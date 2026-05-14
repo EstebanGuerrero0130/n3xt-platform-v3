@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /customer/dashboard
+
+Sitemap: https://n3xt3d.com/sitemap.xml

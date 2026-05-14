@@ -1,0 +1,119 @@
+# ============================================================
+# N3XT Platform V3 — .gitignore
+# Optimized for: Laravel 13 + Vue 3 + Vite + Three.js + Vercel
+# ============================================================
+
+# ── Environment & Secrets ──────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+backend/.env
+frontend/.env.local
+
+# ── PHP / Composer ─────────────────────────────────────────
+/backend/vendor/
+backend/vendor/
+composer.phar
+
+# ── Node / npm ─────────────────────────────────────────────
+node_modules/
+/node_modules/
+frontend/node_modules/
+package-lock.json
+frontend/package-lock.json
+*.tgz
+
+# ── Build Outputs ──────────────────────────────────────────
+/frontend/dist/
+frontend/dist/
+/dist/
+/dist_exe/
+*.exe
+
+# ── Laravel Specific ──────────────────────────────────────
+/backend/storage/*.key
+/backend/storage/framework/cache/data/*
+/backend/storage/framework/sessions/*
+/backend/storage/framework/views/*
+/backend/storage/logs/*
+/backend/bootstrap/cache/*
+/backend/public/hot
+/backend/public/storage
+backend/.phpunit.result.cache
+backend/.phpunit.cache
+Homestead.json
+Homestead.yaml
+auth.json
+
+# ── Database Files ─────────────────────────────────────────
+*.sqlite
+*.sqlite-journal
+*.sqlite3
+/backend/database/*.sqlite
+
+# ── IDE & Editors ──────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+*.sublime-project
+*.sublime-workspace
+.history/
+
+# ── OS Generated ──────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ── Logs & Debug ──────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── 3D / Three.js Temp Files ─────────────────────────────
+*.stl
+*.obj
+*.gcode
+*.3mf
+*.amf
+*.step
+*.iges
+/uploads/
+/backend/storage/app/public/stl_files/
+/backend/storage/app/stl_temp/
+
+# ── Backup & Sync Artifacts ──────────────────────────────
+/backups/
+*.bak
+*.backup
+*_sync_*.json
+n3xt_sync_*.json
+
+# ── Vercel ────────────────────────────────────────────────
+.vercel/
+.vercel
+
+# ── Electron (Legacy) ────────────────────────────────────
+electron-main.js
+/out/
+
+# ── Testing ──────────────────────────────────────────────
+/coverage/
+.nyc_output/
+
+# ── Misc ─────────────────────────────────────────────────
+*.map
+query

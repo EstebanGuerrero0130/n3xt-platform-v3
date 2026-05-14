@@ -1,0 +1,336 @@
+{
+    "system": "N3XT 3D MIRROR",
+    "db_engine": "POSTGRESQL_COMPATIBLE",
+    "version": "5.0",
+    "timestamp": "2026-05-10T22:48:53+00:00",
+    "payload": {
+        "materials": [
+            {
+                "id": "PLA_BLACK",
+                "name": "PLA Alta Resistencia",
+                "category": "FDM",
+                "density": null,
+                "cost_per_kg": "85000.00",
+                "color": "#000000",
+                "is_active": true,
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:09:23.000000Z",
+                "type": "material",
+                "unit": "g",
+                "location": null
+            },
+            {
+                "id": "PLA_WHITE",
+                "name": "PLA Alta Resistencia",
+                "category": "FDM",
+                "density": null,
+                "cost_per_kg": "85000.00",
+                "color": "#FFFFFF",
+                "is_active": true,
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:09:23.000000Z",
+                "type": "material",
+                "unit": "g",
+                "location": null
+            },
+            {
+                "id": "PETG_BLUE",
+                "name": "PETG Funcional",
+                "category": "FDM",
+                "density": null,
+                "cost_per_kg": "95000.00",
+                "color": "#0000FF",
+                "is_active": true,
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:09:23.000000Z",
+                "type": "material",
+                "unit": "g",
+                "location": null
+            },
+            {
+                "id": "SLA_GRAY",
+                "name": "Resina Est\u00e1ndar",
+                "category": "SLA",
+                "density": null,
+                "cost_per_kg": "250000.00",
+                "color": "#808080",
+                "is_active": true,
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:09:23.000000Z",
+                "type": "material",
+                "unit": "g",
+                "location": null
+            },
+            {
+                "id": "FDM-PLA-512",
+                "name": "PLA negro",
+                "category": "FDM",
+                "density": null,
+                "cost_per_kg": "65000.00",
+                "color": "#000000",
+                "is_active": true,
+                "created_at": "2026-05-10T22:11:40.000000Z",
+                "updated_at": "2026-05-10T22:11:40.000000Z",
+                "type": "material",
+                "unit": "g",
+                "location": null
+            }
+        ],
+        "printers": [
+            {
+                "id": 5,
+                "name": "A1",
+                "model": "bambulab",
+                "technology": "FDM",
+                "status": "printing",
+                "created_at": "2026-05-10T22:11:40.000000Z",
+                "updated_at": "2026-05-10T22:14:14.000000Z",
+                "last_maintenance": null,
+                "next_maintenance": null,
+                "maintenance_notes": null,
+                "watts": 0,
+                "total_hours_run": "2",
+                "maintenance_interval_h": 200
+            }
+        ],
+        "settings": [
+            {
+                "id": 3,
+                "key": "oper",
+                "value": {
+                    "transporte": 50,
+                    "ganancia": 50,
+                    "marketing": 50,
+                    "fallos": 30
+                },
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:09:23.000000Z"
+            },
+            {
+                "id": 4,
+                "key": "margin",
+                "value": {
+                    "iva": 19
+                },
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:09:23.000000Z"
+            },
+            {
+                "id": 6,
+                "key": "company_logo",
+                "value": "logos\/k0CjiwytlOMoY8V4Sms42YHiv28GsGTgfs5nDMiI.png",
+                "created_at": "2026-05-10T22:11:40.000000Z",
+                "updated_at": "2026-05-10T22:11:40.000000Z"
+            },
+            {
+                "id": 1,
+                "key": "infra",
+                "value": {
+                    "luz_hr": 976,
+                    "depr_hr": 400,
+                    "mant_hr": 700,
+                    "etiquetas": 400,
+                    "load_factor": 0.4,
+                    "setup_fee": 400
+                },
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:11:40.000000Z"
+            },
+            {
+                "id": 2,
+                "key": "prep",
+                "value": {
+                    "mano_obra_hr": 6000,
+                    "prep_time_pct": 10
+                },
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:11:40.000000Z"
+            },
+            {
+                "id": 7,
+                "key": "company",
+                "value": {
+                    "name": "N3XT 3D",
+                    "nit": "10271500341",
+                    "email": "servicion3xt@gmail.com",
+                    "phone": "+57 3118796416",
+                    "address": "Guateque-Boyaca",
+                    "slogan": "Manufactura Digital",
+                    "website": null
+                },
+                "created_at": "2026-05-10T22:11:40.000000Z",
+                "updated_at": "2026-05-10T22:11:40.000000Z"
+            },
+            {
+                "id": 5,
+                "key": "security",
+                "value": {
+                    "workshop_pin": "2021"
+                },
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:11:40.000000Z"
+            }
+        ],
+        "orders": [
+            {
+                "id": 1,
+                "customer_name": "Cliente Simulaci\u00f3n",
+                "customer_email": null,
+                "customer_phone": null,
+                "volume_mm3": 40000,
+                "estimated_weight_g": 50,
+                "qty": 1,
+                "technology": "FDM",
+                "material_id": "PLA_BLACK",
+                "infill": null,
+                "total_price": 29424,
+                "comments": "SIMULACI\u00d3N N3XT: Proyecto. Lote: 1 pzs.",
+                "file_path": null,
+                "original_filename": "Manual Order",
+                "status": "printing",
+                "tracking_guide": null,
+                "created_at": "2026-05-10T22:14:02.000000Z",
+                "updated_at": "2026-05-10T22:14:55.000000Z",
+                "dimensions_mm": null,
+                "scale_factor": 1,
+                "material_name": "PLA_BLACK",
+                "printer_id": 5,
+                "estimated_duration_h": 2,
+                "extras_cost": 0,
+                "extra_items": null,
+                "cost_snapshot": {
+                    "settings": {
+                        "oper": {
+                            "transporte": 50,
+                            "ganancia": 50,
+                            "marketing": 50,
+                            "fallos": 30
+                        },
+                        "margin": {
+                            "iva": 19
+                        },
+                        "company_logo": "logos\/k0CjiwytlOMoY8V4Sms42YHiv28GsGTgfs5nDMiI.png",
+                        "infra": {
+                            "luz_hr": 976,
+                            "depr_hr": 400,
+                            "mant_hr": 700,
+                            "etiquetas": 400,
+                            "load_factor": 0.4,
+                            "setup_fee": 400
+                        },
+                        "prep": {
+                            "mano_obra_hr": 6000,
+                            "prep_time_pct": 10
+                        },
+                        "company": {
+                            "name": "N3XT 3D",
+                            "nit": "10271500341",
+                            "email": "servicion3xt@gmail.com",
+                            "phone": "+57 3118796416",
+                            "address": "Guateque-Boyaca",
+                            "slogan": "Manufactura Digital",
+                            "website": null
+                        },
+                        "security": {
+                            "workshop_pin": "2021"
+                        }
+                    },
+                    "material_cost_per_kg": "85000.00",
+                    "captured_at": "2026-05-10T22:14:02+00:00"
+                },
+                "stock_deducted": true,
+                "is_paid": true,
+                "customer_company": null,
+                "customer_phone_secondary": null,
+                "shipping_address": null,
+                "shipping_city": null,
+                "shipping_zip": null,
+                "shipping_reference": null,
+                "customer_id_document": null,
+                "hours_added_to_printer": false,
+                "project_id": null
+            }
+        ],
+        "purchases": [
+            {
+                "id": 1,
+                "item_name": "NUEVO MATERIAL: PLA negro",
+                "category": "inventory_restock",
+                "material_id": "FDM-PLA-512",
+                "units": "1.00",
+                "unit_amount": "1000.00",
+                "qty": "1000.00",
+                "total_cost": "65000.00",
+                "supplier": "4DLAB",
+                "notes": null,
+                "purchase_date": "2026-05-09T00:00:00.000000Z",
+                "created_at": "2026-05-10T22:11:40.000000Z",
+                "updated_at": "2026-05-10T22:11:40.000000Z"
+            }
+        ],
+        "recurrent_suppliers": [
+            {
+                "id": 1,
+                "name": "4DLAB",
+                "contact_person": "4DLAB",
+                "phone": null,
+                "created_at": "2026-05-09T20:35:57.000000Z",
+                "updated_at": "2026-05-09T20:35:57.000000Z",
+                "specialty": null
+            }
+        ],
+        "recurrent_customers": [
+            {
+                "id": 1,
+                "name": "PATI",
+                "email": null,
+                "phone": null,
+                "location": null,
+                "notes": null,
+                "created_at": "2026-05-10T22:17:42.000000Z",
+                "updated_at": "2026-05-10T22:17:42.000000Z",
+                "company": null,
+                "address_full": null,
+                "city_dept_country": null,
+                "zip_code": null,
+                "location_reference": null,
+                "phone_secondary": null,
+                "customer_id_document": null
+            }
+        ],
+        "inventories": [
+            {
+                "id": 2,
+                "material_id": "PLA_WHITE",
+                "stock_available": 5000,
+                "low_stock_threshold": 1000,
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:09:23.000000Z"
+            },
+            {
+                "id": 3,
+                "material_id": "PETG_BLUE",
+                "stock_available": 5000,
+                "low_stock_threshold": 1000,
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:09:23.000000Z"
+            },
+            {
+                "id": 4,
+                "material_id": "SLA_GRAY",
+                "stock_available": 5000,
+                "low_stock_threshold": 1000,
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:09:23.000000Z"
+            },
+            {
+                "id": 1,
+                "material_id": "PLA_BLACK",
+                "stock_available": 4950,
+                "low_stock_threshold": 1000,
+                "created_at": "2026-05-10T22:09:23.000000Z",
+                "updated_at": "2026-05-10T22:14:55.000000Z"
+            }
+        ]
+    }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "n3xt-3d-system",
+  "version": "3.5.0",
+  "description": "N3XT 3D Administrative System - Industrial Edition",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:exe": "electron-builder build --windows"
+  },
+  "author": "N3XT 3D",
+  "license": "Proprietary",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.n3xt3d.system",
+    "productName": "N3XT 3D",
+    "directories": {
+      "output": "dist_exe"
+    },
+    "files": [
+      "electron-main.js",
+      "frontend/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!storage/logs/*",
+          "!node_modules"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "frontend/public/logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
