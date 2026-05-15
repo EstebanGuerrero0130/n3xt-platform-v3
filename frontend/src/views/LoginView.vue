@@ -38,6 +38,7 @@ const router = useRouter()
 const showPassword = ref(false)
 const honeypot = ref('')
 const lastAttemptTime = ref(0)
+const selectedRole = ref('customer') // 'customer' or 'admin'
 
 onMounted(() => {
   // Redirigir si ya hay sesión activa
@@ -47,8 +48,6 @@ onMounted(() => {
     router.push('/admin')
     return
   }
-  // Eliminamos la redirección automática de clientes para permitir el cambio de cuenta al admin
-
 
   const savedEmail = localStorage.getItem('n3xt_remember_email')
   if (savedEmail) {
@@ -175,15 +174,29 @@ const register = async () => {
             <transition name="fade-slide" mode="out-in">
                 <div :key="mode" class="text-center mb-12">
                     <div class="space-y-4">
-                        <div class="w-24 h-24 bg-gray-900 dark:bg-white dark:text-gray-900 rounded-[2.5rem] mx-auto flex items-center justify-center shadow-2xl shadow-black/20 mb-8">
-                            <svg class="w-10 h-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        <div class="w-20 h-20 bg-gray-900 dark:bg-white dark:text-gray-900 rounded-[2rem] mx-auto flex items-center justify-center shadow-2xl shadow-black/20 mb-6">
+                            <svg v-if="selectedRole === 'admin'" class="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <svg v-else class="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                         </div>
-                        <h2 class="text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase italic">
-                            {{ mode === 'register' ? 'Nuevo' : 'Acceso' }} <span class="text-primary">N3XT</span>
+                        <h2 class="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase italic">
+                            Acceso <span class="text-primary">N3XT</span>
                         </h2>
-                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em]">
-                            {{ mode === 'register' ? 'Crea tu cuenta y accede a todos nuestros servicios' : 'Plataforma de gestion N3XT' }}
-                        </p>
+                        
+                        <!-- Role Selector Tabs -->
+                        <div class="flex bg-gray-100 dark:bg-white/5 p-1.5 rounded-[1.5rem] max-w-[320px] mx-auto mt-8 border border-gray-200 dark:border-white/5">
+                            <button 
+                                @click="selectedRole = 'customer'"
+                                :class="['flex-1 py-3 px-6 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all', selectedRole === 'customer' ? 'bg-white dark:bg-gray-800 text-primary shadow-xl' : 'text-gray-400 hover:text-gray-600 dark:hover:text-white']"
+                            >
+                                Cliente
+                            </button>
+                            <button 
+                                @click="selectedRole = 'admin'"
+                                :class="['flex-1 py-3 px-6 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all', selectedRole === 'admin' ? 'bg-white dark:bg-gray-800 text-primary shadow-xl' : 'text-gray-400 hover:text-gray-600 dark:hover:text-white']"
+                            >
+                                Administrador
+                            </button>
+                        </div>
                     </div>
                 </div>
             </transition>
