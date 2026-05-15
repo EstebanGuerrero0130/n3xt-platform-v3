@@ -1,5 +1,4 @@
 {
-  "_comment": "N3XT Infrastructure V3.5.2 - Slim Deployment",
   "version": 2,
   "functions": {
     "api/index.php": {
