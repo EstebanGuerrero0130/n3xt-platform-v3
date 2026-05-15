@@ -19,7 +19,6 @@ class UnifiedAuthController extends Controller
     public function login(Request $request)
     {
         Log::info('Intento de Acceso N3XT', [
-            'ip' => $request->ip(),
             'email' => $request->email
         ]);
 
