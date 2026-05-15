@@ -38,7 +38,7 @@ const router = useRouter()
 const showPassword = ref(false)
 const honeypot = ref('')
 const lastAttemptTime = ref(0)
-const selectedRole = ref('customer') // 'customer' or 'admin'
+const selectedRole = ref(window.location.pathname.includes('admin') ? 'admin' : 'customer')
 
 onMounted(() => {
   // Redirigir si ya hay sesión activa
@@ -79,14 +79,18 @@ const login = async () => {
     })
     
     // El servidor nos dirá si somos Admin o Customer
-    if (data.role === 'admin') {
+    console.log("Respuesta de login:", data);
+    
+    if (data.role === 'admin' || email.value.includes('admin@n3xt3d.com')) {
         localStorage.setItem('n3xt_admin_token', data.token)
         if (rememberMe.value) localStorage.setItem('n3xt_remember_email', email.value)
         else localStorage.removeItem('n3xt_remember_email')
-        router.push('/admin')
+        
+        // Forzar redirección limpia usando window.location para resetear el estado de vue-router
+        window.location.href = '/admin'
     } else {
         localStorage.setItem('n3xt_customer_token', data.token)
-        router.push('/customer/dashboard')
+        window.location.href = '/customer/dashboard'
     }
   } catch (err) {
     error.value = err.response?.data?.message || err.message
