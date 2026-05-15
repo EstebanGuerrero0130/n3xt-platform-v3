@@ -1,7 +1,6 @@
 # Filtro Industrial N3XT para Vercel
+# NO ignorar frontend/src ni frontend/public, se necesitan para el build
 frontend/node_modules
-frontend/src
-frontend/public
 backend/node_modules
 backend/tests
 backend/storage/logs/*.log
