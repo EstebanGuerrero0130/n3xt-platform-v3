@@ -18,7 +18,9 @@ return [
     |
     */
 
-    'default' => env('LOG_CHANNEL', 'stack'),
+    'default' => (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL'])) 
+        ? 'stderr' 
+        : env('LOG_CHANNEL', 'stack'),
 
     /*
     |--------------------------------------------------------------------------
@@ -124,7 +126,9 @@ return [
         ],
 
         'emergency' => [
-            'path' => storage_path('logs/laravel.log'),
+            'path' => (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL']))
+                ? '/tmp/storage/logs/emergency.log'
+                : storage_path('logs/laravel.log'),
         ],
 
     ],
