@@ -2,10 +2,9 @@ import axios from 'axios';
 
 // Prioridad: 1. Variables de entorno (Producción en Vercel) 2. Host actual (Local)
 const hostname = window.location.hostname || '127.0.0.1';
-const port = '8000'; // Puerto estándar del Motor N3XT
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${hostname}:${port}/api`;
-const STORAGE_BASE_URL = import.meta.env.VITE_STORAGE_URL || `http://${hostname}:${port}/storage`;
+const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isLocal ? `http://${hostname}:8000/api` : '/api');
+const STORAGE_BASE_URL = import.meta.env.VITE_STORAGE_URL || (isLocal ? `http://${hostname}:8000/storage` : '/storage');
 
 const getHeaders = (includeToken = false, endpoint = '') => {
   const headers = {
