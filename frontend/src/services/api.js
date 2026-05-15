@@ -105,6 +105,13 @@ export const api = {
   async handleResponse(res, endpoint = '') {
     if (res.status === 204) return { success: true };
     
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await res.text();
+      console.error('Respuesta no es JSON:', text.substring(0, 100));
+      throw new Error('El servidor no respondió con JSON válido. Verifica la URL de la API.');
+    }
+
     let data;
     try {
       data = await res.json();
