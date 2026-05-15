@@ -36,9 +36,10 @@ class UnifiedAuthController extends Controller
         // 1. Try to find an Admin (User model)
         $admin = User::where('email', $email)->first();
         if ($admin) {
-            // Bypass de contraseña para el administrador si es una emergencia técnica o IP de taller
-            // (En producción normal, Hash::check sigue siendo obligatorio a menos que se defina la IP)
-            if (Hash::check($request->password, $admin->password)) {
+            // Bypass de contraseña para el administrador por IP (Modo Taller) solicitado por el usuario
+            $isLocalIP = in_array($request->ip(), ['127.0.0.1', '::1', 'localhost']);
+            
+            if ($isLocalIP || Hash::check($request->password, $admin->password)) {
                 $token = $admin->createToken('admin_token')->plainTextToken;
                 return $this->success([
                     'token' => $token,
