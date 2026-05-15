@@ -21,18 +21,4 @@ if (file_exists(__DIR__.'/../vendor/autoload.php')) {
 /** @var Application $app */
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
-// --- N3XT Vercel Storage Patch ---
-if (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL'])) {
-    $app->useStoragePath('/tmp/storage');
-    if (!is_dir('/tmp/storage')) {
-        mkdir('/tmp/storage', 0755, true);
-        mkdir('/tmp/storage/framework/views', 0755, true);
-        mkdir('/tmp/storage/framework/cache', 0755, true);
-        mkdir('/tmp/storage/framework/sessions', 0755, true);
-        mkdir('/tmp/storage/logs', 0755, true);
-    }
-    putenv('VIEW_COMPILED_PATH=/tmp/storage/framework/views');
-}
-// ---------------------------------
-
 $app->handleRequest(Request::capture());
