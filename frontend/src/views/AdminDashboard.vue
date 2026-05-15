@@ -316,15 +316,31 @@ const syncAll = async (silent = false) => {
 }
 
 const fetchOrders = async () => {
-  orders.value = await api.get('/admin/orders', true)
+  try {
+    const res = await api.get('/admin/orders', true)
+    orders.value = Array.isArray(res) ? res : (res?.data || [])
+  } catch (err) {
+    console.error('Error fetching orders:', err)
+    orders.value = []
+  }
 }
 
 const fetchInventory = async () => {
-  inventoryData.value = await api.get('/materials', true)
+  try {
+    const res = await api.get('/materials', true)
+    inventoryData.value = Array.isArray(res) ? res : (res?.data || [])
+  } catch (err) {
+    inventoryData.value = []
+  }
 }
 
 const fetchPrinters = async () => {
-  printers.value = await api.get('/admin/printers', true)
+  try {
+    const res = await api.get('/admin/printers', true)
+    printers.value = Array.isArray(res) ? res : (res?.data || [])
+  } catch (err) {
+    printers.value = []
+  }
 }
 
 const fetchSettings = async () => {
@@ -2399,9 +2415,21 @@ const getSimulatorUnit = () => {
                         @click="syncAll(false)" 
                         :disabled="loading"
                         class="group w-12 h-12 bg-[var(--bg-surface)] hover:bg-primary hover:text-white text-gray-400 rounded-2xl flex items-center justify-center transition-all duration-500 active:scale-90 border border-[var(--border-main)]"
+                        title="Sincronizar Datos"
                     >
                         <svg :class="['w-5 h-5', loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700']" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+
+                    <!-- Logout Button in Header -->
+                    <button 
+                        @click="logout" 
+                        class="w-12 h-12 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 rounded-2xl flex items-center justify-center transition-all duration-300 active:scale-90 shadow-sm border border-rose-500/20"
+                        title="Cerrar Sesión"
+                    >
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                         </svg>
                     </button>
 
