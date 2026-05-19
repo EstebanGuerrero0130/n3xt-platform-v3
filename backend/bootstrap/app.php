@@ -5,7 +5,9 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 // --- N3XT Vercel Serverless Patch ---
-if (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL'])) {
+$isVercel = isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL']) || getenv('VERCEL') || getenv('VERCEL_URL') || (isset($_SERVER['LAMBDA_TASK_ROOT']) || str_contains(getcwd(), '/var/task'));
+
+if ($isVercel) {
     $storagePath = '/tmp/storage';
     if (!is_dir($storagePath)) {
         mkdir($storagePath, 0755, true);
@@ -35,7 +37,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
     })->create();
 
 // Aplicar ruta de almacenamiento si estamos en Vercel
-if (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL'])) {
+if ($isVercel) {
     $app->useStoragePath('/tmp/storage');
 }
 

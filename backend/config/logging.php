@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'default' => (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL'])) 
+    'default' => (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL']) || getenv('VERCEL') || getenv('VERCEL_URL') || str_contains(getcwd(), '/var/task')) 
         ? 'stderr' 
         : env('LOG_CHANNEL', 'stack'),
 
@@ -126,7 +126,7 @@ return [
         ],
 
         'emergency' => [
-            'path' => (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL']))
+            'path' => (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL']) || getenv('VERCEL') || getenv('VERCEL_URL') || str_contains(getcwd(), '/var/task'))
                 ? '/tmp/storage/logs/emergency.log'
                 : storage_path('logs/laravel.log'),
         ],
