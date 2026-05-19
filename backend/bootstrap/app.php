@@ -17,11 +17,10 @@ if (isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL'])) {
     putenv("VITE_STORAGE_PATH=$storagePath");
     putenv("VIEW_COMPILED_PATH=$storagePath/framework/views");
     putenv("LOG_CHANNEL=stderr"); // Enviar logs a la consola de Vercel, no a archivo
-    config(['logging.default' => 'stderr']);
 }
 // ------------------------------------
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
