@@ -8,6 +8,13 @@ use Illuminate\Foundation\Configuration\Middleware;
 $isVercel = isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL']) || getenv('VERCEL') || getenv('VERCEL_URL') || (isset($_SERVER['LAMBDA_TASK_ROOT']) || str_contains(getcwd(), '/var/task'));
 
 if ($isVercel) {
+    // Evitar que Symfony/Laravel detecte '/api' como base URL al venir de api/index.php
+    $_SERVER['SCRIPT_NAME'] = '/index.php';
+    $_SERVER['PHP_SELF'] = '/index.php';
+    if (isset($_SERVER['ORIG_SCRIPT_NAME'])) {
+        $_SERVER['ORIG_SCRIPT_NAME'] = '/index.php';
+    }
+
     $storagePath = '/tmp/storage';
     $dirs = [
         $storagePath,
