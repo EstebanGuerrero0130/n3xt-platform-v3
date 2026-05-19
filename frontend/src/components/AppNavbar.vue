@@ -26,6 +26,8 @@ const logoSrc = ref('/logo.svg')
 const handleLogoError = () => {
   if (logoSrc.value === '/logo.svg') {
     logoSrc.value = '/logo.png'
+  } else if (logoSrc.value === '/logo.png') {
+    logoSrc.value = '/logo.png.png'
   }
 }
 
