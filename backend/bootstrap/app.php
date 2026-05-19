@@ -47,8 +47,18 @@ $app = Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         //
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        //
+    ->withExceptions(function (Exceptions $exceptions) use ($isVercel): void {
+        if ($isVercel) {
+            $exceptions->render(function (\Throwable $e) {
+                return response()->json([
+                    'error' => 'N3XT_INTERNAL_ERROR',
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => explode("\n", $e->getTraceAsString())
+                ], 500);
+            });
+        }
     })->create();
 
 // Aplicar ruta de almacenamiento si estamos en Vercel
