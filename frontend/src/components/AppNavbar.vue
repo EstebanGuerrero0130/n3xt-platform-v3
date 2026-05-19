@@ -40,7 +40,7 @@ onMounted(() => {
 <template>
   <header class="bg-white/80 dark:bg-[#0a0f14]/80 backdrop-blur-3xl px-6 md:px-12 py-5 flex justify-between items-center border-b border-gray-100 dark:border-white/5 sticky top-0 z-[100] w-full transition-colors duration-500">
     <router-link to="/" class="flex items-center gap-3 group">
-      <img :src="logoSrc" @error="handleLogoError" alt="N3XT 3D Logo" class="h-8 md:h-9 w-auto cursor-pointer" />
+      <img :src="logoSrc" @error="handleLogoError" alt="N3XT 3D Logo" class="h-14 md:h-16 w-auto cursor-pointer" />
       <div class="hidden xs:flex flex-col text-left">
         <span class="text-[7px] md:text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em] leading-none">{{ subtext }}</span>
       </div>
