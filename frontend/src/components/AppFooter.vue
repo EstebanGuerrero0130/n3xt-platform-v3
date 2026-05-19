@@ -12,11 +12,20 @@ const isDark = ref(localStorage.getItem('n3xt_theme') !== 'light')
         <!-- COL 1: BRAND -->
         <div class="space-y-6">
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]">
-              <span class="text-white font-black text-2xl italic">N</span>
+            <div class="w-12 h-12 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)]">
+              <svg class="w-7 h-7 text-primary animate-pulse" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g transform="rotate(45 256 256)">
+                  <path d="M236 370 C200 420 220 500 256 512 C292 500 312 420 276 370 Z" fill="currentColor" />
+                  <path d="M200 280 C160 280 110 330 110 375 C110 400 130 405 155 405 C185 405 200 380 208 370 Z" fill="currentColor" />
+                  <path d="M312 280 C352 280 402 330 402 375 C402 400 382 405 357 405 C327 405 312 380 304 370 Z" fill="currentColor" />
+                  <path d="M256 50 C216 110 196 190 196 310 C196 345 204 370 216 370 L296 370 C308 370 316 345 316 310 C316 190 296 110 256 50 Z" fill="currentColor" />
+                  <circle cx="256" cy="170" r="28" fill="#000" />
+                  <circle cx="256" cy="170" r="16" fill="currentColor" />
+                </g>
+              </svg>
             </div>
             <div>
-              <h2 class="text-2xl font-black italic tracking-tighter leading-none">N3XT 3D</h2>
+              <h2 class="text-2xl font-black italic tracking-tighter leading-none">N3XT <span class="text-primary">3D</span></h2>
               <p class="text-[8px] font-black text-primary uppercase tracking-[0.3em] mt-1">Manufactura de Precisión</p>
             </div>
           </div>

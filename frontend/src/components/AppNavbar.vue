@@ -30,15 +30,70 @@ onMounted(() => {
 
 <template>
   <header class="bg-white/80 dark:bg-[#0a0f14]/80 backdrop-blur-3xl px-6 md:px-12 py-5 flex justify-between items-center border-b border-gray-100 dark:border-white/5 sticky top-0 z-[100] w-full transition-colors duration-500">
-    <div class="flex items-center gap-5">
-      <div class="w-10 h-10 md:w-12 md:h-12 bg-[#1e3a34] rounded-2xl flex items-center justify-center shadow-2xl shadow-emerald-900/20">
-        <span class="text-white font-black text-2xl italic">N</span>
+    <router-link to="/" class="flex items-center gap-3 group">
+      <svg class="h-8 md:h-9 w-auto cursor-pointer" viewBox="0 0 800 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="rocketGrad" x1="1" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ab5cff" />
+            <stop offset="50%" stop-color="#4facfe" />
+            <stop offset="100%" stop-color="#00f5ff" />
+          </linearGradient>
+        </defs>
+        <!-- Letters N, 3, T in adaptive theme color -->
+        <g stroke="currentColor" class="text-gray-900 dark:text-white transition-colors duration-500" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <!-- N -->
+          <path d="M 60,50 L 60,200" />
+          <path d="M 82,50 L 82,200" />
+          <path d="M 82,50 L 158,200" />
+          <path d="M 60,50 L 136,200" />
+          <path d="M 136,50 L 136,200" />
+          <path d="M 158,50 L 158,200" />
+          <!-- 3 -->
+          <path d="M 210,50 L 290,50 C 320,50 330,75 310,95 L 290,115 C 280,125 265,125 250,125" />
+          <path d="M 210,72 L 275,72 C 295,72 300,85 290,95 L 270,115" />
+          <path d="M 250,125 C 265,125 280,125 290,135 L 310,155 C 330,175 320,200 290,200 L 210,200" />
+          <path d="M 270,135 L 290,155 C 300,165 295,178 275,178 L 210,178" />
+          <!-- T -->
+          <path d="M 540,50 L 680,50" />
+          <path d="M 540,72 L 680,72" />
+          <path d="M 600,72 L 600,200" />
+          <path d="M 622,72 L 622,200" />
+        </g>
+        <!-- The Rocket replacing 'X' -->
+        <g transform="translate(260, -25) scale(0.6)">
+          <g transform="rotate(45 256 256)">
+            <!-- Speed lines -->
+            <line x1="110" y1="60" x2="110" y2="160" stroke="url(#rocketGrad)" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+            <line x1="135" y1="85" x2="135" y2="185" stroke="url(#rocketGrad)" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+            <line x1="160" y1="110" x2="160" y2="210" stroke="url(#rocketGrad)" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+            <line x1="185" y1="135" x2="185" y2="235" stroke="url(#rocketGrad)" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+            <line x1="327" y1="277" x2="327" y2="377" stroke="url(#rocketGrad)" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+            <line x1="352" y1="302" x2="352" y2="402" stroke="url(#rocketGrad)" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+            <line x1="377" y1="327" x2="377" y2="427" stroke="url(#rocketGrad)" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+            <line x1="402" y1="352" x2="402" y2="452" stroke="url(#rocketGrad)" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+            <!-- Flame -->
+            <path d="M236 370 C200 420 220 500 256 512 C292 500 312 420 276 370 Z" fill="url(#rocketGrad)" />
+            <path d="M246 370 C225 410 235 460 256 475 C277 460 287 410 266 370 Z" fill="#ffffff" opacity="0.4" />
+            <!-- Fins -->
+            <path d="M200 280 C160 280 110 330 110 375 C110 400 130 405 155 405 C185 405 200 380 208 370 Z" fill="url(#rocketGrad)" />
+            <path d="M312 280 C352 280 402 330 402 375 C402 400 382 405 357 405 C327 405 312 380 304 370 Z" fill="url(#rocketGrad)" />
+            <!-- Rocket Body -->
+            <path d="M256 50 C216 110 196 190 196 310 C196 345 204 370 216 370 L296 370 C308 370 316 345 316 310 C316 190 296 110 256 50 Z" fill="url(#rocketGrad)" />
+            <!-- Highlights -->
+            <path d="M256 70 C226 120 210 190 210 300 C210 330 216 350 220 350" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.4" />
+            <!-- Window -->
+            <circle cx="256" cy="170" r="28" fill="#ffffff" />
+            <circle cx="256" cy="170" r="20" fill="url(#rocketGrad)" />
+            <circle cx="256" cy="170" r="14" fill="#ffffff" opacity="0.9" />
+            <!-- Center Line -->
+            <path d="M256 210 L256 340" stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity="0.6" />
+          </g>
+        </g>
+      </svg>
+      <div class="hidden xs:flex flex-col text-left">
+        <span class="text-[7px] md:text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em] leading-none">{{ subtext }}</span>
       </div>
-      <div class="flex flex-col text-left">
-        <h1 class="text-xl md:text-2xl font-black text-emerald-500 tracking-tighter uppercase italic leading-none">N3XT<span class="text-gray-900 dark:text-white not-italic">3D</span></h1>
-        <span class="text-[8px] md:text-[9px] font-black text-gray-500 uppercase tracking-[0.4em] mt-1">{{ subtext }}</span>
-      </div>
-    </div>
+    </router-link>
 
     <nav class="hidden md:flex gap-10 items-center">
       <router-link to="/" :class="['text-[10px] font-black uppercase tracking-[0.2em] transition-all pb-1 border-b-2', activeTab === 'home' ? 'text-emerald-500 border-emerald-500' : 'text-gray-400 border-transparent hover:text-emerald-500']">Inicio</router-link>
