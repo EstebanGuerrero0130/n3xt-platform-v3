@@ -12,5 +12,5 @@ try {
     echo "Ruta actual: " . __DIR__ . "\n";
     echo "Vendor path local: " . realpath(__DIR__ . '/../backend/vendor/autoload.php') . "\n";
     echo "Vendor path root: " . realpath(__DIR__ . '/../vendor/autoload.php') . "\n";
-    exit(0);
+    exit(1);
 }
