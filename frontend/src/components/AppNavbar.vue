@@ -21,12 +21,10 @@ const toggleDarkMode = () => {
 }
 
 const isAdmin = ref(false)
-const logoSrc = ref('/logo.svg')
+const logoSrc = ref('/logo.png')
 
 const handleLogoError = () => {
-  if (logoSrc.value === '/logo.svg') {
-    logoSrc.value = '/logo.png'
-  } else if (logoSrc.value === '/logo.png') {
+  if (logoSrc.value === '/logo.png') {
     logoSrc.value = '/logo.png.png'
   }
 }
