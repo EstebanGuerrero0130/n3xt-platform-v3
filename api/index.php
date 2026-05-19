@@ -3,6 +3,7 @@
 try {
     require __DIR__ . '/../backend/public/index.php';
 } catch (\Throwable $e) {
+    header('HTTP/1.1 500 Internal Server Error');
     header('Content-Type: text/plain');
     echo "ERROR N3XT DIAGNOSTIC:\n";
     echo "Mensaje: " . $e->getMessage() . "\n";
@@ -11,5 +12,5 @@ try {
     echo "Ruta actual: " . __DIR__ . "\n";
     echo "Vendor path local: " . realpath(__DIR__ . '/../backend/vendor/autoload.php') . "\n";
     echo "Vendor path root: " . realpath(__DIR__ . '/../vendor/autoload.php') . "\n";
-    exit(1);
+    exit(0);
 }
