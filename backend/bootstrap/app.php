@@ -9,12 +9,20 @@ $isVercel = isset($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_URL']) || getenv
 
 if ($isVercel) {
     $storagePath = '/tmp/storage';
-    if (!is_dir($storagePath)) {
-        mkdir($storagePath, 0755, true);
-        mkdir("$storagePath/framework/views", 0755, true);
-        mkdir("$storagePath/framework/cache", 0755, true);
-        mkdir("$storagePath/framework/sessions", 0755, true);
-        mkdir("$storagePath/logs", 0755, true);
+    $dirs = [
+        $storagePath,
+        "$storagePath/framework",
+        "$storagePath/framework/views",
+        "$storagePath/framework/cache",
+        "$storagePath/framework/sessions",
+        "$storagePath/bootstrap",
+        "$storagePath/bootstrap/cache",
+        "$storagePath/logs"
+    ];
+    foreach ($dirs as $dir) {
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
     }
     putenv("VITE_STORAGE_PATH=$storagePath");
     putenv("VIEW_COMPILED_PATH=$storagePath/framework/views");
