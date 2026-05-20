@@ -207,6 +207,7 @@ const modalState = reactive({
 const pdfPreviewData = ref({ title: '', content: '', orderId: '' })
 
 const printerToDelete = ref(null)
+const editingPrinter = ref({ id: '', name: '', model: '', technology: 'FDM', status: 'idle', maintenance_interval_h: 200, next_maintenance: '', total_hours_run: 0, maintenance_notes: '' })
 
 const handleAddPrinter = () => {
     editingPrinter.value = { name: '', model: '', technology: 'FDM', status: 'idle', maintenance_interval_h: 200, next_maintenance: '' }
@@ -1613,13 +1614,13 @@ const simulatedResult = computed(() => {
     pcts: { material: 0, infra: 0, extras: 0, profit: 0 }
   }
   
-  // 1. Costo Material (Total del Lote)
+  // 1. Costo Material (El peso ingresado ya es el total del lote/placa)
   const qty = Math.max(1, simulator.pieces_per_batch || 1)
-  const matCost = (simulator.weight_g / 1000) * mat.cost_per_kg * qty
+  const matCost = (simulator.weight_g / 1000) * mat.cost_per_kg
   
-  // 2. Costo Infraestructura (Escalado por tiempo total del lote)
+  // 2. Costo Infraestructura (El tiempo ingresado ya es el total del lote/placa)
   const [hours, minutes] = simulator.time_str.split(':').map(Number)
-  const totalHours = ((hours || 0) + ((minutes || 0) / 60)) * qty
+  const totalHours = (hours || 0) + ((minutes || 0) / 60)
   
   const luz = totalHours * (settings.value.infra.load_factor || 0.4) * (settings.value.infra.luz_hr || 0)
   const labor = (totalHours * ((settings.value.prep?.prep_time_pct || 10) / 100)) * (settings.value.prep?.mano_obra_hr || 0)
@@ -1690,7 +1691,7 @@ const handleConvertSimulationToOrder = async () => {
     const estimatedVolume = (simulator.weight_g / density) * 1000
 
     const qty = Math.max(1, simulator.pieces_per_batch || 1)
-    const totalHours = ((parseFloat(simulator.time_str.split(':')[0]) || 0) + ((parseFloat(simulator.time_str.split(':')[1]) || 0) / 60)) * qty
+    const totalHours = (parseFloat(simulator.time_str.split(':')[0]) || 0) + ((parseFloat(simulator.time_str.split(':')[1]) || 0) / 60)
 
     await api.post('/orders', {
       customer_id: simulator.customer_id || null,
@@ -2285,6 +2286,13 @@ const getSimulatorUnit = () => {
     <div class="fixed inset-0 technical-grid opacity-20 dark:opacity-10 pointer-events-none z-0"></div>
     <div class="fixed top-[-10%] right-[-10%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[180px] pointer-events-none z-0"></div>
 
+    <!-- Backdrop for mobile sidebar -->
+    <div 
+      v-if="isSidebarOpen" 
+      @click="isSidebarOpen = false" 
+      class="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-xs z-40 md:hidden transition-all duration-300"
+    ></div>
+
     <!-- N3XT PREMIUM SIDEBAR -->
     <aside 
       :class="[
@@ -2371,7 +2379,7 @@ const getSimulatorUnit = () => {
     <main class="flex-1 flex flex-col min-w-0 bg-transparent h-screen overflow-hidden relative z-10">
 
         <!-- PREMIUM HEADER -->
-        <header class="h-24 bg-white/70 dark:bg-black/40 backdrop-blur-3xl border-b border-gray-100/50 dark:border-white/5 flex items-center justify-between px-8 md:px-12 relative z-40 shadow-sm">
+        <header class="h-20 md:h-24 bg-white/70 dark:bg-black/40 backdrop-blur-3xl border-b border-gray-100/50 dark:border-white/5 flex items-center justify-between px-4 md:px-12 relative z-40 shadow-sm">
             <div class="flex items-center gap-6">
                 <!-- Mobile Toggle -->
                 <button @click="isSidebarOpen = !isSidebarOpen" class="md:hidden w-12 h-12 flex items-center justify-center bg-gray-900 dark:bg-white dark:text-gray-900 text-white rounded-2xl">
@@ -2381,13 +2389,13 @@ const getSimulatorUnit = () => {
                 <div class="flex flex-col">
                     <div class="flex items-center gap-3">
                         <div class="w-2.5 h-2.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_#1e3a34]"></div>
-                        <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">{{ activeTab === 'kanban' ? 'Producción' : activeTab.toUpperCase() }}</h2>
+                        <h2 class="text-lg md:text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">{{ activeTab === 'kanban' ? 'Producción' : activeTab.toUpperCase() }}</h2>
                     </div>
-                    <span class="text-[9px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-[0.4em] mt-1 ml-5">Real-time Operations</span>
+                    <span class="hidden sm:block text-[9px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-[0.4em] mt-1 ml-5">Real-time Operations</span>
                 </div>
             </div>
 
-            <div class="flex items-center gap-8">
+            <div class="flex items-center gap-2 md:gap-8">
                 <!-- System Status Desktop -->
                 <div class="hidden lg:flex flex-col items-end">
                     <span class="text-[9px] font-black text-gray-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
@@ -2397,15 +2405,15 @@ const getSimulatorUnit = () => {
                     <span class="text-[8px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-widest mt-0.5">Modo Central Activo</span>
                 </div>
 
-                <div class="h-10 w-px bg-gray-100 dark:bg-white/10"></div>
+                <div class="hidden md:block h-10 w-px bg-gray-100 dark:bg-white/10"></div>
 
 
                 <!-- Action Group -->
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 md:gap-4">
                     <!-- Dark Mode Toggle -->
                     <button 
                         @click="toggleDarkMode" 
-                        class="w-12 h-12 bg-[var(--bg-surface)] text-gray-400 hover:text-primary rounded-2xl flex items-center justify-center active:scale-95 shadow-sm border border-[var(--border-main)]"
+                        class="w-10 h-10 md:w-12 md:h-12 bg-[var(--bg-surface)] text-gray-400 hover:text-primary rounded-xl md:rounded-2xl flex items-center justify-center active:scale-95 shadow-sm border border-[var(--border-main)]"
                     >
                         <svg v-if="isDark" class="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
                         <svg v-else class="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
@@ -2414,7 +2422,7 @@ const getSimulatorUnit = () => {
                     <button 
                         @click="syncAll(false)" 
                         :disabled="loading"
-                        class="group w-12 h-12 bg-[var(--bg-surface)] hover:bg-primary hover:text-white text-gray-400 rounded-2xl flex items-center justify-center transition-all duration-500 active:scale-90 border border-[var(--border-main)]"
+                        class="group w-10 h-10 md:w-12 md:h-12 bg-[var(--bg-surface)] hover:bg-primary hover:text-white text-gray-400 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 active:scale-90 border border-[var(--border-main)]"
                         title="Sincronizar Datos"
                     >
                         <svg :class="['w-5 h-5', loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700']" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2425,7 +2433,7 @@ const getSimulatorUnit = () => {
                     <!-- Logout Button in Header -->
                     <button 
                         @click="logout" 
-                        class="w-12 h-12 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 rounded-2xl flex items-center justify-center transition-all duration-300 active:scale-90 shadow-sm border border-rose-500/20"
+                        class="hidden md:flex w-10 h-10 md:w-12 md:h-12 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 rounded-xl md:rounded-2xl items-center justify-center transition-all duration-300 active:scale-90 shadow-sm border border-rose-500/20"
                         title="Cerrar Sesión"
                     >
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2433,7 +2441,7 @@ const getSimulatorUnit = () => {
                         </svg>
                     </button>
 
-                    <div class="w-12 h-12 rounded-2xl overflow-hidden border-2 border-primary/20 p-0.5 shadow-xl shadow-primary/10">
+                    <div class="hidden sm:block w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl overflow-hidden border-2 border-primary/20 p-0.5 shadow-xl shadow-primary/10">
                         <img v-if="settings.company_logo" :src="logoUrl" class="w-full h-full object-contain bg-white" />
                         <div v-else class="w-full h-full bg-primary flex items-center justify-center text-white font-black italic">N</div>
                     </div>
@@ -2442,9 +2450,9 @@ const getSimulatorUnit = () => {
         </header>
 
         <!-- VIEWPORT: DINAMIC CONTENT -->
-        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative p-8 md:p-12 bg-transparent">
+        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative p-4 md:p-12 bg-transparent">
             
-            <div class="max-w-[1600px] mx-auto">
+            <div class="w-full max-w-[1600px] mx-auto">
                 <transition 
                     name="view-fade" 
                     mode="out-in"
@@ -2453,7 +2461,7 @@ const getSimulatorUnit = () => {
                     <div :key="activeTab">
         
         <!-- Módulo: Producción (Kanban) -->
-        <div v-if="activeTab === 'kanban'" class="p-4 md:p-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div v-if="activeTab === 'kanban'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div class="flex flex-col lg:flex-row items-center justify-between gap-8 mb-12 bg-white/40 dark:bg-gray-950/40 backdrop-blur-md p-8 md:p-10 rounded-[3rem] border border-white/60 dark:border-white/5 shadow-2xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden group">
             <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-1000"></div>
             <div class="relative z-10">
@@ -2550,7 +2558,7 @@ const getSimulatorUnit = () => {
         </div>
 
         <!-- Módulo: Finanzas (Accounting Dashboard) -->
-        <div v-if="activeTab === 'accounting'" class="p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'accounting'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <AccountingDashboard 
             :analytics="analyticsData"
             :loading="loadingAnalytics"
@@ -2560,7 +2568,7 @@ const getSimulatorUnit = () => {
         </div>
 
         <!-- Módulo: Inventario (Inventory Manager) -->
-        <div v-if="activeTab === 'inventory'" class="p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'inventory'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <InventoryManager 
             :inventory="inventoryData" 
             @add-item="modalState.newMaterial = true"
@@ -2571,7 +2579,7 @@ const getSimulatorUnit = () => {
         </div>
 
         <!-- Módulo: Registro de Compras (Purchase Log) -->
-        <div v-if="activeTab === 'purchases'" class="p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'purchases'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <PurchaseLog 
             :inventory="inventoryData"
             :suppliers="contacts.suppliers"
@@ -2581,7 +2589,7 @@ const getSimulatorUnit = () => {
         </div>
 
         <!-- Módulo: Historial de Pedidos -->
-        <div v-if="activeTab === 'history'" class="p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'history'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <OrderHistory 
             :orders="orders"
             :loadingAnalytics="loadingAnalytics"
@@ -2594,7 +2602,7 @@ const getSimulatorUnit = () => {
         </div>
 
         <!-- Módulo: Códigos y Descuentos -->
-        <div v-if="activeTab === 'discounts'" class="p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1400px] mx-auto">
+        <div v-if="activeTab === 'discounts'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1400px] mx-auto">
           <DiscountManager 
             :discounts="settings.discounts"
             @update-discounts="(newDiscounts) => { settings.discounts = newDiscounts; saveSettings(true) }"
@@ -2602,7 +2610,7 @@ const getSimulatorUnit = () => {
         </div>
 
         <!-- Módulo: Estado de la Granja (Machine Monitor) -->
-        <div v-if="activeTab === 'machines'" class="p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'machines'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <MachineMonitor 
             :printers="printers"
             :loading="loading"
@@ -2617,7 +2625,7 @@ const getSimulatorUnit = () => {
         </div>
 
         <!-- Módulo: Base de Contactos -->
-        <div v-if="activeTab === 'contacts'" class="p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'contacts'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <ContactManager 
             :customers="contacts.customers"
             :suppliers="contacts.suppliers"
@@ -2627,7 +2635,7 @@ const getSimulatorUnit = () => {
         </div>
 
         <!-- Módulo: Gestión Web (Landing Page Control) -->
-        <div v-if="activeTab === 'web'" class="p-4 md:p-8 lg:p-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1600px] mx-auto space-y-12 pb-12">
+        <div v-if="activeTab === 'web'" class="p-0 md:p-8 lg:p-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1600px] mx-auto space-y-12 pb-12">
             <!-- Header de Módulo -->
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 bg-white/40 dark:bg-gray-950/40 backdrop-blur-xl p-8 md:p-12 rounded-[4rem] border border-white/60 dark:border-white/5 shadow-2xl relative overflow-hidden group">
                 <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-1000"></div>
@@ -3141,7 +3149,7 @@ const getSimulatorUnit = () => {
         </div>
 
         <!-- Módulo: Configuración Global (Settings) -->
-        <div v-if="activeTab === 'settings'" class="p-4 md:p-8 lg:p-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1600px] mx-auto space-y-12 pb-12">
+        <div v-if="activeTab === 'settings'" class="p-0 md:p-8 lg:p-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1600px] mx-auto space-y-12 pb-12">
             <!-- Header Seccional Premium -->
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 bg-white/40 dark:bg-gray-950/40 backdrop-blur-xl p-8 md:p-12 rounded-[3rem] md:rounded-[4rem] border border-white/60 dark:border-white/5 shadow-2xl shadow-gray-200/30 dark:shadow-none relative overflow-hidden group">
               <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-1000"></div>
@@ -3535,7 +3543,7 @@ const getSimulatorUnit = () => {
                         <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Material Base (Filamento / Resina)</label>
                         <select v-model="simulator.material_id" class="w-full bg-gray-800 border-none rounded-2xl p-4 font-bold text-sm text-white outline-none focus:ring-2 focus:ring-primary">
                             <option value="">Seleccionar...</option>
-                            <option v-for="m in (inventoryData || []).filter(i => ['FDM', 'SLA'].includes(i.category))" :key="m.id" :value="m.id">{{ m.name }} ({{ m.category }})</option>
+                            <option v-for="m in (inventoryData || []).filter(i => i.type === 'material')" :key="m.id" :value="m.id">{{ m.name }} ({{ m.category }})</option>
                         </select>
                     </div>
 
@@ -3690,7 +3698,7 @@ const getSimulatorUnit = () => {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-12 flex-1">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 flex-1">
                     <div class="space-y-6">
                         <h5 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-white/10 pb-2">Costos Operativos</h5>
                         <div class="space-y-4">
@@ -3763,7 +3771,7 @@ const getSimulatorUnit = () => {
                         <!-- Panel de Provisiones Operativas -->
                         <div class="mt-10">
                             <h5 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 px-4">Provisiones y Gastos Operativos</h5>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-2 gap-3 md:gap-4">
                                 <div class="bg-gray-50 dark:bg-white/5 p-6 rounded-[2.5rem] border border-gray-100 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none transition-all group relative overflow-hidden">
                                     <p class="text-[9px] font-black text-gray-400 uppercase mb-3 text-center group-hover:text-primary transition-colors">Logística %</p>
                                     <div class="flex items-center justify-center">

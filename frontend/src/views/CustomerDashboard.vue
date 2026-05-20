@@ -73,7 +73,7 @@ const getStatusLabel = (status) => {
     <div class="fixed inset-0 technical-grid opacity-20 dark:opacity-10 pointer-events-none z-0"></div>
     <div class="fixed top-[-10%] right-[-10%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[180px] pointer-events-none z-0"></div>
     
-    <div class="max-w-7xl mx-auto py-10 px-6 relative z-10">
+    <div class="max-w-7xl mx-auto py-6 px-4 md:py-10 md:px-6 relative z-10">
         <!-- Header Industrial Deluxe -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 bg-white/80 dark:bg-black/60 backdrop-blur-3xl p-6 md:p-10 rounded-[3rem] border border-gray-200 dark:border-white/5 shadow-xl">
             <div class="flex items-center gap-6">
@@ -145,38 +145,40 @@ const getStatusLabel = (status) => {
                     <div v-for="order in orders" :key="order.id" class="group bg-white/60 dark:bg-white/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white dark:border-white/10 shadow-xl hover:shadow-primary/10 hover:border-primary/30 transition-all duration-500 relative overflow-hidden">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors"></div>
                         
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 relative z-10">
-                            <div class="flex items-center gap-8">
-                                <div class="w-20 h-20 bg-gray-50 dark:bg-gray-900 rounded-[2rem] flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-700 shadow-inner group-hover:rotate-6"><svg class="w-8 h-8 text-gray-400 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
-                                <div>
-                                    <div class="flex items-center gap-4 mb-2">
-                                        <h4 class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter group-hover:text-primary transition-colors">{{ order.project_name || 'Proyecto 3D' }}</h4>
-                                        <span class="text-[9px] font-black px-3 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 rounded-xl tracking-widest">#{{ order.id }}</span>
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-8 relative z-10">
+                            <div class="flex items-center gap-4 sm:gap-8">
+                                <div class="w-14 h-14 sm:w-20 sm:h-20 bg-gray-50 dark:bg-gray-900 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-700 shadow-inner group-hover:rotate-6 shrink-0">
+                                    <svg class="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2 sm:gap-4 mb-1 sm:mb-2">
+                                        <h4 class="text-base sm:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter truncate group-hover:text-primary transition-colors">{{ order.project_name || 'Proyecto 3D' }}</h4>
+                                        <span class="text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 rounded-lg sm:rounded-xl tracking-widest shrink-0">#{{ order.id }}</span>
                                     </div>
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-[10px] font-black text-primary uppercase tracking-widest">{{ order.material_name }}</span>
+                                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                        <span class="text-[9px] sm:text-[10px] font-black text-primary uppercase tracking-widest">{{ order.material_name }}</span>
                                         <span class="w-1 h-1 bg-gray-300 dark:bg-white/20 rounded-full"></span>
-                                        <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ order.estimated_weight_g }}g de masa</span>
+                                        <span class="text-[9px] sm:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ order.estimated_weight_g }}g de masa</span>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end border-t md:border-0 pt-6 md:pt-0 border-gray-100 dark:border-white/5">
-                                <div class="text-right hidden sm:block">
-                                    <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Estado de Manufactura</p>
-                                    <div class="flex items-center gap-3 justify-end">
-                                        <span class="w-2.5 h-2.5 rounded-full animate-pulse shadow-[0_0_8px_currentColor]" :class="getStatusColor(order.status)"></span>
-                                        <span class="text-[11px] font-black uppercase tracking-[0.2em]" :class="order.status === 'printing' ? 'text-primary' : 'text-gray-900 dark:text-white'">{{ getStatusLabel(order.status) }}</span>
+                            <div class="flex items-center gap-4 sm:gap-8 w-full md:w-auto justify-between md:justify-end border-t md:border-0 pt-6 md:pt-0 border-gray-100 dark:border-white/5">
+                                <div class="text-left sm:text-right">
+                                    <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 sm:mb-2">Estado</p>
+                                    <div class="flex items-center gap-2 sm:gap-3 sm:justify-end">
+                                        <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full animate-pulse shadow-[0_0_8px_currentColor]" :class="getStatusColor(order.status)"></span>
+                                        <span class="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em]" :class="order.status === 'printing' ? 'text-primary' : 'text-gray-900 dark:text-white'">{{ getStatusLabel(order.status) }}</span>
                                     </div>
                                 </div>
                                 <div class="flex flex-col items-end gap-1">
                                     <p class="text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest">Inversión</p>
-                                    <div class="text-2xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">
+                                    <div class="text-lg sm:text-2xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">
                                         ${{ Number(order.total_price).toLocaleString() }}
                                     </div>
                                 </div>
-                                <router-link :to="'/track?id=' + order.id" class="w-14 h-14 bg-gray-900 dark:bg-emerald-600 text-white rounded-2xl hover:bg-primary transition-all flex items-center justify-center shadow-xl hover:shadow-primary/30 group-hover:translate-x-1 duration-500">
-                                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                <router-link :to="'/track?id=' + order.id" class="w-10 h-10 sm:w-14 sm:h-14 bg-gray-900 dark:bg-emerald-600 text-white rounded-xl sm:rounded-2xl hover:bg-primary transition-all flex items-center justify-center shadow-xl hover:shadow-primary/30 group-hover:translate-x-1 duration-500 shrink-0">
+                                    <svg class="w-4 h-4 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                                 </router-link>
                             </div>
                         </div>

@@ -53,7 +53,7 @@ const sendMessage = (msg) => {
 </script>
 
 <template>
-  <div class="fixed bottom-8 right-8 z-[200] font-sans">
+  <div class="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-[200] font-sans flex flex-col items-end">
     <!-- Chat Window -->
     <transition
       enter-active-class="transition duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]"
@@ -63,10 +63,20 @@ const sendMessage = (msg) => {
       leave-from-class="opacity-100 translate-y-0 scale-100"
       leave-to-class="opacity-0 translate-y-20 scale-90"
     >
-      <div v-if="isOpen" class="absolute bottom-24 right-0 w-[380px] bg-white/90 dark:bg-gray-950/90 backdrop-blur-3xl rounded-[3rem] shadow-[0_40px_80px_rgba(0,0,0,0.5)] overflow-hidden border border-white/20 dark:border-white/10 flex flex-col animate-in slide-in-from-bottom-10 duration-700">
+      <div v-if="isOpen" class="absolute bottom-20 right-0 w-[calc(100vw-2rem)] sm:w-[380px] max-h-[calc(100vh-7rem)] bg-white/90 dark:bg-gray-950/90 backdrop-blur-3xl rounded-[3rem] shadow-[0_40px_80px_rgba(0,0,0,0.5)] overflow-hidden border border-white/20 dark:border-white/10 flex flex-col animate-in slide-in-from-bottom-10 duration-700">
         <!-- Header: Industrial Gradient -->
-        <div class="bg-gradient-to-br from-[#1e3a34] to-[#0a1f1a] p-10 text-white relative overflow-hidden border-b border-white/10">
+        <div class="bg-gradient-to-br from-[#1e3a34] to-[#0a1f1a] p-10 text-white relative overflow-hidden border-b border-white/10 flex-shrink-0">
             <div class="absolute -right-16 -top-16 w-48 h-48 bg-emerald-500/20 rounded-full blur-[60px] animate-pulse"></div>
+            <!-- Close Button in Header -->
+            <button 
+                @click="isOpen = false"
+                class="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all active:scale-95 z-20"
+                aria-label="Cerrar chat"
+            >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
             <div class="relative z-10">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
@@ -78,7 +88,7 @@ const sendMessage = (msg) => {
         </div>
 
         <!-- Body / Input -->
-        <div class="p-8 space-y-8">
+        <div class="p-8 space-y-8 overflow-y-auto flex-1 scrollbar-thin">
             <div class="relative group">
                 <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-primary/20 rounded-3xl blur opacity-0 group-focus-within:opacity-100 transition duration-1000"></div>
                 <textarea 
@@ -118,7 +128,7 @@ const sendMessage = (msg) => {
         </div>
 
         <!-- Footer: Industrial ID -->
-        <div class="p-6 bg-gray-50/50 dark:bg-white/5 border-t border-gray-100 dark:border-white/10 text-center relative overflow-hidden">
+        <div class="p-6 bg-gray-50/50 dark:bg-white/5 border-t border-gray-100 dark:border-white/10 text-center relative overflow-hidden flex-shrink-0">
             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent"></div>
             <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.6em] relative z-10 animate-pulse">N3XT 3D ASSISTANT ACTIVE</p>
         </div>
@@ -160,5 +170,19 @@ textarea::placeholder {
     letter-spacing: 0.1em;
     font-size: 10px;
     opacity: 0.5;
+}
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.2);
+    border-radius: 10px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.4);
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 const props = defineProps({
   activeTab: String,
@@ -8,6 +8,14 @@ const props = defineProps({
 
 const isDark = ref(localStorage.getItem('n3xt_theme') !== 'light')
 const showMobileMenu = ref(false)
+
+watch(showMobileMenu, (isOpen) => {
+  if (isOpen) {
+    document.body.classList.add('overflow-hidden')
+  } else {
+    document.body.classList.remove('overflow-hidden')
+  }
+})
 
 const toggleDarkMode = () => {
   isDark.value = !isDark.value
@@ -33,10 +41,14 @@ onMounted(() => {
   if (isDark.value) document.documentElement.classList.add('dark')
   isAdmin.value = !!localStorage.getItem('n3xt_admin_token')
 })
+
+onUnmounted(() => {
+  document.body.classList.remove('overflow-hidden')
+})
 </script>
 
 <template>
-  <header class="bg-white/80 dark:bg-[#0a0f14]/80 backdrop-blur-3xl px-6 md:px-12 py-5 flex justify-between items-center border-b border-gray-100 dark:border-white/5 sticky top-0 z-[100] w-full transition-colors duration-500">
+  <header class="bg-white/80 dark:bg-[#0a0f14]/80 backdrop-blur-3xl px-6 md:px-12 py-5 flex justify-between items-center border-b border-gray-100 dark:border-white/5 sticky top-0 w-full z-[1000] transition-colors duration-500">
     <router-link to="/" class="flex items-center gap-3 group">
       <img :src="logoSrc" @error="handleLogoError" alt="N3XT 3D Logo" class="h-14 md:h-16 w-auto cursor-pointer" />
       <div class="hidden xs:flex flex-col text-left">
@@ -71,36 +83,36 @@ onMounted(() => {
             <svg v-if="isDark" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
             <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
         </button>
-        <button @click="showMobileMenu = !showMobileMenu" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-white/5 rounded-xl text-emerald-500 border border-gray-200 dark:border-white/10 relative z-[110]">
+        <button @click="showMobileMenu = !showMobileMenu" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-white/5 rounded-xl text-emerald-500 border border-gray-200 dark:border-white/10 relative z-[1010]">
             <svg v-if="!showMobileMenu" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
             <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
-
-    <!-- Menú Móvil Overlay -->
-    <transition 
-      enter-active-class="transition duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]"
-      enter-from-class="opacity-0 translate-x-full"
-      enter-to-class="opacity-100 translate-x-0"
-      leave-active-class="transition duration-400 ease-[cubic-bezier(0.19,1,0.22,1)]"
-      leave-from-class="opacity-100 translate-x-0"
-      leave-to-class="opacity-0 translate-x-full"
-    >
-      <div v-if="showMobileMenu" class="fixed inset-0 z-[105] bg-white dark:bg-[#0a0f14]/95 backdrop-blur-3xl md:hidden flex flex-col items-center justify-center gap-8 p-12">
-        <div class="absolute inset-0 technical-grid opacity-10 pointer-events-none"></div>
-        
-        <router-link @click="showMobileMenu = false" to="/" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]">Inicio</router-link>
-        <router-link @click="showMobileMenu = false" to="/catalog" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]">Catálogo</router-link>
-        <router-link @click="showMobileMenu = false" to="/quote" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]">Cotizador</router-link>
-        <router-link @click="showMobileMenu = false" to="/track" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]">Rastrear</router-link>
-        <router-link @click="showMobileMenu = false" to="/project/init" class="text-xl font-black text-emerald-500 uppercase tracking-[0.4em]">Contacto</router-link>
-        
-        <router-link @click="showMobileMenu = false" :to="isAdmin ? '/admin' : '/admin/login'" class="mt-8 text-sm font-black uppercase tracking-[0.3em] bg-[#1e3a34] text-white px-12 py-5 rounded-3xl shadow-2xl">
-          {{ isAdmin ? 'Ir al Taller' : 'Acceso Taller' }}
-        </router-link>
-      </div>
-    </transition>
   </header>
+
+  <!-- Menú Móvil Overlay -->
+  <transition 
+    enter-active-class="transition duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]"
+    enter-from-class="opacity-0 translate-x-full"
+    enter-to-class="opacity-100 translate-x-0"
+    leave-active-class="transition duration-400 ease-[cubic-bezier(0.19,1,0.22,1)]"
+    leave-from-class="opacity-100 translate-x-0"
+    leave-to-class="opacity-0 translate-x-full"
+  >
+    <div v-if="showMobileMenu" class="fixed inset-0 z-[999] bg-white dark:bg-[#0a0f14] backdrop-blur-3xl md:hidden flex flex-col items-center justify-start overflow-y-auto gap-8 pt-28 pb-12 px-12">
+      <div class="absolute inset-0 technical-grid opacity-10 pointer-events-none"></div>
+      
+      <router-link @click="showMobileMenu = false" to="/" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]">Inicio</router-link>
+      <router-link @click="showMobileMenu = false" to="/catalog" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]">Catálogo</router-link>
+      <router-link @click="showMobileMenu = false" to="/quote" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]">Cotizador</router-link>
+      <router-link @click="showMobileMenu = false" to="/track" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]">Rastrear</router-link>
+      <router-link @click="showMobileMenu = false" to="/project/init" class="text-xl font-black text-emerald-500 uppercase tracking-[0.4em]">Contacto</router-link>
+      
+      <router-link @click="showMobileMenu = false" :to="isAdmin ? '/admin' : '/admin/login'" class="mt-8 text-sm font-black uppercase tracking-[0.3em] bg-[#1e3a34] text-white px-12 py-5 rounded-3xl shadow-2xl">
+        {{ isAdmin ? 'Ir al Taller' : 'Acceso Taller' }}
+      </router-link>
+    </div>
+  </transition>
 </template>
 
 <style scoped>
