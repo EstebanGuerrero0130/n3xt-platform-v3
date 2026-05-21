@@ -2268,6 +2268,28 @@ const getSimulatorUnit = () => {
   const mat = (inventoryData.value || []).find(m => String(m.id) === String(simulator.material_id))
   return mat?.category === 'SLA' ? 'Volumen (ML)' : 'Peso (Gramos)'
 }
+
+const handlePurgeAll = () => {
+  askConfirm(
+    'PELIGRO: PURGA DE PRODUCCIÓN',
+    'Esta acción eliminará de forma irreversible todos los pedidos, materiales, inventarios, clientes y maquinaria del sistema. Volverá el estado a CERO. ¿Estás seguro?',
+    'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+    async () => {
+      try {
+        await api.post('/admin/purge-all');
+        showNotify('SISTEMA PURGADO EXITOSAMENTE. ENTORNO CERO INICIADO.', 'success');
+        orders.value = [];
+        inventoryData.value = [];
+        printers.value = [];
+        contacts.customers = [];
+        contacts.suppliers = [];
+        syncAll(true);
+      } catch (err) {
+        showNotify('Error al purgar el sistema: ' + err.message, 'error');
+      }
+    }
+  );
+}
 </script>
 
 <template>
@@ -3212,9 +3234,19 @@ const getSimulatorUnit = () => {
 
                 <!-- Danger Zone -->
                 <div class="bg-rose-50/50 p-8 md:p-12 rounded-[3rem] border border-rose-100 shadow-xl shadow-rose-100/20 relative overflow-hidden group">
-                  <div class="relative z-10">
-                    <h3 class="text-xl font-black text-rose-900 uppercase tracking-tighter mb-2">Zona Crítica</h3>
-                    <p class="text-[10px] text-rose-400 font-bold uppercase mb-10 tracking-widest">Purga y mantenimiento profundo</p>
+                  <div class="relative z-10 flex flex-col items-center">
+                    <h3 class="text-xl font-black text-rose-900 uppercase tracking-tighter mb-2 text-center">Zona Crítica</h3>
+                    <p class="text-[10px] text-rose-400 font-bold uppercase mb-8 tracking-widest text-center">Purga y mantenimiento profundo</p>
+
+                    <button 
+                        @click="handlePurgeAll"
+                        class="px-8 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all duration-300 shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 active:scale-95 flex items-center gap-3 z-20 relative"
+                    >
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Ejecutar Purga Total
+                    </button>
 
                     <p class="text-[9px] text-rose-300 text-center mt-8 font-bold uppercase tracking-[0.3em] opacity-80">N3XT OS v3.2.4 Premium • Build Stable</p>
                   </div>
