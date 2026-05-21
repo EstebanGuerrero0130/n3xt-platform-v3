@@ -205,7 +205,7 @@ onMounted(() => {
             
             <div class="mt-auto pt-8 border-t border-gray-100 dark:border-white/5">
                <div class="flex flex-col items-center gap-1 mb-10">
-                  <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em] mb-2 italic">Inversión Estimada</p>
+                  <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em] mb-2 italic">Precio de Venta</p>
                   <p class="text-5xl font-black text-emerald-500 dark:text-emerald-400 tracking-tighter leading-none italic drop-shadow-[0_0_10px_rgba(16,185,129,0.2)]">
                     ${{ Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
                   </p>

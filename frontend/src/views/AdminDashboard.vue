@@ -24,6 +24,7 @@ const analyticsData = ref(null)
 const loading = ref(true)
 const loadingAnalytics = ref(false)
 const activeTab = ref('kanban')
+const editingCatalogItemIndex = ref(null)
 const isSidebarOpen = ref(false)
 const isDark = ref(localStorage.getItem('n3xt_theme') !== 'light')
 const webSubTab = ref('general')
@@ -1533,16 +1534,18 @@ const handleAddExtra = async () => {
 
 const handleCreateCatalogProduct = () => {
   const newProduct = {
-    name: 'Nuevo Producto',
+    name: '',
     category: 'General',
     subcategory: '',
     price: '0',
     original_price: '0',
     image: '',
+    images: [],
     description: '',
     status: 'active'
   }
-  settings.value.web.catalog.push(newProduct)
+  settings.value.web.catalog.unshift(newProduct)
+  editingCatalogItemIndex.value = 0
   showNotify('Nuevo producto creado en el borrador del catalogo', 'success')
 }
 
@@ -1566,12 +1569,15 @@ const isDiscounted = (item) => {
 }
 
 const scrollToCatalogItem = (index) => {
-  const el = document.getElementById(`catalog-item-${index}`)
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    el.classList.add('ring-4', 'ring-primary/50', 'transition-all')
-    setTimeout(() => el.classList.remove('ring-4', 'ring-primary/50'), 2000)
-  }
+  editingCatalogItemIndex.value = index
+  setTimeout(() => {
+      const el = document.getElementById(`catalog-item-${index}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.classList.add('ring-4', 'ring-primary/50', 'transition-all')
+        setTimeout(() => el.classList.remove('ring-4', 'ring-primary/50'), 2000)
+      }
+  }, 50)
 }
 
 const groupedCatalog = computed(() => {
@@ -2901,8 +2907,9 @@ const handlePurgeAll = () => {
                         </div>
 
                         <div class="space-y-16">
-                            <div v-for="(item, index) in settings.web.catalog" :key="index" :id="`catalog-item-${index}`" class="p-10 md:p-12 bg-gray-50 dark:bg-white/5 rounded-[3.5rem] border border-gray-200 dark:border-white/5 relative group/card transition-all hover:bg-white dark:hover:bg-white/10">
-                                <button @click="settings.web.catalog.splice(index, 1)" class="absolute top-8 right-8 w-10 h-10 bg-rose-500/10 text-rose-500 rounded-xl flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white">✕</button>
+                            <template v-for="(item, index) in settings.web.catalog" :key="index">
+                              <div v-if="editingCatalogItemIndex === index" :id="`catalog-item-${index}`" class="p-10 md:p-12 bg-gray-50 dark:bg-white/5 rounded-[3.5rem] border border-gray-200 dark:border-white/5 relative group/card transition-all hover:bg-white dark:hover:bg-white/10">
+                                <button @click="settings.web.catalog.splice(index, 1); editingCatalogItemIndex = null" class="absolute top-8 right-8 w-10 h-10 bg-rose-500/10 text-rose-500 rounded-xl flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white">✕</button>
                                 
                                 <div v-if="isDiscounted(item)" class="absolute -top-4 left-10 px-6 py-2 bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-xl animate-bounce z-20">
                                      EN DESCUENTO
@@ -2955,23 +2962,28 @@ const handlePurgeAll = () => {
                                             </select>
                                         </div>
                                         <div class="space-y-3">
-                                            <label class="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2 block">Imagen Principal (URL)</label>
-                                            <div class="aspect-square bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-white/10 flex items-center justify-center relative group/img">
-                                                <img v-if="item.image" :src="item.image" class="w-full h-full object-cover" />
+                                            <label class="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2 block">Imágenes (Selecciona Múltiples)</label>
+                                            <div class="aspect-square bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-white/10 flex flex-wrap items-center justify-center relative group/img gap-1 p-2">
+                                                <template v-if="item.images && item.images.length > 0">
+                                                    <div v-for="(img, imgIdx) in item.images" :key="imgIdx" class="w-1/3 aspect-square relative border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
+                                                        <img :src="img" class="w-full h-full object-cover" />
+                                                        <button @click="item.images.splice(imgIdx, 1)" class="absolute top-1 right-1 bg-rose-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px]">✕</button>
+                                                    </div>
+                                                </template>
+                                                <img v-else-if="item.image" :src="item.image" class="w-full h-full object-cover" />
                                                 <svg v-else class="w-10 h-10 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-4 opacity-0 group-hover/img:opacity-100 transition-opacity">
-                                                    <input type="text" v-model="item.image" placeholder="Pegar URL..." class="w-full bg-white text-gray-900 rounded-lg p-2 text-[8px] font-mono mb-2">
-                                                    <button @click="triggerProductUpload(index)" class="w-full py-2 bg-primary text-white rounded-lg text-[9px] font-black uppercase mb-2">Subir y Optimizar SEO</button>
-                                                    <input type="file" :id="'product-upload-' + index" @change="handleImageUploadSEO($event, item, 'name')" accept="image/*" class="hidden">
-                                                    <span class="text-[8px] text-white font-black uppercase italic text-center">Formato WebP Progresivo Auto</span>
+                                                <div class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-4 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                                                    <input type="text" v-model="item.image" placeholder="Main URL fallback..." class="w-full bg-white text-gray-900 rounded-lg p-2 text-[8px] font-mono mb-2">
+                                                    <button @click="triggerProductUpload(index)" class="w-full py-2 bg-primary text-white rounded-lg text-[9px] font-black uppercase mb-2">Subir Múltiples</button>
+                                                    <input type="file" :id="'product-upload-' + index" multiple @change="handleMultipleImagesUploadSEO($event, item, 'name')" accept="image/*" class="hidden">
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                              </div>
+                            </template>
                         </div>
-
                         <!-- Apartado de Productos Creados (Vista Previa Grupal) -->
                         <div class="mt-24 pt-20 border-t-4 border-dashed border-gray-100 dark:border-white/5">
                              <h4 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic mb-12 text-center">Visualización por Categorías</h4>
