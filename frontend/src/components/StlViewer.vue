@@ -48,6 +48,7 @@ let needsUpdate = true; // Bandera para renderizado por demanda
 let animationFrameId = null
 let baseVolume = 0
 let resizeObserver = null
+let loadingTimeout = null
 
 onMounted(() => {
   generateCaptcha()
@@ -63,6 +64,7 @@ onBeforeUnmount(() => {
     resizeObserver.unobserve(container.value)
   }
   if (animationFrameId) cancelAnimationFrame(animationFrameId)
+  if (loadingTimeout) clearTimeout(loadingTimeout)
   
   // Limpieza profunda de memoria
   scene?.traverse((object) => {
@@ -96,12 +98,18 @@ const initThree = () => {
   camera.position.set(200, 200, 200)
 
   // Renderer (Optimizado para modelos pesados)
-  renderer = new THREE.WebGLRenderer({ 
-    antialias: window.devicePixelRatio < 2,
-    alpha: true,
-    powerPreference: 'high-performance',
-    logarithmicDepthBuffer: true // Evita z-fighting en modelos grandes
-  })
+  try {
+    renderer = new THREE.WebGLRenderer({ 
+      antialias: window.devicePixelRatio < 2,
+      alpha: true,
+      powerPreference: 'high-performance',
+      logarithmicDepthBuffer: true // Evita z-fighting en modelos grandes
+    })
+  } catch (e) {
+    console.error('N3XT: WebGL no disponible', e)
+    emit('error', 'Tu dispositivo no soporta WebGL. Intenta desde otro navegador.')
+    return
+  }
   renderer.setSize(width, height)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)) // Limitar para rendimiento en modelos densos
   renderer.shadowMap.enabled = true
@@ -433,6 +441,7 @@ const processGeometry = (geometry, file) => {
 
   hasModel.value = true
   isLoading.value = false
+  if (loadingTimeout) clearTimeout(loadingTimeout)
   emit('loading', false)
   
   // Auto-Orientación Inicial (Aplanar por defecto si es muy alto)
@@ -465,6 +474,16 @@ const loadFile = (file) => {
 
   isLoading.value = true
   emit('loading', true)
+  
+  // N3XT Safety: Timeout para evitar estado de carga infinito
+  if (loadingTimeout) clearTimeout(loadingTimeout)
+  loadingTimeout = setTimeout(() => {
+    if (isLoading.value) {
+      isLoading.value = false
+      emit('loading', false)
+      emit('error', 'El procesamiento tardó demasiado. Intenta con un archivo más ligero o verifica tu conexión.')
+    }
+  }, 15000) // 15 segundos máximo
 
   const reader = new FileReader()
   reader.onload = (event) => {
@@ -521,8 +540,9 @@ const loadFile = (file) => {
     } catch (err) {
       console.error(err)
       isLoading.value = false
+      if (loadingTimeout) clearTimeout(loadingTimeout)
       emit('loading', false)
-      emit('error', 'Error al procesar el archivo 3D')
+      emit('error', 'Error al procesar el archivo 3D. Verifica que el formato sea correcto.')
     }
   }
   

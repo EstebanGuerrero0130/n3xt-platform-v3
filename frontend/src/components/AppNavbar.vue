@@ -48,7 +48,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <header class="bg-white/80 dark:bg-[#0a0f14]/80 backdrop-blur-3xl px-6 md:px-12 py-5 flex justify-between items-center border-b border-gray-100 dark:border-white/5 sticky top-0 w-full z-[1000] transition-colors duration-500">
+  <header role="banner" class="bg-white/80 dark:bg-[#0a0f14]/80 backdrop-blur-3xl px-6 md:px-12 py-5 flex justify-between items-center border-b border-gray-100 dark:border-white/5 sticky top-0 w-full z-[1000] transition-colors duration-500">
     <router-link to="/" class="flex items-center gap-3 group">
       <img :src="logoSrc" @error="handleLogoError" alt="N3XT 3D Logo" class="h-14 md:h-16 w-auto cursor-pointer" />
       <div class="hidden xs:flex flex-col text-left">
@@ -56,7 +56,7 @@ onUnmounted(() => {
       </div>
     </router-link>
 
-    <nav class="hidden md:flex gap-10 items-center">
+    <nav role="navigation" aria-label="Navegación principal" class="hidden md:flex gap-10 items-center">
       <router-link to="/" :class="['text-[10px] font-black uppercase tracking-[0.2em] transition-all pb-1 border-b-2', activeTab === 'home' ? 'text-emerald-500 border-emerald-500' : 'text-gray-400 border-transparent hover:text-emerald-500']">Inicio</router-link>
       <router-link to="/catalog" :class="['text-[10px] font-black uppercase tracking-[0.2em] transition-all pb-1 border-b-2', activeTab === 'catalog' ? 'text-emerald-500 border-emerald-500' : 'text-gray-400 border-transparent hover:text-emerald-500']">Catálogo</router-link>
       <router-link to="/quote" :class="['text-[10px] font-black uppercase tracking-[0.2em] transition-all pb-1 border-b-2', activeTab === 'quote' ? 'text-emerald-500 border-emerald-500' : 'text-gray-400 border-transparent hover:text-emerald-500']">Cotizador</router-link>
@@ -66,6 +66,7 @@ onUnmounted(() => {
       <!-- Dark Mode Toggle -->
       <button 
           @click="toggleDarkMode" 
+          :aria-label="isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
           class="w-10 h-10 bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-emerald-500 rounded-xl flex items-center justify-center transition-all active:scale-90 border border-gray-200 dark:border-white/10 ml-4"
       >
           <svg v-if="isDark" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
@@ -79,11 +80,11 @@ onUnmounted(() => {
 
     <!-- Mobile Menu Icon -->
     <div class="md:hidden flex items-center gap-4">
-        <button @click="toggleDarkMode" class="w-10 h-10 bg-gray-100 dark:bg-white/5 text-emerald-500 rounded-xl flex items-center justify-center border border-gray-200 dark:border-white/10">
+        <button @click="toggleDarkMode" :aria-label="isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'" class="w-10 h-10 bg-gray-100 dark:bg-white/5 text-emerald-500 rounded-xl flex items-center justify-center border border-gray-200 dark:border-white/10">
             <svg v-if="isDark" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
             <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
         </button>
-        <button @click="showMobileMenu = !showMobileMenu" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-white/5 rounded-xl text-emerald-500 border border-gray-200 dark:border-white/10 relative z-[1010]">
+        <button @click="showMobileMenu = !showMobileMenu" :aria-expanded="showMobileMenu" aria-label="Menú de navegación" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-white/5 rounded-xl text-emerald-500 border border-gray-200 dark:border-white/10 relative z-[1010]">
             <svg v-if="!showMobileMenu" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
             <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>

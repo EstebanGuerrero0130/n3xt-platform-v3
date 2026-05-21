@@ -1,13 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import QuoteView from '../views/QuoteView.vue'
-import HomeView from '../views/HomeView.vue'
-import LoginView from '../views/LoginView.vue'
-import AdminDashboard from '../views/AdminDashboard.vue'
-import TrackView from '../views/TrackView.vue'
-import CustomerDashboard from '../views/CustomerDashboard.vue'
-import CatalogView from '../views/CatalogView.vue'
-import ProductDetailView from '../views/ProductDetailView.vue'
-import ProjectInitView from '../views/ProjectInitView.vue'
+
+// Lazy-loaded routes for code splitting (N3XT Performance Protocol)
+const HomeView = () => import('../views/HomeView.vue')
+const QuoteView = () => import('../views/QuoteView.vue')
+const CatalogView = () => import('../views/CatalogView.vue')
+const ProductDetailView = () => import('../views/ProductDetailView.vue')
+const TrackView = () => import('../views/TrackView.vue')
+const ProjectInitView = () => import('../views/ProjectInitView.vue')
+const LoginView = () => import('../views/LoginView.vue')
+const AdminDashboard = () => import('../views/AdminDashboard.vue')
+const CustomerDashboard = () => import('../views/CustomerDashboard.vue')
 
 const router = createRouter({
   history: createWebHistory(),

@@ -1549,20 +1549,11 @@ const handleCreateCatalogProduct = () => {
 const handleResetCatalog = () => {
   askConfirm(
     'Reiniciar Catalogo',
-    '¿Estás seguro de que deseas restablecer el catálogo? Se perderán todos los cambios no publicados y se volverá a la configuración de fábrica de N3XT.',
+    '¿Estás seguro de que deseas restablecer el catálogo? Se eliminarán todos los productos y podrás empezar de cero.',
     '',
     () => {
-      settings.value.web.catalog = [
-        { 
-          name: 'Mjolnir (Martillo de Thor)', 
-          category: 'Props', 
-          image: '/assets/n3xt_catalog_mjolnir_hammer_1778543149399.png', 
-          price: 'Cotizar', 
-          description: 'Acabado metálico real. Escala 1:1.',
-          status: 'active'
-        }
-      ]
-      showNotify('Catálogo restablecido al estado de fábrica', 'warning')
+      settings.value.web.catalog = []
+      showNotify('Catálogo limpio. Crea tus productos desde cero.', 'warning')
     }
   )
 }
@@ -2450,7 +2441,7 @@ const getSimulatorUnit = () => {
         </header>
 
         <!-- VIEWPORT: DINAMIC CONTENT -->
-        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative p-4 md:p-12 bg-transparent">
+        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative p-3 pb-24 md:p-12 md:pb-12 bg-transparent">
             
             <div class="w-full max-w-[1600px] mx-auto">
                 <transition 
@@ -3389,6 +3380,29 @@ const getSimulatorUnit = () => {
                 </transition>
             </div> <!-- Cierre max-w -->
         </div> <!-- Cierre Scrollable Container -->
+        
+        <!-- Mobile Bottom Nav -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-black/80 backdrop-blur-3xl border-t border-gray-100 dark:border-white/5 z-40 pb-safe">
+            <div class="flex items-center justify-around p-2">
+                <button v-for="item in [
+                    { id: 'kanban', label: 'Inicio', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+                    { id: 'inventory', label: 'Material', icon: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4a2 2 0 012-2m16 0h-2M4 13H6m8 10V10m-4 10V10' },
+                    { id: 'machines', label: 'Máquinas', icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
+                    { id: 'analytics', label: 'Métricas', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+                    { id: 'settings', label: 'Ajustes', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }
+                ]" 
+                :key="item.id"
+                @click="activeTab = item.id === 'analytics' ? 'accounting' : item.id"
+                class="flex flex-col items-center p-2 rounded-xl transition-colors min-w-[64px]"
+                :class="activeTab === (item.id === 'analytics' ? 'accounting' : item.id) ? 'text-primary' : 'text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+                >
+                    <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
+                    </svg>
+                    <span class="text-[9px] font-bold uppercase tracking-wider">{{ item.label }}</span>
+                </button>
+            </div>
+        </nav>
     </main> <!-- Cierre Main Content Area -->
 
 <!-- Modals -->
