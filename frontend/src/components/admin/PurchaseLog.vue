@@ -356,11 +356,24 @@ const generatePDFReport = () => {
   doc.close();
 
   setTimeout(() => {
-    iframe.contentWindow.print();
-    setTimeout(() => {
-        document.body.removeChild(iframe);
-    }, 1000);
-  }, 500);
+    const imgs = iframe.contentWindow.document.images;
+    let loaded = 0;
+    const print = () => { 
+        iframe.contentWindow.print(); 
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+    };
+    
+    if (imgs.length === 0) { setTimeout(print, 250); } 
+    else {
+        let printed = false;
+        const onload = () => { if (++loaded === imgs.length && !printed) { printed = true; setTimeout(print, 250); } };
+        for (let i = 0; i < imgs.length; i++) {
+            if (imgs[i].complete) onload();
+            else { imgs[i].onload = onload; imgs[i].onerror = onload; }
+        }
+        setTimeout(() => { if (!printed) { printed = true; print(); } }, 3000);
+    }
+  }, 50);
 }
 
 const stats = computed(() => {

@@ -215,10 +215,19 @@ const handleDownloadShippingLabel = (customer) => {
     printWindow.document.open();
     printWindow.document.write(content);
     printWindow.document.close();
-    setTimeout(() => { 
-        printWindow.focus();
-        printWindow.print(); 
-    }, 500);
+    const imgs = printWindow.document.images;
+    let loaded = 0;
+    const print = () => { printWindow.focus(); printWindow.print(); };
+    if (imgs.length === 0) { setTimeout(print, 250); } 
+    else {
+        let printed = false;
+        const onload = () => { if (++loaded === imgs.length && !printed) { printed = true; setTimeout(print, 250); } };
+        for (let i = 0; i < imgs.length; i++) {
+            if (imgs[i].complete) onload();
+            else { imgs[i].onload = onload; imgs[i].onerror = onload; }
+        }
+        setTimeout(() => { if (!printed) { printed = true; print(); } }, 3000);
+    }
 }
 </script>
 
