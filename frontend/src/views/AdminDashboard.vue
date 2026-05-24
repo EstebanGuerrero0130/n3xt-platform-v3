@@ -688,7 +688,8 @@ const handleDownloadShippingLabel = (order) => {
         document.body.appendChild(iframe);
     }
 
-    const companyLogo = settings.value.company_logo ? (settings.value.company_logo.startsWith('http') ? settings.value.company_logo : api.storageUrl + '/' + settings.value.company_logo) : '/logo.png';
+    const getAbsoluteUrl = (path) => path.startsWith('http') ? path : window.location.origin + (path.startsWith('/') ? '' : '/') + path;
+    const companyLogo = settings.value.company_logo ? getAbsoluteUrl(settings.value.company_logo.startsWith('http') ? settings.value.company_logo : api.storageUrl + '/' + settings.value.company_logo) : window.location.origin + '/logo.png';
 
     const content = `
         <html>
@@ -750,7 +751,7 @@ const handleDownloadShippingLabel = (order) => {
                         <div class="info-card">
                             <span class="card-label">Remitente (Origen)</span>
                             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                                ${companyLogo ? `<img src="${companyLogo}" style="height: 45px; width: auto;">` : ''}
+                                ${companyLogo ? `<img src="${companyLogo}" style="height: 45px; max-width: 180px; width: auto; object-fit: contain;">` : ''}
                                 <div class="name" style="font-size: 18px;">${settings.value.company?.name || 'N3XT 3D'}</div>
                             </div>
                             ${settings.value.company?.nit ? `<div class="company">NIT: ${settings.value.company.nit}</div>` : ''}
@@ -837,7 +838,8 @@ const handleDownloadSimulationPDF = () => {
 
 const handleDownloadQuotePDF = (order) => {
   const mat = inventoryData.value.find(m => String(m.id) === String(order.material_id));
-  const companyLogo = settings.value.company_logo ? (settings.value.company_logo.startsWith('http') ? settings.value.company_logo : api.storageUrl + '/' + settings.value.company_logo) : '/logo.png';
+  const getAbsoluteUrl = (path) => path.startsWith('http') ? path : window.location.origin + (path.startsWith('/') ? '' : '/') + path;
+  const companyLogo = settings.value.company_logo ? getAbsoluteUrl(settings.value.company_logo.startsWith('http') ? settings.value.company_logo : api.storageUrl + '/' + settings.value.company_logo) : window.location.origin + '/logo.png';
   
   const trackingUrl = `${window.location.origin}/#/track?order_id=${order.id}&email=${order.customer_email || ''}`
   
@@ -856,7 +858,7 @@ const handleDownloadQuotePDF = (order) => {
                     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 5px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
                     
                     .company-brand { display: flex; align-items: center; gap: 20px; }
-                    .company-logo { height: 70px; width: auto; object-fit: contain; }
+                    .company-logo { height: 70px; max-width: 250px; width: auto; object-fit: contain; }
                     .logo-text { font-size: 32px; font-weight: 900; letter-spacing: -1.5px; text-transform: uppercase; color: #0f172a; }
                     .logo-text span { color: #10b981; }
                     
@@ -1850,7 +1852,8 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
     }
     
     const company = settings.value.company || { name: 'N3XT 3D Technology', nit: 'N/A' };
-    const companyLogo = settings.value.company_logo ? (settings.value.company_logo.startsWith('http') ? settings.value.company_logo : api.storageUrl + '/' + settings.value.company_logo) : '/logo.png';
+    const getAbsoluteUrl = (path) => path.startsWith('http') ? path : window.location.origin + (path.startsWith('/') ? '' : '/') + path;
+    const companyLogo = settings.value.company_logo ? getAbsoluteUrl(settings.value.company_logo.startsWith('http') ? settings.value.company_logo : api.storageUrl + '/' + settings.value.company_logo) : window.location.origin + '/logo.png';
     let content = '';
 
     if (type === 'metrics') {
@@ -1888,7 +1891,7 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
               }
               
               .brand-box { display: flex; align-items: center; gap: 15px; }
-              .logo-img { height: 55px; width: auto; object-fit: contain; }
+              .logo-img { height: 55px; max-width: 200px; width: auto; object-fit: contain; }
               .brand-info h1 { 
                 font-size: 26px; 
                 font-weight: 900; 

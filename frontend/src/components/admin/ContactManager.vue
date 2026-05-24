@@ -137,7 +137,8 @@ const handleDownloadShippingLabel = (customer) => {
     }
 
     const currentLogo = settings.value?.company_logo;
-    const logoUrl = currentLogo ? (currentLogo.startsWith('http') ? currentLogo : api.storageUrl + '/' + currentLogo) : null;
+    const getAbsoluteUrl = (path) => path.startsWith('http') ? path : window.location.origin + (path.startsWith('/') ? '' : '/') + path;
+    const logoUrl = currentLogo ? getAbsoluteUrl(currentLogo.startsWith('http') ? currentLogo : api.storageUrl + '/' + currentLogo) : window.location.origin + '/logo.png';
 
     const content = `
         <html>

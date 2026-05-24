@@ -194,6 +194,8 @@ const generatePDFReport = () => {
     `;
   });
 
+  const companyLogo = props.settings.company_logo ? (props.settings.company_logo.startsWith('http') ? props.settings.company_logo : api.storageUrl + '/' + props.settings.company_logo) : window.location.origin + '/logo.png';
+
   const content = `
     <html>
       <head>
@@ -284,7 +286,7 @@ const generatePDFReport = () => {
 
         <div class="header">
           <div class="logo-container">
-            ${props.settings.company_logo ? `<img src="${api.storageUrl}/${props.settings.company_logo}" style="height: 60px; width: auto; object-fit: contain;" onerror="this.src='/logo.png'">` : `<img src="/logo.png" style="height: 60px; width: auto; object-fit: contain;">`}
+            <img src="${companyLogo}" style="height: 60px; max-width: 200px; width: auto; object-fit: contain;">
             <div class="logo-text">
                ${props.settings.company?.name || 'N3XT 3D'}<br>
                <span style="font-size: 10px; font-weight: 600; color: #64748b; letter-spacing: 0;">

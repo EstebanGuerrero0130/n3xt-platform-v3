@@ -18,36 +18,49 @@ const props = defineProps({
 
 const chartData = computed(() => {
   const monthly = props.analytics?.monthly ? [...props.analytics.monthly] : []
+  
+  // Custom gradients can be added via canvas context, but for now we use nice modern colors with opacity
   return {
     labels: monthly.map(m => m.month),
     datasets: [
       {
         label: 'Ventas (Ingresos)',
         data: monthly.map(m => m.revenue),
-        borderColor: '#1e3a34',
-        backgroundColor: 'rgba(30, 58, 52, 0.05)',
+        borderColor: '#10b981', // emerald-500
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
         fill: true,
         tension: 0.4,
         pointRadius: 4,
+        pointBackgroundColor: '#10b981',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
         borderWidth: 3
       },
       {
         label: 'Gastos Operativos',
         data: monthly.map(m => m.expenses),
-        borderColor: '#e11d48',
-        backgroundColor: 'transparent',
+        borderColor: '#f43f5e', // rose-500
+        backgroundColor: 'rgba(244, 63, 94, 0.05)',
         borderDash: [5, 5],
+        fill: true,
         tension: 0.4,
-        pointRadius: 0,
+        pointRadius: 4,
+        pointBackgroundColor: '#f43f5e',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
         borderWidth: 2
       },
       {
         label: 'Utilidad Neta',
         data: monthly.map(m => m.profit),
-        borderColor: '#6366f1',
-        backgroundColor: 'transparent',
+        borderColor: '#6366f1', // indigo-500
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+        fill: true,
         tension: 0.4,
         pointRadius: 4,
+        pointBackgroundColor: '#6366f1',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
         borderWidth: 3
       }
     ]
@@ -60,15 +73,14 @@ const techData = computed(() => {
     labels: counts.map(c => c.technology),
     datasets: [{
       data: counts.map(c => c.count),
-      backgroundColor: ['#1e3a34', '#0f172a', '#6366f1'],
-      borderWidth: 4,
-      borderColor: '#ffffff',
-      hoverOffset: 20
+      backgroundColor: ['#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'],
+      borderWidth: 0,
+      hoverOffset: 15
     }]
   }
 })
 
-const chartOptions = {
+const lineChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   interaction: {
@@ -84,16 +96,19 @@ const chartOptions = {
         usePointStyle: true,
         pointStyle: 'circle',
         padding: 20,
-        font: { size: 10, weight: 'black' }
+        color: '#94a3b8',
+        font: { size: 11, weight: 'bold', family: 'Outfit, sans-serif' }
       }
     },
     tooltip: {
-      backgroundColor: '#111827',
-      titleFont: { size: 12, weight: 'bold' },
-      bodyFont: { size: 14, weight: 'black' },
-      padding: 16,
-      cornerRadius: 12,
+      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+      titleFont: { size: 13, weight: 'bold', family: 'Outfit, sans-serif' },
+      bodyFont: { size: 12, weight: '600', family: 'Outfit, sans-serif' },
+      padding: 14,
+      cornerRadius: 16,
       displayColors: true,
+      borderColor: 'rgba(255,255,255,0.1)',
+      borderWidth: 1,
       callbacks: {
         label: (context) => `${context.dataset.label}: ${formatPrice(context.raw)}`
       }
@@ -101,18 +116,54 @@ const chartOptions = {
   },
   scales: {
     y: {
-      grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false },
+      grid: { color: 'rgba(148, 163, 184, 0.1)', drawBorder: false },
+      border: { display: false },
       ticks: { 
         color: '#94a3b8',
-        font: { weight: 'bold', size: 10 }, 
-        callback: (v) => '$' + v.toLocaleString() 
+        font: { weight: '600', size: 10, family: 'Outfit, sans-serif' }, 
+        callback: (v) => '$' + v.toLocaleString(),
+        padding: 10
       }
     },
     x: {
       grid: { display: false },
+      border: { display: false },
       ticks: { 
         color: '#94a3b8',
-        font: { weight: 'bold', size: 10 } 
+        font: { weight: '600', size: 10, family: 'Outfit, sans-serif' },
+        padding: 10
+      }
+    }
+  }
+}
+
+const doughnutChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutout: '75%',
+  plugins: {
+    legend: { 
+      display: true, 
+      position: 'right',
+      labels: {
+        usePointStyle: true,
+        pointStyle: 'circle',
+        padding: 20,
+        color: '#94a3b8',
+        font: { size: 12, weight: 'bold', family: 'Outfit, sans-serif' }
+      }
+    },
+    tooltip: {
+      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+      titleFont: { size: 13, weight: 'bold', family: 'Outfit, sans-serif' },
+      bodyFont: { size: 13, weight: '800', family: 'Outfit, sans-serif' },
+      padding: 14,
+      cornerRadius: 16,
+      displayColors: true,
+      borderColor: 'rgba(255,255,255,0.1)',
+      borderWidth: 1,
+      callbacks: {
+        label: (context) => ` ${context.label}: ${context.raw} pedidos`
       }
     }
   }
@@ -403,7 +454,7 @@ const selectOrder = (id) => {
             </div>
           </div>
           <div class="h-[300px]">
-            <Line :data="chartData" :options="chartOptions" />
+            <Line :data="chartData" :options="lineChartOptions" />
           </div>
         </div>
 
@@ -414,8 +465,11 @@ const selectOrder = (id) => {
               <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase">Distribución de Pedidos</p>
             </div>
           </div>
-          <div class="h-[300px]">
-            <Doughnut :data="techData" :options="chartOptions" />
+          <div class="h-[300px] flex items-center justify-center relative">
+            <Doughnut :data="techData" :options="doughnutChartOptions" />
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none -ml-28">
+              <!-- El text centrado dependerá del offset de la leyenda, ajustamos un poco hacia la izq con -ml-28 -->
+            </div>
           </div>
         </div>
       </div>
