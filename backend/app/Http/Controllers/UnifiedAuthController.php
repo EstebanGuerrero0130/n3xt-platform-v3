@@ -7,6 +7,7 @@ use App\Models\RecurrentCustomer;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class UnifiedAuthController extends Controller
@@ -36,13 +37,11 @@ class UnifiedAuthController extends Controller
         // 1. Try to find an Admin (User model)
         $admin = User::where('email', $email)->first();
         if ($admin) {
-            // Bypass de contraseña para el administrador por IP (Modo Taller) solicitado por el usuario
-            $isLocalIP = in_array($request->ip(), ['127.0.0.1', '::1', 'localhost']);
-            
-            if ($isLocalIP || Hash::check($request->password, $admin->password)) {
-                $token = $admin->createToken('admin_token')->plainTextToken;
+            if (Hash::check($request->password, $admin->password)) {
+                // Sanctum SPA: use session auth instead of tokens
+                Auth::login($admin);
+                $request->session()->regenerate();
                 return $this->success([
-                    'token' => $token,
                     'role'  => 'admin',
                     'user'  => [
                         'name'  => $admin->name,
@@ -60,9 +59,10 @@ class UnifiedAuthController extends Controller
 
         $customer = RecurrentCustomer::where('email', $email)->first();
         if ($customer && Hash::check($request->password, $customer->password)) {
-            $token = $customer->createToken('customer_token')->plainTextToken;
+            // Sanctum SPA: use session auth instead of tokens
+            Auth::guard('customer')->login($customer);
+            $request->session()->regenerate();
             return $this->success([
-                'token' => $token,
                 'role'  => 'customer',
                 'user'  => [
                     'id'    => $customer->id,
@@ -92,10 +92,11 @@ class UnifiedAuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $token = $customer->createToken('customer_token')->plainTextToken;
+        // Sanctum SPA: log in via session
+        Auth::guard('customer')->login($customer);
+        $request->session()->regenerate();
 
         return $this->success([
-            'token' => $token,
             'role'  => 'customer',
             'user'  => [
                 'id'    => $customer->id,

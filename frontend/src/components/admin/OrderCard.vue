@@ -1,11 +1,11 @@
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed, type PropType } from 'vue'
 
 const props = defineProps({
-  order: { type: Object, required: true }
+  order: { type: Object as PropType<any>, required: true }
 })
 
-const emit = defineEmits(['assign', 'download', 'view', 'delete', 'download-pdf', 'update-status', 'toggle-paid'])
+const emit = defineEmits(['assign', 'download', 'view', 'download-pdf', 'update-status', 'toggle-paid'])
 
 const statusOrder = ['pending', 'printing', 'post-processing', 'completed', 'shipped']
 
@@ -63,21 +63,24 @@ const isStalled = computed(() => {
 </script>
 
 <template>
-  <div :class="[
-    'bg-white dark:bg-gray-900 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-10 shadow-xl border transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] group relative overflow-hidden active:scale-[0.98] hover:-translate-y-1 hover:shadow-2xl',
-    isStalled ? 'border-rose-400 shadow-2xl shadow-rose-500/10' : 'border-gray-100 dark:border-white/5 hover:border-primary/30',
+  <div
+:class="[
+    'bg-white dark:bg-[#151a22] rounded-[24px] p-6 md:p-10 shadow-xl border transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] group relative overflow-hidden active:scale-[0.98] hover:-translate-y-1 hover:shadow-2xl',
+    isStalled ? 'border-rose-400 shadow-2xl shadow-rose-500/10' : 'border-gray-100 dark:border-[#21262d] hover:border-primary/30',
     order.status === 'printing' ? 'ring-4 ring-primary/20' : ''
   ]">
 
     <!-- Dynamic Glow on Hover -->
     <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
 
-    <div :class="[
+    <div
+:class="[
         'absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rotate-45 transition-transform group-hover:scale-110 duration-500',
         order.technology === 'FDM' ? 'bg-indigo-600/10' : 'bg-primary/10',
         'pointer-events-none'
     ]"></div>
-    <div :class="[
+    <div
+:class="[
         'absolute top-4 right-4 flex items-center gap-2 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] shadow-lg',
         order.technology === 'FDM' ? 'bg-indigo-600 text-white shadow-indigo-500/20' : 'bg-primary text-white shadow-primary/20'
     ]">
@@ -89,9 +92,9 @@ const isStalled = computed(() => {
     <div class="absolute inset-x-0 top-0 flex justify-between px-2 pt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
       <button 
         v-if="canMoveLeft" 
-        @click.stop="moveLeft"
         class="w-8 h-8 bg-gray-900/10 dark:bg-white/10 backdrop-blur-md text-gray-900 dark:text-white rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all pointer-events-auto active:scale-75"
         title="Retroceder Estado"
+        @click.stop="moveLeft"
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/></svg>
       </button>
@@ -99,9 +102,9 @@ const isStalled = computed(() => {
       
       <button 
         v-if="canMoveRight" 
-        @click.stop="moveRight"
         class="w-8 h-8 bg-gray-900/10 dark:bg-white/10 backdrop-blur-md text-gray-900 dark:text-white rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all pointer-events-auto active:scale-75"
         title="Avanzar Estado"
+        @click.stop="moveRight"
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
       </button>
@@ -110,7 +113,8 @@ const isStalled = computed(() => {
     <!-- Header: Status & ID -->
     <div class="flex justify-between items-center mb-6">
       <div class="flex items-center gap-3">
-        <div :class="[
+        <div
+:class="[
           order.status === 'printing' ? 'animate-pulse' : '', 
           'w-2.5 h-2.5 rounded-full shadow-lg shadow-current/50',
           order.status === 'pending' ? 'bg-red-500' : 
@@ -143,7 +147,7 @@ const isStalled = computed(() => {
 
     <!-- Specs: Material & Weight -->
     <div class="grid grid-cols-2 gap-4 mb-8">
-      <div class="bg-gray-50/50 dark:bg-slate-800/50 backdrop-blur-sm p-4 rounded-2xl border border-gray-100/50 dark:border-white/5 group-hover:bg-white dark:group-hover:bg-slate-800 transition-all">
+      <div class="bg-gray-50/50 dark:bg-[#0d1117]/50 backdrop-blur-sm p-4 rounded-2xl border border-gray-100/50 dark:border-[#21262d] group-hover:bg-white dark:group-hover:bg-[#151a22] transition-all">
         <p class="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Insumo</p>
         <p class="text-[10px] font-black text-gray-800 dark:text-gray-200 uppercase truncate">{{ order.material_name || order.material_id }}</p>
       </div>
@@ -151,7 +155,7 @@ const isStalled = computed(() => {
         <p class="text-[8px] font-black text-primary uppercase tracking-widest mb-1">Operando en</p>
         <p class="text-[10px] font-black text-primary uppercase truncate">{{ order.printer.name }}</p>
       </div>
-      <div v-else class="bg-gray-50/50 dark:bg-slate-800/50 backdrop-blur-sm p-4 rounded-2xl border border-gray-100/50 dark:border-white/5 group-hover:bg-white dark:group-hover:bg-slate-800 transition-all">
+      <div v-else class="bg-gray-50/50 dark:bg-[#0d1117]/50 backdrop-blur-sm p-4 rounded-2xl border border-gray-100/50 dark:border-[#21262d] group-hover:bg-white dark:group-hover:bg-[#151a22] transition-all">
         <p class="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Masa Neta</p>
         <p class="text-[10px] font-black text-gray-800 dark:text-gray-200 uppercase">{{ order.estimated_weight_g }}g</p>
       </div>
@@ -173,19 +177,19 @@ const isStalled = computed(() => {
     </div>
 
     <!-- Actions: Premium Bar -->
-    <div class="border-t border-gray-50 pt-6 space-y-4">
+    <div class="border-t border-gray-50 dark:border-[#21262d] pt-6 space-y-4">
       <div class="flex items-center justify-between gap-2">
         <!-- Group 1: Viewing/Files -->
         <div class="flex items-center gap-1.5">
-          <button @click="$emit('view', order)" class="w-10 h-10 flex items-center justify-center bg-gray-950 dark:bg-primary text-white rounded-xl hover:bg-primary dark:hover:bg-white dark:hover:text-primary hover:scale-110 active:scale-90 transition-all duration-300 shadow-lg" title="Ver Monitor">
+          <button class="w-10 h-10 flex items-center justify-center bg-gray-950 dark:bg-primary text-white rounded-xl hover:bg-primary dark:hover:bg-white dark:hover:text-primary hover:scale-110 active:scale-90 transition-all duration-300 shadow-lg" title="Ver Monitor" @click="$emit('view', order)">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
           </button>
 
-          <button @click="$emit('download-pdf', order)" class="w-11 h-11 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl hover:bg-gray-900 dark:hover:bg-primary hover:text-white hover:scale-110 active:scale-90 transition-all duration-300 shadow-sm" title="Cotización PDF">
+          <button class="w-11 h-11 flex items-center justify-center bg-white dark:bg-[#151a22] border border-gray-100 dark:border-[#21262d] text-gray-900 dark:text-white rounded-2xl hover:bg-gray-900 dark:hover:bg-primary hover:text-white hover:scale-110 active:scale-90 transition-all duration-300 shadow-sm" title="Cotización PDF" @click="$emit('download-pdf', order)">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
           </button>
 
-          <button @click="$emit('download', order)" class="w-11 h-11 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl hover:bg-gray-900 dark:hover:bg-primary hover:text-white hover:scale-110 active:scale-90 transition-all duration-300 shadow-sm" title="Descargar STL">
+          <button class="w-11 h-11 flex items-center justify-center bg-white dark:bg-[#151a22] border border-gray-100 dark:border-[#21262d] text-gray-900 dark:text-white rounded-2xl hover:bg-gray-900 dark:hover:bg-primary hover:text-white hover:scale-110 active:scale-90 transition-all duration-300 shadow-sm" title="Descargar STL" @click="$emit('download', order)">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
           </button>
         </div>
@@ -193,18 +197,16 @@ const isStalled = computed(() => {
         <!-- Group 2: Management -->
         <div class="flex items-center gap-1.5">
           <button 
-            @click="$emit('toggle-paid', order.id)" 
             :class="[
               'w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 shadow-sm border',
               order.is_paid ? 'bg-emerald-500 text-white border-emerald-500 cursor-pointer shadow-emerald-500/20 hover:scale-110 active:scale-90' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20 hover:scale-110 active:scale-90'
             ]" 
-            :title="order.is_paid ? 'Pago Verificado (Clic para revertir)' : 'Confirmar Pago'"
+            :title="order.is_paid ? 'Pago Verificado (Clic para revertir)' : 'Confirmar Pago'" 
+            @click="$emit('toggle-paid', order.id)"
           >
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </button>
-
-          <button @click="$emit('delete', order.id)" class="w-10 h-10 flex items-center justify-center bg-gray-50 dark:bg-red-500/10 text-gray-400 dark:text-red-400 rounded-xl hover:bg-red-500 dark:hover:bg-red-500 hover:text-white hover:scale-110 active:scale-90 transition-all duration-300 shadow-sm" title="Eliminar Orden">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>          <button class="w-10 h-10 flex items-center justify-center bg-gray-50 dark:bg-red-500/10 text-gray-400 dark:text-red-400 rounded-xl hover:bg-red-500 dark:hover:bg-red-500 hover:text-white hover:scale-110 active:scale-90 transition-all duration-300 shadow-sm" title="Cancelar Orden" @click="$emit('update-status', { orderId: order.id, status: 'cancelled' })">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
       </div>
@@ -212,22 +214,22 @@ const isStalled = computed(() => {
       <!-- Final Decision Action -->
       <button 
         v-if="order.status === 'pending'"
-        @click="$emit('assign', order)" 
-        class="w-full py-4 bg-gray-950 dark:bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all duration-300 shadow-lg shadow-black/10 active:scale-95"
+        class="w-full py-4 bg-gray-950 dark:bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all duration-300 shadow-lg shadow-black/10 active:scale-95" 
+        @click.stop="$emit('assign', order)"
       >
         Asignar a Impresora
       </button>
 
       <div v-else-if="order.status === 'printing'" class="grid grid-cols-2 gap-2">
         <button 
-          @click="$emit('assign', order)" 
-          class="py-4 bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-300 text-[8px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all border border-gray-100 dark:border-white/5"
+          class="py-4 bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-300 text-[8px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all border border-gray-100 dark:border-[#21262d]" 
+          @click="$emit('assign', order)"
         >
           Re-Asignar
         </button>
         <button 
-          @click="$emit('update-status', { orderId: order.id, status: 'post-processing' })" 
-          class="py-4 bg-primary text-white text-[8px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-900 transition-all shadow-lg shadow-primary/20"
+          class="py-4 bg-primary text-white text-[8px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-900 transition-all shadow-lg shadow-primary/20" 
+          @click="$emit('update-status', { orderId: order.id, status: 'post-processing' })"
         >
           Terminar Pieza
         </button>
@@ -235,16 +237,16 @@ const isStalled = computed(() => {
 
       <button 
         v-else-if="order.status === 'post-processing'"
-        @click="$emit('update-status', { orderId: order.id, status: 'completed' })" 
-        class="w-full py-4 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+        class="w-full py-4 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95" 
+        @click="$emit('update-status', { orderId: order.id, status: 'completed' })"
       >
         Lista para Entrega
       </button>
 
       <button 
         v-else-if="order.status === 'completed'"
-        @click="$emit('update-status', { orderId: order.id, status: 'shipped' })" 
-        class="w-full py-4 bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+        class="w-full py-4 bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95" 
+        @click="$emit('update-status', { orderId: order.id, status: 'shipped' })"
       >
         Marcar como Enviado
       </button>

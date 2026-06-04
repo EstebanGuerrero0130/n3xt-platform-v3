@@ -21,7 +21,7 @@ trait ApiResponse
     /**
      * Standard error response
      */
-    protected function error(?string $message = null, int $code, $data = null): JsonResponse
+    protected function error(?string $message = null, int $code = 400, $data = null): JsonResponse
     {
         return response()->json([
             'status' => 'Error',

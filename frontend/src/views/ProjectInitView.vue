@@ -1,9 +1,57 @@
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import AppNavbar from '../components/AppNavbar.vue'
+import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
+import { useRevealAnim } from '../composables/useRevealAnim'
+import logger from '../utils/logger'
+import { useSplitTitle } from '../composables/useSplitTitle'
+import { useSplitButton } from '../composables/useSplitButton'
+import { useParticles } from '../composables/useParticles'
 
-const isDark = ref(localStorage.getItem('n3xt_theme') !== 'light')
+useSplitTitle()
+useSplitButton()
+
+const { particlesRef: heroParticlesRef } = useParticles({
+  count: 30,
+  zIndex: 1,
+})
+
+// --- SEO Meta Tags ---
+const seoMeta = {
+  title: 'Iniciar Proyecto 3D | N3XT 3D',
+  description: 'Configura tu proyecto de impresion 3D. Selecciona tipo, tecnologia, acabado y urgencia.',
+  image: '/assets/n3xt_og_project.png'
+}
+
+let injectedMetaEls: any[] = []
+
+const setMetaTags = () => {
+  document.title = seoMeta.title
+  injectedMetaEls.forEach(el => el.remove())
+  injectedMetaEls = []
+  const metas = [
+    { name: 'og:title', prop: true, content: seoMeta.title },
+    { name: 'og:description', prop: true, content: seoMeta.description },
+    { name: 'og:image', prop: true, content: seoMeta.image },
+    { name: 'og:type', prop: true, content: 'website' },
+    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
+    { name: 'twitter:title', prop: false, content: seoMeta.title },
+    { name: 'twitter:description', prop: false, content: seoMeta.description },
+    { name: 'twitter:image', prop: false, content: seoMeta.image },
+    { name: 'description', prop: false, content: seoMeta.description }
+  ]
+  metas.forEach(({ name, prop, content }) => {
+    const el = document.createElement('meta')
+    if (prop) el.setAttribute('property', name)
+    el.setAttribute('name', name)
+    el.setAttribute('content', content)
+    document.head.appendChild(el)
+    injectedMetaEls.push(el)
+  })
+}
+
+useRevealAnim({ delay: 200 })
 
 // --- CONFIGURACIÓN DINÁMICA ---
 const whatsappNumber = ref('')
@@ -16,12 +64,18 @@ const fetchSettings = async () => {
       whatsappNumber.value = data.web.social.whatsapp.replace(/\D/g, '')
     }
   } catch (err) {
-    console.error('Error fetching settings for WhatsApp:', err)
+    logger.error('Error fetching settings for WhatsApp:', err)
   }
 }
 
 onMounted(() => {
+  setMetaTags()
   fetchSettings()
+})
+
+onUnmounted(() => {
+  injectedMetaEls.forEach(el => el.remove())
+  injectedMetaEls = []
 })
 
 // --- DATA DE CONFIGURACIÓN ---
@@ -71,7 +125,7 @@ const selections = ref({
   priority: 'normal'
 })
 
-const getLabel = (stepId, optionId) => {
+const getLabel = (stepId: any, optionId: any) => {
   const step = steps.find(s => s.id === stepId)
   return step?.options.find(o => o.id === optionId)?.label || ''
 }
@@ -99,8 +153,8 @@ const sendToWhatsapp = () => {
 </script>
 
 <template>
-  <div :class="{'dark': isDark}" class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-slate-900 dark:text-white transition-colors duration-500 overflow-x-hidden selection:bg-emerald-500/20 font-inter">
-    <AppNavbar activeTab="contact" subtext="Centro de Precisión Industrial" />
+  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-slate-900 dark:text-white transition-colors duration-500 overflow-x-hidden selection:bg-emerald-500/20 font-inter">
+    <AppNavbar active-tab="contact" subtext="Centro de Precisión Industrial" />
 
     <main class="max-w-7xl mx-auto px-6 py-20 relative">
       <div class="absolute inset-0 technical-grid opacity-20 dark:opacity-10 pointer-events-none"></div>
@@ -109,13 +163,18 @@ const sendToWhatsapp = () => {
       <div class="relative z-10 flex flex-col lg:flex-row gap-16">
         <div class="flex-1 space-y-16">
           <div class="space-y-6">
-            <h1 class="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.8] text-slate-900 dark:text-white">
-              INICIAR <br/>
-              <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700 dark:from-emerald-400 dark:to-emerald-600">PROYECTO 3D.</span>
-            </h1>
+            <div class="relative inline-block overflow-hidden">
+              <div ref="heroParticlesRef" class="project-hero-particles" aria-hidden="true"></div>
+              <!-- Glow background -->
+              <div class="absolute -inset-20 bg-gradient-to-r from-emerald-500/5 via-primary/5 to-emerald-500/5 rounded-full blur-[100px] animate-pulse pointer-events-none"></div>
+              <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter uppercase leading-[0.85] text-slate-900 dark:text-white animate-fade-in">
+                INICIAR <br/>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-primary to-emerald-300 dark:from-emerald-400 dark:via-primary dark:to-emerald-300 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">PROYECTO 3D.</span>
+              </h1>
+            </div>
             <div class="space-y-3 max-w-md">
               <label class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.4em] block ml-1">Identificación del Cliente</label>
-              <input type="text" v-model="customerName" placeholder="Escribe tu nombre aqui..." class="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-slate-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm">
+              <input v-model="customerName" type="text" placeholder="Escribe tu nombre aqui..." class="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-slate-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm">
             </div>
             <p class="text-slate-400 dark:text-gray-400 font-bold uppercase tracking-[0.4em] text-xs">Asistente de Configuración N3XT</p>
           </div>
@@ -129,14 +188,14 @@ const sendToWhatsapp = () => {
               <button 
                 v-for="opt in step.options" 
                 :key="opt.id"
-                @click="selections[step.id] = opt.id"
                 :class="selections[step.id] === opt.id 
                   ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 shadow-[0_10px_30px_rgba(16,185,129,0.1)] dark:shadow-[0_0_20px_rgba(16,185,129,0.2)]' 
                   : 'border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:border-emerald-200 dark:hover:border-white/20'"
                 class="group aspect-square p-6 rounded-[2.5rem] border text-center transition-all duration-500 relative overflow-hidden flex flex-col items-center justify-center gap-4"
+                @click="selections[step.id] = opt.id"
               >
                 <div 
-                  v-html="opt.icon" 
+                  :innerHTML="sanitizeSVG(opt.icon)" 
                   :class="selections[step.id] === opt.id ? 'text-emerald-500 scale-110' : 'text-slate-400 dark:text-gray-500'"
                   class="group-hover:scale-110 group-hover:text-emerald-500 transition-all duration-500"
                 ></div>
@@ -170,13 +229,13 @@ const sendToWhatsapp = () => {
               </div>
               <div class="space-y-6 relative z-10 pt-6">
                 <button 
-                  @click="sendToWhatsapp"
                   :disabled="!customerName"
                   :class="!customerName ? 'opacity-40 cursor-not-allowed bg-slate-500' : 'bg-emerald-500 shadow-[0_20px_50px_-15px_rgba(16,185,129,0.4)] hover:scale-[1.02] active:scale-95'"
                   class="w-full py-8 text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 group"
+                  @click="sendToWhatsapp"
                 >
                   <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                  SOLICITAR ANÁLISIS
+                  <span class="split-btn">SOLICITAR ANÁLISIS</span>
                 </button>
               </div>
             </div>
@@ -188,8 +247,29 @@ const sendToWhatsapp = () => {
 </template>
 
 <style scoped>
+.project-hero-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .technical-grid {
   background-size: 50px 50px;
   background-image: linear-gradient(to right, rgba(16, 185, 129, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+}
+
+
+/* --- Scroll Reveal --- */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

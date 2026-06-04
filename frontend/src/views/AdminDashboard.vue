@@ -2,6 +2,48 @@
 import { ref, onMounted, onUnmounted, computed, watch, reactive, defineAsyncComponent, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '../services/api'
+import logger from '../utils/logger'
+import { useSimulator } from '../composables/useSimulator'
+import { useUploads } from '../composables/useUploads'
+import { usePrinters } from '../composables/usePrinters'
+import { usePDF } from '../composables/usePDF'
+/**
+ * ADMIN DASHBOARD — N3XT 3D Industrial OS
+ *
+ * ═══════════════════════════════════════════════
+ * ARQUITECTURA ACTUAL
+ * ═══════════════════════════════════════════════
+ *
+ * Este archivo (278KB / 4178 líneas) es el núcleo del panel admin.
+ * Se ha refactorizado parcialmente extrayendo la siguiente lógica:
+ *
+ * ✅ COMPOSABLES EXTRAÍDOS:
+ *   - useSimulator.ts   → Simulador de costos de producción
+ *   - useUploads.ts     → Subida de imágenes (proxy Cloudinary)
+ *   - usePrinters.ts    → API wrappers para impresoras
+ *   - usePDF.ts         → Generación de PDFs (cotizaciones, guías)
+ *   - useOrders.ts      → Gestión de pedidos
+ *   - useSettings.ts    → Gestión de configuración
+ *   - useUI.ts          → Utilidades de UI (animaciones, etc.)
+ *
+ * 📦 SUB-COMPONENTES (carga asíncrona):
+ *   KanbanBoard, InventoryManager, AccountingDashboard,
+ *   MachineMonitor, OrderHistory, PurchaseLog,
+ *   ContactManager, DiscountManager
+ *
+ * 🔄 PENDIENTE DE EXTRAER (candidatos a composables):
+ *   - syncAll + fetch functions → useDataFetching.ts
+ *   - Order mutations → useOrderMutations.ts
+ *   - Catalog/web management → useWebManager.ts
+ *   - Modal/notification system → useModalManager.ts
+ *
+ * El bulk del tamaño (278KB) es el template HTML/CSS con todas
+ * las vistas inline. Para reducirlo drásticamente habría que
+ * crear sub-vistas separadas para cada tab.
+ *
+ * @module AdminDashboard
+ */
+
 
 
 // Sub-components (Carga Asíncrona para optimizar recursos)
@@ -57,7 +99,6 @@ const submitting = ref(false)
 const savingSettings = ref(false)
 const showMobileMenu = ref(false)
 const contacts = reactive({ customers: [], suppliers: [] })
-
 // --- Premium UI Feedback ---
 const notification = reactive({ show: false, message: '', type: 'success' })
 const confirmDialog = reactive({ 
@@ -104,70 +145,6 @@ const handleConfirm = async () => {
   confirmDialog.show = false
 }
 
-// --- CLOUDINARY UPLOAD PIPELINE ---
-const triggerCardUpload = (idx) => {
-    const input = document.getElementById(`card-upload-${idx}`)
-    if (input) input.click()
-}
-
-const triggerProductUpload = (idx) => {
-    const input = document.getElementById(`product-upload-${idx}`)
-    if (input) input.click()
-}
-
-const triggerNewsUpload = (idx) => {
-    const input = document.getElementById(`news-upload-${idx}`)
-    if (input) input.click()
-}
-
-const triggerPostUpload = (idx) => {
-    const input = document.getElementById(`post-upload-${idx}`)
-    if (input) input.click()
-}
-
-const handleImageUploadSEO = async (event, targetObj, nameField) => {
-    const file = event.target.files[0]
-    if (!file) return
-
-    showNotify('SISTEMA N3XT: Optimizando SEO y subiendo imagen...', 'success')
-    
-    // Generar Public ID SEO-friendly basado en el nombre del producto/item
-    const sanitizedName = (targetObj[nameField] || 'n3xt_asset')
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Quitar acentos
-        .replace(/[^a-z0-9]/g, '_') // Cambiar espacios y raros por _
-        .substring(0, 50)
-    
-    const publicId = `n3xt_${sanitizedName}_${Date.now().toString().slice(-4)}`
-
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('upload_preset', 'ml_default')
-    formData.append('public_id', publicId) // SEO Filename
-
-    const cloudName = settings.value.web.cloudinary_name || 'dplcy7vbm' 
-
-    try {
-        const resp = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-            method: 'POST',
-            body: formData
-        })
-        const data = await resp.json()
-        
-        if (data.secure_url) {
-            // Aplicar optimización automática de Cloudinary (f_auto, q_auto)
-            targetObj.image = data.secure_url
-            // Auto-generar Alt tag si no existe
-            if (!targetObj.alt) targetObj.alt = `Imagen de ${targetObj[nameField]} - N3XT 3D Systems`
-            showNotify('MANUFACTURA DIGITAL: Imagen con SEO optimizado', 'success')
-        } else {
-            throw new Error(data.error?.message || 'Error en subida')
-        }
-    } catch (err) {
-        showNotify('ERROR SEO: Revisa tu Cloud Name o conexión.', 'error')
-    }
-}
 
 const settings = ref({
   infra: { luz_hr: 0, depr_hr: 0, mant_hr: 0, etiquetas: 0, load_factor: 0.4 },
@@ -191,6 +168,101 @@ const settings = ref({
   discounts: []
 })
 
+// --- Composables ---
+const { simulator, simulatedResult, addSimulatorExtra, removeSimulatorExtra } = useSimulator({
+  inventoryData, settings, showNotify
+})
+const { triggerCardUpload, triggerProductUpload, triggerNewsUpload, triggerPostUpload, handleImageUploadSEO } = useUploads({
+  settings, showNotify
+})
+const { apiUpdatePrinter, apiDeletePrinter, apiMaintenanceComplete, apiResetPrinter, editingPrinter: editingPrinterData } = usePrinters()
+const { handleDownloadQuotePDF, handlePrintLabel, handleDownloadShippingLabel } = usePDF({
+  settings,
+  inventoryData,
+  showNotify
+})
+
+
+// --- Wrappers para template (adaptan composables al template existente) ---
+const handleAddPrinterWrapper = () => {
+  editingPrinter.value = { id: '', name: '', model: '', technology: 'FDM', status: 'idle', maintenance_interval_h: 200, next_maintenance: '', total_hours_run: 0, maintenance_notes: '' }
+  modalState.editPrinter = true
+}
+
+
+const handleEditPrinterWrapper = (printer) => {
+  editingPrinter.value = { ...printer }
+  modalState.editPrinter = true
+}
+
+const updatePrinterWrapper = async () => {
+  try {
+    await apiUpdatePrinter(editingPrinter.value.id, editingPrinter.value)
+    modalState.editPrinter = false
+    await fetchPrinters()
+    showNotify('Máquina actualizada', 'success')
+  } catch (err) {
+    showNotify('Error: ' + err.message, 'error')
+  }
+}
+
+const handleUpdatePrinterStatusWrapper = async ({ id, status }) => {
+  try {
+    await apiUpdatePrinter(id, { status })
+    await fetchPrinters()
+    showNotify(`Estado actualizado: ${status}`, 'success')
+  } catch (err) {
+    showNotify('Error: ' + err.message, 'error')
+  }
+}
+
+const handleMaintenanceCompleteWrapper = async (id) => {
+  try {
+    await apiMaintenanceComplete(id)
+    await fetchPrinters()
+    showAlert('Puesta a Punto', 'Mantenimiento registrado. Horas reiniciadas.', '')
+  } catch (err) {
+    showAlert('Error', 'No se pudo registrar el mantenimiento: ' + err.message, '')
+  }
+}
+
+const handleResetPrinterWrapper = async (id) => {
+  try {
+    await apiResetPrinter(id)
+    await fetchPrinters()
+    showNotify('Máquina reseteada a estado Libre', 'success')
+  } catch (err) {
+    showNotify('Error: ' + err.message, 'error')
+  }
+}
+
+const handleDeletePrinterWrapper = (id) => {
+  askConfirm(
+    'Eliminar Impresora',
+    '¿Estás seguro de que deseas retirar esta máquina de la granja? Esta acción no se puede deshacer.',
+    '',
+    async () => {
+      try {
+        await apiDeletePrinter(id)
+        await fetchPrinters()
+        showNotify('Impresora eliminada', 'success')
+      } catch (err) {
+        showNotify('Error: ' + err.message, 'error')
+      }
+    }
+  )
+}
+
+const handleAddPrinter = handleAddPrinterWrapper
+const handleEditPrinter = handleEditPrinterWrapper
+const handleUpdatePrinterStatus = handleUpdatePrinterStatusWrapper
+const handleMaintenanceComplete = handleMaintenanceCompleteWrapper
+const handleResetPrinter = handleResetPrinterWrapper
+const handleDeletePrinter = handleDeletePrinterWrapper
+
+
+
+
 // --- Modals State (Unificado para estabilidad) ---
 const modalState = reactive({
   manualOrder: false,
@@ -209,11 +281,8 @@ const pdfPreviewData = ref({ title: '', content: '', orderId: '' })
 
 const printerToDelete = ref(null)
 const editingPrinter = ref({ id: '', name: '', model: '', technology: 'FDM', status: 'idle', maintenance_interval_h: 200, next_maintenance: '', total_hours_run: 0, maintenance_notes: '' })
+// Note: editingPrinter aliased as editingPrinterData from usePrinters composable
 
-const handleAddPrinter = () => {
-    editingPrinter.value = { name: '', model: '', technology: 'FDM', status: 'idle', maintenance_interval_h: 200, next_maintenance: '' }
-    modalState.editPrinter = true
-}
 
 // Selections
 const selectedOrderForPrinter = ref(null)
@@ -227,15 +296,7 @@ const newMaterial = reactive({ id: '', name: '', category: 'FDM', type: 'materia
   package_price: null, package_qty: null, package_units: 1 
 })
 const newPrinter = reactive({ name: '', model: '', technology: 'FDM' })
-const simulator = reactive({
-  customer_id: '',
-  job_name: '', customer_name: '', customer_company: '', customer_id_document: '', material_id: '', weight_g: 0, time_str: '0:00', profit_pct: 20, 
-  customer_email: '', customer_phone: '',
-  shipping_address: '', shipping_city: '', shipping_zip: '', shipping_reference: '',
-  discount_pct: 0, pieces_per_batch: 1, transporte_pct: 0, marketing_pct: 0, fallos_pct: 0, etiquetas: 400,
-  extra_items: [], // { id, name, cost, qty }
-  comments: ''
-})
+// simulator provided by useSimulator composable
 const manualOrder = reactive({
   customer_id: '',
   customer_name: '', customer_company: '', customer_id_document: '', customer_email: '', customer_phone: '',
@@ -306,7 +367,7 @@ const syncAll = async (silent = false) => {
       try {
         await task.fn()
       } catch (err) {
-        console.error(`Error en módulo ${task.name}:`, err)
+        logger.error(`Error en módulo ${task.name}:`, err)
         if (!silent) showNotify(`Fallo parcial: ${task.name}`, 'warning')
       }
     }))
@@ -322,7 +383,7 @@ const fetchOrders = async () => {
     const res = await api.get('/admin/orders', true)
     orders.value = Array.isArray(res) ? res : (res?.data || [])
   } catch (err) {
-    console.error('Error fetching orders:', err)
+    logger.error('Error fetching orders:', err)
     orders.value = []
   }
 }
@@ -393,7 +454,7 @@ const fetchSettings = async () => {
       manualOrder.profit_pct = settings.value.oper.ganancia
     }
   } catch (err) {
-    console.error('Error settings:', err)
+    logger.error('Error settings:', err)
   }
 }
 
@@ -439,7 +500,7 @@ const fetchContacts = async () => {
     contacts.customers = cData
     contacts.suppliers = sData
   } catch (err) {
-    console.error('Error fetching contacts:', err)
+    logger.error('Error fetching contacts:', err)
   }
 }
 
@@ -488,7 +549,7 @@ const trackingGuide = ref('')
 const trackingCarrier = ref('')
 
 const handleStatusUpdate = async ({ orderId, status, tracking_guide, tracking_carrier }) => {
-  console.log(`[ACTION] Actualizando estado: Orden ${orderId} -> ${status}`);
+  logger.info(`[ACTION] Actualizando estado: Orden ${orderId} -> ${status}`);
   if (status === 'shipped' && !tracking_guide) {
     orderToShip.value = orders.value.find(o => o.id === orderId)
     trackingGuide.value = ''
@@ -508,7 +569,7 @@ const handleStatusUpdate = async ({ orderId, status, tracking_guide, tracking_ca
             const currentStock = parseFloat(material.stock_available || 0);
             const newStock = Math.max(0, currentStock - usedWeight);
             
-            console.log(`[STOCK] Deduciendo ${usedWeight}g de ${material.name}. Nuevo: ${newStock}`);
+            logger.info(`[STOCK] Deduciendo ${usedWeight}g de ${material.name}. Nuevo: ${newStock}`);
             await api.post(`/materials/${material.id}/stock`, { stock_available: newStock }, true);
         }
     }
@@ -539,7 +600,7 @@ const handleStatusUpdate = async ({ orderId, status, tracking_guide, tracking_ca
 }
 
 const handleTogglePaid = async (orderId) => {
-  console.log(`[ACTION] Toggle Pago: Orden ${orderId}`);
+  logger.info(`[ACTION] Toggle Pago: Orden ${orderId}`);
   try {
     const order = orders.value.find(o => o.id === orderId)
     if (!order) return
@@ -569,7 +630,7 @@ const confirmShipping = async () => {
 
 // --- Deletion Logic (Unificada con askConfirm) ---
 const handleDeleteOrder = (id) => {
-  console.log(`[ACTION] Solicitud de borrado: Orden ${id}`);
+  logger.info(`[ACTION] Solicitud de borrado: Orden ${id}`);
   askConfirm(
     '¿Eliminar Orden?',
     'Esta acción es permanente y borrará todos los registros de producción y finanzas asociados.',
@@ -622,23 +683,6 @@ const handleDeleteContact = (type, id) => {
 }
 
 
-const handleEditPrinter = (printer) => {
-  editingPrinter.value = { ...printer }
-  modalState.editPrinter = true
-}
-
-const updatePrinter = async () => {
-  try {
-    await api.patch(`/admin/printers/${editingPrinter.value.id}`, editingPrinter.value, true)
-    modalState.editPrinter = false
-    await fetchPrinters()
-    showNotify('Máquina actualizada', 'success')
-  } catch (err) {
-    showNotify('Error: ' + err.message, 'error')
-  }
-}
-
-
 const downloadFile = async (order) => {
   if (!order.file_path && !order.id) {
     showNotify('No hay archivo digital asociado a este pedido.', 'warning')
@@ -646,9 +690,10 @@ const downloadFile = async (order) => {
   }
   
   try {
-    const token = localStorage.getItem('n3xt_admin_token')
+    // Use api client with session cookies (Sanctum SPA) instead of Bearer token
     const res = await fetch(`${api.baseUrl}/admin/orders/${order.id}/download`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      credentials: 'include',
+      headers: { 'Accept': 'application/json' }
     })
     const blob = await res.blob()
     const url = window.URL.createObjectURL(blob)
@@ -676,143 +721,7 @@ const saveTrackingGuide = async () => {
   }
 }
 
-const handleDownloadShippingLabel = (order) => {
-    let iframe = document.getElementById('pdf-print-frame');
-    if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.id = 'pdf-print-frame';
-        iframe.style.position = 'absolute';
-        iframe.style.top = '-9999px';
-        iframe.style.left = '-9999px';
-        iframe.style.visibility = 'hidden';
-        document.body.appendChild(iframe);
-    }
-
-    const getAbsoluteUrl = (path) => path.startsWith('http') ? path : window.location.origin + (path.startsWith('/') ? '' : '/') + path;
-    const companyLogo = settings.value.company_logo ? getAbsoluteUrl(settings.value.company_logo.startsWith('http') ? settings.value.company_logo : api.storageUrl + '/' + settings.value.company_logo) : window.location.origin + '/logo.png';
-
-    const content = `
-        <html>
-            <head>
-                <title>Documento de Entrega - ${order.customer_name}</title>
-                <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap');
-                    @page { size: A4; margin: 15mm; }
-                    body { font-family: 'Outfit', sans-serif; padding: 0; color: #0f172a; background: #fff; line-height: 1.4; }
-                    
-                    .page-border { border: 1px solid #e2e8f0; padding: 40px; height: calc(100vh - 120px); display: flex; flex-direction: column; position: relative; }
-                    
-                    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #0f172a; padding-bottom: 25px; margin-bottom: 35px; }
-                    .brand h1 { font-size: 32px; font-weight: 900; letter-spacing: -2px; margin: 0; text-transform: uppercase; }
-                    .brand p { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 3px; margin: 5px 0 0 0; }
-                    
-                    .doc-type { text-align: right; }
-                    .doc-badge { background: #0f172a; color: white; padding: 8px 15px; border-radius: 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: inline-block; }
-                    .doc-num { font-size: 20px; font-weight: 900; color: #0f172a; }
-                    
-                    .logistics-grid { display: grid; grid-template-cols: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-                    .info-card { background: #f8fafc; padding: 25px; border-radius: 20px; border: 1px solid #f1f5f9; }
-                    .card-label { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #94a3b8; letter-spacing: 2px; margin-bottom: 12px; display: block; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
-                    
-                    .name { font-size: 22px; font-weight: 900; color: #0f172a; margin-bottom: 4px; }
-                    .company { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 12px; }
-                    .addr { font-size: 15px; font-weight: 600; color: #334155; line-height: 1.3; }
-                    .city { font-size: 16px; font-weight: 900; text-transform: uppercase; color: #0f172a; margin-top: 5px; }
-                    .contact { font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 10px; display: flex; gap: 10px; align-items: center; }
-                    
-                    .order-box { border: 2px solid #0f172a; border-radius: 20px; padding: 30px; margin-bottom: 40px; }
-                    .order-ref { font-size: 12px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
-                    .order-title { font-size: 28px; font-weight: 900; color: #0f172a; letter-spacing: -1px; }
-                    
-                    .ref-tag { background: #f1f5f9; padding: 15px; border-radius: 12px; margin-top: 15px; font-size: 13px; color: #475569; font-weight: 600; border-left: 5px solid #0f172a; }
-                    
-                    .footer-sig { margin-top: auto; display: grid; grid-template-cols: 1fr 1fr; gap: 60px; padding-top: 40px; }
-                    .sig-line { border-top: 2px solid #0f172a; padding-top: 10px; text-align: center; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #64748b; letter-spacing: 1px; }
-                    
-                    .stamp { position: absolute; bottom: 40px; right: 40px; font-size: 8px; color: #cbd5e1; text-transform: uppercase; transform: rotate(-90deg); transform-origin: bottom right; }
-                    
-                    @media print { body { -webkit-print-color-adjust: exact; } .page-border { border: none; padding: 0; } }
-                </style>
-            </head>
-            <body>
-                <div class="page-border">
-                    <div class="header">
-                        <div class="brand">
-                            <h1>${settings.value.company?.name || 'N3XT 3D'}</h1>
-                            <p>Manufactura Digital Avanzada</p>
-                        </div>
-                        <div class="doc-type">
-                            <div class="doc-badge">Remisión de Entrega</div>
-                            <div class="doc-num">ORDEN #${order.id}</div>
-                        </div>
-                    </div>
-
-                    <div class="logistics-grid">
-                        <div class="info-card">
-                            <span class="card-label">Remitente (Origen)</span>
-                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                                ${companyLogo ? `<img src="${companyLogo}" style="height: 45px; max-width: 180px; width: auto; object-fit: contain;">` : ''}
-                                <div class="name" style="font-size: 18px;">${settings.value.company?.name || 'N3XT 3D'}</div>
-                            </div>
-                            ${settings.value.company?.nit ? `<div class="company">NIT: ${settings.value.company.nit}</div>` : ''}
-                            <div class="addr">${settings.value.company?.address || ''}</div>
-                            ${settings.value.company?.phone ? `<div class="contact">TEL: ${settings.value.company.phone}</div>` : ''}
-                            ${settings.value.company?.email ? `<div class="contact" style="font-size: 11px;">EMAIL: ${settings.value.company.email}</div>` : ''}
-                        </div>
-
-                        <div class="info-card">
-                            <span class="card-label">Destinatario (Entrega)</span>
-                            <div class="name">${order.customer_name}</div>
-                            ${order.customer_id_document ? `<div class="company" style="font-size: 13px; color: #000;">ID: ${order.customer_id_document}</div>` : ''}
-                            <div class="company">${order.customer_company || 'Cliente Registrado'}</div>
-                            <div class="addr">${order.shipping_address || 'Dirección por confirmar'}</div>
-                            <div class="city">${order.shipping_city || 'Ciudad / Depto'} ${order.shipping_zip ? `(${order.shipping_zip})` : ''}</div>
-                            <div class="contact">WhatsApp: ${order.customer_phone}</div>
-                        </div>
-                    </div>
-
-                    <div class="order-box">
-                        <div class="order-ref">Detalles del Despacho</div>
-                        <div class="order-title">${order.job_name || 'Fabricación 3D Bajo Demanda'}</div>
-                        ${order.shipping_reference ? `
-                            <div class="ref-tag">
-                                <strong>Indicaciones de Entrega:</strong><br>
-                                ${order.shipping_reference}
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <div class="footer-sig">
-                        <div class="sig-line">Entregado por (N3XT 3D)</div>
-                        <div class="sig-line">Recibido a Conformidad (Cliente)</div>
-                    </div>
-
-                    <div class="stamp">
-                        Generado por N3XT OS v3.2 • Fecha: ${new Date().toLocaleDateString()} • Auditoría Digital
-                    </div>
-                </div>
-            </body>
-        </html>
-    `;
-
-    const printWindow = iframe.contentWindow || iframe.contentDocument.defaultView;
-    printWindow.document.open();
-    printWindow.document.write(content);
-    printWindow.document.close();
-    const imgs = printWindow.document.images;
-    let loaded = 0;
-    const print = () => { printWindow.focus(); printWindow.print(); };
-    if (imgs.length === 0) { setTimeout(print, 250); } 
-    else {
-        let printed = false;
-        const onload = () => { if (++loaded === imgs.length && !printed) { printed = true; setTimeout(print, 250); } };
-        for (let i = 0; i < imgs.length; i++) {
-            if (imgs[i].complete) onload();
-            else { imgs[i].onload = onload; imgs[i].onerror = onload; }
-        }
-        setTimeout(() => { if (!printed) { printed = true; print(); } }, 3000);
-    }
-}
+// handleDownloadShippingLabel provided by usePDF composable
 
 const handleDownloadSimulationPDF = () => {
   if (!simulator.material_id) {
@@ -845,314 +754,30 @@ const handleDownloadSimulationPDF = () => {
   handleDownloadQuotePDF(fakeOrder)
 }
 
-const handleDownloadQuotePDF = (order) => {
-  const mat = inventoryData.value.find(m => String(m.id) === String(order.material_id));
-  const getAbsoluteUrl = (path) => path.startsWith('http') ? path : window.location.origin + (path.startsWith('/') ? '' : '/') + path;
-  const companyLogo = settings.value.company_logo ? getAbsoluteUrl(settings.value.company_logo.startsWith('http') ? settings.value.company_logo : api.storageUrl + '/' + settings.value.company_logo) : window.location.origin + '/logo.png';
-  
-  const trackingUrl = `${window.location.origin}/#/track?order_id=${order.id}&email=${order.customer_email || ''}`
-  
-  // QR de Rastreo (Generado vía API para evitar bloqueos)
-  const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(trackingUrl)}`;
-
-  const content = `
-    <html>
-      <head>
-        <title>N3XT 3D - Cotización #${order.id}</title>
-        <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap');
-                    @page { size: A4; margin: 8mm; }
-                    body { font-family: 'Outfit', sans-serif; padding: 0; color: #0f172a; line-height: 1.25; font-size: 13px; background: white; }
-                    
-                    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 5px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
-                    
-                    .company-brand { display: flex; align-items: center; gap: 20px; }
-                    .company-logo { height: 70px; max-width: 250px; width: auto; object-fit: contain; }
-                    .logo-text { font-size: 32px; font-weight: 900; letter-spacing: -1.5px; text-transform: uppercase; color: #0f172a; }
-                    .logo-text span { color: #10b981; }
-                    
-                    .company-info-mini { font-size: 11px; color: #334155; font-weight: 600; line-height: 1.4; border-left: 3px solid #10b981; padding-left: 15px; }
-                    
-                    .quote-badge { background: #0f172a; color: white; padding: 10px 25px; border-radius: 18px; text-align: right; }
-                    .badge-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; margin-bottom: 2px; }
-                    .badge-val { font-size: 22px; font-weight: 900; }
-
-                    .grid { display: grid; grid-template-cols: 1fr; gap: 15px; margin-bottom: 20px; }
-                    .info-box { background: #f8fafc; padding: 20px; border-radius: 20px; border: 1.5px solid #f1f5f9; }
-                    .info-label { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px; display: block; letter-spacing: 1px; }
-                    .info-value { font-weight: 900; font-size: 18px; color: #0f172a; }
-
-                    .table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px; }
-                    .table th { background: #f8fafc; padding: 12px 15px; text-align: left; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #64748b; letter-spacing: 1.5px; border-bottom: 3px solid #0f172a; }
-                    .table td { padding: 15px; border-bottom: 1.5px solid #f1f5f9; font-size: 14px; font-weight: 700; }
-
-                    .rec-container { display: grid; grid-template-cols: 1.2fr 0.8fr; gap: 15px; margin-bottom: 20px; }
-                    .rec-box { background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 15px; border-radius: 20px; }
-                    .rec-title { font-size: 12px; font-weight: 900; color: #166534; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-                    .rec-list { margin: 0; padding-left: 20px; font-size: 11px; color: #166534; font-weight: 600; line-height: 1.6; }
-                    
-                    .cert-box { background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 15px; border-radius: 20px; display: flex; flex-direction: column; justify-content: center; }
-                    .cert-title { font-size: 12px; font-weight: 900; color: #1e40af; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
-                    .cert-text { font-size: 11px; color: #1e40af; font-weight: 600; margin: 0; line-height: 1.4; }
-
-                    .total-section { display: flex; justify-content: flex-end; padding-top: 5px; }
-                    .total-box { text-align: right; background: #0f172a; color: white; padding: 25px 40px; border-radius: 25px; border: 2px solid #10b981; }
-                    .total-label { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #10b981; margin-bottom: 5px; }
-                    .total-val-main { font-size: 42px; font-weight: 900; letter-spacing: -2px; }
-
-                    .footer { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 30px; border-top: 1.5px solid #f1f5f9; padding-top: 20px; font-weight: 600; }
-                    
-                    @media print {
-                        body { -webkit-print-color-adjust: exact; }
-                        .total-box { -webkit-print-color-adjust: exact; background-color: #0f172a !important; color: white !important; border-color: #10b981 !important; }
-                        .rec-box, .cert-box { -webkit-print-color-adjust: exact; }
-                    }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="company-brand">
-            ${companyLogo ? `<img src="${companyLogo}" class="company-logo">` : ''}
-            <div class="company-info-mini" style="border-left: 5px solid #0f172a; padding-left: 20px;">
-              <div style="color: #0f172a; font-weight: 900; text-transform: uppercase; font-size: 24px; margin-bottom: 6px;">${settings.value.company?.name || 'N3XT 3D'}</div>
-              <div style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase;">
-                ${settings.value.company?.nit ? `NIT: ${settings.value.company.nit} | ` : ''} 
-                ${settings.value.company?.address || ''}<br>
-                ${settings.value.company?.phone ? `TEL: ${settings.value.company.phone} | ` : ''} 
-                ${settings.value.company?.email ? `EMAIL: ${settings.value.company.email}` : ''}
-              </div>
-            </div>
-          </div>
-          <div class="quote-badge" style="display: flex; gap: 15px; align-items: center; padding: 10px 20px;">
-            <div style="background: white; padding: 4px; border-radius: 12px; line-height: 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-              <img src="${qrDataUrl}" style="width: 75px; height: 75px;">
-            </div>
-            <div style="text-align: right;">
-              <div class="badge-label">Propuesta Técnica</div>
-              <div class="badge-val">#${order.id}</div>
-              <div style="font-size: 6px; margin-top: 5px; opacity: 0.5; font-family: monospace;">TRACKING ENABLED</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid">
-          <div class="info-box">
-            <span class="info-label">Proyecto / Cliente Destino</span>
-            <div class="info-value">${order.customer_name} ${order.customer_company ? `(${order.customer_company})` : ''}</div>
-            <div style="font-size: 14px; color: #475569; font-weight: 600; margin-top: 5px;">
-                ${order.customer_id_document ? `ID: ${order.customer_id_document} | ` : ''} 
-                ${order.customer_phone ? `${order.customer_phone} | ` : ''} 
-                ${order.customer_email || ''}
-            </div>
-            ${order.shipping_address ? `
-                <div style="font-size: 13px; color: #64748b; font-weight: 500; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;">
-                    <strong>Envío:</strong> ${order.shipping_address}, ${order.shipping_city} ${order.shipping_zip ? `(ZIP: ${order.shipping_zip})` : ''}
-                    ${order.shipping_reference ? `<br><small>Ref: ${order.shipping_reference}</small>` : ''}
-                </div>
-            ` : ''}
-          </div>
-        </div>
-
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Descripción Industrial</th>
-              <th style="width: 150px;">Proceso</th>
-              <th style="width: 200px;">Material</th>
-              <th style="text-align: right; width: 180px;">Inversión</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="font-weight: 800; color: #0f172a;">
-                ${order.job_name || 'Fabricación Digital Bajo Demanda'}<br>
-                <span style="font-size: 13px; color: #64748b; font-weight: 500;">Producción 3D Especializada - Prototipado / Final</span>
-              </td>
-              <td>${order.technology}</td>
-              <td>${mat ? mat.name : (order.material_name || order.material_id)}</td>
-              <td style="text-align: right; font-weight: 900; color: #0f172a;">$${Number(order.total_price - (order.extras_cost || 0)).toLocaleString()}</td>
-            </tr>
-            ${(order.extra_items || []).map(extra => `
-              <tr>
-                <td>${extra.name} (Adicional / Empaque)</td>
-                <td>N/A</td>
-                <td>${extra.qty} x Und</td>
-                <td style="text-align: right; font-weight: 900; color: #0f172a;">$${Number(extra.cost * extra.qty).toLocaleString()}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <div class="rec-container">
-          <div class="rec-box">
-            <div class="rec-title">Recomendaciones de Fabricacion</div>
-            <ul class="rec-list">
-              <li><strong>Estructura:</strong> Optimización de perímetros para mayor solidez.</li>
-              <li><strong>Acabado:</strong> Altura de capa industrial de alta definición.</li>
-              <li><strong>Post-Proceso:</strong> ${order.technology === 'SLA' ? 'Curado UV intensivo para estabilidad química.' : 'Tratamiento térmico para alivio de tensiones.'}</li>
-            </ul>
-          </div>
-          <div class="cert-box">
-            <div class="cert-title">Sello de Calidad N3XT</div>
-            <p class="cert-text">
-                Este documento certifica que el proyecto ha sido analizado bajo los estándares de precisión N3XT. Garantía de estabilidad dimensional y resistencia estructural según ficha técnica del material.
-            </p>
-          </div>
-        </div>
-
-        <div class="total-section">
-          <div class="total-box">
-            <div class="total-label">Inversión Total del Proyecto</div>
-            <div class="total-val-main">$${Number(order.total_price).toLocaleString()}</div>
-            <div style="font-size: 11px; margin-top: 10px; opacity: 0.9; font-weight: 700; color: #10b981; text-transform: uppercase;">
-              IVA INCLUIDO (${settings.value.margin?.iva || 0}%) • VALIDEZ: 15 DÍAS • ANTICIPO: 50%
-            </div>
-          </div>
-        </div>
-
-        <div class="footer">
-          <p style="margin-bottom: 5px; font-weight: 800;">N3XT 3D Administrative System • Soluciones de Manufactura Aditiva de Alta Precisión</p>
-          <p>© 2026 ${settings.value.company?.name || 'N3XT 3D SYSTEMS'} - Tecnología Digital Avanzada</p>
-          <p>Email: ${settings.value.company?.email || 'ventas@n3xt.com'} • ${settings.value.company?.address || ''}</p>
-          <p style="font-size: 8px; opacity: 0.5; margin-top: 10px;">Generado el ${new Date().toLocaleString()} • Copia Digital Autenticada</p>
-        </div>
-      </body>
-    </html>
-  `;
-
-  let iframe = document.getElementById('pdf-print-frame');
-  if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'pdf-print-frame';
-      iframe.style.position = 'absolute';
-      iframe.style.top = '-9999px';
-      iframe.style.left = '-9999px';
-      iframe.style.visibility = 'hidden';
-      document.body.appendChild(iframe);
-  }
-  const printWindow = iframe.contentWindow || iframe.contentDocument.defaultView;
-  printWindow.document.open();
-  printWindow.document.write(content);
-  printWindow.document.close();
-  const imgs = printWindow.document.images;
-  let loaded = 0;
-  const print = () => { printWindow.focus(); printWindow.print(); };
-  if (imgs.length === 0) { setTimeout(print, 250); } 
-  else {
-      let printed = false;
-      const onload = () => { if (++loaded === imgs.length && !printed) { printed = true; setTimeout(print, 250); } };
-      for (let i = 0; i < imgs.length; i++) {
-          if (imgs[i].complete) onload();
-          else { imgs[i].onload = onload; imgs[i].onerror = onload; }
-      }
-      setTimeout(() => { if (!printed) { printed = true; print(); } }, 3000);
-  }
-}
+// handleDownloadQuotePDF provided by usePDF composable
 
 
-
-const handleUpdateStock = async (mat) => {
+const handleUpdateStock = async (matId, newStock) => {
   try {
-    if (mat.newStock === null || mat.newStock === undefined || mat.newStock === 0) return
+    if (!newStock || newStock === 0) return
+    
+    const mat = inventoryData.value.find((m) => m.id === matId)
+    if (!mat) return
     
     // Cálculo preventivo: Sumamos al stock actual para evitar sobrescritura accidental
     const currentStock = mat.inventory?.stock_available || 0
-    const totalNewStock = currentStock + mat.newStock
+    const totalNewStock = currentStock + newStock
     
-    await api.post(`/materials/${mat.id}/stock`, { stock_available: totalNewStock }, true)
+    await api.post(`/materials/${matId}/stock`, { stock_available: totalNewStock }, true)
     await fetchInventory()
     
-    showNotify(`Stock incrementado: +${mat.newStock}${mat.unit || ''} en ${mat.name}`, 'success')
-    mat.newStock = null // Limpiar campo
+    showNotify(`Stock incrementado: +${newStock}${mat.unit || ''} en ${mat.name}`, 'success')
   } catch (err) {
     showNotify('Error al actualizar stock: ' + err.message, 'error')
   }
 }
 
-const handlePrintLabel = (order) => {
-  let iframe = document.getElementById('pdf-print-frame');
-  if (!iframe) {
-    iframe = document.createElement('iframe');
-    iframe.id = 'pdf-print-frame';
-    iframe.style.position = 'absolute';
-    iframe.style.top = '-9999px';
-    iframe.style.left = '-9999px';
-    iframe.style.visibility = 'hidden';
-    document.body.appendChild(iframe);
-  }
-  
-  const content = `
-    <html>
-      <head>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap');
-          @page { size: 100mm 150mm; margin: 0; }
-          body { font-family: 'Outfit', sans-serif; padding: 25px; text-transform: uppercase; color: #000; margin: 0; background: white; }
-          .label-box { border: 10px solid #000; padding: 30px; height: 125mm; display: flex; flex-direction: column; position: relative; box-sizing: border-box; }
-          .header { border-bottom: 5px solid #000; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
-          .logo { font-size: 28px; font-weight: 900; letter-spacing: -1.5px; }
-          .order-id { font-size: 16px; font-weight: 900; background: #000; color: #fff; padding: 8px 15px; border-radius: 8px; }
-          .destinatario { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-          .label-text { font-size: 11px; font-weight: 900; margin-bottom: 8px; color: #666; letter-spacing: 2px; }
-          .value-text { font-size: 32px; font-weight: 900; margin-bottom: 25px; line-height: 0.9; }
-          .address-box { border-top: 3px solid #eee; padding-top: 20px; }
-          .address-text { font-size: 22px; font-weight: 900; line-height: 1.1; margin-bottom: 10px; }
-          .city-text { font-size: 18px; font-weight: 700; color: #444; }
-          .footer { border-top: 5px solid #000; padding-top: 20px; font-size: 11px; font-weight: 900; display: flex; justify-content: space-between; align-items: flex-end; }
-          .qr-placeholder { width: 70px; height: 70px; border: 4px solid #000; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center; border-radius: 12px; }
-          .stamp { position: absolute; bottom: 120px; right: -40px; transform: rotate(-90deg); font-size: 10px; font-weight: 900; color: #eee; }
-        </style>
-      </head>
-      <body>
-        <div class="label-box">
-          <div class="stamp">N3XT 3D SYSTEMS INDUSTRIAL LOGISTICS</div>
-          <div class="header">
-            <div class="logo">N3XT SHIPMENT</div>
-            <div class="order-id">#${order.id}</div>
-          </div>
-          <div class="destinatario">
-            <div class="label-text">DESTINATARIO:</div>
-            <div class="value-text">${order.customer_name}</div>
-            <div class="address-box">
-                <div class="label-text">DIRECCIÓN DE ENTREGA:</div>
-                <div class="address-text">${order.shipping_address || 'RECOGE EN TALLER'}</div>
-                <div class="city-text">${order.shipping_city || ''} ${order.shipping_zip || ''}</div>
-                <div class="city-text" style="margin-top: 10px;">TEL: ${order.customer_phone || 'S/D'}</div>
-            </div>
-          </div>
-          <div class="footer">
-            <div>
-              ORIGEN: N3XT 3D SYSTEMS TALLER<br>
-              CONTROL: ${new Date().toLocaleDateString()}<br>
-              LOG: ${order.technology} / ${order.estimated_weight_g}G
-            </div>
-            <div style="background: #000; padding: 8px; border-radius: 15px;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&color=ffffff&bgcolor=000000&data=${encodeURIComponent(window.location.origin + '/#/track?order_id=' + order.id + '&email=' + (order.customer_email || ''))}" style="width: 80px; height: 80px; display: block;">
-            </div>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  const printWindow = iframe.contentWindow || iframe.contentDocument.defaultView;
-  printWindow.document.open();
-  printWindow.document.write(content);
-  printWindow.document.close();
-  const imgs = printWindow.document.images;
-  let loaded = 0;
-  const print = () => { printWindow.focus(); printWindow.print(); };
-  if (imgs.length === 0) { setTimeout(print, 250); } 
-  else {
-      let printed = false;
-      const onload = () => { if (++loaded === imgs.length && !printed) { printed = true; setTimeout(print, 250); } };
-      for (let i = 0; i < imgs.length; i++) {
-          if (imgs[i].complete) onload();
-          else { imgs[i].onload = onload; imgs[i].onerror = onload; }
-      }
-      setTimeout(() => { if (!printed) { printed = true; print(); } }, 3000);
-  }
-}
+// handlePrintLabel provided by usePDF composable
 
 const handleEditMaterial = (mat) => {
   editingMaterial.value = { ...mat, ...mat.inventory, id: mat.id }
@@ -1233,52 +858,6 @@ const confirmAssignment = async (printerId) => {
   }
 }
 
-const handleUpdatePrinterStatus = async ({ id, status }) => {
-  try {
-    await api.patch(`/admin/printers/${id}`, { status }, true)
-    await fetchPrinters()
-    showNotify(`Estado actualizado: ${status}`, 'success')
-  } catch (err) {
-    showNotify('Error: ' + err.message, 'error')
-  }
-}
-
-const handleMaintenanceComplete = async (id) => {
-  try {
-    await api.post(`/admin/printers/${id}/maintenance-complete`, {}, true)
-    await fetchPrinters()
-    showAlert('Puesta a Punto', 'Mantenimiento registrado. Horas reiniciadas.', '')
-  } catch (err) {
-    showAlert('Error', 'No se pudo registrar el mantenimiento: ' + err.message, '')
-  }
-}
-
-const handleResetPrinter = async (id) => {
-  try {
-    await api.post(`/admin/printers/${id}/reset`, {}, true)
-    await fetchPrinters()
-    showNotify('Máquina reseteada a estado Libre', 'success')
-  } catch (err) {
-    showNotify('Error: ' + err.message, 'error')
-  }
-}
-
-const handleDeletePrinter = (id) => {
-  askConfirm(
-    'Eliminar Impresora',
-    '¿Estás seguro de que deseas retirar esta máquina de la granja? Esta acción no se puede deshacer.',
-    '',
-    async () => {
-      try {
-        await api.delete(`/admin/printers/${id}`, true)
-        await fetchPrinters()
-        showNotify('Impresora eliminada', 'success')
-      } catch (err) {
-        showNotify('Error: ' + err.message, 'error')
-      }
-    }
-  )
-}
 
 const saveMaterial = async () => {
   await api.post('/materials', newMaterial, true)
@@ -1290,7 +869,7 @@ const saveSettings = (silent = false) => {
   const executeSave = async () => {
     if (savingSettings.value) return
     savingSettings.value = true
-    console.log('N3XT Sync: Iniciando proceso de guardado...');
+    logger.info('N3XT Sync: Iniciando proceso de guardado...');
     
     try {
       try {
@@ -1298,7 +877,7 @@ const saveSettings = (silent = false) => {
             globalSeoOptimizer()
         }
       } catch (seoErr) {
-        console.warn('Advertencia SEO:', seoErr)
+        logger.warn('Advertencia SEO:', seoErr)
       }
       
       const payload = JSON.parse(JSON.stringify(settings.value))
@@ -1312,7 +891,7 @@ const saveSettings = (silent = false) => {
         }
       }
     } catch (err) {
-      console.error('Error crítico en guardado:', err)
+      logger.error('Error crítico en guardado:', err)
       showNotify('Error al sincronizar: ' + (err.message || 'Error de red'), 'error')
     } finally {
       savingSettings.value = false
@@ -1358,7 +937,7 @@ const handleLogoUpload = async (event) => {
       showNotify('IDENTIDAD ACTUALIZADA: Marca sincronizada con éxito', 'success')
     }
   } catch (err) {
-    console.error('Error Logo Upload:', err)
+    logger.error('Error Logo Upload:', err)
     showNotify('FALLO DE IDENTIDAD: ' + err.message, 'error')
   } finally {
     uploadingLogo.value = false
@@ -1366,8 +945,6 @@ const handleLogoUpload = async (event) => {
     if (event.target) event.target.value = ''
   }
 }
-
-
 
 
 const handleManualOrderSubmit = async () => {
@@ -1432,10 +1009,10 @@ watch(() => [manualOrder.weight_g, manualOrder.qty, manualOrder.duration_h, manu
 
 const handleExportCSV = async () => {
   try {
-    const token = localStorage.getItem('n3xt_admin_token')
     const response = await fetch(`${api.baseUrl}/admin/export-csv`, {
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Accept': 'text/csv'
       }
     });
     
@@ -1630,83 +1207,7 @@ const stats = computed(() => {
   }
 })
 
-const simulatedResult = computed(() => {
-  const mat = inventoryData.value.find(m => m.id === simulator.material_id)
-  if (!mat || !settings.value.infra) return { 
-    material: 0, luz: 0, labor: 0, depr: 0, mant: 0, etiquetas: 0, extras: 0,
-    production: 0, subtotal: 0, iva: 0, total: 0, unit_price: 0, discount: 0,
-    isSafetyAlert: false,
-    pcts: { material: 0, infra: 0, extras: 0, profit: 0 }
-  }
-  
-  // 1. Costo Material (El peso ingresado ya es el total del lote/placa)
-  const qty = Math.max(1, simulator.pieces_per_batch || 1)
-  const matCost = (simulator.weight_g / 1000) * mat.cost_per_kg
-  
-  // 2. Costo Infraestructura (El tiempo ingresado ya es el total del lote/placa)
-  const [hours, minutes] = simulator.time_str.split(':').map(Number)
-  const totalHours = (hours || 0) + ((minutes || 0) / 60)
-  
-  const luz = totalHours * (settings.value.infra.load_factor || 0.4) * (settings.value.infra.luz_hr || 0)
-  const labor = (totalHours * ((settings.value.prep?.prep_time_pct || 10) / 100)) * (settings.value.prep?.mano_obra_hr || 0)
-  const depr = totalHours * (settings.value.infra.depr_hr || 0)
-  const mant = totalHours * (settings.value.infra.mant_hr || 0)
-  const etiquetas = Number(simulator.etiquetas || 0) // Costo base por pedido
-  
-  // 3. Adicionales y Empaque (Ya vienen multiplicados por su propia cantidad interna)
-  const extrasCost = simulator.extra_items.reduce((acc, item) => acc + (item.cost * item.qty), 0)
-  
-  // 4. Costo de Producción Total (Para el lote completo)
-  const productionCost = matCost + luz + labor + depr + mant + etiquetas + extrasCost
-  
-  // 5. Márgenes Operativos y Ganancia (Sobre el costo total del lote)
-  const logistics = productionCost * (simulator.transporte_pct / 100)
-  const marketing = productionCost * (simulator.marketing_pct / 100)
-  const failures = productionCost * (simulator.fallos_pct / 100)
-  const profitAmount = productionCost * (simulator.profit_pct / 100)
-  
-  // 6. Precio de Lista del Lote
-  const listPrice = productionCost + logistics + marketing + failures + profitAmount
-  
-  // 7. Descuento Especial
-  const discountAmount = listPrice * (simulator.discount_pct / 100)
-  const subtotal = Math.max(listPrice - discountAmount, productionCost)
-  const effectiveDiscount = listPrice - subtotal
-  
-  // 8. IVA
-  const iva = subtotal * (settings.value.margin?.iva / 100 || 0)
-  
-  const totalGrand = subtotal + iva
-  
-  return {
-    material: matCost,
-    luz,
-    labor,
-    depr,
-    mant,
-    etiquetas,
-    extras: extrasCost,
-    production: productionCost,
-    logistics,
-    marketing,
-    failures,
-    profit: profitAmount,
-    subtotal: Math.round(subtotal),
-    discount: Math.round(effectiveDiscount),
-    iva: Math.round(iva),
-    total: Math.round(totalGrand),
-    unit_price: Math.round(totalGrand / qty),
-    total_hours: totalHours,
-    profit_margin_pct: productionCost > 0 ? ((subtotal - productionCost) / subtotal) * 100 : 0,
-    isSafetyAlert: simulator.discount_pct === 100,
-    pcts: {
-        material: subtotal > 0 ? (matCost / subtotal) * 100 : 0,
-        infra: subtotal > 0 ? ((luz + labor + depr + mant + etiquetas) / subtotal) * 100 : 0,
-        extras: subtotal > 0 ? (extrasCost / subtotal) * 100 : 0,
-        profit: subtotal > 0 ? (Math.max(0, subtotal - productionCost) / subtotal) * 100 : 0
-    }
-  }
-})
+// simulatedResult provided by useSimulator composable)
 const handleConvertSimulationToOrder = async () => {
   if (submitting.value) return
   submitting.value = true
@@ -1753,38 +1254,13 @@ const handleConvertSimulationToOrder = async () => {
     
     showNotify('¡Orden Creada! La simulación ahora es un pedido real.', 'success')
   } catch (err) {
-    console.error('Error Conversion:', err)
+    logger.error('Error Conversion:', err)
     showNotify('Error al convertir: ' + err.message, 'error')
   } finally {
     submitting.value = false
   }
 }
 
-const addSimulatorExtra = (event) => {
-  const matId = event.target.value
-  if (!matId) return
-  const item = inventoryData.value.find(m => m.id === matId)
-  if (item) {
-    // Si ya existe, incrementar cantidad
-    const existing = simulator.extra_items.find(i => i.id === item.id)
-    if (existing) {
-        existing.qty++
-    } else {
-        simulator.extra_items.push({
-            id: item.id,
-            name: item.name,
-            cost: item.cost_per_kg,
-            unit: item.unit,
-            qty: 1
-        })
-    }
-  }
-  event.target.value = "" // Reset select
-}
-
-const removeSimulatorExtra = (index) => {
-  simulator.extra_items.splice(index, 1)
-}
 
 // --- Lifecycle & Watchers ---
 
@@ -1794,7 +1270,7 @@ onMounted(async () => {
   await syncAll()
   
   // Motor de Sincronización Proactiva: Cada 5 min intenta un silent sync si hay conexión
-  setInterval(async () => {
+  const syncInterval = setInterval(async () => {
     try {
       await syncAll(true)
     } catch (e) {
@@ -1802,8 +1278,10 @@ onMounted(async () => {
     }
   }, 1000 * 60 * 5)
   
-  const currentToken = localStorage.getItem('n3xt_admin_token')
-  if (!currentToken) {
+  // Verificar sesión activa via Sanctum SPA (session cookie)
+  // No usamos localStorage token — la auth es via cookie httpOnly
+  const authStatus = await api.checkAuth()
+  if (!authStatus.authenticated || authStatus.role !== 'admin') {
     router.push('/admin/login')
     return
   }
@@ -1832,13 +1310,16 @@ onMounted(async () => {
        showNotify('Sesion expirada. Por favor ingresa de nuevo.', 'warning')
        logout()
     } else {
-       console.error('Error inicial de carga:', err)
+       logger.error('Error inicial de carga:', err)
     }
   }
 })
 
 onUnmounted(() => {
   document.body.style.overflow = ''
+  if (typeof syncInterval !== 'undefined') {
+    clearInterval(syncInterval)
+  }
 })
 
 watch(activeTab, (tab) => {
@@ -1847,8 +1328,12 @@ watch(activeTab, (tab) => {
   Object.keys(modalState).forEach(k => modalState[k] = false)
 })
 
-const logout = () => {
-  localStorage.removeItem('n3xt_admin_token')
+const logout = async () => {
+  try {
+    await api.post('/logout')
+  } catch (e) {
+    // Silent — session may already be invalid
+  }
   router.push('/admin/login')
 }
 
@@ -2300,7 +1785,7 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
     }
     
   } catch (err) {
-    console.error('Error:', err);
+    logger.error('Error:', err);
     showNotify('Error: ' + err.message, 'error')
   } finally {
     loadingAnalytics.value = false;
@@ -3453,7 +2938,6 @@ const handlePurgeAll = () => {
                   <svg class="w-96 h-96 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
                 </div>
               </div> <!-- Cierre lg:col-span-2 -->
-
 
 
             </div> <!-- Cierre grid Principal de Ajustes -->
@@ -4640,7 +4124,6 @@ const handlePurgeAll = () => {
     </transition>
 
 
-
     <!-- Premium Confirmation Dialog (Estilo Maker) -->
     <div v-if="confirmDialog.show" class="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-gray-950/80 backdrop-blur-md">
         <div 
@@ -4717,7 +4200,6 @@ input[type=range]:focus { outline: none; }
 input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: #f1f5f9; border-radius: 4px; }
 input[type=range]::-webkit-slider-thumb { height: 20px; width: 20px; border-radius: 50%; background: #1e3a34; cursor: pointer; -webkit-appearance: none; appearance: none; margin-top: -6px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid white; transition: all 0.2s; }
 input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
-
 
 
 /* Printing Styles for Invoice PDF */

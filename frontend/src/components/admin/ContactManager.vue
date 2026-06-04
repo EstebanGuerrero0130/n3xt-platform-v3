@@ -1,6 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed, inject } from 'vue'
 import { api } from '../../services/api'
+import { printHtml, openInNewWindow, getCompanyInfo } from '../../services/pdfPrint'
+import logger from '../../utils/logger'
 
 const props = defineProps({
     customers: { type: Array, default: () => [] },
@@ -8,7 +10,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['refresh', 'delete-contact'])
-const showNotify = inject('showNotify')
+const showNotify: any = inject('showNotify')
 
 const settings = ref({})
 const loading = ref(false)
@@ -23,10 +25,10 @@ const newCustomer = ref({
 const newSupplier = ref({ name: '', contact_person: '', phone: '', specialty: '' })
 const showAddModal = ref(false)
 const isEditing = ref(false)
-const editingId = ref(null)
+const editingId = ref<any>(null)
 
 // La confirmación se delega al padre (AdminDashboard) para consistencia global
-const handleDelete = (id) => {
+const handleDelete = (id: any) => {
     emit('delete-contact', activeType.value === 'customers' ? 'customers' : 'suppliers', id)
 }
 
@@ -34,7 +36,7 @@ const fetchData = async () => {
     loading.value = true
     try {
         const results = await Promise.allSettled([
-            api.get('/settings', true)
+            api.get('/settings')
         ]);
         
         if (results[0].status === 'fulfilled') {
@@ -46,15 +48,15 @@ const fetchData = async () => {
                 settings.value = { ...settings.value, ...mapped }
             }
         }
-    } catch (err) {
-        console.error('Error fetching settings in ContactManager:', err)
+    } catch (err: any) {
+        logger.error('Error fetching settings in ContactManager:', err)
     } finally {
         loading.value = false
     }
 }
 
 const filteredItems = computed(() => {
-    const baseList = activeType.value === 'customers' ? props.customers : props.suppliers;
+    const baseList: any[] = (activeType.value === 'customers' ? props.customers : props.suppliers) as any[];
     if (!searchQuery.value) return baseList;
     
     const query = searchQuery.value.toLowerCase();
@@ -77,7 +79,7 @@ const openAddModal = () => {
     showAddModal.value = true
 }
 
-const openEditModal = (item) => {
+const openEditModal = (item: any) => {
     isEditing.value = true
     editingId.value = item.id
     if (activeType.value === 'customers') {
@@ -101,9 +103,9 @@ const handleAdd = async () => {
         const endpoint = `/admin/contacts/${type}`
         
         if (isEditing.value) {
-            await api.patch(`${endpoint}/${editingId.value}`, data, true)
+            await api.patch(`${endpoint}/${editingId.value}`, data)
         } else {
-            await api.post(endpoint, data, true)
+            await api.post(endpoint, data)
         }
         
         showAddModal.value = false
@@ -118,7 +120,7 @@ const handleAdd = async () => {
         newSupplier.value = { name: '', contact_person: '', phone: '', specialty: '' }
         
         emit('refresh')
-    } catch (err) {
+    } catch (err: any) {
         showNotify('No pudimos guardar los cambios: ' + err.message, 'error')
     }
 }
@@ -127,122 +129,99 @@ const handleAdd = async () => {
 
 onMounted(fetchData)
 
-const handleDownloadShippingLabel = (customer) => {
-    let iframe = document.getElementById('pdf-print-frame');
-    if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.id = 'pdf-print-frame';
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-    }
-
-    const currentLogo = settings.value?.company_logo;
-    const getAbsoluteUrl = (path) => path.startsWith('http') ? path : window.location.origin + (path.startsWith('/') ? '' : '/') + path;
-    const logoUrl = currentLogo ? getAbsoluteUrl(currentLogo.startsWith('http') ? currentLogo : api.storageUrl + '/' + currentLogo) : window.location.origin + '/logo.png';
-
-    const content = `
-        <html>
-            <head>
-                <title>Rótulo de Envío - ${customer.name}</title>
-                <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
-                    @page { size: 100mm 150mm; margin: 0; }
-                    body { font-family: 'Outfit', sans-serif; padding: 15px; color: #000; margin: 0; background: white; }
-                    .label-box { border: 5px solid #000; padding: 20px; height: 135mm; display: flex; flex-direction: column; position: relative; box-sizing: border-box; }
-                    .header { border-bottom: 3px solid #000; padding-bottom: 5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-                    .title { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; }
-                    .priority { font-size: 9px; font-weight: 900; background: #000; color: #fff; padding: 2px 8px; border-radius: 4px; }
-                    .remitente { font-size: 8px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #444; border-left: 3px solid #ccc; padding-left: 12px; line-height: 1.1; }
-                    .destinatario-label { font-size: 11px; font-weight: 900; text-transform: uppercase; background: #000; color: #fff; padding: 3px 10px; display: inline-block; margin-bottom: 10px; }
-                    .dest-info { margin-bottom: 10px; }
-                    .dest-name { font-size: 24px; font-weight: 900; line-height: 0.9; margin-bottom: 4px; text-transform: uppercase; }
-                    .dest-company { font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: #333; }
-                    .dest-addr { font-size: 18px; font-weight: 800; line-height: 1.1; margin-bottom: 6px; border-top: 2px solid #eee; padding-top: 8px; }
-                    .dest-city { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px; }
-                    .dest-cc { font-size: 14px; font-weight: 800; margin-top: 5px; color: #333; }
-                    .dest-zip { font-size: 14px; font-family: monospace; font-weight: 700; margin-top: 4px; background: #f0f0f0; padding: 2px 6px; display: inline-block; }
-                    .ref-box { margin-top: 15px; padding: 10px; border: 2px dashed #000; font-size: 12px; font-weight: 800; line-height: 1.2; }
-                    .footer-info { margin-top: auto; border-top: 2px solid #000; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; }
-                    .contact-data { display: flex; flex-direction: column; gap: 2px; }
-                    .phone-box { font-size: 16px; font-weight: 900; }
-                    .email-box { font-size: 10px; font-weight: 700; color: #444; text-transform: lowercase; }
-                    .logo-box { width: 50px; height: 50px; object-fit: contain; }
-                    @media print { body { -webkit-print-color-adjust: exact; } }
-                </style>
-            </head>
-            <body>
-                <div class="label-box">
-                    <div class="header">
-                        <div class="title">${settings.value?.company_name || 'LOGÍSTICA'}</div>
-                        <div class="priority">ENVÍO PRIORITARIO</div>
-                    </div>
-                    <div class="remitente">
-                        <strong>REMITENTE:</strong><br>
-                        ${settings.value.company?.name || 'N3XT 3D'}<br>
-                        NIT: ${settings.value.company?.nit || 'N/A'}<br>
-                        DIR: ${settings.value.company?.address || 'N/A'}<br>
-                        TEL: ${settings.value.company?.phone || 'N/A'}<br>
-                        EMAIL: ${settings.value.company?.email || 'N/A'}
-                    </div>
-                    <div class="destinatario-label">DESTINATARIO</div>
-                    <div class="dest-info">
-                        <div class="dest-name">${customer.name}</div>
-                        ${customer.customer_id_document ? `<div class="dest-cc">CC/NIT: ${customer.customer_id_document}</div>` : ''}
-                        ${customer.company ? `<div class="dest-company">${customer.company}</div>` : ''}
-                    </div>
-                    <div class="dest-addr">${customer.address_full || customer.location || 'DIRECCIÓN PENDIENTE'}</div>
-                    <div class="dest-city">${customer.city_dept_country || 'CIUDAD / MUNICIPIO'}</div>
-                    <div class="dest-zip">C.P. ${customer.zip_code || 'S/N'}</div>
-                    ${customer.location_reference ? `
-                        <div class="ref-box">
-                            <strong>REFERENCIAS:</strong><br>
-                            ${customer.location_reference}
-                        </div>
-                    ` : ''}
-                    <div class="footer-info">
-                        <div class="contact-data">
-                            <div class="phone-box">TEL: ${customer.phone}</div>
-                            ${customer.email ? `<div class="email-box">${customer.email}</div>` : ''}
-                        </div>
-                        ${logoUrl ? `<img src="${logoUrl}" class="logo-box" />` : ''}
-                    </div>
+// Helper compartido para generar el HTML del rótulo de envío
+const buildShippingLabelHtml = (customer: any, companyInfo: any) => `
+    <html>
+        <head>
+            <title>Rótulo de Envío - ${customer.name}</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+                @page { size: 100mm 150mm; margin: 0; }
+                body { font-family: 'Outfit', sans-serif; padding: 15px; color: #000; margin: 0; background: white; }
+                .label-box { border: 5px solid #000; padding: 20px; height: 135mm; display: flex; flex-direction: column; position: relative; box-sizing: border-box; }
+                .header { border-bottom: 3px solid #000; padding-bottom: 5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+                .title { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; }
+                .priority { font-size: 9px; font-weight: 900; background: #000; color: #fff; padding: 2px 8px; border-radius: 4px; }
+                .remitente { font-size: 8px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #444; border-left: 3px solid #ccc; padding-left: 12px; line-height: 1.1; }
+                .destinatario-label { font-size: 11px; font-weight: 900; text-transform: uppercase; background: #000; color: #fff; padding: 3px 10px; display: inline-block; margin-bottom: 10px; }
+                .dest-info { margin-bottom: 10px; }
+                .dest-name { font-size: 24px; font-weight: 900; line-height: 0.9; margin-bottom: 4px; text-transform: uppercase; }
+                .dest-company { font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: #333; }
+                .dest-addr { font-size: 18px; font-weight: 800; line-height: 1.1; margin-bottom: 6px; border-top: 2px solid #eee; padding-top: 8px; }
+                .dest-city { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px; }
+                .dest-cc { font-size: 14px; font-weight: 800; margin-top: 5px; color: #333; }
+                .dest-zip { font-size: 14px; font-family: monospace; font-weight: 700; margin-top: 4px; background: #f0f0f0; padding: 2px 6px; display: inline-block; }
+                .ref-box { margin-top: 15px; padding: 10px; border: 2px dashed #000; font-size: 12px; font-weight: 800; line-height: 1.2; }
+                .footer-info { margin-top: auto; border-top: 2px solid #000; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; }
+                .contact-data { display: flex; flex-direction: column; gap: 2px; }
+                .phone-box { font-size: 16px; font-weight: 900; }
+                .email-box { font-size: 10px; font-weight: 700; color: #444; text-transform: lowercase; }
+                @media print { body { -webkit-print-color-adjust: exact; } }
+            </style>
+        </head>
+        <body>
+            <div class="label-box">
+                <div class="header">
+                    <div class="title">${companyInfo.name}</div>
+                    <div class="priority">ENVÍO PRIORITARIO</div>
                 </div>
-            </body>
-        </html>
-    `;
+                <div class="remitente">
+                    <strong>REMITENTE:</strong><br>
+                    ${companyInfo.name}<br>
+                    NIT: ${companyInfo.nit}<br>
+                    DIR: ${companyInfo.address}<br>
+                    TEL: ${companyInfo.phone}<br>
+                    EMAIL: ${companyInfo.email}
+                </div>
+                <div class="destinatario-label">DESTINATARIO</div>
+                <div class="dest-info">
+                    <div class="dest-name">${customer.name}</div>
+                    ${customer.customer_id_document ? `<div class="dest-cc">CC/NIT: ${customer.customer_id_document}</div>` : ''}
+                    ${customer.company ? `<div class="dest-company">${customer.company}</div>` : ''}
+                </div>
+                <div class="dest-addr">${customer.address_full || customer.location || 'DIRECCIÓN PENDIENTE'}</div>
+                <div class="dest-city">${customer.city_dept_country || 'CIUDAD / MUNICIPIO'}</div>
+                <div class="dest-zip">C.P. ${customer.zip_code || 'S/N'}</div>
+                ${customer.location_reference ? `
+                    <div class="ref-box">
+                        <strong>REFERENCIAS:</strong><br>
+                        ${customer.location_reference}
+                    </div>
+                ` : ''}
+                <div class="footer-info">
+                    <div class="contact-data">
+                        <div class="phone-box">TEL: ${customer.phone}</div>
+                        ${customer.email ? `<div class="email-box">${customer.email}</div>` : ''}
+                    </div>
+                    <div style="font-size: 9px; font-weight: 900; text-transform: uppercase;">N3XT 3D</div>
+                </div>
+            </div>
+        </body>
+    </html>`
 
-    const printWindow = iframe.contentWindow || iframe.contentDocument.defaultView;
-    printWindow.document.open();
-    printWindow.document.write(content);
-    printWindow.document.close();
-    const imgs = printWindow.document.images;
-    let loaded = 0;
-    const print = () => { printWindow.focus(); printWindow.print(); };
-    if (imgs.length === 0) { setTimeout(print, 250); } 
-    else {
-        let printed = false;
-        const onload = () => { if (++loaded === imgs.length && !printed) { printed = true; setTimeout(print, 250); } };
-        for (let i = 0; i < imgs.length; i++) {
-            if (imgs[i].complete) onload();
-            else { imgs[i].onload = onload; imgs[i].onerror = onload; }
-        }
-        setTimeout(() => { if (!printed) { printed = true; print(); } }, 3000);
-    }
+const handleDownloadShippingLabel = (customer: any) => {
+    const html = buildShippingLabelHtml(customer, getCompanyInfo(settings.value))
+    printHtml(html)
+}
+
+const handleViewShippingLabel = (customer: any) => {
+    const html = buildShippingLabelHtml(customer, getCompanyInfo(settings.value))
+    openInNewWindow(html, `Rótulo - ${customer.name}`)
 }
 </script>
 
 <template>
   <div class="animate-fade-in">
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 px-4 gap-6">
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12 lg:mb-16 px-6 lg:px-10 gap-8">
         <div>
-            <h2 class="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-2">Contactos</h2>
+            <h2 class="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-2">Iniciar<br/>Proyecto 3D<span class="text-primary">.</span></h2>
             <div class="flex items-center gap-3">
                 <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                <p class="text-gray-400 dark:text-gray-300 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">Base de Datos Unificada</p>
+                <p class="text-gray-400 dark:text-gray-300 font-bold uppercase tracking-widest text-[10px] md:text-[10px]">Identificación del Cliente</p>
             </div>
         </div>
 
-        <div class="flex items-center gap-2 md:gap-4 bg-white dark:bg-gray-900 p-2 rounded-2xl md:rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm w-full lg:w-auto overflow-x-auto no-scrollbar">
+        <div class="flex items-center gap-2 md:gap-4 bg-white dark:bg-[#151a22] p-2 rounded-2xl md:rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm w-full lg:w-auto overflow-x-auto no-scrollbar">
             <!-- Buscador -->
             <div class="relative flex-1 lg:w-64">
                 <input 
@@ -255,23 +234,23 @@ const handleDownloadShippingLabel = (customer) => {
             </div>
             
             <button 
-                @click="activeType = 'customers'" 
-                :class="activeType === 'customers' ? 'bg-gray-900 dark:bg-primary text-white shadow-xl' : 'text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100'"
-                class="flex-1 lg:flex-none px-4 md:px-8 py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                :class="activeType === 'customers' ? 'bg-gray-900 dark:bg-primary text-white shadow-xl' : 'text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100'" 
+                class="flex-1 lg:flex-none px-4 md:px-8 py-3 rounded-xl md:rounded-2xl text-[10px] md:text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                @click="activeType = 'customers'"
             >
                 Clientes
             </button>
             <button 
-                @click="activeType = 'suppliers'" 
-                :class="activeType === 'suppliers' ? 'bg-gray-900 dark:bg-primary text-white shadow-xl' : 'text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100'"
-                class="flex-1 lg:flex-none px-4 md:px-8 py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                :class="activeType === 'suppliers' ? 'bg-gray-900 dark:bg-primary text-white shadow-xl' : 'text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100'" 
+                class="flex-1 lg:flex-none px-4 md:px-8 py-3 rounded-xl md:rounded-2xl text-[10px] md:text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                @click="activeType = 'suppliers'"
             >
                 Proveedores
             </button>
             <div class="w-px h-6 bg-gray-100 dark:bg-white/5 mx-1 md:mx-2 shrink-0"></div>
             <button 
-                @click="openAddModal"
                 class="w-10 h-10 md:w-12 md:h-12 bg-primary text-white rounded-xl md:rounded-2xl flex items-center justify-center hover:rotate-90 transition-all duration-300 shadow-lg shadow-primary/20 shrink-0"
+                @click="openAddModal"
             >
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             </button>
@@ -279,22 +258,40 @@ const handleDownloadShippingLabel = (customer) => {
     </div>
 
     <!-- Lista de Contactos -->
-    <div class="px-4">
-        <div v-if="loading" class="flex justify-center p-20">
-            <div class="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+    <div class="px-6 lg:px-10">
+        <!-- Skeleton: cards placeholder mientras carga -->
+        <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 animate-pulse">
+            <div v-for="i in 6" :key="'skel-'+i" class="bg-gray-100 dark:bg-[#1a1f2e] p-8 lg:p-10 rounded-[24px] border border-gray-200 dark:border-[#252b3a]">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-14 h-14 rounded-2xl bg-gray-200 dark:bg-[#2a3040]"></div>
+                    <div>
+                        <div class="h-4 bg-gray-200 dark:bg-[#2a3040] rounded-full w-28 mb-2"></div>
+                        <div class="h-2 bg-gray-200 dark:bg-[#2a3040] rounded-full w-20"></div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full w-40"></div>
+                    <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full w-32"></div>
+                    <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full w-44"></div>
+                </div>
+                <div class="flex gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-[#252b3a]">
+                    <div class="flex-1 h-10 bg-gray-200 dark:bg-[#2a3040] rounded-xl"></div>
+                    <div class="flex-1 h-10 bg-gray-200 dark:bg-[#2a3040] rounded-xl"></div>
+                </div>
+            </div>
         </div>
         
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" :key="activeType">
+        <div v-else :key="activeType" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
             <div 
                 v-for="item in filteredItems" 
                 :key="item.id"
-                class="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none group relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-xl"
+                class="bg-white dark:bg-[#151a22] p-8 lg:p-10 rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm dark:shadow-none group relative overflow-hidden transition-all hover:shadow-xl"
             >
                 <div class="absolute top-0 right-0 p-4 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all flex gap-2">
-                    <button @click="openEditModal(item)" class="icon-btn icon-btn-edit">
+                    <button class="icon-btn icon-btn-edit" @click="openEditModal(item)">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
-                    <button @click="handleDelete(item.id)" class="icon-btn icon-btn-danger">
+                    <button class="icon-btn icon-btn-danger" @click="handleDelete(item.id)">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </div>
@@ -307,7 +304,7 @@ const handleDownloadShippingLabel = (customer) => {
                         <h4 class="font-black text-gray-900 dark:text-white uppercase tracking-tight text-lg">{{ item.name }}</h4>
                         <div class="flex flex-col">
                             <p v-if="item.customer_id_document" class="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-widest">ID: {{ item.customer_id_document }}</p>
-                            <p v-if="item.company" class="text-[9px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-1">{{ item.company }}</p>
+                            <p v-if="item.company" class="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-1">{{ item.company }}</p>
                         </div>
                     </div>
                 </div>
@@ -327,9 +324,12 @@ const handleDownloadShippingLabel = (customer) => {
                             {{ item.city_dept_country }} {{ item.zip_code ? `[${item.zip_code}]` : '' }}
                         </div>
 
-                        <div class="pt-4 mt-2 border-t border-gray-50 dark:border-white/5 flex gap-2">
-                            <button @click="handleDownloadShippingLabel(item)" class="btn-pdf dark:bg-white/5 dark:border-white/10 dark:text-white dark:hover:bg-primary dark:hover:border-primary flex-1 py-3">
-                                <svg class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg> Generar Rotulo
+                        <div class="pt-4 mt-2 border-t border-gray-50 dark:border-[#21262d] flex gap-2">
+                            <button class="btn-pdf dark:bg-white/5 dark:border-white/10 dark:text-white dark:hover:bg-primary dark:hover:border-primary flex-1 py-3" @click="handleDownloadShippingLabel(item)">
+                                <svg class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg> Imprimir
+                            </button>
+                            <button class="btn-secondary dark:bg-white/5 dark:border-white/10 dark:text-white dark:hover:bg-gray-700 flex-1 py-3" @click="handleViewShippingLabel(item)">
+                                <svg class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg> Ver PDF
                             </button>
                         </div>
                     </div>
@@ -340,21 +340,21 @@ const handleDownloadShippingLabel = (customer) => {
                         <div class="flex items-center gap-3 text-sm text-gray-500 font-bold">
                             <svg class="w-4 h-4 inline text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> {{ item.phone || 'N/A' }}
                         </div>
-                        <div v-if="item.specialty" class="pt-4 mt-2 border-t border-gray-50">
-                            <p class="text-[9px] font-black text-primary uppercase tracking-widest mb-1">Especialidad / Insumos</p>
+                        <div v-if="item.specialty" class="pt-4 mt-2 border-t border-gray-50 dark:border-[#21262d]">
+                            <p class="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Especialidad / Insumos</p>
                             <p class="text-sm font-bold text-gray-700">{{ item.specialty }}</p>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="item.notes" class="mt-6 pt-6 border-t border-gray-50 dark:border-white/5">
+                <div v-if="item.notes" class="mt-6 pt-6 border-t border-gray-50 dark:border-[#21262d]">
                     <p class="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase mb-2">Observaciones</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 italic">{{ item.notes }}</p>
                 </div>
             </div>
 
             <!-- Empty State -->
-            <div v-if="(activeType === 'customers' ? props.customers.length : props.suppliers.length) === 0" class="col-span-full bg-gray-50/50 border-2 border-dashed border-gray-100 rounded-[3rem] p-20 text-center">
+            <div v-if="(activeType === 'customers' ? props.customers.length : props.suppliers.length) === 0" class="col-span-full bg-gray-50/50 dark:bg-[#151a22]/50 border-2 border-dashed border-gray-100 dark:border-[#21262d] rounded-[24px] p-20 text-center">
                 <svg class="w-12 h-12 text-gray-300 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                 <h3 class="text-xl font-black text-gray-400 uppercase tracking-tighter">No hay {{ activeType === 'customers' ? 'clientes' : 'proveedores' }} registrados</h3>
                 <p class="text-sm text-gray-300 font-bold uppercase tracking-widest mt-2">Usa el botón "+" para crear el primero</p>
@@ -365,7 +365,7 @@ const handleDownloadShippingLabel = (customer) => {
     <!-- Modal para Agregar/Editar -->
     <div v-if="showAddModal" class="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4">
         <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showAddModal = false"></div>
-        <div class="bg-white dark:bg-gray-950 md:rounded-[3rem] w-full max-w-lg relative z-10 overflow-hidden shadow-2xl animate-in zoom-in duration-300 h-full md:h-auto">
+        <div class="bg-white dark:bg-[#0d1117] md:rounded-[24px] w-full max-w-lg relative z-10 overflow-hidden shadow-2xl animate-in zoom-in duration-300 h-full md:h-auto">
             <div class="bg-gray-900 dark:bg-black p-8 md:p-10 text-white flex justify-between items-center">
                 <div>
                     <h3 class="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-1 md:mb-2">
@@ -373,7 +373,7 @@ const handleDownloadShippingLabel = (customer) => {
                     </h3>
                     <p class="text-gray-400 text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Actualiza la ficha del contacto</p>
                 </div>
-                <button @click="showAddModal = false" class="text-white text-2xl hover:rotate-90 transition-transform px-4 outline-none">✕</button>
+                <button class="text-white text-2xl hover:rotate-90 transition-transform px-4 outline-none" @click="showAddModal = false">✕</button>
             </div>
             
             <div class="p-6 md:p-10 space-y-6 overflow-y-auto h-[calc(100%-120px)] md:h-auto md:max-h-[70vh] no-scrollbar">
@@ -448,8 +448,8 @@ const handleDownloadShippingLabel = (customer) => {
                 </div>
 
                 <div class="flex gap-4 pt-4">
-                    <button @click="showAddModal = false" class="btn-secondary flex-1 py-4">Descartar</button>
-                    <button @click="handleAdd" class="btn-primary flex-2 py-4">
+                    <button class="btn-secondary flex-1 py-4" @click="showAddModal = false">Descartar</button>
+                    <button class="btn-primary flex-2 py-4" @click="handleAdd">
                         {{ isEditing ? 'Actualizar Ficha' : 'Crear Registro' }}
                     </button>
                 </div>

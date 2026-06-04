@@ -9,6 +9,9 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
+    <!-- Preload Critical Assets: Hero image (LCP optimization) -->
+    <link rel="preload" href="/assets/n3xt_industrial_maker_figures_1778542131405.webp" as="image" type="image/webp" />
+    
     <!-- Preload Critical Fonts (cuts FCP by ~400ms) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -46,98 +49,6 @@
     <meta property="twitter:description" content="Servicio experto de impresión 3D en resina y filamento. Prototipado y arte digital." />
     <meta property="twitter:image" content="/assets/n3xt_og_image.png" />
 
-    <!-- Structured Data (JSON-LD Graph for Sitelinks & Search) -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "ManufacturingBusiness",
-          "@id": "https://n3xt3d.com/#business",
-          "name": "N3XT 3D",
-          "image": "https://n3xt3d.com/favicon.svg",
-          "url": "https://n3xt3d.com",
-          "telephone": "+573118796416",
-          "priceRange": "$$",
-          "address": {
-            "@type": "PostalAddress",
-            "streetAddress": "Taller N3XT",
-            "addressLocality": "Bogotá",
-            "addressCountry": "CO"
-          },
-          "openingHoursSpecification": {
-            "@type": "OpeningHoursSpecification",
-            "dayOfWeek": [
-              "Monday",
-              "Tuesday",
-              "Wednesday",
-              "Thursday",
-              "Friday",
-              "Saturday"
-            ],
-            "opens": "08:00",
-            "closes": "20:00"
-          },
-          "sameAs": [
-            "https://www.instagram.com/n3xt3d",
-            "https://www.tiktok.com/@n3xt3d"
-          ]
-        },
-        {
-          "@type": "WebSite",
-          "@id": "https://n3xt3d.com/#website",
-          "url": "https://n3xt3d.com",
-          "name": "N3XT 3D",
-          "description": "Servicio experto de impresión 3D en resina y filamento en Colombia.",
-          "publisher": {
-            "@id": "https://n3xt3d.com/#business"
-          },
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://n3xt3d.com/catalog?search={search_term_string}",
-            "query-input": "required name=search_term_string"
-          }
-        },
-        {
-          "@type": "SiteNavigationElement",
-          "@id": "https://n3xt3d.com/#navigation",
-          "hasPart": [
-            {
-              "@type": "WebPage",
-              "name": "Inicio",
-              "description": "Página principal de N3XT 3D, manufactura digital de alta precisión.",
-              "url": "https://n3xt3d.com/"
-            },
-            {
-              "@type": "WebPage",
-              "name": "Productos",
-              "description": "Catálogo de figuras coleccionables impresas en resina de alta resolución y piezas de filamento.",
-              "url": "https://n3xt3d.com/catalog"
-            },
-            {
-              "@type": "WebPage",
-              "name": "Servicios",
-              "description": "Cotiza tus archivos STL y OBJ al instante con nuestro cotizador avanzado OrcaEngine.",
-              "url": "https://n3xt3d.com/quote"
-            },
-            {
-              "@type": "WebPage",
-              "name": "Rastrear",
-              "description": "Sigue el estado de fabricación de tu pedido en tiempo real.",
-              "url": "https://n3xt3d.com/track"
-            },
-            {
-              "@type": "WebPage",
-              "name": "Contacto",
-              "description": "Asesoría técnica para tus proyectos personalizados de impresión 3D.",
-              "url": "https://n3xt3d.com/project/init"
-            }
-          ]
-        }
-      ]
-    }
-    </script>
-
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   </head>
   <body>
@@ -152,6 +63,6 @@
       </div>
     </noscript>
     <div id="app"></div>
-    <script type="module" src="./src/main.js"></script>
+    <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

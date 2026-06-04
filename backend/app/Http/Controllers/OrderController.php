@@ -6,8 +6,11 @@ use App\Models\Order;
 use App\Models\Inventory;
 use App\Models\Material;
 use App\Models\Printer;
+use App\Services\CostCalculatorService;
 use App\Traits\ApiResponse;
 use App\Models\Setting;
+use App\Http\Requests\StoreOrderRequest;
+use App\Http\Requests\UpdateStatusRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -18,6 +21,10 @@ use Illuminate\Support\Str;
 class OrderController extends Controller
 {
     use ApiResponse;
+
+    public function __construct(
+        protected CostCalculatorService $costCalculator
+    ) {}
 
     /**
      * Process STL with CuraEngine (Industrial Slicing API)
@@ -51,7 +58,7 @@ class OrderController extends Controller
     /**
      * Store a new order (Public or Admin)
      */
-    public function store(Request $request)
+    public function store(StoreOrderRequest $request)
     {
         $isAdmin = auth('sanctum')->check();
 
@@ -62,30 +69,8 @@ class OrderController extends Controller
             }
         }
 
-        // 2. Validation
-        $validated = $request->validate([
-            'customer_name'             => 'required|string|max:255',
-            'customer_company'          => 'nullable|string|max:255',
-            'customer_email'            => 'nullable|email|max:255',
-            'customer_phone'            => 'nullable|string|max:50',
-            'shipping_address'          => 'nullable|string|max:255',
-            'shipping_city'             => 'nullable|string|max:255',
-            'shipping_zip'              => 'nullable|string|max:20',
-            'shipping_reference'        => 'nullable|string|max:255',
-            'comments'                  => 'nullable|string',
-            'volume_mm3'                => 'required|numeric',
-            'estimated_weight_g'        => 'required|numeric',
-            'total_price'               => 'required|numeric',
-            'technology'                => 'required|string',
-            'material_id'               => 'required|string',
-            'qty'                       => 'nullable|integer|min:1',
-            'infill'                    => 'nullable|integer',
-            'dimensions_mm'             => 'nullable|string',
-            'scale_factor'              => 'nullable|numeric',
-            'estimated_duration_h'      => 'nullable|numeric',
-            'material_name'             => 'nullable|string',
-            'file'                      => $isAdmin ? 'nullable|file|max:51200' : 'required|file|max:51200', 
-        ]);
+        // 2. Validation (using StoreOrderRequest)
+        $validated = $request->validated();
 
         // 3. File Handling
         $path = null;
@@ -117,8 +102,11 @@ class OrderController extends Controller
                         $inventory->stock_available -= $extra['qty'];
                         $inventory->save();
 
-                        $isWeightOrVolume = in_array(strtolower($material->unit), ['g', 'ml', 'kg', 'l']);
-                        $cost = $isWeightOrVolume ? ($material->cost_per_kg * ($extra['qty'] / 1000)) : ($material->cost_per_kg * $extra['qty']);
+                        $cost = $this->costCalculator->calculateExtraCost(
+                            (float)$material->cost_per_kg,
+                            $material->unit,
+                            (float)$extra['qty']
+                        );
 
                         $processedExtras[] = [
                             'material_id' => $material->id,
@@ -167,13 +155,9 @@ class OrderController extends Controller
     /**
      * Update order status and trigger inventory deduction
      */
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(UpdateStatusRequest $request, $id)
     {
-        $validated = $request->validate([
-            'status'         => 'required|string|in:pending,printing,post-processing,completed,shipped,cancelled',
-            'tracking_guide' => 'nullable|string|max:255',
-            'printer_id'     => 'nullable|integer'
-        ]);
+        $validated = $request->validated();
 
         try {
             return DB::transaction(function () use ($validated, $id) {
@@ -268,9 +252,11 @@ class OrderController extends Controller
                     throw new \Exception('Inventario no encontrado para este material.');
                 }
 
-                // Calculate cost: assume cost_per_kg is cost_per_unit
-                $isWeightOrVolume = in_array(strtolower($material->unit), ['g', 'ml', 'kg', 'l']);
-                $cost = $isWeightOrVolume ? ($material->cost_per_kg * ($validated['qty'] / 1000)) : ($material->cost_per_kg * $validated['qty']);
+                $cost = $this->costCalculator->calculateExtraCost(
+                    (float)$material->cost_per_kg,
+                    $material->unit,
+                    (float)$validated['qty']
+                );
 
                 $extraItems = $order->extra_items ?? [];
                 $extraItems[] = [
@@ -367,10 +353,16 @@ class OrderController extends Controller
     }
 
     /**
-     * RESET SYSTEM: Purge all orders (CAUTION)
+     * RESET SYSTEM: Purge all orders (CAUTION - Requires confirmation)
      */
-    public function purgeAll()
+    public function purgeAll(Request $request)
     {
+        // ---- SEGURIDAD N3XT: Confirmación Requerida ----
+        $confirmation = $request->input('confirm_purge');
+        if ($confirmation !== 'PURGE_ALL_CONFIRMED') {
+            return $this->error('Acción denegada. Debes enviar confirm_purge = "PURGE_ALL_CONFIRMED" para ejecutar esta operación destructiva.', 403);
+        }
+
         try {
             Schema::disableForeignKeyConstraints();
             DB::table('orders')->truncate();
@@ -399,8 +391,15 @@ class OrderController extends Controller
         $token = $request->input('cf_turnstile_response');
         if (!$token) return false;
 
+        $secret = config('services.turnstile.secret');
+        
+        // Si no hay secret configurado en producción, la validación falla
+        if (!$secret) {
+            return false;
+        }
+
         $response = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
-            'secret'   => config('services.turnstile.secret', '1x0000000000000000000000000000000AA'),
+            'secret'   => $secret,
             'response' => $token,
             'remoteip' => $request->ip()
         ]);

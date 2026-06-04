@@ -35,6 +35,9 @@ Route::middleware('auth:sanctum')->post('/customer/logout', [CustomerAuthControl
 
 // Rutas protegidas para Administrador
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', function (Request $request) {
+        return response()->json($request->user());
+    });
     // Analytics & Accounting
     Route::get('/admin/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index']);
     Route::get('/admin/export-csv', [\App\Http\Controllers\Admin\AnalyticsController::class, 'exportCsv']);
@@ -62,6 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Configuración
     Route::post('/admin/settings', [SettingController::class, 'update']);
     Route::post('/admin/settings/logo', [SettingController::class, 'uploadLogo']);
+    Route::post('/admin/upload-image', [SettingController::class, 'uploadImage']);
+
 
     // Inventario
     Route::post('/materials', [MaterialController::class, 'store']);

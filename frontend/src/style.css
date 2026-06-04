@@ -1,24 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;700;900&family=Mona+Sans:wght@400;700;900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary: #1e3a34;
-  --color-primary-dark: #142a25;
-  --color-primary-light: #2d5a51;
-  --color-secondary: #f8fafc;
-  --color-dark: #0f172a;
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-light: var(--color-primary-light);
+  --color-secondary: var(--color-secondary);
+  --color-dark: var(--color-dark);
+  
+  --color-deep-space: #0d1117;
+  --color-midnight-ink: #000000;
+  --color-code-canvas: #151a22;
+  --color-subtle-gray: #21262d;
+  --color-polar-blue: #8dd6ff;
+  --color-spring-green: #08872b;
+  --color-ghost-white: #ffffff;
+  --color-faded-silver: #f0f6fc;
 }
 
 :root {
-  --bg-main: #f8fafc;
+  --bg-main: #f0f4f8;
   --bg-surface: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --border-main: rgba(0, 0, 0, 0.05);
+  --text-main: #0d1117;
+  --text-muted: #57606a;
+  --border-main: rgba(0, 0, 0, 0.08);
   --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.2);
+
+  --color-primary: #08872b;
+  --color-primary-dark: #066b22;
+  --color-primary-light: #10a33a;
+  --color-secondary: #f0f6fc;
+  --color-dark: #0d1117;
 
   --ease-elastic: cubic-bezier(0.68, -0.6, 0.32, 1.6);
   --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
@@ -30,13 +45,19 @@
 }
 
 .dark {
-  --bg-main: #020617;
-  --bg-surface: #0f172a;
-  --text-main: #ffffff;
-  --text-muted: #cbd5e1;
-  --border-main: rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(15, 23, 42, 0.9);
-  --glass-border: rgba(255, 255, 255, 0.2);
+  --bg-main: #0d1117; /* Deep Space */
+  --bg-surface: #151a22; /* Code Canvas */
+  --text-main: #ffffff; /* Ghost White */
+  --text-muted: #f0f6fc; /* Faded Silver */
+  --border-main: #21262d; /* Subtle Gray */
+  --glass-bg: rgba(13, 17, 23, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+
+  --color-primary: #08872b;
+  --color-primary-dark: #066b22;
+  --color-primary-light: #10a33a;
+  --color-secondary: #f0f6fc;
+  --color-dark: #0d1117;
 
   color-scheme: dark;
 }
@@ -89,6 +110,14 @@ h1, h2, h3, h4, h5, h6 {
   background-image:
     linear-gradient(to right, rgba(30, 58, 52, 0.08) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(30, 58, 52, 0.08) 1px, transparent 1px);
+}
+
+/* SplitText character divs — keep inline so buttons don't break layout */
+.split-btn {
+  white-space: nowrap;
+}
+.split-btn > div {
+  display: inline-block;
 }
 
 .animate-progress {
@@ -243,27 +272,29 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--glass-border);
 }
 
-/* Unified Button System N3XT */
+/* Unified Button System N3XT - Refero Midnight Command Center style */
 .btn-primary {
-  background-color: var(--color-primary);
-  color: white;
-  font-weight: 900;
+  background-color: var(--color-spring-green, #08872b);
+  color: var(--color-ghost-white, #ffffff);
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  border-radius: 1rem;
+  border-radius: 6px; /* 6px border radius */
+  padding: 8px 28px; /* 6px vertical (using 8px for standard height), 28px horizontal */
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  box-shadow: 0 10px 15px -3px rgba(30, 58, 52, 0.2);
+  border: 1px solid transparent;
   transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
 .btn-primary:hover {
-  background-color: white;
-  color: var(--color-primary);
-  box-shadow: 0 20px 25px -5px rgba(30, 58, 52, 0.3);
-  transform: translateY(-2px);
+  background-color: #066b22;
+  box-shadow: 0 0 15px rgba(8, 135, 43, 0.4);
+  transform: translateY(-1px);
 }
 
 .btn-primary:active {
@@ -274,6 +305,84 @@ h1, h2, h3, h4, h5, h6 {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+
+/* Outlined Accent Button */
+.btn-outlined {
+  color: var(--color-polar-blue, #8dd6ff);
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* transparent/subtle border default */
+  border-radius: 8px; /* 8px border radius */
+  padding: 8px 28px; /* 6px vertical (using 8px for standard height), 28px horizontal */
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.btn-outlined:hover {
+  border-color: var(--color-subtle-gray, #21262d);
+  color: var(--color-ghost-white, #ffffff);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Pill Ghost Button */
+.pill-ghost-btn {
+  color: var(--color-ghost-white, #ffffff);
+  background-color: transparent;
+  border-radius: 60px; /* 60px border radius */
+  padding: 8px 16px; /* 8px vertical, 16px horizontal */
+  font-family: 'Mona Sans', 'Inter', sans-serif;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.pill-ghost-btn:hover {
+  color: var(--color-polar-blue, #8dd6ff);
+}
+
+/* Ghost Header Button */
+.ghost-header-btn {
+  color: var(--color-ghost-white, #ffffff);
+  background-color: transparent;
+  padding: 8px; /* 8px padding */
+  border: none;
+  font-family: 'Mona Sans', 'Inter', sans-serif;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.ghost-header-btn:hover {
+  color: var(--color-polar-blue, #8dd6ff);
+}
+
+/* Floating Content Card */
+.floating-card {
+  background-color: rgba(255, 255, 255, 0.03); /* transparent or semi-transparent background */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15); /* subtle gray border 1px solid rgba(255,255,255,0.2) */
+  border-radius: 24px; /* 24px border radius */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.floating-card:hover {
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .btn-secondary {
@@ -394,6 +503,15 @@ h1, h2, h3, h4, h5, h6 {
       transparent 100%);
   background-size: 100% 8px;
   animation: scanline 10s linear infinite;
+}
+
+/* Scrollbar oculto pero funcional - usar clase .no-scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @keyframes scanline {

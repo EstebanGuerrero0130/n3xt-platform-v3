@@ -1,9 +1,47 @@
-<script setup>
-import { ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../services/api'
+import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
+import logger from '../utils/logger'
+
+// --- SEO Meta Tags ---
+const seoMeta = {
+  title: 'Panel del Cliente | N3XT 3D',
+  description: 'Gestiona tus pedidos de impresion 3D. Consulta el estado de tus proyectos y solicita nuevas cotizaciones.',
+  image: '/assets/n3xt_og_dashboard.png'
+}
+
+let injectedMetaEls = []
+
+const setMetaTags = () => {
+  document.title = seoMeta.title
+  injectedMetaEls.forEach(el => el.remove())
+  injectedMetaEls = []
+  const metas = [
+    { name: 'og:title', prop: true, content: seoMeta.title },
+    { name: 'og:description', prop: true, content: seoMeta.description },
+    { name: 'og:image', prop: true, content: seoMeta.image },
+    { name: 'og:type', prop: true, content: 'website' },
+    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
+    { name: 'twitter:title', prop: false, content: seoMeta.title },
+    { name: 'twitter:description', prop: false, content: seoMeta.description },
+    { name: 'twitter:image', prop: false, content: seoMeta.image },
+    { name: 'description', prop: false, content: seoMeta.description }
+  ]
+  metas.forEach(({ name, prop, content }) => {
+    const el = document.createElement('meta')
+    if (prop) el.setAttribute('property', name)
+    el.setAttribute('name', name)
+    el.setAttribute('content', content)
+    document.head.appendChild(el)
+    injectedMetaEls.push(el)
+  })
+}
+
+useRevealAnim({ delay: 200 })
 
 const customer = ref(null)
 const orders = ref([])
@@ -12,11 +50,11 @@ const router = useRouter()
 
 const fetchProfile = async () => {
     try {
-        const data = await api.get('/customer/profile', true)
+        const data = await api.get('/customer/profile')
         customer.value = data
         fetchOrders()
     } catch (err) {
-        console.error('Error fetching profile:', err)
+        logger.error('Error fetching profile:', err)
         logout()
     }
 }
@@ -28,7 +66,7 @@ const fetchOrders = async () => {
         const data = await api.get(`/orders/track?email=${customer.value.email}`)
         orders.value = Array.isArray(data) ? data : [data]
     } catch (err) {
-        console.error('Error fetching orders:', err)
+        logger.error('Error fetching orders:', err)
     } finally {
         loading.value = false
     }
@@ -36,13 +74,22 @@ const fetchOrders = async () => {
 
 const logout = async () => {
     try {
-        await api.post('/customer/logout', {}, true)
-    } catch (e) {}
-    localStorage.removeItem('n3xt_customer_token')
+        await api.post('/customer/logout')
+    } catch (e) {
+        // Silent fail — session might already be invalid
+    }
     router.push('/')
 }
 
-onMounted(fetchProfile)
+onMounted(() => {
+  setMetaTags()
+  fetchProfile()
+})
+
+onUnmounted(() => {
+  injectedMetaEls.forEach(el => el.remove())
+  injectedMetaEls = []
+})
 
 const getStatusColor = (status) => {
     switch (status) {
@@ -67,7 +114,7 @@ const getStatusLabel = (status) => {
 
 <template>
   <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] transition-colors duration-500 relative overflow-hidden">
-    <AppNavbar activeTab="dashboard" subtext="Terminal del Usuario" />
+    <AppNavbar active-tab="dashboard" subtext="Terminal del Usuario" />
     
     <!-- Background Industrial Engine -->
     <div class="fixed inset-0 technical-grid opacity-20 dark:opacity-10 pointer-events-none z-0"></div>
@@ -90,27 +137,27 @@ const getStatusLabel = (status) => {
             
             <div class="flex items-center gap-4">
                 <router-link to="/quote" class="px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary dark:hover:bg-primary dark:hover:text-white transition-all shadow-xl">Nueva Cotización</router-link>
-                <button @click="logout" class="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-2xl shadow-sm hover:bg-rose-500 hover:text-white transition-all">
+                <button class="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-2xl shadow-sm hover:bg-rose-500 hover:text-white transition-all" @click="logout">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                 </button>
             </div>
         </header>
 
         <!-- Stats / Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 reveal">
             <div class="bg-white/60 dark:bg-white/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white dark:border-white/10 shadow-xl animate-in slide-in-from-bottom-2 duration-500">
-                <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Pedidos Activos</p>
+                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Pedidos Activos</p>
                 <div class="flex items-end gap-3">
                     <h3 class="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">{{ orders.filter(o => o.status !== 'delivered').length }}</h3>
                     <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mb-2"></div>
                 </div>
             </div>
             <div class="bg-white/60 dark:bg-white/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white dark:border-white/10 shadow-xl animate-in slide-in-from-bottom-2 duration-700">
-                <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Material Consumido</p>
+                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Material Consumido</p>
                 <h3 class="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">-- <span class="text-sm font-bold opacity-40">g</span></h3>
             </div>
             <div class="bg-white/60 dark:bg-white/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white dark:border-white/10 shadow-xl animate-in slide-in-from-bottom-2 duration-1000">
-                <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Ahorro Estimado</p>
+                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Ahorro Estimado</p>
                 <div class="flex items-center gap-3">
                     <h3 class="text-4xl font-black text-emerald-500 tracking-tighter">15%</h3>
                     <span class="text-[8px] font-black text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-lg">TIER 1</span>
@@ -238,5 +285,18 @@ const getStatusLabel = (status) => {
   background-image: 
     linear-gradient(to right, rgba(30, 58, 52, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(30, 58, 52, 0.05) 1px, transparent 1px);
+}
+
+
+/* --- Scroll Reveal --- */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

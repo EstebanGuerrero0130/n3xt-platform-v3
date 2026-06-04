@@ -3,35 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Models\Material;
+use App\Models\Inventory;
+use App\Traits\ApiResponse;
+use App\Http\Requests\StoreMaterialRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MaterialController extends Controller
 {
+    use ApiResponse;
+
     public function index()
     {
         try {
-            return Material::with('inventory')->get();
+            return $this->success(Material::with('inventory')->get());
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al listar inventario'], 500);
+            return $this->error('Error al listar inventario', 500);
         }
     }
 
-    public function store(Request $request)
+    public function store(StoreMaterialRequest $request)
     {
         try {
-            $validated = $request->validate([
-                'id' => 'required|string|unique:materials,id|max:50',
-                'name' => 'required|string|max:255',
-                'category' => 'required|string',
-                'type' => 'required|in:material,utility,service',
-                'unit' => 'required|string',
-                'cost_per_kg' => 'required|numeric|min:0',
-                'color' => 'nullable|string|max:20',
-                'initial_stock' => 'required|numeric|min:0',
-                'low_stock_threshold' => 'nullable|numeric|min:0'
-            ]);
+            $validated = $request->validated();
 
-            return \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
+            return DB::transaction(function () use ($validated) {
                 $material = Material::create([
                     'id' => strtoupper($validated['id']),
                     'name' => $validated['name'],
@@ -44,16 +40,16 @@ class MaterialController extends Controller
                     'is_active' => true
                 ]);
 
-                \App\Models\Inventory::create([
+                Inventory::create([
                     'material_id' => $material->id,
                     'stock_available' => $validated['initial_stock'],
                     'low_stock_threshold' => $validated['low_stock_threshold'] ?? 500
                 ]);
 
-                return response()->json($material->load('inventory'), 201);
+                return $this->success($material->load('inventory'), 'Material creado con éxito.', 201);
             });
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al registrar material: ' . $e->getMessage()], 422);
+            return $this->error('Error al registrar material: ' . $e->getMessage(), 422);
         }
     }
 
@@ -72,9 +68,9 @@ class MaterialController extends Controller
                 $inventory->save();
             }
 
-            return response()->json($material->load('inventory'));
+            return $this->success($material->load('inventory'));
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al actualizar stock'], 422);
+            return $this->error('Error al actualizar stock', 422);
         }
     }
 
@@ -101,9 +97,9 @@ class MaterialController extends Controller
                     $inventory->save();
                 }
             }
-            return response()->json($material->load('inventory'));
+            return $this->success($material->load('inventory'));
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al actualizar material: ' . $e->getMessage()], 422);
+            return $this->error('Error al actualizar material: ' . $e->getMessage(), 422);
         }
     }
 
@@ -111,12 +107,10 @@ class MaterialController extends Controller
     {
         try {
             $material = Material::findOrFail($id);
-            // El inventario debería borrarse por cascada si está configurado en la migración,
-            // si no, se puede borrar aquí manualmente.
             $material->delete();
-            return response()->json(['message' => 'Material e inventario eliminados exitosamente']);
+            return $this->success(null, 'Material e inventario eliminados exitosamente');
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al eliminar material'], 500);
+            return $this->error('Error al eliminar material', 500);
         }
     }
 }

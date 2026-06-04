@@ -3,18 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\Printer;
+use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 
 class PrinterController extends Controller
 {
+    use ApiResponse;
+
     public function index()
     {
         try {
-            return Printer::with(['orders' => function($query) {
+            $printers = Printer::with(['orders' => function($query) {
                 $query->where('status', 'printing');
             }])->get();
+            return $this->success($printers);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al listar impresoras'], 500);
+            return $this->error('Error al listar impresoras', 500);
         }
     }
 
@@ -31,9 +35,9 @@ class PrinterController extends Controller
             $validated['maintenance_interval_h'] = 200;
             $printer = Printer::create($validated);
             
-            return response()->json($printer, 201);
+            return $this->success($printer, 'Impresora creada con éxito.', 201);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al crear impresora: ' . $e->getMessage()], 422);
+            return $this->error('Error al crear impresora: ' . $e->getMessage(), 422);
         }
     }
 
@@ -54,9 +58,9 @@ class PrinterController extends Controller
             ]);
 
             $printer->update($validated);
-            return response()->json($printer);
+            return $this->success($printer, 'Impresora actualizada.');
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al actualizar impresora'], 422);
+            return $this->error('Error al actualizar impresora', 422);
         }
     }
 
@@ -66,17 +70,13 @@ class PrinterController extends Controller
             $printer = Printer::findOrFail($id);
             $printer->total_hours_run = 0;
             $printer->last_maintenance = now();
-            // Estimamos la próxima fecha según el intervalo (ej: +3 meses)
             $printer->next_maintenance = now()->addMonths(3); 
             $printer->status = 'idle';
             $printer->save();
 
-            return response()->json([
-                'message' => 'Mantenimiento registrado. Contador de horas reiniciado.',
-                'printer' => $printer
-            ]);
+            return $this->success($printer, 'Mantenimiento registrado. Contador de horas reiniciado.');
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al completar mantenimiento'], 500);
+            return $this->error('Error al completar mantenimiento', 500);
         }
     }
 
@@ -86,9 +86,9 @@ class PrinterController extends Controller
             $printer = Printer::findOrFail($id);
             $printer->status = 'idle';
             $printer->save();
-            return response()->json(['message' => 'Máquina reiniciada a estado Libre', 'printer' => $printer]);
+            return $this->success($printer, 'Máquina reiniciada a estado Libre');
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al reiniciar máquina'], 500);
+            return $this->error('Error al reiniciar máquina', 500);
         }
     }
 
@@ -97,9 +97,9 @@ class PrinterController extends Controller
         try {
             $printer = Printer::findOrFail($id);
             $printer->delete();
-            return response()->json(['message' => 'Impresora eliminada exitosamente']);
+            return $this->success(null, 'Impresora eliminada exitosamente');
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al eliminar impresora'], 500);
+            return $this->error('Error al eliminar impresora', 500);
         }
     }
 }

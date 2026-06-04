@@ -1,20 +1,64 @@
-<script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
+import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
+import logger from '../utils/logger'
+import { useSplitTitle } from '../composables/useSplitTitle'
+import { useSplitButton } from '../composables/useSplitButton'
+
+const { applySplitTitle } = useSplitTitle()
+const { applySplitBtn } = useSplitButton()
+
+// --- SEO Meta Tags ---
+const seoMeta = {
+  title: 'Detalles del Producto | N3XT 3D Shop',
+  description: 'Explora nuestros productos 3D de alta precision. Figuras, prototipos y piezas industriales.',
+  image: '/assets/n3xt_og_product.png'
+}
+
+let injectedMetaEls: any[] = []
+
+const setMetaTags = (customTitle) => {
+  const title = customTitle || seoMeta.title
+  document.title = title
+  injectedMetaEls.forEach(el => el.remove())
+  injectedMetaEls = []
+  const metas = [
+    { name: 'og:title', prop: true, content: title },
+    { name: 'og:description', prop: true, content: seoMeta.description },
+    { name: 'og:image', prop: true, content: seoMeta.image },
+    { name: 'og:type', prop: true, content: 'product' },
+    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
+    { name: 'twitter:title', prop: false, content: title },
+    { name: 'twitter:description', prop: false, content: seoMeta.description },
+    { name: 'twitter:image', prop: false, content: seoMeta.image },
+    { name: 'description', prop: false, content: seoMeta.description }
+  ]
+  metas.forEach(({ name, prop, content }) => {
+    const el = document.createElement('meta')
+    if (prop) el.setAttribute('property', name)
+    el.setAttribute('name', name)
+    el.setAttribute('content', content)
+    document.head.appendChild(el)
+    injectedMetaEls.push(el)
+  })
+}
+
+useRevealAnim({ delay: 200 })
 
 const route = useRoute()
-const isDark = ref(localStorage.getItem('n3xt_theme') !== 'light')
 const quantity = ref(1)
-const product = ref(null)
+const product = ref<any>(null)
 const selectedImage = ref('')
 const loading = ref(true)
 const companySettings = ref({ company: { phone: '' } })
 const customerForm = ref({ name: '' })
 
-const catalog = ref([])
+const catalog = ref<any[]>([])
 const relatedProducts = computed(() => {
   if (!product.value || !catalog.value.length) return []
   
@@ -51,12 +95,16 @@ const fetchProduct = async () => {
     if (found) {
       product.value = found
       selectedImage.value = found.images && found.images.length > 0 ? found.images[0] : found.image
-      document.title = `${found.name} | N3XT 3D Shop`
+      setMetaTags(`${found.name} | N3XT 3D Shop`)
     }
   } catch (err) {
-    console.error('Error fetching product:', err)
+    logger.error('Error fetching product:', err)
   } finally {
     loading.value = false
+    nextTick(() => {
+      applySplitTitle()
+      applySplitBtn()
+    })
   }
 }
 
@@ -67,7 +115,7 @@ const checkoutWhatsApp = () => {
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
 }
 
-const formatPrice = (p) => {
+const formatPrice = (p: any) => {
   if (!p) return '$ 0'
   if (typeof p === 'string' && p.toLowerCase().includes('cotizar')) return p.toUpperCase()
   const val = parseFloat(String(p).replace(/[^0-9.-]+/g,""))
@@ -82,9 +130,13 @@ const isDiscounted = computed(() => {
 })
 
 onMounted(() => {
-  document.title = 'Detalles del Producto | N3XT 3D Shop'
-  if (isDark.value) document.documentElement.classList.add('dark')
+  setMetaTags()
   fetchProduct()
+})
+
+onUnmounted(() => {
+  injectedMetaEls.forEach(el => el.remove())
+  injectedMetaEls = []
 })
 
 // Observar cambios en la URL para recargar el producto (Navegación entre relacionados)
@@ -98,7 +150,7 @@ watch(() => route.params.id, () => {
 
 <template>
   <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white transition-colors duration-500 overflow-x-hidden">
-    <AppNavbar activeTab="catalog" subtext="Detalle de producto" />
+    <AppNavbar active-tab="catalog" subtext="Detalle de producto" />
 
     <main class="max-w-7xl mx-auto px-6 py-12 md:py-20">
       <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-2 gap-24 py-12 md:py-20 animate-in fade-in duration-500">
@@ -127,7 +179,7 @@ watch(() => route.params.id, () => {
         <!-- Columna Galería -->
         <div class="space-y-6 animate-in fade-in slide-in-from-left-4 duration-1000 lg:sticky lg:top-24">
           <div class="aspect-square bg-gray-50 dark:bg-gray-900 rounded-[3rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-2xl relative group p-10 flex items-center justify-center">
-            <img :src="selectedImage || product.image" :alt="'Detalle de producto: ' + product.name" class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-[2s]" />
+            <img :src="selectedImage || product.image" :alt="'Detalle de producto: ' + product.name" class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-[2s]" fetchpriority="high" @error="(e: any) => e.target.style.display='none'" />
             <!-- Cloudinary Optimization Note Tag (Invisible to user) -->
             <div class="absolute top-8 right-8 px-4 py-2 bg-black/40 backdrop-blur-md rounded-xl border border-white/10">
                 <span class="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Alta definicion</span>
@@ -135,8 +187,8 @@ watch(() => route.params.id, () => {
           </div>
           <!-- Miniaturas -->
           <div v-if="product.images && product.images.length > 1" class="grid grid-cols-4 gap-4">
-             <div v-for="(img, i) in product.images" :key="i" @click="selectedImage = img" :class="[selectedImage === img ? 'border-primary opacity-100 ring-2 ring-primary/30' : 'border-gray-200 dark:border-white/10 opacity-50']" class="aspect-square bg-gray-100 dark:bg-white/5 rounded-2xl border overflow-hidden cursor-pointer hover:opacity-100 hover:border-primary transition-all">
-                <img :src="img" :alt="'Vista previa ' + (i + 1) + ' de ' + product.name" class="w-full h-full object-cover" />
+             <div v-for="(img, i) in product.images" :key="i" :class="[selectedImage === img ? 'border-primary opacity-100 ring-2 ring-primary/30' : 'border-gray-200 dark:border-white/10 opacity-50']" class="aspect-square bg-gray-100 dark:bg-white/5 rounded-2xl border overflow-hidden cursor-pointer hover:opacity-100 hover:border-primary transition-all" @click="selectedImage = img">
+                <img :src="img" :alt="'Vista previa ' + (i + 1) + ' de ' + product.name" class="w-full h-full object-cover" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
              </div>
           </div>
         </div>
@@ -148,7 +200,7 @@ watch(() => route.params.id, () => {
                 <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_12px_#34d399]"></span>
                 <span class="text-[10px] font-black text-emerald-400 dark:text-emerald-300 uppercase tracking-[0.4em] drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">{{ product.category }}</span>
             </div>
-            <h1 class="text-4xl md:text-6xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none italic mb-4">
+            <h1 class="split-title text-5xl md:text-7xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-[0.9] mb-4">
               {{ product.name }}
             </h1>
             <div class="flex items-center gap-6">
@@ -167,19 +219,20 @@ watch(() => route.params.id, () => {
             </div>
           </div>
 
-          <p class="text-gray-500 dark:text-gray-400 font-medium text-lg leading-relaxed italic">
+          <p class="text-gray-500 dark:text-gray-400 text-sm md:text-base font-bold leading-relaxed">
             {{ product.description }}
           </p>
 
           <!-- Specifications List -->
           <div class="grid grid-cols-2 gap-6 pt-8 border-t border-gray-100 dark:border-white/5">
-             <div v-for="spec in [
+             <div
+v-for="spec in [
                {l: 'Tecnologia', v: 'Resina 8K / FDM Pro', c: 'text-primary', i: `<svg class='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z'/></svg>`},
                {l: 'Material', v: 'Grado industrial', c: 'text-emerald-500', i: `<svg class='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'/></svg>`},
                {l: 'Envio', v: 'Nacional (Colombia)', c: 'text-blue-500', i: `<svg class='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M12 19l9 2-9-18-9 18 9-2zm0 0v-8'/></svg>`},
                {l: 'Garantia', v: '6 Meses N3XT', c: 'text-orange-500', i: `<svg class='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'/></svg>`}
              ]" :key="spec.l" class="group/spec flex items-center gap-5 p-5 bg-gray-50 dark:bg-[#0f172a] rounded-[2rem] border border-transparent hover:border-primary/20 transition-all duration-500">
-                <div class="w-12 h-12 bg-white dark:bg-black/40 rounded-2xl flex items-center justify-center shadow-lg group-hover/spec:scale-110 group-hover/spec:bg-primary/10 transition-all" v-html="spec.i">
+                <div class="w-12 h-12 bg-white dark:bg-black/40 rounded-2xl flex items-center justify-center shadow-lg group-hover/spec:scale-110 group-hover/spec:bg-primary/10 transition-all" :innerHTML="sanitizeSVG(spec.i)">
                 </div>
                 <div>
                    <p class="text-[8px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1">{{ spec.l }}</p>
@@ -192,9 +245,9 @@ watch(() => route.params.id, () => {
           <div class="pt-10 space-y-6">
             <div class="flex items-center gap-6">
               <div class="flex items-center bg-gray-100 dark:bg-[#0f172a] rounded-[1.5rem] p-1.5 border border-gray-200 dark:border-white/5">
-                <button @click="quantity > 1 ? quantity-- : null" class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl">-</button>
+                <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl" @click="quantity > 1 ? quantity-- : null">-</button>
                 <span class="w-14 text-center font-black text-xl italic tracking-tighter">{{ quantity }}</span>
-                <button @click="quantity++" class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl">+</button>
+                <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl" @click="quantity++">+</button>
               </div>
               <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest max-w-[120px] leading-tight italic">Disponibilidad inmediata bajo pedido industrial</p>
             </div>
@@ -202,11 +255,11 @@ watch(() => route.params.id, () => {
             <!-- IDENTIFICACION (NOMBRE PARA WHATSAPP) -->
             <div class="space-y-3 p-6 bg-gray-100 dark:bg-[#0f172a] rounded-[2rem] border border-transparent dark:border-white/5">
               <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest block ml-2">Tu Nombre (Para identificarte en WhatsApp)</label>
-              <input type="text" v-model="customerForm.name" placeholder="Ej. Juan Perez..." class="w-full bg-white dark:bg-black/40 border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+              <input v-model="customerForm.name" type="text" placeholder="Ej. Juan Perez..." class="w-full bg-white dark:bg-black/40 border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-primary/20 transition-all">
             </div>
 
             <div class="flex flex-col gap-5">
-              <button @click="checkoutWhatsApp" class="w-full px-10 py-6 bg-emerald-500 text-white rounded-[2rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-3xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4 group">
+              <button class="split-btn w-full px-10 py-6 bg-emerald-500 text-white rounded-[2rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-3xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4 group" @click="checkoutWhatsApp">
                 <svg class="w-6 h-6 group-hover:rotate-12 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.67-1.618-.918-2.213-.242-.588-.487-.51-.67-.51-.172-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                 <span>Adquirir por WhatsApp</span>
               </button>
@@ -231,7 +284,7 @@ watch(() => route.params.id, () => {
         </div>
       </div>
       <!-- Related Products Section -->
-      <div v-if="product && relatedProducts.length > 0" class="mt-40 pt-20 border-t border-gray-100 dark:border-white/5">
+      <div v-if="product && relatedProducts.length > 0" class="mt-40 pt-20 border-t border-gray-100 dark:border-white/5 reveal">
          <div class="flex flex-col md:flex-row justify-between items-end gap-6 mb-16">
             <div>
                <h4 class="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic mb-2">Colecciones Similares</h4>
@@ -250,7 +303,7 @@ watch(() => route.params.id, () => {
                class="group block space-y-6"
             >
                <div class="aspect-square bg-gray-50 dark:bg-gray-900/50 rounded-3xl overflow-hidden border border-gray-100 dark:border-white/5 p-8 flex items-center justify-center group-hover:scale-[1.02] transition-all duration-500">
-                  <img :src="rel.image" :alt="rel.name" class="max-w-full max-h-full object-contain" />
+                  <img :src="rel.image" :alt="rel.name" class="max-w-full max-h-full object-contain" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
                </div>
                <div class="px-4">
                   <p class="text-[8px] font-black text-primary uppercase tracking-widest mb-1">{{ rel.category }}</p>
@@ -275,4 +328,17 @@ watch(() => route.params.id, () => {
 
 <style scoped>
 /* Estilos específicos del detalle si son necesarios */
+
+
+/* --- Scroll Reveal --- */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
 </style>

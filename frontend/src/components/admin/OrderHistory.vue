@@ -1,8 +1,8 @@
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+import { ref, computed, type PropType } from 'vue'
 
 const props = defineProps({
-  orders: { type: Array, required: true },
+  orders: { type: Array as PropType<any[]>, required: true },
   loadingAnalytics: { type: Boolean, default: false }
 })
 
@@ -34,20 +34,20 @@ const filteredOrders = computed(() => {
     if (searchQuery.value) {
       const q = searchQuery.value.toLowerCase()
       const matchesSearch = (
-        order.id.toString().includes(q) ||
+        (order.id?.toString() || '').includes(q) ||
         (order.customer_name && order.customer_name.toLowerCase().includes(q))
       )
       if (!matchesSearch) return false
     }
     // 3. Filtrar por fecha
     if (dateRange.value.start) {
-      if (new Date(order.created_at) < new Date(dateRange.value.start + 'T00:00:00')) return false
+      if (new Date(order.created_at || 0) < new Date(dateRange.value.start + 'T00:00:00')) return false
     }
     if (dateRange.value.end) {
-      if (new Date(order.created_at) > new Date(dateRange.value.end + 'T23:59:59')) return false
+      if (new Date(order.created_at || 0) > new Date(dateRange.value.end + 'T23:59:59')) return false
     }
     return true
-  }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) // Más recientes primero
+  }).sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()) // Más recientes primero
 })
 
 const metricsSummary = computed(() => {
@@ -63,7 +63,7 @@ const metricsSummary = computed(() => {
 })
 
 const topCustomers = computed(() => {
-  const map = {}
+  const map: Record<string, { name: string; total: number; count: number }> = {}
   filteredOrders.value.forEach(o => {
     if (!map[o.customer_name]) map[o.customer_name] = { name: o.customer_name, total: 0, count: 0 }
     map[o.customer_name].total += parseFloat(o.total_price) || 0
@@ -72,7 +72,7 @@ const topCustomers = computed(() => {
   return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 3)
 })
 
-const getStatusColor = (status) => {
+const getStatusColor = (status: any) => {
   const map = {
     pending: 'bg-red-50 text-red-600 border-red-200',
     printing: 'bg-amber-50 text-amber-600 border-amber-200',
@@ -83,7 +83,7 @@ const getStatusColor = (status) => {
   return map[status] || 'bg-gray-50 text-gray-600 border-gray-200'
 }
 
-const getStatusLabel = (status) => {
+const getStatusLabel = (status: any) => {
   const map = {
     pending: 'Pendiente',
     printing: 'En Máquina',
@@ -100,19 +100,19 @@ const getStatusLabel = (status) => {
     <!-- Header -->
     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-12 px-4">
       <div>
-        <h2 class="text-4xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-2 italic">Historial<span class="text-primary">.</span>OS</h2>
+        <h2 class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-2">Historial<span class="text-primary">.</span>OS</h2>
         <div class="flex items-center gap-3">
           <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse"></div>
-          <p class="text-gray-400 dark:text-gray-500 font-black uppercase tracking-[0.3em] text-[9px] md:text-[10px]">Auditoría Logística de Precisión</p>
+          <p class="text-gray-400 dark:text-gray-500 font-black uppercase tracking-[0.3em] text-[10px] md:text-[10px]">Auditoría Logística de Precisión</p>
         </div>
       </div>
       
       <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
         <button 
           v-if="activeSubTab === 'list'"
-          @click="$emit('export-report', { type: 'ledger', start: dateRange.start, end: dateRange.end, filteredOrders })" 
-          :disabled="loadingAnalytics"
+          :disabled="loadingAnalytics" 
           class="flex-1 lg:flex-none px-8 py-5 bg-gray-950 dark:bg-primary text-white rounded-[2rem] shadow-2xl shadow-black/20 hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 border border-white/10"
+          @click="$emit('export-report', { type: 'ledger', start: dateRange.start, end: dateRange.end, filteredOrders })"
         >
           <svg class="w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> {{ loadingAnalytics ? 'Sincronizando...' : 'Libro de Auditoria' }}
         </button>
@@ -122,8 +122,8 @@ const getStatusLabel = (status) => {
     <!-- Sub-Navegación y Sincronización -->
     <div class="flex flex-wrap items-center justify-between gap-6 mb-12 px-4 bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl p-6 rounded-[3rem] border border-gray-100/50 dark:border-white/5 shadow-xl overflow-x-auto no-scrollbar">
       <div class="flex gap-3">
-        <button @click="activeSubTab = 'list'" :class="activeSubTab === 'list' ? 'bg-gray-950 dark:bg-primary text-white shadow-2xl' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap">Listado</button>
-        <button @click="activeSubTab = 'metrics'" :class="activeSubTab === 'metrics' ? 'bg-gray-950 dark:bg-primary text-white shadow-2xl' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap">Analíticas</button>
+        <button :class="activeSubTab === 'list' ? 'bg-gray-950 dark:bg-primary text-white shadow-2xl' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap" @click="activeSubTab = 'list'">Listado</button>
+        <button :class="activeSubTab === 'metrics' ? 'bg-gray-950 dark:bg-primary text-white shadow-2xl' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap" @click="activeSubTab = 'metrics'">Analíticas</button>
       </div>
     </div>
 
@@ -134,8 +134,8 @@ const getStatusLabel = (status) => {
         <div class="relative flex-1 group">
           <svg class="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 group-focus-within:text-primary transition-colors w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           <input 
-            type="text" 
             v-model="searchQuery" 
+            type="text" 
             placeholder="Rastrear Orden o Cliente..." 
             class="pl-16 pr-6 py-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2rem] text-sm font-bold text-gray-900 dark:text-white w-full outline-none focus:ring-4 focus:ring-primary/5 shadow-xl shadow-gray-200/20 dark:shadow-none transition-all"
           >
@@ -153,22 +153,22 @@ const getStatusLabel = (status) => {
       </div>
 
       <!-- Filtro de Fechas -->
-      <div class="lg:col-span-7 bg-white dark:bg-gray-900 p-3 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none flex flex-col sm:flex-row items-center gap-3">
-        <div class="flex items-center gap-4 px-6 py-3 bg-gray-50/80 dark:bg-white/5 rounded-[1.5rem] border border-gray-50 dark:border-white/5 flex-1 w-full sm:w-auto">
-          <span class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Desde</span>
-          <input type="date" v-model="dateRange.start" class="bg-transparent border-none text-xs font-black text-gray-900 dark:text-white outline-none p-0 flex-1 sm:w-32 uppercase tracking-tighter">
+      <div class="lg:col-span-7 bg-white dark:bg-gray-900 p-3 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none flex flex-col sm:flex-row items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-4 px-6 py-3 bg-gray-50/80 dark:bg-white/5 rounded-[1.5rem] border border-gray-50 dark:border-white/5 flex-1 w-full sm:w-auto min-w-0">
+          <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Desde</span>
+          <input v-model="dateRange.start" type="date" class="bg-transparent border-none text-xs font-black text-gray-900 dark:text-white outline-none p-0 flex-1 sm:w-32 uppercase tracking-tighter">
           <div class="h-4 w-px bg-gray-200 dark:bg-white/10 mx-2"></div>
-          <span class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Hasta</span>
-          <input type="date" v-model="dateRange.end" class="bg-transparent border-none text-xs font-black text-gray-900 dark:text-white outline-none p-0 flex-1 sm:w-32 uppercase tracking-tighter">
+          <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Hasta</span>
+          <input v-model="dateRange.end" type="date" class="bg-transparent border-none text-xs font-black text-gray-900 dark:text-white outline-none p-0 flex-1 sm:w-32 uppercase tracking-tighter">
         </div>
         
         <div class="flex items-center gap-2 w-full sm:w-auto">
-          <button @click="setQuickMonth(0)" class="flex-1 sm:flex-none px-6 py-3 bg-gray-950 dark:bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all shadow-lg">Mes Actual</button>
-          <button @click="setQuickMonth(-1)" class="flex-1 sm:flex-none px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all">Anterior</button>
+          <button class="flex-1 sm:flex-none px-6 py-3 bg-gray-950 dark:bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all shadow-lg" @click="setQuickMonth(0)">Mes Actual</button>
+          <button class="flex-1 sm:flex-none px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all" @click="setQuickMonth(-1)">Anterior</button>
           <button 
             v-if="dateRange.start || dateRange.end"
-            @click="dateRange.start = ''; dateRange.end = ''" 
-            class="p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0 border border-rose-100"
+            class="p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0 border border-rose-100" 
+            @click="dateRange.start = ''; dateRange.end = ''"
           >
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
@@ -178,23 +178,23 @@ const getStatusLabel = (status) => {
 
     <!-- Vista de Métricas -->
     <div v-if="activeSubTab === 'metrics'" class="px-2 animate-in slide-in-from-right-4 duration-500">
-        <div class="bg-gray-950 rounded-[3rem] md:rounded-[4rem] p-10 md:p-16 text-white relative overflow-hidden mb-10 shadow-2xl shadow-black/40 border border-white/5 group">
+        <div class="bg-gray-950 rounded-[3rem] md:rounded-[4rem] p-6 md:p-16 text-white relative overflow-hidden mb-10 shadow-2xl shadow-black/40 border border-white/5 group">
             <div class="absolute -right-20 -top-20 w-80 h-80 bg-primary/10 rounded-full blur-[100px] group-hover:bg-primary/20 transition-all duration-1000"></div>
             <div class="relative z-10">
-                <h3 class="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4 italic">Balanced Scorecard</h3>
+                <h3 class="text-2xl md:text-4xl font-black uppercase tracking-tighter mb-4">Balanced Scorecard</h3>
                 <p class="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-[0.3em] mb-12 max-w-md">Análisis de rendimiento financiero y volumétrico del periodo</p>
                 
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-10">
                     <div class="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-500">
-                        <span class="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-widest block mb-3">Flujo Órdenes</span>
+                        <span class="text-[10px] md:text-[10px] font-black text-primary uppercase tracking-widest block mb-3">Flujo Órdenes</span>
                         <div class="text-4xl md:text-6xl font-black tracking-tighter text-white">{{ filteredOrders.length }}</div>
                     </div>
                     <div class="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-500">
-                        <span class="text-[9px] md:text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-3">Capitalizado</span>
+                        <span class="text-[10px] md:text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-3">Capitalizado</span>
                         <div class="text-3xl md:text-6xl font-black tracking-tighter">$ {{ Math.round(metricsSummary.total).toLocaleString() }}</div>
                     </div>
                     <div class="col-span-2 md:col-span-1 p-8 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-500">
-                        <span class="text-[9px] md:text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-3">Producción</span>
+                        <span class="text-[10px] md:text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-3">Producción</span>
                         <div class="text-4xl md:text-6xl font-black tracking-tighter">{{ metricsSummary.weight }} <span class="text-xl md:text-2xl font-bold opacity-30 italic">KG</span></div>
                     </div>
                 </div>
@@ -227,7 +227,7 @@ const getStatusLabel = (status) => {
                           </div>
                           <div class="flex-1">
                               <div class="text-xs font-black text-gray-900 dark:text-white uppercase truncate max-w-[150px]">{{ customer.name }}</div>
-                              <div class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ customer.count }} órdenes registradas</div>
+                              <div class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ customer.count }} órdenes registradas</div>
                           </div>
                           <div class="text-sm font-black text-gray-900 dark:text-white">${{ customer.total.toLocaleString() }}</div>
                       </div>
@@ -239,8 +239,8 @@ const getStatusLabel = (status) => {
 
                   <div class="mt-8 pt-6 border-t border-gray-100 dark:border-white/5">
                       <button 
+                        class="w-full py-4 bg-gray-900 dark:bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all active:scale-95 flex items-center justify-center gap-3"
                         @click="$emit('export-report', { type: 'metrics', start: dateRange.start, end: dateRange.end, filteredOrders })"
-                        class="w-full py-4 bg-gray-900 dark:bg-primary text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all active:scale-95 flex items-center justify-center gap-3"
                       >
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                         Balance Ejecutivo PDF
@@ -250,8 +250,44 @@ const getStatusLabel = (status) => {
         </div>
     </div>
 
-    <!-- Tabla -->
-    <div v-if="activeSubTab === 'list'" class="bg-white dark:bg-gray-900 rounded-[3rem] md:rounded-[4rem] border border-gray-100 dark:border-white/5 shadow-2xl shadow-gray-200/20 dark:shadow-none overflow-hidden mx-4">
+    <!-- Skeleton Loading: tabla mientras carga -->
+    <div v-if="activeSubTab === 'list' && loadingAnalytics" class="mx-4 animate-pulse">
+      <div class="bg-white dark:bg-gray-900 rounded-[3rem] md:rounded-[4rem] border border-gray-100 dark:border-white/5 shadow-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse min-w-[900px]">
+            <thead>
+              <tr class="border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
+                <th v-for="i in 7" :key="'th-'+i" class="p-8"><div class="h-4 bg-gray-200 dark:bg-[#2a3040] rounded-full w-16"></div></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in 5" :key="'row-'+row" class="border-b border-gray-50 dark:border-white/5">
+                <td v-for="col in 7" :key="'col-'+col" class="p-8">
+                  <div v-if="col === 1" class="h-6 bg-gray-200 dark:bg-[#2a3040] rounded-xl w-20"></div>
+                  <div v-else-if="col === 2" class="h-4 bg-gray-200 dark:bg-[#2a3040] rounded-full w-24"></div>
+                  <div v-else-if="col === 3" class="space-y-2">
+                    <div class="h-4 bg-gray-200 dark:bg-[#2a3040] rounded-full w-28"></div>
+                    <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full w-20"></div>
+                  </div>
+                  <div v-else-if="col === 4" class="flex gap-2">
+                    <div class="h-6 bg-gray-200 dark:bg-[#2a3040] rounded-lg w-12"></div>
+                    <div class="h-6 bg-gray-200 dark:bg-[#2a3040] rounded-lg w-16"></div>
+                  </div>
+                  <div v-else-if="col === 5" class="h-5 bg-gray-200 dark:bg-[#2a3040] rounded-full w-20"></div>
+                  <div v-else-if="col === 6" class="h-6 bg-gray-200 dark:bg-[#2a3040] rounded-xl w-24 mx-auto"></div>
+                  <div v-else class="flex justify-end gap-2">
+                    <div v-for="btn in 4" :key="'btn-'+btn" class="w-10 h-10 bg-gray-200 dark:bg-[#2a3040] rounded-xl"></div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla (real) -->
+    <div v-if="activeSubTab === 'list' && !loadingAnalytics" class="bg-white dark:bg-gray-900 rounded-[3rem] md:rounded-[4rem] border border-gray-100 dark:border-white/5 shadow-2xl shadow-gray-200/20 dark:shadow-none overflow-hidden mx-4">
       <div class="overflow-x-auto no-scrollbar">
         <table class="w-full text-left border-collapse min-w-[900px]">
           <thead>
@@ -275,11 +311,11 @@ const getStatusLabel = (status) => {
               </td>
               <td class="p-8">
                 <p class="text-sm font-black text-gray-900 dark:text-white tracking-tighter uppercase">{{ order.customer_name }}</p>
-                <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ order.customer_email || 'Sin Contacto' }}</p>
+                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ order.customer_email || 'Sin Contacto' }}</p>
               </td>
               <td class="p-8">
                 <div class="flex items-center gap-3">
-                  <span :class="order.technology === 'FDM' ? 'bg-indigo-600' : 'bg-primary'" class="px-3 py-1.5 text-white rounded-lg text-[9px] font-black uppercase tracking-widest shadow-md">{{ order.technology }}</span>
+                  <span :class="order.technology === 'FDM' ? 'bg-indigo-600' : 'bg-primary'" class="px-3 py-1.5 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-md">{{ order.technology }}</span>
                   <span class="text-[10px] font-black text-gray-900 dark:text-gray-300">{{ order.estimated_weight_g }}<span class="text-gray-300 dark:text-gray-700">g</span></span>
                 </div>
               </td>
@@ -287,22 +323,22 @@ const getStatusLabel = (status) => {
                 <p class="text-lg font-black text-gray-900 dark:text-white tracking-tighter">${{ Number(order.total_price).toLocaleString() }}</p>
               </td>
               <td class="p-8 text-center">
-                <span :class="['px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.1em] border shadow-sm', getStatusColor(order.status)]">
+                <span :class="['px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm', getStatusColor(order.status)]">
                   {{ getStatusLabel(order.status) }}
                 </span>
               </td>
               <td class="p-8">
                 <div class="flex items-center justify-end gap-2">
-                  <button @click="$emit('view-details', order)" class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Ver Detalles">
+                  <button class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Ver Detalles" @click="$emit('view-details', order)">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                   </button>
-                  <button @click="$emit('download-pdf', order)" class="w-10 h-10 rounded-xl bg-gray-950 text-white flex items-center justify-center hover:bg-primary transition-all shadow-sm" title="Cotización PDF">
+                  <button class="w-10 h-10 rounded-xl bg-gray-950 text-white flex items-center justify-center hover:bg-primary transition-all shadow-sm" title="Cotización PDF" @click="$emit('download-pdf', order)">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                   </button>
-                  <button v-if="order.status === 'shipped'" @click="$emit('print-label', order)" class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Rótulo de Envío">
+                  <button v-if="order.status === 'shipped'" class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Rótulo de Envío" @click="$emit('print-label', order)">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                   </button>
-                  <button @click="$emit('delete', order.id)" class="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Eliminar Registro">
+                  <button class="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Eliminar Registro" @click="$emit('delete', order.id)">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>

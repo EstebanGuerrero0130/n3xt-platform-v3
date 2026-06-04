@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import WhatsAppWidget from './components/WhatsAppWidget.vue'
@@ -7,15 +7,13 @@ const route = useRoute()
 const showWhatsApp = computed(() => !route.path.startsWith('/admin'))
 
 onMounted(() => {
-  // Por defecto DARK a menos que esté guardado como light
-  const theme = localStorage.getItem('n3xt_theme')
-  const isDark = theme !== 'light'
-  
-  if (isDark) {
-    document.documentElement.classList.add('dark')
-    if (!theme) localStorage.setItem('n3xt_theme', 'dark')
-  } else {
+  // Respetar preferencia guardada, default dark
+  const savedTheme = localStorage.getItem('n3xt_theme')
+  if (savedTheme === 'light') {
     document.documentElement.classList.remove('dark')
+  } else {
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('n3xt_theme', 'dark')
   }
 })
 </script>

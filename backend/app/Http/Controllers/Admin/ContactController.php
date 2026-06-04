@@ -5,99 +5,94 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\RecurrentCustomer;
 use App\Models\RecurrentSupplier;
+use App\Traits\ApiResponse;
+use App\Http\Requests\StoreContactRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ContactController extends Controller
 {
+    use ApiResponse;
+
     // Customers
     public function getCustomers()
     {
-        return response()->json(RecurrentCustomer::orderBy('name')->get());
+        try {
+            return $this->success(RecurrentCustomer::orderBy('name')->get());
+        } catch (\Exception $e) {
+            return $this->error('Error al listar clientes', 500);
+        }
     }
 
-    public function storeCustomer(Request $request)
+    public function storeCustomer(StoreContactRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'company' => 'nullable|string|max:255',
-            'customer_id_document' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'location' => 'nullable|string|max:255',
-            'address_full' => 'nullable|string|max:255',
-            'city_dept_country' => 'nullable|string|max:255',
-            'zip_code' => 'nullable|string|max:20',
-            'location_reference' => 'nullable|string|max:255',
-            'notes' => 'nullable|string'
-        ]);
-
-        $customer = RecurrentCustomer::create($validated);
-        return response()->json($customer, 201);
+        try {
+            $customer = RecurrentCustomer::create($request->validated());
+            return $this->success($customer, 'Cliente creado con éxito.', 201);
+        } catch (\Exception $e) {
+            return $this->error('Error al crear cliente: ' . $e->getMessage(), 422);
+        }
     }
 
-    public function updateCustomer(Request $request, $id)
+    public function updateCustomer(StoreContactRequest $request, $id)
     {
-        $customer = RecurrentCustomer::findOrFail($id);
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'company' => 'nullable|string|max:255',
-            'customer_id_document' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'location' => 'nullable|string|max:255',
-            'address_full' => 'nullable|string|max:255',
-            'city_dept_country' => 'nullable|string|max:255',
-            'zip_code' => 'nullable|string|max:20',
-            'location_reference' => 'nullable|string|max:255',
-            'notes' => 'nullable|string'
-        ]);
-
-        $customer->update($validated);
-        return response()->json($customer);
+        try {
+            $customer = RecurrentCustomer::findOrFail($id);
+            $customer->update($request->validated());
+            return $this->success($customer, 'Cliente actualizado.');
+        } catch (\Exception $e) {
+            return $this->error('Error al actualizar cliente', 422);
+        }
     }
 
     public function deleteCustomer($id)
     {
-        RecurrentCustomer::destroy($id);
-        return response()->json(['message' => 'Cliente eliminado']);
+        try {
+            RecurrentCustomer::destroy($id);
+            return $this->success(null, 'Cliente eliminado');
+        } catch (\Exception $e) {
+            return $this->error('Error al eliminar cliente', 500);
+        }
     }
 
     // Suppliers
     public function getSuppliers()
     {
-        return response()->json(RecurrentSupplier::orderBy('name')->get());
+        try {
+            return $this->success(RecurrentSupplier::orderBy('name')->get());
+        } catch (\Exception $e) {
+            return $this->error('Error al listar proveedores', 500);
+        }
     }
 
-    public function storeSupplier(Request $request)
+    public function storeSupplier(StoreContactRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'contact_person' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'specialty' => 'nullable|string|max:255'
-        ]);
-
-        $supplier = RecurrentSupplier::create($validated);
-        return response()->json($supplier, 201);
+        try {
+            $supplier = RecurrentSupplier::create($request->validated());
+            return $this->success($supplier, 'Proveedor creado con éxito.', 201);
+        } catch (\Exception $e) {
+            return $this->error('Error al crear proveedor: ' . $e->getMessage(), 422);
+        }
     }
 
-    public function updateSupplier(Request $request, $id)
+    public function updateSupplier(StoreContactRequest $request, $id)
     {
-        $supplier = RecurrentSupplier::findOrFail($id);
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'contact_person' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'specialty' => 'nullable|string|max:255'
-        ]);
-
-        $supplier->update($validated);
-        return response()->json($supplier);
+        try {
+            $supplier = RecurrentSupplier::findOrFail($id);
+            $supplier->update($request->validated());
+            return $this->success($supplier, 'Proveedor actualizado.');
+        } catch (\Exception $e) {
+            return $this->error('Error al actualizar proveedor', 422);
+        }
     }
 
     public function deleteSupplier($id)
     {
-        RecurrentSupplier::destroy($id);
-        return response()->json(['message' => 'Proveedor eliminado']);
+        try {
+            RecurrentSupplier::destroy($id);
+            return $this->success(null, 'Proveedor eliminado');
+        } catch (\Exception $e) {
+            return $this->error('Error al eliminar proveedor', 500);
+        }
     }
 }

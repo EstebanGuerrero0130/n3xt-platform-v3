@@ -15,20 +15,31 @@ return [
     |
     */
 
-    'paths' => ['*'],
+    'paths' => ['api/*', 'storage/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed Origins
+    |--------------------------------------------------------------------------
+    |
+    | Define los orígenes permitidos para CORS.
+    | En local se incluyen localhost y 127.0.0.1.
+    | En producción, define CORS_ALLOWED_ORIGINS en .env
+    | Ejemplo: CORS_ALLOWED_ORIGINS=https://n3xt3d.com,https://admin.n3xt3d.com
+    |
+    */
+    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:8000,http://127.0.0.1:5173,http://127.0.0.1:8000')),
 
     'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['Content-Disposition'],
 
-    'max_age' => 0,
+    'max_age' => 86400,
 
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];

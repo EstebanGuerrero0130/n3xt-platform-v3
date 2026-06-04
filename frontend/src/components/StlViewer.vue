@@ -1,10 +1,29 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, shallowRef } from 'vue'
-import * as THREE from 'three'
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js'
+import logger from '../utils/logger'
+
+// Three.js lazy-loaded via dynamic import — no vendor chunk on initial load
+let THREE: any = null
+let STLLoader: any = null
+let OBJLoader: any = null
+let OrbitControls: any = null
+let TransformControls: any = null
+
+async function loadThree() {
+  if (THREE) return
+  const [threeModule, stlModule, objModule, orbitModule, transformModule] = await Promise.all([
+    import('three'),
+    import('three/examples/jsm/loaders/STLLoader.js'),
+    import('three/examples/jsm/loaders/OBJLoader.js'),
+    import('three/examples/jsm/controls/OrbitControls.js'),
+    import('three/examples/jsm/controls/TransformControls.js'),
+  ])
+  THREE = threeModule
+  STLLoader = stlModule.STLLoader
+  OBJLoader = objModule.OBJLoader
+  OrbitControls = orbitModule.OrbitControls
+  TransformControls = transformModule.TransformControls
+}
 
 const emit = defineEmits(['model-loaded', 'loading', 'error', 'model-transformed', 'file-ready'])
 
@@ -50,9 +69,9 @@ let baseVolume = 0
 let resizeObserver = null
 let loadingTimeout = null
 
-onMounted(() => {
+onMounted(async () => {
   generateCaptcha()
-  initThree()
+  await initThree()
   if (container.value) {
     resizeObserver = new ResizeObserver(handleResize)
     resizeObserver.observe(container.value)
@@ -85,7 +104,8 @@ onBeforeUnmount(() => {
   }
 })
 
-const initThree = () => {
+const initThree = async () => {
+  await loadThree()
   if (!container.value) return
 
   // Scene
@@ -106,15 +126,18 @@ const initThree = () => {
       logarithmicDepthBuffer: true // Evita z-fighting en modelos grandes
     })
   } catch (e) {
-    console.error('N3XT: WebGL no disponible', e)
+    logger.error('N3XT: WebGL no disponible', e)
     emit('error', 'Tu dispositivo no soporta WebGL. Intenta desde otro navegador.')
     return
   }
   renderer.setSize(width, height)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)) // Limitar para rendimiento en modelos densos
   renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.shadowMap.type = THREE.PCFShadowMap
   container.value.appendChild(renderer.domElement)
+
+  // Inicializar vectores reutilizables ahora que THREE está cargado
+  ensureVectors()
 
   // Orbit Controls
   orbitControls = new OrbitControls(camera, renderer.domElement)
@@ -245,13 +268,23 @@ const emitTransformation = () => {
   })
 }
 
-// Vectores reutilizables para cálculos pesados (evita GC thrashing)
-const _vA = new THREE.Vector3()
-const _vB = new THREE.Vector3()
-const _vC = new THREE.Vector3()
-const _edge1 = new THREE.Vector3()
-const _edge2 = new THREE.Vector3()
-const _cross = new THREE.Vector3()
+// Vectores reutilizables para cálculos pesados (lazy init: THREE debe cargarse primero)
+let _vA: any = null
+let _vB: any = null
+let _vC: any = null
+let _edge1: any = null
+let _edge2: any = null
+let _cross: any = null
+
+function ensureVectors() {
+  if (_vA) return
+  _vA = new THREE.Vector3()
+  _vB = new THREE.Vector3()
+  _vC = new THREE.Vector3()
+  _edge1 = new THREE.Vector3()
+  _edge2 = new THREE.Vector3()
+  _cross = new THREE.Vector3()
+}
 
 const calculateTotalArea = (geometry) => {
   if (!geometry.attributes.position) return 0
@@ -300,7 +333,7 @@ const calculateVolume = (geometry) => {
   
   // N3XT SCALE INTELLIGENCE: Detectar si el archivo está en Metros o Pulgadas
   if (vol > 0 && vol < 5) {
-      console.log("N3XT: Posible escala en Metros detectada. Normalizando a mm...");
+      // N3XT: Escala en Metros detectada. Normalizando a mm.
       vol = vol * 1000000000;
   }
   
@@ -456,7 +489,8 @@ const processGeometry = (geometry, file) => {
   emit('file-ready', file)
 }
 
-const loadFile = (file) => {
+const loadFile = async (file) => {
+  await loadThree()
   const name = file.name.toLowerCase()
   const isStl = name.endsWith('.stl')
   const isObj = name.endsWith('.obj')
@@ -538,7 +572,7 @@ const loadFile = (file) => {
         textReader.readAsText(file)
       }
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       isLoading.value = false
       if (loadingTimeout) clearTimeout(loadingTimeout)
       emit('loading', false)
@@ -560,25 +594,25 @@ const loadFile = (file) => {
     <!-- View & Transform Controls Toolbar -->
     <div v-if="hasModel" class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex gap-4 bg-gray-900/90 backdrop-blur-xl p-3 rounded-2xl shadow-2xl border border-white/10 transition-all duration-500 hover:scale-105">
       <div class="flex gap-2 border-r pr-4 border-white/10">
-        <button @click="setView('top')" class="w-10 h-10 flex items-center justify-center text-[10px] font-black text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Vista Superior">TOP</button>
-        <button @click="setView('front')" class="w-10 h-10 flex items-center justify-center text-[10px] font-black text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Vista Frontal">FRON</button>
-        <button @click="setView('iso')" class="w-10 h-10 flex items-center justify-center text-[10px] font-black text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Vista Isométrica">ISO</button>
+        <button class="w-10 h-10 flex items-center justify-center text-[10px] font-black text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Vista Superior" @click="setView('top')">TOP</button>
+        <button class="w-10 h-10 flex items-center justify-center text-[10px] font-black text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Vista Frontal" @click="setView('front')">FRON</button>
+        <button class="w-10 h-10 flex items-center justify-center text-[10px] font-black text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Vista Isométrica" @click="setView('iso')">ISO</button>
       </div>
       <div class="flex items-center px-2">
-          <button @click="autoOrient" class="px-6 py-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-xl shadow-primary/20 flex items-center gap-2">
+          <button class="px-6 py-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-xl shadow-primary/20 flex items-center gap-2" @click="autoOrient">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 13l-7 7-7-7m14-8l-7 7-7-7" /></svg>
             APLANAR
           </button>
       </div>
       <div class="w-px h-10 bg-white/10 mx-2"></div>
       <div class="flex gap-2">
-        <button @click="setTransformMode('translate')" :class="transformMode === 'translate' ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all" title="Mover">
+        <button :class="transformMode === 'translate' ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all" title="Mover" @click="setTransformMode('translate')">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
         </button>
-        <button @click="setTransformMode('rotate')" :class="transformMode === 'rotate' ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all" title="Rotar">
+        <button :class="transformMode === 'rotate' ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all" title="Rotar" @click="setTransformMode('rotate')">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
         </button>
-        <button @click="setTransformMode('scale')" :class="transformMode === 'scale' ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all" title="Escalar">
+        <button :class="transformMode === 'scale' ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all" title="Escalar" @click="setTransformMode('scale')">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
         </button>
       </div>
@@ -598,9 +632,11 @@ const loadFile = (file) => {
         v-if="!hasModel || isDragging"
         class="absolute inset-0 flex flex-col items-center justify-center bg-transparent backdrop-blur-[2px] transition-all"
       >
-        <div class="text-center p-12 rounded-[40px] border-2 border-dashed transition-all duration-500" 
+        <div
+class="text-center p-12 rounded-[40px] border-2 border-dashed transition-all duration-500" 
              :class="isDragging ? 'border-primary bg-primary/5 scale-105' : 'border-gray-200 bg-white/40 shadow-2xl'">
-          <div class="w-32 h-32 mx-auto mb-8 bg-white rounded-[32px] shadow-xl flex items-center justify-center transition-transform group-hover/viewer:rotate-3"
+          <div
+class="w-32 h-32 mx-auto mb-8 bg-white rounded-[32px] shadow-xl flex items-center justify-center transition-transform group-hover/viewer:rotate-3"
                :class="isDragging ? 'text-primary scale-110' : 'text-gray-400'">
             <svg v-if="!isLoading" xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -632,9 +668,9 @@ const loadFile = (file) => {
                 <p class="text-[8px] font-black text-primary uppercase tracking-[0.4em] mb-1">Data Shield Active</p>
                 <p class="text-xs font-black italic uppercase">Resuelve: {{ captchaA }} + {{ captchaB }} = ?</p>
               </div>
-              <input type="number" v-model="captchaAnswer" @keyup.enter="verifyCaptcha" class="w-20 bg-white/10 border border-white/20 rounded-xl p-3 text-center text-white font-black outline-none focus:border-primary">
+              <input v-model="captchaAnswer" type="number" class="w-20 bg-white/10 border border-white/20 rounded-xl p-3 text-center text-white font-black outline-none focus:border-primary" @keyup.enter="verifyCaptcha">
             </div>
-            <button @click="verifyCaptcha" class="w-full bg-primary hover:bg-gray-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95">
+            <button class="w-full bg-primary hover:bg-gray-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95" @click="verifyCaptcha">
               Verificar Identidad
             </button>
           </div>

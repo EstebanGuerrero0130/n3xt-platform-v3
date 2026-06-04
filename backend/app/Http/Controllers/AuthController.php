@@ -5,66 +5,20 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * AuthController — Logout para el panel admin.
+ *
+ * La autenticación (login) se maneja via UnifiedAuthController con
+ * Sanctum SPA mode (cookies de sesión). Este controller solo provee
+ * el endpoint de logout.
+ */
 class AuthController extends Controller
 {
-    public function login(Request $request)
-    {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
-        ]);
-
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            $token = $user->createToken('admin-token')->plainTextToken;
-
-            return response()->json([
-                'token' => $token,
-                'user' => $user
-            ]);
-        }
-
-        return response()->json(['message' => 'Credenciales incorrectas'], 401);
-    }
-
-    public function loginByPin(Request $request)
-    {
-        $request->validate([
-            'pin' => 'required|string|size:4'
-        ]);
-
-        // Prioridad 1: PIN Global de Taller (Workshop PIN) en Settings
-        $workshopPin = \App\Models\Setting::where('key', 'security')->first();
-        if ($workshopPin && isset($workshopPin->value['workshop_pin']) && $workshopPin->value['workshop_pin'] === $request->pin) {
-            // Buscamos al primer administrador para asignarle la sesión
-            $user = \App\Models\User::first();
-            if ($user) {
-                $token = $user->createToken('admin-token')->plainTextToken;
-                return response()->json([
-                    'token' => $token,
-                    'user' => $user
-                ]);
-            }
-        }
-
-        // Prioridad 2: PIN individual de usuario
-        $user = \App\Models\User::where('pin_code', $request->pin)->first();
-
-        if ($user) {
-            $token = $user->createToken('admin-token')->plainTextToken;
-
-            return response()->json([
-                'token' => $token,
-                'user' => $user
-            ]);
-        }
-
-        return response()->json(['message' => 'PIN de acceso incorrecto'], 401);
-    }
-
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
         return response()->json(['message' => 'Cierre de sesión exitoso']);
     }
 }

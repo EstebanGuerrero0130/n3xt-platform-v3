@@ -6,11 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Models\Material;
+use App\Services\CostCalculatorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
 {
+    public function __construct(
+        protected CostCalculatorService $costCalculator
+    ) {}
+
     public function index(Request $request)
     {
         $startDate = $request->query('start_date');
@@ -38,7 +43,7 @@ class AnalyticsController extends Controller
         $ordersCount = $allOrdersQuery->count();
         $completedCount = (clone $allOrdersQuery)->where('status', 'shipped')->count();
 
-        // 2. Costo Real de Materiales (FILTRADO POR PAGO CONFIRMADO)
+        // 2. Costos usando el servicio compartido
         $matFDMCost = 0;
         $matSLACost = 0;
         $materialCosts = 0;
@@ -51,72 +56,43 @@ class AnalyticsController extends Controller
         $totalExtras = 0;
         $detailedOrders = [];
         
-        // Obtenemos todas las órdenes para el desglose detallado, 
-        // pero solo acumulamos métricas de las PAGADAS
         $activeOrders = $orderQuery->get();
 
         foreach ($activeOrders as $order) {
-            $snap = $order->cost_snapshot;
-            if (is_string($snap)) $snap = json_decode($snap, true);
-            $hasSnapshot = !empty($snap) && isset($snap['settings']);
-            
-            $s = $hasSnapshot ? $snap['settings'] : $settings;
-            $orderHours = (float)($order->estimated_duration_h ?? 0);
-            
-            $loadFactor = (float)($s['infra']['load_factor'] ?? 0.4);
-            $prepTimePct = (float)($s['prep']['prep_time_pct'] ?? 10) / 100;
-
-            // Calculamos costos individuales para la tabla
-            $orderLuz = $orderHours * $loadFactor * (float)($s['infra']['luz_hr'] ?? 0);
-            $orderDepr = $orderHours * (float)($s['infra']['depr_hr'] ?? 0);
-            $orderMant = $orderHours * (float)($s['infra']['mant_hr'] ?? 0);
-            $orderLabor = $orderHours * $prepTimePct * (float)($s['prep']['mano_obra_hr'] ?? 0);
-            $orderEtiquetas = (float)($s['infra']['etiquetas'] ?? 0);
-
-            // Material Logic
-            $matCostPerKg = 0;
-            if ($hasSnapshot && isset($snap['material_cost_per_kg'])) {
-                $matCostPerKg = (float)$snap['material_cost_per_kg'];
-            } else {
-                $material = Material::find($order->material_id);
-                $matCostPerKg = $material ? (float)$material->cost_per_kg : 85000;
-            }
-            $orderMatCost = (($order->estimated_weight_g ?? 0) / 1000) * $matCostPerKg;
-            $orderExtras = (float)($order->extras_cost ?? 0);
-            $orderTotalExpenses = $orderMatCost + $orderLuz + $orderDepr + $orderMant + $orderLabor + $orderEtiquetas + $orderExtras;
+            $bd = $this->costCalculator->calculateOrderBreakdown($order, $settings->toArray());
 
             // --- ACUMULACIÓN: Solo si está PAGADA ---
             if ($order->is_paid) {
-                $luzCost += $orderLuz;
-                $deprCost += $orderDepr;
-                $mantCost += $orderMant;
-                $laborCost += $orderLabor;
-                $etiquetasCost += $orderEtiquetas;
-                $totalHours += $orderHours;
-                $totalExtras += $orderExtras;
+                $luzCost += $bd['luz'];
+                $deprCost += $bd['depr'];
+                $mantCost += $bd['mant'];
+                $laborCost += $bd['labor'];
+                $etiquetasCost += $bd['etiquetas'];
+                $totalHours += $bd['total_hours'];
+                $totalExtras += $bd['extras'];
                 
-                if ($order->technology === 'SLA') $matSLACost += $orderMatCost;
-                else $matFDMCost += $orderMatCost;
+                if ($order->technology === 'SLA') $matSLACost += $bd['material'];
+                else $matFDMCost += $bd['material'];
             }
 
-            // Individual Order Audit (Aparecen todas pero con su estado)
+            // Individual Order Audit
             $detailedOrders[] = [
-                'id' => $order->id,
-                'customer' => $order->customer_name,
-                'file' => $order->original_filename,
-                'date' => $order->created_at->format('Y-m-d'),
+                'id'          => $order->id,
+                'customer'    => $order->customer_name,
+                'file'        => $order->original_filename,
+                'date'        => $order->created_at->format('Y-m-d'),
                 'total_price' => round($order->total_price, 2),
-                'expenses' => round($orderTotalExpenses, 2),
-                'profit' => round($order->total_price - $orderTotalExpenses, 2),
-                'is_paid' => (bool)$order->is_paid,
-                'breakdown' => [
-                    'luz' => round($orderLuz, 2),
-                    'labor' => round($orderLabor, 2),
-                    'mant' => round($orderMant, 2),
-                    'depr' => round($orderDepr, 2),
-                    'mat' => round($orderMatCost, 2),
-                    'etiquetas' => round($orderEtiquetas, 2),
-                    'extras' => round($orderExtras, 2)
+                'expenses'    => $bd['total_cost'],
+                'profit'      => $bd['margin'],
+                'is_paid'     => (bool)$order->is_paid,
+                'breakdown'   => [
+                    'luz'       => $bd['luz'],
+                    'labor'     => $bd['labor'],
+                    'mant'      => $bd['mant'],
+                    'depr'      => $bd['depr'],
+                    'mat'       => $bd['material'],
+                    'etiquetas' => $bd['etiquetas'],
+                    'extras'    => $bd['extras'],
                 ]
             ];
         }
@@ -126,47 +102,12 @@ class AnalyticsController extends Controller
         $totalExpenses = $materialCosts + $totalOperationalCost + $totalExtras;
         $netProfit = $collectedRevenue - $totalExpenses;
 
-        // Monthly Breakdown
+        // Monthly Breakdown (usando el servicio)
         $monthlyQuery = Order::where('status', '!=', 'cancelled');
         if ($startDate) $monthlyQuery->whereDate('created_at', '>=', $startDate);
         if ($endDate) $monthlyQuery->whereDate('created_at', '<=', $endDate);
 
-        $monthlyData = $monthlyQuery->get()
-            ->groupBy(function($val) {
-                return $val->created_at->format('Y-m');
-            })
-            ->map(function($items, $month) use ($settings) {
-                $rev = $items->sum('total_price');
-                $exp = 0;
-                foreach ($items as $order) {
-                    $snap = $order->cost_snapshot;
-                    if (is_string($snap)) $snap = json_decode($snap, true);
-                    $hasSnapshot = !empty($snap) && isset($snap['settings']);
-                    $s = $hasSnapshot ? $snap['settings'] : $settings;
-                    
-                    $h = (float)($order->estimated_duration_h ?? 0);
-                    $matCostPerKg = $hasSnapshot ? (float)($snap['material_cost_per_kg'] ?? 85000) : 85000;
-                    
-                    $loadFactor = (float)($s['infra']['load_factor'] ?? 0.4);
-                    $prepTimePct = (float)($s['prep']['prep_time_pct'] ?? 10) / 100;
-                    
-                    $orderExp = (($order->estimated_weight_g ?? 0) / 1000) * $matCostPerKg 
-                              + ($h * $loadFactor * (float)($s['infra']['luz_hr'] ?? 0))
-                              + ($h * (float)($s['infra']['depr_hr'] ?? 0))
-                              + ($h * (float)($s['infra']['mant_hr'] ?? 0))
-                              + ($h * $prepTimePct * (float)($s['prep']['mano_obra_hr'] ?? 0))
-                              + (float)($s['infra']['etiquetas'] ?? 0)
-                              + (float)($order->extras_cost ?? 0);
-                    $exp += $orderExp;
-                }
-                return [
-                    'month' => $month,
-                    'revenue' => round($rev, 2),
-                    'expenses' => round($exp, 2),
-                    'profit' => round($rev - $exp, 2),
-                    'count' => count($items)
-                ];
-            })->values();
+        $monthlyData = $this->costCalculator->calculateMonthlyBreakdown($monthlyQuery->get(), $settings->toArray());
 
         // By Technology
         $techQuery = Order::where('status', '!=', 'cancelled');
@@ -237,41 +178,41 @@ class AnalyticsController extends Controller
 
         return response()->json([
             'summary' => [
-                'total_revenue' => round($totalRevenue, 2),
-                'collected_revenue' => round($collectedRevenue, 2),
-                'pending_revenue' => round($pendingRevenue, 2),
+                'total_revenue'       => round($totalRevenue, 2),
+                'collected_revenue'   => round($collectedRevenue, 2),
+                'pending_revenue'     => round($pendingRevenue, 2),
                 'total_material_cost' => round($materialCosts, 2),
-                'operational_overhead' => round($totalOperationalCost, 2),
-                'total_extras_cost' => round($totalExtras, 2),
-                'total_expenses' => round($totalExpenses, 2),
-                'net_profit' => round($netProfit, 2),
-                'profit_margin_pct' => $collectedRevenue > 0 ? round(($netProfit / $collectedRevenue) * 100, 1) : 0,
-                'orders_count' => $ordersCount,
-                'completed_count' => $completedCount,
-                'total_hours' => round($totalHours, 1),
-                'total_weight_kg' => round($activeOrders->where('technology', '!=', 'SLA')->sum('estimated_weight_g') / 1000, 2),
-                'total_resin_ml' => round($activeOrders->where('technology', 'SLA')->sum('estimated_weight_g'), 1),
-                'mom_growth_pct' => round($momGrowthPct, 1),
-                'waste_cost' => round($wasteCost, 2),
-                'waste_weight_g' => round($wasteWeight, 2),
+                'operational_overhead'=> round($totalOperationalCost, 2),
+                'total_extras_cost'   => round($totalExtras, 2),
+                'total_expenses'      => round($totalExpenses, 2),
+                'net_profit'          => round($netProfit, 2),
+                'profit_margin_pct'   => $collectedRevenue > 0 ? round(($netProfit / $collectedRevenue) * 100, 1) : 0,
+                'orders_count'        => $ordersCount,
+                'completed_count'     => $completedCount,
+                'total_hours'         => round($totalHours, 1),
+                'total_weight_kg'     => round($activeOrders->where('technology', '!=', 'SLA')->sum('estimated_weight_g') / 1000, 2),
+                'total_resin_ml'      => round($activeOrders->where('technology', 'SLA')->sum('estimated_weight_g'), 1),
+                'mom_growth_pct'      => round($momGrowthPct, 1),
+                'waste_cost'          => round($wasteCost, 2),
+                'waste_weight_g'      => round($wasteWeight, 2),
                 'breakdown' => [
-                    'luz' => round($luzCost, 2),
-                    'depr' => round($deprCost, 2),
-                    'mant' => round($mantCost, 2),
-                    'labor' => round($laborCost, 2),
+                    'luz'       => round($luzCost, 2),
+                    'depr'      => round($deprCost, 2),
+                    'mant'      => round($mantCost, 2),
+                    'labor'     => round($laborCost, 2),
                     'etiquetas' => round($etiquetasCost, 2),
-                    'mat_fdm' => round($matFDMCost, 2),
-                    'mat_sla' => round($matSLACost, 2),
+                    'mat_fdm'   => round($matFDMCost, 2),
+                    'mat_sla'   => round($matSLACost, 2),
                 ]
             ],
             'detailed_orders' => $detailedOrders,
-            'monthly' => $monthlyData,
-            'by_technology' => $techData,
-            'top_customers' => $topCustomers,
-            'settings' => $settings,
+            'monthly'         => $monthlyData,
+            'by_technology'   => $techData,
+            'top_customers'   => $topCustomers,
+            'settings'        => $settings,
             'filters' => [
                 'start_date' => $startDate,
-                'end_date' => $endDate
+                'end_date'   => $endDate
             ]
         ]);
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RecurrentCustomer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -23,10 +24,11 @@ class CustomerAuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $token = $customer->createToken('customer-token')->plainTextToken;
+        // Sanctum SPA: use session auth instead of tokens
+        Auth::guard('customer')->login($customer);
+        $request->session()->regenerate();
 
         return response()->json([
-            'token' => $token,
             'customer' => $customer,
         ]);
     }
@@ -46,10 +48,11 @@ class CustomerAuthController extends Controller
             ]);
         }
 
-        $token = $customer->createToken('customer-token')->plainTextToken;
+        // Sanctum SPA: use session auth instead of tokens
+        Auth::guard('customer')->login($customer);
+        $request->session()->regenerate();
 
         return response()->json([
-            'token' => $token,
             'customer' => $customer,
         ]);
     }
@@ -61,7 +64,9 @@ class CustomerAuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('customer')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
         return response()->json(['message' => 'Cierre de sesión exitoso']);
     }
 }

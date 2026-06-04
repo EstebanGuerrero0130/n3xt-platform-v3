@@ -1,22 +1,24 @@
-<script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, watch, type PropType } from 'vue'
 import { api } from '../../services/api'
 import { inject } from 'vue'
+import logger from '../../utils/logger'
 
-const showNotify = inject('showNotify')
+const showNotify: any = inject('showNotify')
 
 const props = defineProps({
-  inventory: { type: Array, required: true },
-  suppliers: { type: Array, default: () => [] },
+  inventory: { type: Array as PropType<any[]>, required: true },
+  suppliers: { type: Array as PropType<any[]>, default: () => [] },
   settings: { type: Object, default: () => ({}) }
 })
 
 const emit = defineEmits(['refresh-inventory'])
 
-const purchases = ref([])
+const purchases = ref<any[]>([])
 const loading = ref(false)
 const showNewPurchaseModal = ref(false)
 const isNewMaterial = ref(false)
+const _timers: any[] = []
 
 // Filtros de fecha
 const dateFilter = ref({
@@ -50,7 +52,7 @@ watch(() => newPurchase.value.category, (newCat) => {
   }
 })
 
-const handleSelectSupplier = (e) => {
+const handleSelectSupplier = (e: any) => {
   const name = e.target.value
   if (name) {
     newPurchase.value.supplier = name
@@ -60,10 +62,10 @@ const handleSelectSupplier = (e) => {
 const fetchPurchases = async () => {
   loading.value = true
   try {
-    const data = await api.get('/admin/purchases', true)
+    const data = await api.get('/admin/purchases')
     purchases.value = data
-  } catch (err) {
-    console.error('Error fetching purchases:', err)
+  } catch (err: any) {
+    logger.error('Error fetching purchases:', err)
   } finally {
     loading.value = false
   }
@@ -72,7 +74,7 @@ const fetchPurchases = async () => {
 const filteredPurchases = computed(() => {
   if (!dateFilter.value.start || !dateFilter.value.end) return purchases.value
   
-  return purchases.value.filter(p => {
+  return purchases.value.filter((p: any) => {
     // Tomamos solo los primeros 10 caracteres (YYYY-MM-DD) para la comparación
     const d = p.purchase_date.substring(0, 10)
     return d >= dateFilter.value.start && d <= dateFilter.value.end
@@ -105,7 +107,7 @@ const handleAddPurchase = async () => {
   try {
     // Preparar item_name si es restock
     if (!isNewMaterial.value && newPurchase.value.category === 'inventory_restock') {
-        const mat = props.inventory.find(m => m.id === newPurchase.value.material_id)
+        const mat = props.inventory.find((m: any) => m.id === newPurchase.value.material_id)
         if (mat) newPurchase.value.item_name = mat.name
     } else if (isNewMaterial.value) {
         // Cálculo de costo automático para el nuevo material
@@ -121,7 +123,7 @@ const handleAddPurchase = async () => {
         newPurchase.value.is_new_item = true
     }
 
-    const response = await api.post('/admin/purchases', newPurchase.value, true)
+    const response = await api.post('/admin/purchases', newPurchase.value)
     
     showNewPurchaseModal.value = false
     await fetchPurchases()
@@ -137,16 +139,16 @@ const handleAddPurchase = async () => {
       material_data: { id: '', name: '', category: 'FDM', type: 'material', unit: 'g', cost_per_kg: 0, color: '#000000' }
     }
     showNotify('Compra registrada correctamente', 'success')
-  } catch (err) {
-    console.error('Error al registrar compra:', err)
+  } catch (err: any) {
+    logger.error('Error al registrar compra:', err)
     const errorMsg = err.response?.data?.message || err.message || 'Error desconocido'
     showNotify('Error al registrar: ' + errorMsg, 'error')
   }
 }
 
-const confirmingDeleteId = ref(null)
+const confirmingDeleteId = ref<any>(null)
 
-const handleDeletePurchase = async (id) => {
+const handleDeletePurchase = async (id: any) => {
   if (!id) {
     showNotify('ID de registro no valido', 'warning')
     return
@@ -155,31 +157,34 @@ const handleDeletePurchase = async (id) => {
   if (confirmingDeleteId.value !== id) {
     confirmingDeleteId.value = id
     // Auto-reset after 3 seconds if not confirmed
-    setTimeout(() => { confirmingDeleteId.value = null }, 3000)
+    const timer = setTimeout(() => { confirmingDeleteId.value = null }, 3000)
+    _timers.push(timer)
     return
-  }
-
-  console.log('Eliminando compra ID:', id)
+  }    // Eliminando compra
   try {
-    const res = await api.delete(`/admin/purchases/${id}`, true)
-    console.log('Respuesta eliminación:', res)
+    const res = await api.delete(`/admin/purchases/${id}`)
+    // Respuesta eliminación recibida
     await fetchPurchases()
     emit('refresh-inventory')
     showNotify('Registro eliminado correctamente', 'success')
-  } catch (err) {
-    console.error('Error al eliminar:', err)
+  } catch (err: any) {
+    logger.error('Error al eliminar:', err)
     showNotify('Error al eliminar: ' + (err.response?.data?.message || err.message), 'error')
   } finally {
     confirmingDeleteId.value = null
   }
 }
 
-const generatePDFReport = () => {
-  const total = filteredPurchases.value.reduce((acc, p) => acc + parseFloat(p.total_cost), 0)
-  const totalInv = filteredPurchases.value.filter(p => p.category === 'inventory_restock').reduce((acc, p) => acc + parseFloat(p.total_cost), 0)
+  onUnmounted(() => {
+    _timers.forEach(t => { clearTimeout(t); clearInterval(t) })
+  })
+
+  const generatePDFReport = () => {
+  const total = filteredPurchases.value.reduce((acc: any, p: any) => acc + parseFloat(p.total_cost), 0)
+  const totalInv = filteredPurchases.value.filter((p: any) => p.category === 'inventory_restock').reduce((acc: any, p: any) => acc + parseFloat(p.total_cost), 0)
   
   let rowsHtml = '';
-  filteredPurchases.value.forEach(p => {
+  filteredPurchases.value.forEach((p: any) => {
     rowsHtml += `
       <tr>
         <td class="date-cell">${new Date(p.purchase_date).toLocaleDateString()}</td>
@@ -193,8 +198,6 @@ const generatePDFReport = () => {
       </tr>
     `;
   });
-
-  const companyLogo = props.settings.company_logo ? (props.settings.company_logo.startsWith('http') ? props.settings.company_logo : api.storageUrl + '/' + props.settings.company_logo) : window.location.origin + '/logo.png';
 
   const content = `
     <html>
@@ -286,7 +289,6 @@ const generatePDFReport = () => {
 
         <div class="header">
           <div class="logo-container">
-            <img src="${companyLogo}" style="height: 60px; max-width: 200px; width: auto; object-fit: contain;">
             <div class="logo-text">
                ${props.settings.company?.name || 'N3XT 3D'}<br>
                <span style="font-size: 10px; font-weight: 600; color: #64748b; letter-spacing: 0;">
@@ -350,37 +352,40 @@ const generatePDFReport = () => {
   iframe.style.display = 'none';
   document.body.appendChild(iframe);
   
-  const doc = iframe.contentWindow.document;
+  const doc = iframe.contentWindow?.document;
+  if (!doc) { document.body.removeChild(iframe); return; }
   doc.open();
   doc.write(content);
   doc.close();
 
-  setTimeout(() => {
-    const imgs = iframe.contentWindow.document.images;
+  const timer1 = setTimeout(() => {
+    const imgs = iframe.contentWindow?.document?.images || [];
     let loaded = 0;
     const print = () => { 
-        iframe.contentWindow.print(); 
-        setTimeout(() => document.body.removeChild(iframe), 1000);
+        iframe.contentWindow?.print(); 
+        const t = setTimeout(() => document.body.removeChild(iframe), 1000);
+        _timers.push(t)
     };
     
-    if (imgs.length === 0) { setTimeout(print, 250); } 
+    if (imgs.length === 0) { _timers.push(setTimeout(print, 250)); } 
     else {
         let printed = false;
-        const onload = () => { if (++loaded === imgs.length && !printed) { printed = true; setTimeout(print, 250); } };
+        const onload = () => { if (++loaded === imgs.length && !printed) { printed = true; _timers.push(setTimeout(print, 250)); } };
         for (let i = 0; i < imgs.length; i++) {
             if (imgs[i].complete) onload();
             else { imgs[i].onload = onload; imgs[i].onerror = onload; }
         }
-        setTimeout(() => { if (!printed) { printed = true; print(); } }, 3000);
+        _timers.push(setTimeout(() => { if (!printed) { printed = true; print(); } }, 3000));
     }
   }, 50);
+  _timers.push(timer1)
 }
 
 const stats = computed(() => {
   return {
-    total: filteredPurchases.value.reduce((acc, p) => acc + parseFloat(p.total_cost), 0),
-    inventory: filteredPurchases.value.filter(p => p.category === 'inventory_restock').reduce((acc, p) => acc + parseFloat(p.total_cost), 0),
-    maintenance: filteredPurchases.value.filter(p => p.category === 'maintenance' || p.category === 'tools').reduce((acc, p) => acc + parseFloat(p.total_cost), 0),
+    total: filteredPurchases.value.reduce((acc: any, p: any) => acc + parseFloat(p.total_cost), 0),
+    inventory: filteredPurchases.value.filter((p: any) => p.category === 'inventory_restock').reduce((acc: any, p: any) => acc + parseFloat(p.total_cost), 0),
+    maintenance: filteredPurchases.value.filter((p: any) => p.category === 'maintenance' || p.category === 'tools').reduce((acc: any, p: any) => acc + parseFloat(p.total_cost), 0),
     count: filteredPurchases.value.length
   }
 })
@@ -392,32 +397,91 @@ onMounted(() => {
 
 <template>
   <div class="animate-in fade-in slide-in-from-bottom-6 duration-700 p-4">
+    <!-- Skeleton Loading -->
+    <div v-if="loading" class="animate-pulse">
+      <!-- Header Skeleton -->
+      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-8 px-4">
+        <div class="space-y-3">
+          <div class="h-10 w-64 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+          <div class="h-4 w-48 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+        </div>
+        <div class="h-14 w-96 bg-gray-200 dark:bg-[#2a3040] rounded-[2rem]"></div>
+      </div>
+
+      <!-- KPI Cards Skeleton -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12 px-4">
+        <div v-for="i in 4" :key="'kpi-'+i" class="bg-gray-100 dark:bg-[#151a22] p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-200/50 dark:border-[#21262d]">
+          <div class="h-3 w-24 bg-gray-200 dark:bg-[#2a3040] rounded-full mx-auto mb-4"></div>
+          <div class="h-8 w-32 bg-gray-200 dark:bg-[#2a3040] rounded-full mx-auto"></div>
+        </div>
+      </div>
+
+      <!-- Cards Grid Skeleton -->
+      <div class="px-4 pb-20">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div v-for="i in 6" :key="'card-'+i" class="bg-gray-100 dark:bg-[#151a22] rounded-[2.5rem] border border-gray-200/50 dark:border-[#21262d] p-8 space-y-6">
+            <div class="flex justify-between items-start">
+              <div class="space-y-2">
+                <div class="h-3 w-28 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+                <div class="h-5 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+              </div>
+              <div class="h-10 w-10 bg-gray-200 dark:bg-[#2a3040] rounded-2xl"></div>
+            </div>
+            <div class="h-6 w-3/4 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+            <div class="flex items-center gap-2">
+              <div class="h-5 w-5 bg-gray-200 dark:bg-[#2a3040] rounded-lg"></div>
+              <div class="h-3 w-32 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+            </div>
+            <div class="bg-gray-200/50 dark:bg-[#1a1f2e] rounded-2xl p-4 flex justify-between">
+              <div class="space-y-2">
+                <div class="h-2 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+                <div class="h-4 w-20 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+              </div>
+              <div class="space-y-2 text-right">
+                <div class="h-2 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full ml-auto"></div>
+                <div class="h-4 w-20 bg-gray-200 dark:bg-[#2a3040] rounded-full ml-auto"></div>
+              </div>
+            </div>
+            <div class="flex justify-between items-end pt-2">
+              <div class="space-y-2">
+                <div class="h-2 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+                <div class="h-7 w-24 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
+              </div>
+              <div class="h-12 w-12 bg-gray-200 dark:bg-[#2a3040] rounded-2xl"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real Content -->
+    <template v-else>
     <!-- Header -->
     <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-8 px-4">
       <div>
         <h2 class="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-2">Registro de Compras</h2>
         <div class="flex items-center gap-3">
           <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-          <p class="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">Trazabilidad financiera y operativa</p>
+          <p class="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest text-[10px] md:text-[10px]">Trazabilidad financiera y operativa</p>
         </div>
       </div>
       
       <!-- Filtros y Botones -->
       <div class="flex flex-col sm:flex-row flex-wrap items-center gap-4 bg-white dark:bg-gray-900 p-3 md:p-4 rounded-2xl md:rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-sm w-full xl:w-auto">
         <div class="flex items-center gap-2 px-4 border-b sm:border-b-0 sm:border-r border-gray-100 dark:border-white/5 w-full sm:w-auto pb-2 sm:pb-0">
-            <label class="text-[9px] font-black text-gray-400 dark:text-gray-600 uppercase">Desde</label>
-            <input type="date" v-model="dateFilter.start" class="bg-transparent border-none text-xs font-bold text-gray-900 dark:text-white outline-none flex-1">
+            <label class="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase">Desde</label>
+            <input v-model="dateFilter.start" type="date" class="bg-transparent border-none text-xs font-bold text-gray-900 dark:text-white outline-none flex-1">
         </div>
         <div class="flex items-center gap-2 px-4 border-b sm:border-b-0 sm:border-r border-gray-100 dark:border-white/5 w-full sm:w-auto pb-2 sm:pb-0">
-            <label class="text-[9px] font-black text-gray-400 dark:text-gray-600 uppercase">Hasta</label>
-            <input type="date" v-model="dateFilter.end" class="bg-transparent border-none text-xs font-bold text-gray-900 dark:text-white outline-none flex-1">
+            <label class="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase">Hasta</label>
+            <input v-model="dateFilter.end" type="date" class="bg-transparent border-none text-xs font-bold text-gray-900 dark:text-white outline-none flex-1">
         </div>
         <div class="flex gap-2 w-full sm:w-auto">
-            <button @click="generatePDFReport" class="flex-1 sm:flex-none p-4 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 rounded-xl md:rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+            <button class="flex-1 sm:flex-none p-4 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 rounded-xl md:rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2" @click="generatePDFReport">
                 <span class="text-[10px] font-black uppercase tracking-widest">PDF</span>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </button>
-            <button @click="showNewPurchaseModal = true" class="flex-[2] sm:flex-none px-6 md:px-8 py-4 bg-gray-900 dark:bg-primary text-white rounded-xl md:rounded-2xl shadow-xl shadow-black/10 hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all active:scale-95 flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest">
+            <button class="flex-[2] sm:flex-none px-6 md:px-8 py-4 bg-gray-900 dark:bg-primary text-white rounded-xl md:rounded-2xl shadow-xl shadow-black/10 hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all active:scale-95 flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest" @click="showNewPurchaseModal = true">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nueva Compra
             </button>
         </div>
@@ -427,19 +491,19 @@ onMounted(() => {
     <!-- KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12 px-4">
       <div class="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none flex flex-col justify-between group hover:shadow-xl transition-all">
-        <p class="text-[9px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Gasto Periodo</p>
+        <p class="text-[10px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Gasto Periodo</p>
         <h3 class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter text-center">$ {{ stats.total.toLocaleString() }}</h3>
       </div>
       <div class="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none flex flex-col justify-between group hover:shadow-xl transition-all">
-        <p class="text-[9px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Stock</p>
+        <p class="text-[10px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Stock</p>
         <h3 class="text-2xl md:text-4xl font-black text-primary tracking-tighter text-center">$ {{ stats.inventory.toLocaleString() }}</h3>
       </div>
       <div class="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none flex flex-col justify-between group hover:shadow-xl transition-all">
-        <p class="text-[9px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Mant.</p>
+        <p class="text-[10px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Mant.</p>
         <h3 class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter text-center">$ {{ stats.maintenance.toLocaleString() }}</h3>
       </div>
       <div class="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none flex flex-col justify-between group hover:shadow-xl transition-all">
-        <p class="text-[9px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Registros</p>
+        <p class="text-[10px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Registros</p>
         <h3 class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter text-center">{{ stats.count }}</h3>
       </div>
     </div>
@@ -447,7 +511,8 @@ onMounted(() => {
     <!-- Historial Estilo Cards Premium -->
     <div class="px-4 pb-20">
       <div v-if="filteredPurchases.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="p in filteredPurchases" :key="p.id" 
+        <div
+v-for="p in filteredPurchases" :key="p.id" 
              class="group relative bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm dark:shadow-none hover:shadow-2xl hover:shadow-gray-200/50 dark:hover:border-primary/20 transition-all duration-500 hover:-translate-y-1 overflow-hidden">
           
           <!-- Decoración de Fondo -->
@@ -456,8 +521,9 @@ onMounted(() => {
           <!-- Badge de Fecha y Categoría -->
           <div class="flex justify-between items-start mb-6 relative z-10">
             <div class="flex flex-col gap-1">
-              <span class="text-[9px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em]">{{ new Date(p.purchase_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) }}</span>
-              <div :class="[
+              <span class="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em]">{{ new Date(p.purchase_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) }}</span>
+              <div
+:class="[
                 'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border inline-block',
                 p.category === 'inventory_restock' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20' : 
                 p.category === 'maintenance' ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20' : 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-500/20'
@@ -466,11 +532,11 @@ onMounted(() => {
               </div>
             </div>
             <button 
-                @click="handleDeletePurchase(p.id)" 
                 :class="[
                   'w-10 h-10 rounded-2xl transition-all flex items-center justify-center shadow-sm',
                   confirmingDeleteId === p.id ? 'bg-rose-600 text-white animate-pulse scale-110' : 'bg-gray-50 text-gray-300 hover:bg-rose-50 hover:text-rose-500'
-                ]"
+                ]" 
+                @click="handleDeletePurchase(p.id)"
             >
                 <svg v-if="confirmingDeleteId !== p.id" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 <span v-else class="text-[8px] font-black">OK?</span>
@@ -524,7 +590,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="showNewPurchaseModal" class="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-[100] flex items-center justify-center p-0 md:p-4 overflow-y-auto">
+    <div v-if="showNewPurchaseModal" class="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-[100] flex items-center justify-center p-0 md:p-4 overflow-y-auto no-scrollbar">
       <div class="bg-white md:rounded-[3rem] w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in duration-500 my-auto border border-white/20">
         <div class="p-6 md:p-12 max-h-[95vh] overflow-y-auto no-scrollbar">
           
@@ -540,7 +606,7 @@ onMounted(() => {
                   </p>
                 </div>
             </div>
-            <button @click="showNewPurchaseModal = false" class="w-12 h-12 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-gray-900 hover:text-white transition-all duration-500 shadow-inner">
+            <button class="w-12 h-12 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-gray-900 hover:text-white transition-all duration-500 shadow-inner" @click="showNewPurchaseModal = false">
               <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
@@ -564,7 +630,7 @@ onMounted(() => {
                     <div v-if="newPurchase.category === 'inventory_restock'" class="pt-4 border-t border-gray-100 space-y-6">
                         <div class="flex items-center justify-between">
                             <label class="text-[10px] font-black text-primary uppercase tracking-widest">Vincular Item</label>
-                            <button @click="isNewMaterial = !isNewMaterial" class="text-[8px] font-black uppercase tracking-widest px-4 py-2 bg-white border border-primary/20 rounded-full text-primary hover:bg-primary hover:text-white transition-all shadow-md">
+                            <button class="text-[8px] font-black uppercase tracking-widest px-4 py-2 bg-white border border-primary/20 rounded-full text-primary hover:bg-primary hover:text-white transition-all shadow-md" @click="isNewMaterial = !isNewMaterial">
                                 {{ isNewMaterial ? 'Seleccionar Existente' : 'Nuevo Material' }}
                             </button>
                         </div>
@@ -585,53 +651,53 @@ onMounted(() => {
                                 <div class="grid grid-cols-3 gap-2">
                                     <button 
                                         type="button"
+                                        :class="[
+                                            'py-3 rounded-xl text-[8px] font-black uppercase transition-all border',
+                                            newPurchase.material_data.type === 'material' ? 'bg-primary text-white border-primary shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                                        ]"
                                         @click="() => {
                                             newPurchase.material_data.type = 'material';
                                             newPurchase.material_data.category = 'FDM';
                                             newPurchase.material_data.unit = 'g';
                                         }"
-                                        :class="[
-                                            'py-3 rounded-xl text-[8px] font-black uppercase transition-all border',
-                                            newPurchase.material_data.type === 'material' ? 'bg-primary text-white border-primary shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                                        ]"
                                     >Material</button>
                                     <button 
                                         type="button"
+                                        :class="[
+                                            'py-3 rounded-xl text-[8px] font-black uppercase transition-all border',
+                                            newPurchase.material_data.type === 'product' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                                        ]"
                                         @click="() => {
                                             newPurchase.material_data.type = 'product';
                                             newPurchase.material_data.category = 'PROD';
                                             newPurchase.material_data.unit = 'unid';
                                         }"
-                                        :class="[
-                                            'py-3 rounded-xl text-[8px] font-black uppercase transition-all border',
-                                            newPurchase.material_data.type === 'product' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                                        ]"
                                     >Producto</button>
                                     <button 
                                         type="button"
+                                        :class="[
+                                            'py-3 rounded-xl text-[8px] font-black uppercase transition-all border',
+                                            newPurchase.material_data.type === 'utility' ? 'bg-amber-500 text-white border-amber-500 shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                                        ]"
                                         @click="() => {
                                             newPurchase.material_data.type = 'utility';
                                             newPurchase.material_data.category = 'UTIL';
                                             newPurchase.material_data.unit = 'unid';
                                         }"
-                                        :class="[
-                                            'py-3 rounded-xl text-[8px] font-black uppercase transition-all border',
-                                            newPurchase.material_data.type === 'utility' ? 'bg-amber-500 text-white border-amber-500 shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                                        ]"
                                     >Insumo</button>
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div v-if="newPurchase.material_data.type === 'material'" class="space-y-2">
-                                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2">Tecnología</label>
-                                    <select v-model="newPurchase.material_data.category" @change="newPurchase.material_data.unit = newPurchase.material_data.category === 'SLA' ? 'ml' : 'g'" class="w-full bg-white border border-gray-100 rounded-2xl p-4 font-black text-[10px] text-gray-900 outline-none shadow-sm uppercase">
+                                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2">Tecnología</label>
+                                    <select v-model="newPurchase.material_data.category" class="w-full bg-white border border-gray-100 rounded-2xl p-4 font-black text-[10px] text-gray-900 outline-none shadow-sm uppercase" @change="newPurchase.material_data.unit = newPurchase.material_data.category === 'SLA' ? 'ml' : 'g'">
                                         <option value="FDM">Filamento (FDM)</option>
                                         <option value="SLA">Resina (SLA)</option>
                                     </select>
                                 </div>
                                 <div :class="newPurchase.material_data.type === 'material' ? 'col-span-1' : 'col-span-2'" class="space-y-2">
-                                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2">Unidad de Medida</label>
+                                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2">Unidad de Medida</label>
                                     <select v-model="newPurchase.material_data.unit" class="w-full bg-white border border-gray-100 rounded-2xl p-4 font-black text-[10px] text-gray-900 outline-none shadow-sm uppercase">
                                         <option value="g">Gramos (g)</option>
                                         <option value="ml">Mililitros (ml)</option>
@@ -641,14 +707,14 @@ onMounted(() => {
                             </div>
 
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black text-gray-400 uppercase ml-2">Nombre Identificador</label>
-                                <input type="text" v-model="newPurchase.material_data.name" placeholder="Ej: PLA Pro Negro" class="w-full bg-white border border-gray-100 rounded-2xl p-5 font-black text-xs text-gray-900 outline-none shadow-sm focus:ring-4 focus:ring-primary/10">
+                                <label class="text-[10px] font-black text-gray-400 uppercase ml-2">Nombre Identificador</label>
+                                <input v-model="newPurchase.material_data.name" type="text" placeholder="Ej: PLA Pro Negro" class="w-full bg-white border border-gray-100 rounded-2xl p-5 font-black text-xs text-gray-900 outline-none shadow-sm focus:ring-4 focus:ring-primary/10">
                             </div>
 
                             <div class="flex items-center gap-4 bg-white/50 p-4 rounded-2xl border border-dashed border-gray-200">
                                 <div class="flex items-center gap-2 flex-1">
-                                    <input type="color" v-model="newPurchase.material_data.color" class="w-8 h-8 rounded-lg border-none bg-transparent cursor-pointer">
-                                    <span class="text-[9px] font-black text-gray-400 uppercase">Visual</span>
+                                    <input v-model="newPurchase.material_data.color" type="color" class="w-8 h-8 rounded-lg border-none bg-transparent cursor-pointer">
+                                    <span class="text-[10px] font-black text-gray-400 uppercase">Visual</span>
                                 </div>
                                 <div class="text-right">
                                     <span class="text-[8px] font-black text-gray-300 uppercase block">ID Sugerido</span>
@@ -662,7 +728,7 @@ onMounted(() => {
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                             Descripcion General
                         </label>
-                        <input type="text" v-model="newPurchase.item_name" placeholder="Ej: Correa GT2 6mm" class="w-full bg-white border border-gray-100 rounded-2xl p-5 font-bold text-sm text-gray-900 outline-none shadow-sm focus:ring-4 focus:ring-primary/10">
+                        <input v-model="newPurchase.item_name" type="text" placeholder="Ej: Correa GT2 6mm" class="w-full bg-white border border-gray-100 rounded-2xl p-5 font-bold text-sm text-gray-900 outline-none shadow-sm focus:ring-4 focus:ring-primary/10">
                     </div>
                 </div>
 
@@ -672,11 +738,11 @@ onMounted(() => {
                         <label class="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
                             Proveedor
                         </label>
-                        <select @change="handleSelectSupplier" class="w-full bg-white border border-indigo-100 rounded-2xl p-4 font-black text-xs text-gray-900 outline-none shadow-sm">
+                        <select class="w-full bg-white border border-indigo-100 rounded-2xl p-4 font-black text-xs text-gray-900 outline-none shadow-sm" @change="handleSelectSupplier">
                             <option value="">-- Nuevo Proveedor --</option>
                             <option v-for="s in suppliers" :key="s.id" :value="s.name">{{ s.name }}</option>
                         </select>
-                        <input type="text" v-model="newPurchase.supplier" placeholder="Nombre Comercial" class="w-full bg-white border border-indigo-100 rounded-2xl p-4 font-bold text-xs text-gray-900 outline-none shadow-sm">
+                        <input v-model="newPurchase.supplier" type="text" placeholder="Nombre Comercial" class="w-full bg-white border border-indigo-100 rounded-2xl p-4 font-bold text-xs text-gray-900 outline-none shadow-sm">
                     </div>
                 </div>
             </div>
@@ -687,11 +753,11 @@ onMounted(() => {
                     <!-- Cantidades -->
                     <div class="space-y-3 relative z-10">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Nº Unidades</label>
-                        <input type="number" v-model.number="newPurchase.units" class="w-full bg-white/10 border border-white/10 rounded-2xl p-5 font-black text-2xl text-white outline-none focus:ring-4 focus:ring-primary/30">
+                        <input v-model.number="newPurchase.units" type="number" class="w-full bg-white/10 border border-white/10 rounded-2xl p-5 font-black text-2xl text-white outline-none focus:ring-4 focus:ring-primary/30">
                     </div>
                     <div class="space-y-3 relative z-10">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Contenido Unit.</label>
-                        <input type="number" v-model.number="newPurchase.unit_amount" class="w-full bg-white/10 border border-white/10 rounded-2xl p-5 font-black text-2xl text-white outline-none focus:ring-4 focus:ring-primary/30">
+                        <input v-model.number="newPurchase.unit_amount" type="number" class="w-full bg-white/10 border border-white/10 rounded-2xl p-5 font-black text-2xl text-white outline-none focus:ring-4 focus:ring-primary/30">
                     </div>
 
                     <div class="col-span-2 pt-6 border-t border-white/10 relative z-10">
@@ -699,13 +765,13 @@ onMounted(() => {
                             <span class="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Carga Total de Stock</span>
                             <span class="text-3xl font-black text-white tracking-tighter">
                                 {{ (newPurchase.units * newPurchase.unit_amount).toLocaleString() }} 
-                                <span class="text-xs text-gray-500 uppercase">{{ isNewMaterial ? newPurchase.material_data.unit : (inventory.find(m => m.id === newPurchase.material_id)?.unit || 'g') }}</span>
+                                <span class="text-xs text-gray-500 uppercase">{{ isNewMaterial ? newPurchase.material_data.unit : (inventory.find((m: any) => m.id === newPurchase.material_id)?.unit || 'g') }}</span>
                             </span>
                         </div>
                         
                         <div class="space-y-3">
                             <label class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Inversión Total ($)</label>
-                            <input type="number" v-model.number="newPurchase.total_cost" class="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 font-black text-4xl text-emerald-400 outline-none focus:ring-4 focus:ring-emerald-500/20">
+                            <input v-model.number="newPurchase.total_cost" type="number" class="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 font-black text-4xl text-emerald-400 outline-none focus:ring-4 focus:ring-emerald-500/20">
                         </div>
                     </div>
 
@@ -721,7 +787,7 @@ onMounted(() => {
                         <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Precio Unitario Calculado</p>
                         <p class="text-3xl font-black text-emerald-900 tracking-tighter">
                             $ {{ (newPurchase.total_cost / (newPurchase.units * newPurchase.unit_amount)).toLocaleString(undefined, {minimumFractionDigits: 2}) }}
-                            <span class="text-xs text-emerald-500 font-bold uppercase ml-1">/ {{ isNewMaterial ? newPurchase.material_data.unit : (inventory.find(m => m.id === newPurchase.material_id)?.unit || 'ud') }}</span>
+                            <span class="text-xs text-emerald-500 font-bold uppercase ml-1">/ {{ isNewMaterial ? newPurchase.material_data.unit : (inventory.find((m: any) => m.id === newPurchase.material_id)?.unit || 'ud') }}</span>
                         </p>
                     </div>
                     <div v-if="isNewMaterial && (newPurchase.material_data.unit === 'g' || newPurchase.material_data.unit === 'ml')" class="bg-white/50 px-6 py-4 rounded-2xl border border-emerald-100/50">
@@ -734,17 +800,17 @@ onMounted(() => {
                     <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                         Fecha de Operacion
                     </label>
-                    <input type="date" v-model="newPurchase.purchase_date" class="w-full bg-gray-50 border border-gray-100 rounded-2xl p-5 font-black text-sm text-gray-900 outline-none focus:ring-4 focus:ring-primary/10">
+                    <input v-model="newPurchase.purchase_date" type="date" class="w-full bg-gray-50 border border-gray-100 rounded-2xl p-5 font-black text-sm text-gray-900 outline-none focus:ring-4 focus:ring-primary/10">
                 </div>
             </div>
           </div>
 
           <!-- Acciones Finales -->
           <div class="mt-12 md:mt-16 flex flex-col md:flex-row gap-6">
-            <button @click="showNewPurchaseModal = false" class="flex-1 py-6 bg-gray-100 text-gray-400 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-gray-200 hover:text-gray-600 transition-all duration-500 flex items-center justify-center gap-3">
+            <button class="flex-1 py-6 bg-gray-100 text-gray-400 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-gray-200 hover:text-gray-600 transition-all duration-500 flex items-center justify-center gap-3" @click="showNewPurchaseModal = false">
                 SALIR SIN REGISTRAR
             </button>
-            <button @click="handleAddPurchase" class="flex-[2] py-6 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-black/30 hover:scale-[1.02] hover:shadow-primary/20 active:scale-95 transition-all duration-500 flex items-center justify-center gap-4">
+            <button class="flex-[2] py-6 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-black/30 hover:scale-[1.02] hover:shadow-primary/20 active:scale-95 transition-all duration-500 flex items-center justify-center gap-4" @click="handleAddPurchase">
                 REGISTRAR COMPRA COMPLETA
             </button>
           </div>
@@ -752,5 +818,8 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  </div>
+  </template>
+</div>
 </template>
+<style scoped>
+</style>

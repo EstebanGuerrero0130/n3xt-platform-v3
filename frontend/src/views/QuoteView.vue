@@ -1,9 +1,54 @@
-<script setup>
-import { ref, watch, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import StlViewer from '../components/StlViewer.vue'
+import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
+import { calcProductionCost, calcFinalPrice, calcExtraCost } from '../services/costCalculator'
+import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
+import QuoteSidebar from '../components/QuoteSidebar.vue'
+import QuoteOrderModal from '../components/QuoteOrderModal.vue'
+import logger from '../utils/logger'
+import { useSplitTitle } from '../composables/useSplitTitle'
+import { useSplitButton } from '../composables/useSplitButton'
+
+useSplitTitle()
+useSplitButton()
+
+// --- SEO Meta Tags ---
+const seoMeta = {
+  title: 'Cotizador 3D Industrial | N3XT 3D',
+  description: 'Cotiza tus piezas 3D al instante. Precios precisos con motor de calculo industrial.',
+  image: '/assets/n3xt_og_quote.png'
+}
+
+let injectedMetaEls: any[] = []
+
+const setMetaTags = () => {
+  document.title = seoMeta.title
+  injectedMetaEls.forEach(el => el.remove())
+  injectedMetaEls = []
+  const metas = [
+    { name: 'og:title', prop: true, content: seoMeta.title },
+    { name: 'og:description', prop: true, content: seoMeta.description },
+    { name: 'og:image', prop: true, content: seoMeta.image },
+    { name: 'og:type', prop: true, content: 'website' },
+    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
+    { name: 'twitter:title', prop: false, content: seoMeta.title },
+    { name: 'twitter:description', prop: false, content: seoMeta.description },
+    { name: 'twitter:image', prop: false, content: seoMeta.image },
+    { name: 'description', prop: false, content: seoMeta.description }
+  ]
+  metas.forEach(({ name, prop, content }) => {
+    const el = document.createElement('meta')
+    if (prop) el.setAttribute('property', name)
+    el.setAttribute('name', name)
+    el.setAttribute('content', content)
+    document.head.appendChild(el)
+    injectedMetaEls.push(el)
+  })
+}
 
 // --- N3XT CORE DATA ---
 const appData = ref({
@@ -12,26 +57,12 @@ const appData = ref({
     oper: { transporte: 50, ganancia: 50, marketing: 50, fallos: 30 },
     margin: { iva: 19 }
 })
-const companyLogo = ref(null)
-const isDark = ref(localStorage.getItem('n3xt_theme') !== 'light')
-
-const toggleDarkMode = () => {
-  isDark.value = !isDark.value
-  const theme = isDark.value ? 'dark' : 'light'
-  localStorage.setItem('n3xt_theme', theme)
-  if (isDark.value) document.documentElement.classList.add('dark')
-  else document.documentElement.classList.remove('dark')
-}
-
-onMounted(() => {
-    if (isDark.value) document.documentElement.classList.add('dark')
-    else document.documentElement.classList.remove('dark')
-})
-
-const materials = ref([])
-const utilities = ref([])
-const selectedExtras = ref([])
-const autoExtras = ref([])
+const materials = ref<any[]>([])
+const utilities = ref<any[]>([])
+const selectedExtras = ref<any[]>([])
+const autoExtras = ref<any[]>([])
+const loadingQuote = ref(true)
+const quoteMessage = ref('')
 
 const fetchMaterials = async () => {
   try {
@@ -43,7 +74,7 @@ const fetchMaterials = async () => {
       selectedMaterial.value = materials.value[0].id
     }
   } catch (err) {
-    console.error('Error fetching materials:', err)
+    logger.error('Error fetching materials:', err)
   }
 }
 
@@ -56,8 +87,6 @@ const fetchSettings = async () => {
       if (data.prep) appData.value.prep = { ...appData.value.prep, ...data.prep }
       if (data.oper) appData.value.oper = { ...appData.value.oper, ...data.oper }
       if (data.margin) appData.value.margin = { ...appData.value.margin, ...data.margin }
-      if (data.company_logo) companyLogo.value = data.company_logo
-      
       // Forzar conversión numérica de todos los parámetros de cálculo
       const i = appData.value.infra
       i.luz_hr = Number(i.luz_hr) || 0
@@ -80,62 +109,62 @@ const fetchSettings = async () => {
       m.iva = Number(m.iva) || 19
     }
   } catch (err) {
-    console.error('Error fetching settings:', err)
+    logger.error('Error fetching settings:', err)
   }
 }
 
+useRevealAnim({ delay: 200 })
+
+let resizeCleanup: any = null
+
+const setupResizeListener = () => {
+  const handler = () => {
+    const w = window.innerWidth
+    isDesktop.value = w >= 1024
+    if (w >= 1024) showSidebar.value = true
+  }
+  window.addEventListener('resize', handler)
+  resizeCleanup = () => window.removeEventListener('resize', handler)
+}
+
 onMounted(async () => {
-  document.title = 'Cotizador 3D Automático | N3XT 3D Systems'
+  setMetaTags()
+  loadingQuote.value = true
+  quoteMessage.value = 'Cargando materiales y configuración...'
   await fetchSettings()
   await fetchMaterials()
+  loadingQuote.value = false
   calculatePrice()
+  
+  setupResizeListener()
 })
 
 const selectedTechnology = ref('FDM')
 const selectedMaterial = ref('')
-const volume = ref(0)
-const totalArea = ref(0)
-const supportArea = ref(0)
-const dimensions = ref({ x: 0, y: 0, z: 0 })
 const qty = ref(1)
-const infill = ref(15)
-const layerHeight = ref(0.2)
-const currentScale = ref(1.0)
-const hasModel = ref(false)
-const uploadedFile = ref(null)
 
 // --- CURAENGINE INTEGRATION (MANUAL SINCRO) ---
 const isSlicing = ref(false)
-const hasSlicingData = ref(false)
-const curaFactors = ref({ 
-    resolution: 1, 
-    infill_density: 1, 
-    shell_weight_g: 0, 
-    internal_weight_g: 0,
-    support_weight_g: 0,
-    filament_length_m: 0,
-    prep_time_h: 0.233, // 14 mins default (N3XT Guard)
-    print_time_h: 0
-})
 
 const runCuraEngineAnalysis = async () => {
-  if (!uploadedFile.value) {
+  const idx = activeModelIdx.value
+  const model = models.value[idx]
+  if (!model || !model.file) {
       notify("Sube un modelo 3D primero", "error")
       return
   }
   
   isSlicing.value = true
-  hasSlicingData.value = false
   
   try {
     const mat = materials.value.find(m => m.id === selectedMaterial.value)
     const formData = new FormData()
-    formData.append('file', uploadedFile.value)
-    formData.append('infill', infill.value)
-    formData.append('layer_height', layerHeight.value)
-    formData.append('total_area', totalArea.value)
-    formData.append('volume_mm3', volume.value)
-    formData.append('support_area', supportArea.value)
+    formData.append('file', model.file)
+    formData.append('infill', model.infill || 15)
+    formData.append('layer_height', model.layerHeight || 0.2)
+    formData.append('total_area', model.totalArea || 0)
+    formData.append('volume_mm3', model.volume || 0)
+    formData.append('support_area', model.supportArea || 0)
     if (mat) {
         formData.append('density', mat.density)
         formData.append('material_id', mat.id)
@@ -145,15 +174,22 @@ const runCuraEngineAnalysis = async () => {
     const factors = res.data || res.factors || res;
     
     if (factors && (factors.shell_weight_g >= 0)) {
-        curaFactors.value = factors
-        hasSlicingData.value = true
+        models.value[idx].curaFactors = factors
+        models.value[idx].hasSlicing = true
+        // Store weight and duration from slicing
+        models.value[idx].weight = (Number(factors.shell_weight_g) || 0) 
+                                 + (Number(factors.internal_weight_g) || 0) 
+                                 + (Number(factors.support_weight_g) || 0) 
+                                 + (Number(factors.purge_weight_g) || 3.0)
+        models.value[idx].duration = (Number(factors.prep_time_h) || 0) 
+                                   + (Number(factors.print_time_h) || 0)
         notify("Sincronización Industrial Exitosa", "success")
         calculatePrice()
     } else {
         throw new Error("El motor devolvió datos incompletos.")
     }
   } catch (err) {
-    console.error("CuraEngine Error:", err)
+    logger.error("CuraEngine Error:", err)
     const statusInfo = err.message.includes('(') ? ` [${err.message.split('(')[1].split(')')[0]}]` : '';
     notify(`Error de Motor${statusInfo}: ${err.message.split(' (')[0] || 'Fallo de conexión'}`, "error")
   } finally {
@@ -195,6 +231,14 @@ const materialGuide = [
 const showModal = ref(false)
 const isSubmitting = ref(false)
 const showMobileMenu = ref(false)
+const previousTotal = ref(0)
+const showSidebar = ref(window.innerWidth >= 1024)
+const isDesktop = ref(window.innerWidth >= 1024)
+const modalStep = ref(1)
+
+// Multi-modelo support
+const models = ref([{ id: 0, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo 1', curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }])
+const activeModelIdx = ref(0)
 const honeypot = ref('')
 const lastSubmitTime = ref(0)
 const customerForm = ref({
@@ -210,7 +254,7 @@ const customerForm = ref({
 })
 
 const couponCode = ref('')
-const activeCoupon = ref(null)
+const activeCoupon = ref<any>(null)
 const validCoupons = [
     { code: 'N3XT10', discount: 0.10, label: 'Cupón Bienvenida' },
     { code: 'MAKER5', discount: 0.05, label: 'Especial Maker' },
@@ -230,10 +274,22 @@ const applyCoupon = () => {
     }
 }
 
+const _timerNotif = ref<any>(null)
 const notification = ref({ show: false, message: '', type: 'info' })
 const notify = (msg, type = 'info') => {
     notification.value = { show: true, message: msg, type }
-    setTimeout(() => { notification.value.show = false }, 5000)
+    _timerNotif.value = setTimeout(() => { notification.value.show = false }, 5000)
+  }
+
+const handleModalSubmit = (payload: any) => {
+  if (!payload.captchaAnswer) {
+    notify('Error de Verificación', 'error')
+    generateCaptcha()
+    return
+  }
+  // Sincronizar datos del formulario del modal al componente padre
+  customerForm.value = { ...customerForm.value, ...payload.customerForm }
+  submitOrder()
 }
 
 const captchaChallenge = ref({ a: 0, b: 0, result: 0 })
@@ -250,9 +306,11 @@ const openModal = () => {
   showModal.value = true
 }
 
-const handleFileReady = (file) => {
-  uploadedFile.value = file
-  hasSlicingData.value = false 
+const handleFileReady = (file: any) => {
+  if (models.value[activeModelIdx.value]) {
+    models.value[activeModelIdx.value].file = file
+    models.value[activeModelIdx.value].hasSlicing = false
+  }
 }
 
 const submitOrder = async () => {
@@ -287,15 +345,15 @@ const submitOrder = async () => {
     formData.append('technology', selectedTechnology.value)
     formData.append('material_id', selectedMaterial.value)
     formData.append('material_name', mat ? mat.name : '')
-    formData.append('volume_mm3', volume.value)
+    formData.append('volume_mm3', models.value.reduce((s, m) => s + (m.volume || 0), 0))
     formData.append('estimated_weight_g', breakdown.value.weight)
     formData.append('estimated_duration_h', breakdown.value.duration)
     formData.append('qty', qty.value)
-    formData.append('infill', infill.value)
+    formData.append('infill', models.value[0]?.infill || 15)
     formData.append('total_price', breakdown.value.total)
     
-    if (uploadedFile.value) {
-      formData.append('file', uploadedFile.value)
+    if (models.value[0]?.file) {
+      formData.append('file', models.value[0].file)
     }
 
     // Extras
@@ -321,14 +379,14 @@ const submitOrder = async () => {
   }
 }
 
-const toggleExtra = (id) => {
+const toggleExtra = (id: any) => {
     const idx = selectedExtras.value.findIndex(e => e.id === id)
     if (idx > -1) selectedExtras.value.splice(idx, 1)
     else selectedExtras.value.push({ id, qty: 1 })
     calculatePrice()
 }
 
-watch([selectedTechnology, selectedMaterial, qty, infill, layerHeight, volume], () => {
+watch([selectedTechnology, selectedMaterial, qty, models], () => {
   const mat = materials.value.find(m => m.id === selectedMaterial.value)
   if (mat && mat.category !== selectedTechnology.value) {
     const firstAvailable = materials.value.find(m => m.category === selectedTechnology.value)
@@ -338,64 +396,85 @@ watch([selectedTechnology, selectedMaterial, qty, infill, layerHeight, volume], 
 }, { deep: true })
 
 const calculatePrice = () => {
+  if (loadingQuote.value) return
+  
   const mat = materials.value.find(m => m.id === selectedMaterial.value)
-  if (!mat || !appData.value) return
+  if (!mat || !appData.value) {
+    quoteMessage.value = 'Cargando datos de materiales...'
+    return
+  }
+  if (!models.value.length || !models.value[0]?.hasModel) {
+    quoteMessage.value = 'Sube un modelo 3D para ver el precio'
+    // Mostrar breakdown en cero pero con mensaje
+    breakdown.value = { ...breakdown.value, weight: 0, duration: 0, total: 0, subtotal: 0, iva: 0 }
+    return
+  }
+  quoteMessage.value = ''
   
   const cfg = appData.value
-  let weight = 0
-  let duration = 0
+  let totalWeight = 0
+  let totalDuration = 0
   
-  if (selectedTechnology.value === 'FDM') {
-    if (hasSlicingData.value) {
-        weight = (Number(curaFactors.value.shell_weight_g) || 0) 
-               + (Number(curaFactors.value.internal_weight_g) || 0) 
-               + (Number(curaFactors.value.support_weight_g) || 0) 
-               + (Number(curaFactors.value.purge_weight_g) || 3.0)
-        duration = (Number(curaFactors.value.prep_time_h) || 0) 
-                 + (Number(curaFactors.value.print_time_h) || 0)
+  // Iterate over all models
+  for (const model of models.value) {
+    let mWeight = 0
+    let mDuration = 0
+    
+    if (selectedTechnology.value === 'FDM') {
+      if (model.hasSlicing && model.curaFactors) {
+        const cf = model.curaFactors
+        mWeight = (Number(cf.shell_weight_g) || 0) 
+                + (Number(cf.internal_weight_g) || 0) 
+                + (Number(cf.support_weight_g) || 0) 
+                + (Number(cf.purge_weight_g) || 3.0)
+        mDuration = (Number(cf.prep_time_h) || 0) 
+                  + (Number(cf.print_time_h) || 0)
+        // Store in model for display
+        model.weight = mWeight
+        model.duration = mDuration
+      }
     } else {
-        breakdown.value = { ...breakdown.value, weight: 0, duration: 0, total: 0 }
-        return
+      // SLA: volume viene en mm³, convertir a cm³
+      const volCm3 = (model.volume || 0) / 1000 
+      const density = Number(mat.density) || 1.1
+      mWeight = volCm3 * density * 1.1 
+      const heightMm = model.dimensions?.z || model.dimensions?.y || 0
+      mDuration = Math.max(0.5, heightMm / 25)
+      model.weight = mWeight
+      model.duration = mDuration
     }
-  } else {
-    // SLA: volume viene en mm³, convertir a cm³
-    const volCm3 = (volume.value || 0) / 1000 
-    const density = Number(mat.density) || 1.1
-    weight = volCm3 * density * 1.1 
-    // Duración basada en la altura del modelo (eje Z) en horas
-    const heightMm = dimensions.value.z || dimensions.value.y || 0
-    duration = Math.max(0.5, heightMm / 25) // ~25mm/h velocidad típica SLA
+    
+    totalWeight += mWeight
+    totalDuration += mDuration
   }
-
-  const totalWeight = weight * qty.value
-  const totalDuration = duration * qty.value
+  
+  // Apply quantity to totals
+  totalWeight *= qty.value
+  totalDuration *= qty.value
   
   // Costo de material
-  const costPerG = (Number(mat.cost_per_kg) || 0) / 1000
-  const matCost = totalWeight * costPerG
-  
-  // Infraestructura (usando load_factor y prep_time_pct del admin)
-  const loadFactor = cfg.infra.load_factor || 0.4
-  const prepPct = (cfg.prep.prep_time_pct || 10) / 100
-  
-  const luz = totalDuration * loadFactor * cfg.infra.luz_hr
-  const labor = (totalDuration * prepPct) * cfg.prep.mano_obra_hr
-  const depr = totalDuration * cfg.infra.depr_hr
-  const mant = totalDuration * cfg.infra.mant_hr
-  const infraCost = luz + labor + depr + mant
-  
-  // Extras/Consumibles
+  // Use shared service for production cost
+  const prodCalc = calcProductionCost({
+    weightG: totalWeight,
+    totalHours: totalDuration,
+    costPerKg: Number(mat.cost_per_kg) || 0,
+    infra: cfg.infra,
+    prep: cfg.prep,
+    extrasCost: 0,
+  })
+  const matCost = prodCalc.material
+  const infraCost = prodCalc.luz + prodCalc.depr + prodCalc.mant    // Extras/Consumibles
   let utilityCost = 0
   autoExtras.value = []
   if (selectedTechnology.value === 'SLA') {
     const alcohol = utilities.value.find(u => u.id === 'Alco_ML_05')
     if (alcohol) {
-      utilityCost += (Number(alcohol.cost_per_kg) || 0) * 50 * qty.value
+      utilityCost += calcExtraCost(Number(alcohol.cost_per_kg) || 0, alcohol.unit || 'ml', 50 * qty.value)
       autoExtras.value.push({ id: alcohol.id, qty: 50 * qty.value, name: alcohol.name })
     }
     const curado = utilities.value.find(u => u.id === 'Cicl_Serv_06')
     if (curado) {
-      utilityCost += (Number(curado.cost_per_kg) || 0) * qty.value
+      utilityCost += calcExtraCost(Number(curado.cost_per_kg) || 0, curado.unit || 'servicio', qty.value)
       autoExtras.value.push({ id: curado.id, qty: qty.value, name: curado.name })
     }
   }
@@ -403,51 +482,87 @@ const calculatePrice = () => {
   selectedExtras.value.forEach(item => {
     const extra = utilities.value.find(u => u.id === item.id)
     if (extra) {
-        utilityCost += ((Number(extra.cost_per_kg) || 0) * item.qty)
+        utilityCost += calcExtraCost(Number(extra.cost_per_kg) || 0, extra.unit || 'g', item.qty)
     }
   })
   
-  const totalBaseCost = matCost + infraCost + utilityCost
+  // Use shared services for calculations
+  const prod = calcProductionCost({
+    weightG: totalWeight,
+    totalHours: totalDuration,
+    costPerKg: Number(mat.cost_per_kg) || 0,
+    infra: cfg.infra,
+    prep: cfg.prep,
+    extrasCost: utilityCost,
+  })
+  
+  const totalBaseCost = prod.total
   const baseUnitCost = qty.value > 0 ? totalBaseCost / qty.value : 0
   
-  // Márgenes operativos (porcentajes del admin)
-  const m_transporte = baseUnitCost * (cfg.oper.transporte / 100)
-  const m_ganancia = baseUnitCost * (cfg.oper.ganancia / 100)
-  const m_marketing = baseUnitCost * (cfg.oper.marketing / 100)
-  const m_fallos = baseUnitCost * (cfg.oper.fallos / 100)
-  const unitPrice = baseUnitCost + m_transporte + m_ganancia + m_marketing + m_fallos
-  const subtotal = unitPrice * qty.value
+  // Margins on base unit cost, then apply qty
+  const pricePerUnit = calcFinalPrice({
+    productionCost: baseUnitCost,
+    oper: cfg.oper,
+    margin: cfg.margin,
+  })
   
+  const subtotal = pricePerUnit.subtotal * qty.value
+  
+  // Apply coupon discount separately (it's on total)
   const discountAmount = activeCoupon.value ? (subtotal * activeCoupon.value.discount) : 0
-  const finalSubtotal = subtotal - discountAmount
-  
+  const finalSubtotal = Math.round(subtotal - discountAmount)
   const ivaRate = (cfg.margin.iva || 19) / 100
-  const iva = finalSubtotal * ivaRate
+  const iva = Math.round(finalSubtotal * ivaRate)
   const total = finalSubtotal + iva
   
+  const newTotal = total
+  if (newTotal !== breakdown.value.total) {
+    previousTotal.value = breakdown.value.total
+  }
+  
+  const marginCost = (pricePerUnit.logistics + pricePerUnit.marketing + pricePerUnit.failures + pricePerUnit.profit) * qty.value
+  
   breakdown.value = {
-    weight, duration, matCost, infraCost, laborCost: labor, utilityCost, 
-    marginCost: (m_transporte + m_ganancia + m_marketing + m_fallos) * qty.value, 
-    discount: discountAmount,
-    subtotal: finalSubtotal, iva, total: Math.round(total)
+    weight: totalWeight,
+    duration: totalDuration,
+    matCost: prod.material,
+    infraCost: prod.luz + prod.depr + prod.mant,
+    laborCost: prod.labor,
+    utilityCost,
+    marginCost,
+    discount: Math.round(discountAmount),
+    subtotal: finalSubtotal,
+    iva,
+    total,
   }
 }
 
-const handleModelLoaded = (data) => {
-  volume.value = data.volume
-  totalArea.value = data.totalArea || 0
-  dimensions.value = { x: data.dimensions.x, y: data.dimensions.y, z: data.dimensions.z }
-  currentScale.value = data.scale || 1.0
-  supportArea.value = data.supportArea || 0
-  hasModel.value = true
+
+const handleModelLoaded = (data: any) => {
+  const idx = activeModelIdx.value
+  if (models.value[idx]) {
+    models.value[idx].volume = data.volume
+    models.value[idx].totalArea = data.totalArea || 0
+    models.value[idx].dimensions = { x: data.dimensions.x, y: data.dimensions.y, z: data.dimensions.z }
+    models.value[idx].currentScale = data.scale || 1.0
+    models.value[idx].supportArea = data.supportArea || 0
+    models.value[idx].hasModel = true
+  }
   if (selectedTechnology.value !== 'FDM') calculatePrice()
 }
 
-const handleError = (msg) => {
+const handleError = (msg: any) => {
   notify(msg, "error")
 }
 
-const formatTime = (h) => {
+onUnmounted(() => {
+  if (_timerNotif.value) clearTimeout(_timerNotif.value)
+  injectedMetaEls.forEach(el => el.remove())
+  injectedMetaEls = []
+  if (resizeCleanup) resizeCleanup()
+})
+
+const formatTime = (h: any) => {
     if (!h || h < 0) return "0m";
     const hours = Math.floor(h);
     const minutes = Math.round((h - hours) * 60);
@@ -459,32 +574,63 @@ const formatTime = (h) => {
 </script>
 
 <template>
-  <div :class="{'dark': isDark}" class="min-h-screen flex flex-col bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white transition-colors duration-500 overflow-x-hidden selection:bg-primary/20">
-    <AppNavbar activeTab="quote" subtext="Centro de Precisión Industrial" />
+  <div class="min-h-screen flex flex-col bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white transition-colors duration-500 overflow-x-hidden selection:bg-primary/20">
+    <AppNavbar active-tab="quote" subtext="Centro de Precisión Industrial" />
 
     <main class="flex-1 flex flex-col lg:flex-row relative">
       <div class="absolute inset-0 technical-grid opacity-20 dark:opacity-10 pointer-events-none"></div>
       
       <section class="flex-1 relative flex flex-col items-center justify-center p-6 lg:p-16">
         <div class="w-full max-w-5xl text-center mb-16 relative z-10">
-            <h1 class="text-5xl md:text-[8rem] font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-[0.8] mb-8">COTIZA.<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-emerald-500">PRODUCE.</span></h1>
+          <div class="relative inline-block">
+            <!-- Glow background -->
+            <div class="absolute -inset-20 bg-gradient-to-r from-primary/5 via-emerald-500/5 to-primary/5 rounded-full blur-[100px] animate-pulse pointer-events-none"></div>
+            <div class="flex items-center justify-center gap-4 relative">
+              <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-[0.85] animate-fade-in">
+                COTIZA.<br/>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-emerald-500 to-primary-light drop-shadow-[0_0_15px_rgba(8,135,43,0.3)]">PRODUCE.</span>
+              </h1>
+              <button class="lg:hidden w-14 h-14 bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/10 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 transition-all shrink-0 self-start mt-2 opacity-40 hover:opacity-100" @click="showSidebar = !showSidebar">
+                <svg class="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
 
+        <div class="flex flex-wrap gap-3 mb-4">
+          <button v-for="(m, mi) in models" :key="m.id" :class="activeModelIdx === mi ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105' : 'bg-white dark:bg-white/5 text-gray-500 border border-gray-100 dark:border-white/10 hover:border-primary/30'" class="px-6 py-3 rounded-2xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="activeModelIdx = mi">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            {{ m.name || 'Modelo ' + (mi + 1) }}
+            <span v-if="m.hasModel" class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+          </button>
+          <button class="px-5 py-3 bg-white/5 border border-dashed border-gray-200 dark:border-white/10 rounded-2xl text-[8px] font-black text-gray-400 uppercase tracking-widest hover:border-primary/40 hover:text-primary transition-all" @click="models.push({ id: models.length, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo ' + (models.length + 1), curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }); activeModelIdx = models.length - 1">
+            + Añadir Modelo
+          </button>
+        </div>
+        <!-- Loading / Message State -->
+        <div v-if="loadingQuote" class="w-full max-w-5xl mb-4 flex items-center justify-center gap-3 py-4 bg-primary/5 rounded-3xl border border-primary/20">
+          <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <span class="text-[10px] font-black text-primary uppercase tracking-[0.3em]">{{ quoteMessage }}</span>
+        </div>
+        <div v-else-if="quoteMessage && !models.some(m => m.hasModel)" class="w-full max-w-5xl mb-4 flex items-center justify-center gap-3 py-4 bg-amber-500/10 rounded-3xl border border-amber-500/20 animate-in fade-in slide-in-from-top-2 duration-500">
+          <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="text-[10px] font-black text-amber-400 uppercase tracking-[0.2em]">{{ quoteMessage }}</span>
+        </div>
         <div class="w-full max-w-5xl aspect-square md:aspect-[16/9] bg-white dark:bg-white/5 rounded-[4rem] border border-gray-100 dark:border-white/5 shadow-2xl relative overflow-hidden group mb-16">
-          <StlViewer @model-loaded="handleModelLoaded" @model-transformed="handleModelLoaded" @file-ready="handleFileReady" @error="handleError" />
+          <StlViewer :key="'viewer-' + activeModelIdx" @model-loaded="handleModelLoaded" @model-transformed="handleModelLoaded" @file-ready="handleFileReady" @error="handleError" />
           <transition enter-active-class="transition duration-300" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition duration-300" leave-from-class="opacity-100" leave-to-class="opacity-0">
             <div v-if="isSlicing" class="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                 <div class="bg-gray-900 border border-primary/40 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-6">
                     <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <p class="text-primary font-black uppercase tracking-[0.5em] text-xs">Procesando modelo</p>
+                    <p class="text-primary font-black uppercase tracking-[0.5em] text-xs">Procesando modelo {{ activeModelIdx + 1 }}</p>
                 </div>
             </div>
           </transition>
         </div>
 
-        <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+        <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-4 gap-6 mb-16 reveal">
             <div v-for="mat in materialGuide" :key="mat.name" class="bg-white dark:bg-white/5 p-8 rounded-[2.5rem] border border-gray-100 dark:border-white/5 hover:border-primary/30 transition-all group">
-                <div class="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-all" v-html="mat.icon"></div>
+                <div class="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-all" :innerHTML="sanitizeSVG(mat.icon)"></div>
                 <h4 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest mb-3">{{ mat.name }}</h4>
                 <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold leading-relaxed uppercase mb-4">{{ mat.desc }}</p>
                 <div class="pt-4 border-t border-gray-100 dark:border-white/5">
@@ -495,280 +641,49 @@ const formatTime = (h) => {
         </div>
       </section>
 
-      <aside class="w-full lg:w-[540px] bg-white dark:bg-black flex flex-col border-l border-gray-100 dark:border-white/5 shadow-2xl z-10 overflow-y-auto">
-        <div class="p-8 lg:p-10 space-y-8">
-
-          <!-- HEADER -->
-          <div class="border-b border-gray-100 dark:border-white/5 pb-6">
-            <p class="text-[9px] font-black text-primary uppercase tracking-[0.5em] mb-1">Motor OrcaEngine</p>
-            <p class="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em]">Configuracion de Fabricacion</p>
-          </div>
-
-          <!-- TECNOLOGIA -->
-          <div>
-            <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Tecnologia</label>
-            <div class="flex bg-gray-100 dark:bg-white/5 p-1.5 rounded-2xl">
-              <button v-for="t in ['FDM','SLA']" :key="t" @click="selectedTechnology = t" :class="selectedTechnology === t ? 'bg-white dark:bg-primary text-gray-900 dark:text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'" class="flex-1 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">{{ t }}</button>
-            </div>
-          </div>
-
-          <!-- MATERIAL -->
-          <div>
-            <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Material</label>
-            <select v-model="selectedMaterial" class="w-full bg-gray-100 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-widest outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer transition-all">
-              <option v-for="mat in materials.filter(m => m.category === selectedTechnology)" :key="mat.id" :value="mat.id" class="bg-[#0f172a] text-white">{{ mat.name }} — ${{ mat.cost_per_kg }}/kg</option>
-            </select>
-          </div>
-
-          <!-- PARAMETROS FDM -->
-          <div v-if="selectedTechnology === 'FDM'" class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block">Relleno %</label>
-              <input type="number" v-model.number="infill" min="5" max="100" step="5" class="w-full bg-gray-100 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20">
-            </div>
-            <div>
-              <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block">Capa (mm)</label>
-              <select v-model.number="layerHeight" class="w-full bg-gray-100 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer transition-all">
-                <option :value="0.12" class="bg-[#0f172a] text-white">0.12 Ultra</option>
-                <option :value="0.16" class="bg-[#0f172a] text-white">0.16 Alta</option>
-                <option :value="0.2" class="bg-[#0f172a] text-white">0.20 Estandar</option>
-                <option :value="0.28" class="bg-[#0f172a] text-white">0.28 Rapida</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- CANTIDAD -->
-          <div>
-            <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Cantidad</label>
-            <div class="flex items-center bg-gray-100 dark:bg-white/5 rounded-2xl overflow-hidden">
-              <button @click="qty = Math.max(1, qty - 1)" class="px-6 py-4 text-gray-400 hover:text-primary font-black text-lg transition-colors">-</button>
-              <input type="number" v-model.number="qty" min="1" class="flex-1 bg-transparent text-center text-lg font-black text-gray-900 dark:text-white outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
-              <button @click="qty++" class="px-6 py-4 text-gray-400 hover:text-primary font-black text-lg transition-colors">+</button>
-            </div>
-          </div>
-
-          <!-- EXTRAS -->
-          <div v-if="utilities.length > 0">
-            <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Extras / Consumibles</label>
-            <div class="space-y-2">
-              <button v-for="u in utilities" :key="u.id" @click="toggleExtra(u.id)" :class="selectedExtras.find(e => e.id === u.id) ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-gray-50 dark:bg-white/5 border-transparent text-gray-500'" class="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all hover:border-primary/20">
-                <span>{{ u.name }}</span>
-                <span class="text-[9px]">${{ u.cost_per_kg }}/u</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- CUPON -->
-          <div>
-            <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Cupon de Descuento</label>
-            <div class="flex gap-2">
-              <input type="text" v-model="couponCode" placeholder="Codigo..." class="flex-1 bg-gray-100 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-[11px] font-black text-gray-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-              <button @click="applyCoupon" class="px-6 py-4 bg-gray-900 dark:bg-white/10 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-primary transition-all">Aplicar</button>
-            </div>
-            <p v-if="activeCoupon" class="text-[9px] font-black text-primary uppercase tracking-widest mt-2 ml-2">{{ activeCoupon.label }} (-{{ (activeCoupon.discount * 100) }}%)</p>
-          </div>
-
-          <!-- BOTON CALCULAR (FDM) -->
-          <button v-if="selectedTechnology === 'FDM' && !hasSlicingData" @click="runCuraEngineAnalysis" :disabled="isSlicing || !hasModel" :class="!hasModel ? 'opacity-40 cursor-not-allowed' : 'hover:bg-emerald-600 active:scale-95'" class="w-full py-5 bg-gray-900 dark:bg-white/10 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3">
-            <span v-if="isSlicing" class="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
-            <span>{{ isSlicing ? 'Procesando...' : 'Calcular Cotizacion' }}</span>
-          </button>
-
-          <!-- RESULTADO -->
-          <div v-if="hasSlicingData || selectedTechnology === 'SLA'" class="bg-gray-900 dark:bg-[#0f172a] rounded-[3rem] p-8 text-white relative overflow-hidden border border-white/5">
-            <div class="absolute -top-10 -right-10 w-48 h-48 bg-primary/20 rounded-full blur-[80px]"></div>
-            
-            <div class="flex justify-between items-center mb-6 relative z-10">
-              <p class="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Total Estimado</p>
-              <span class="bg-primary text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest">Listo</span>
-            </div>
-
-            <h3 class="text-6xl lg:text-7xl font-black tracking-tighter italic text-white relative z-10 mb-8">${{ Math.round(breakdown.total).toLocaleString('es-CO') }}</h3>
-
-            <!-- Desglose -->
-            <div class="space-y-3 relative z-10">
-              <div class="flex justify-between items-center bg-white/5 px-4 py-3 rounded-xl">
-                <span class="text-[9px] font-black text-white/40 uppercase tracking-widest">Masa unitaria</span>
-                <span class="text-sm font-black text-white">{{ breakdown.weight.toFixed(2) }}g</span>
-              </div>
-              <div class="flex justify-between items-center bg-white/5 px-4 py-3 rounded-xl">
-                <span class="text-[9px] font-black text-white/40 uppercase tracking-widest">Tiempo estimado</span>
-                <span class="text-sm font-black text-white">{{ formatTime(breakdown.duration) }}</span>
-              </div>
-              <div class="flex justify-between items-center px-4 py-2">
-                <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">Material</span>
-                <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.matCost).toLocaleString() }}</span>
-              </div>
-              <div class="flex justify-between items-center px-4 py-2">
-                <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">Infraestructura</span>
-                <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.infraCost).toLocaleString() }}</span>
-              </div>
-              <div class="flex justify-between items-center px-4 py-2">
-                <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">Extras</span>
-                <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.utilityCost).toLocaleString() }}</span>
-              </div>
-              <div class="flex justify-between items-center px-4 py-2">
-                <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">Margenes Operativos</span>
-                <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.marginCost).toLocaleString() }}</span>
-              </div>
-              <div v-if="breakdown.discount > 0" class="flex justify-between items-center px-4 py-2">
-                <span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Descuento</span>
-                <span class="text-xs font-black text-emerald-400">-${{ Math.round(breakdown.discount).toLocaleString() }}</span>
-              </div>
-              <div class="border-t border-white/10 pt-3 mt-2">
-                <div class="flex justify-between items-center px-4 py-2">
-                  <span class="text-[9px] font-black text-white/50 uppercase tracking-widest">Subtotal</span>
-                  <span class="text-sm font-black text-white">${{ Math.round(breakdown.subtotal).toLocaleString() }}</span>
-                </div>
-                <div class="flex justify-between items-center px-4 py-2">
-                  <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">IVA (19%)</span>
-                  <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.iva).toLocaleString() }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- DIMENSIONES -->
-          <div v-if="hasModel" class="grid grid-cols-3 gap-3">
-            <div v-for="(val, axis) in dimensions" :key="axis" class="bg-gray-50 dark:bg-white/5 p-4 rounded-2xl text-center border border-gray-100 dark:border-white/5">
-              <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ axis.toUpperCase() }}</p>
-              <p class="text-sm font-black text-gray-900 dark:text-white">{{ val.toFixed(1) }}mm</p>
-            </div>
-          </div>
-
-          <!-- CTA -->
-          <button @click="openModal" class="w-full bg-primary hover:bg-emerald-600 text-white font-black py-7 rounded-[2.5rem] shadow-2xl shadow-primary/20 uppercase tracking-[0.3em] text-[11px] transition-all active:scale-[0.98]">Solicitar Cotizacion</button>
-        </div>
+      <aside v-show="showSidebar || isDesktop" :class="['w-full lg:w-[540px] bg-white dark:bg-black flex flex-col border-l border-gray-100 dark:border-white/5 shadow-2xl z-10', showSidebar || window.innerWidth >= 1024 ? '' : '']">
+        <QuoteSidebar
+          :models="models"
+          :active-model-idx="activeModelIdx"
+          :materials="materials"
+          :utilities="utilities"
+          :selected-technology="selectedTechnology"
+          :selected-material="selectedMaterial"
+          :qty="qty"
+          :selected-extras="selectedExtras"
+          :active-coupon="activeCoupon"
+          :coupon-code="couponCode"
+          :breakdown="breakdown"
+          :is-slicing="isSlicing"
+          :previous-total="previousTotal"
+          @update:selected-technology="selectedTechnology = $event"
+          @update:selected-material="selectedMaterial = $event"
+          @update:qty="qty = $event"
+          @update:coupon-code="couponCode = $event"
+          @toggle-extra="toggleExtra"
+          @apply-coupon="applyCoupon"
+          @calculate="runCuraEngineAnalysis"
+          @request-quote="openModal"
+          @update:models="models = $event"
+        />
       </aside>
     </main>
 
-    <!-- MODAL DE CONTACTO INDUSTRIAL -->
-    <transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
-      <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
-        <div class="bg-white dark:bg-[#0a0f14] w-full max-w-lg rounded-[3.5rem] shadow-2xl border border-gray-100 dark:border-white/5 overflow-hidden flex flex-col relative">
-          
-          <!-- Banner Superior -->
-          <div class="bg-primary p-12 text-white relative">
-            <button @click="showModal = false" class="absolute top-8 right-8 w-10 h-10 flex items-center justify-center bg-white/20 rounded-full hover:bg-white hover:text-primary transition-all">✕</button>
-            <p class="text-[10px] font-black uppercase tracking-[0.5em] mb-2 text-white/80">N3XT Protocol</p>
-            <h2 class="text-4xl font-black tracking-tighter uppercase leading-none">Finalizar<br/>Solicitud</h2>
-          </div>
-
-          <div class="p-8 lg:p-10 space-y-6 overflow-y-auto max-h-[65vh]">
-            <!-- SECCION: DATOS CLIENTE -->
-            <div class="space-y-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="group">
-                  <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block ml-4">Nombre Completo</label>
-                  <input type="text" v-model="customerForm.name" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                </div>
-                <div class="group">
-                  <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block ml-4">Empresa / Razon Social</label>
-                  <input type="text" v-model="customerForm.company" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                </div>
-              </div>
-              
-              <div class="grid grid-cols-2 gap-4">
-                <div class="group">
-                  <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block ml-4">NIT / Documento</label>
-                  <input type="text" v-model="customerForm.document" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                </div>
-                <div class="group">
-                  <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block ml-4">Email Corporativo</label>
-                  <input type="email" v-model="customerForm.email" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
-                <div class="group">
-                  <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block ml-4">WhatsApp / Tel</label>
-                  <input type="tel" v-model="customerForm.phone" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                </div>
-                <div class="group">
-                  <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block ml-4">Ciudad / Ubicacion</label>
-                  <input type="text" v-model="customerForm.city" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                </div>
-              </div>
-
-              <div class="group">
-                <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block ml-4">Direccion de Envio</label>
-                <input type="text" v-model="customerForm.address" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="group">
-                  <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block ml-4">Uso de la Pieza</label>
-                  <select v-model="customerForm.use" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer">
-                    <option value="Prototipo" class="bg-[#0f172a] text-white">Prototipo Rapido</option>
-                    <option value="Funcional" class="bg-[#0f172a] text-white">Pieza Mecanica / Funcional</option>
-                    <option value="Decorativo" class="bg-[#0f172a] text-white">Arte / Decorativo</option>
-                    <option value="Medico" class="bg-[#0f172a] text-white">Industrial / Medico</option>
-                    <option value="Joyeria" class="bg-[#0f172a] text-white">Joyeria / Dental</option>
-                  </select>
-                </div>
-                <div class="group">
-                  <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block ml-4">Notas Tecnicas</label>
-                  <textarea v-model="customerForm.comments" rows="1" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none" placeholder="EJ. ACABADO ESPEJO..."></textarea>
-                </div>
-              </div>
-            </div>
-
-            <!-- SECCION: RESUMEN TECNICO -->
-            <div class="bg-primary/5 rounded-[2rem] p-6 border border-primary/20">
-              <p class="text-[8px] font-black text-primary uppercase tracking-[0.4em] mb-4">Resumen Industrial</p>
-              <div class="grid grid-cols-2 gap-y-3">
-                <div class="flex flex-col">
-                  <span class="text-[8px] font-black text-gray-400 uppercase">Tecnologia</span>
-                  <span class="text-xs font-black dark:text-white uppercase">{{ selectedTechnology }}</span>
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-[8px] font-black text-gray-400 uppercase">Material</span>
-                  <span class="text-xs font-black dark:text-white uppercase">{{ materials.find(m => m.id === selectedMaterial)?.name }}</span>
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-[8px] font-black text-gray-400 uppercase">Cantidad</span>
-                  <span class="text-xs font-black dark:text-white uppercase">{{ qty }} Unidades</span>
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-[8px] font-black text-gray-400 uppercase text-right">Inversion Total</span>
-                  <span class="text-xs font-black text-primary text-right uppercase italic font-italic">${{ Math.round(breakdown.total).toLocaleString() }} COP</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- CAPTCHA SEGURIDAD -->
-            <div class="bg-gray-100 dark:bg-white/5 p-6 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
-              <div class="flex items-center gap-4">
-                <div class="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center shrink-0">
-                  <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                </div>
-                <div class="flex-1">
-                  <p class="text-[8px] font-black text-primary uppercase tracking-[0.3em]">Validacion Maker</p>
-                  <p class="text-[10px] font-black dark:text-white uppercase">{{ captchaChallenge.a }} + {{ captchaChallenge.b }} = ?</p>
-                </div>
-                <input type="number" v-model="captchaAnswer" class="w-20 bg-white dark:bg-white/10 border-none rounded-xl p-3 text-center text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 shadow-inner">
-              </div>
-            </div>
-
-            <button @click="submitOrder" :disabled="isSubmitting" class="w-full bg-primary hover:bg-emerald-600 text-white py-6 rounded-2xl font-black text-xs uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 shadow-xl shadow-primary/20">
-              <span v-if="isSubmitting" class="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
-              <span>{{ isSubmitting ? 'PROCESANDO ORDEN...' : 'CONFIRMAR PEDIDO INDUSTRIAL' }}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
-
-    <!-- NOTIFICACION -->
-    <transition enter-active-class="transition transform duration-500 ease-out" enter-from-class="translate-y-10 opacity-0" enter-to-class="translate-y-0 opacity-100" leave-active-class="transition transform duration-400 ease-in" leave-from-class="translate-y-0 opacity-100" leave-to-class="translate-y-10 opacity-0">
-        <div v-if="notification.show" :class="notification.type === 'success' ? 'bg-primary' : 'bg-rose-600'" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] px-10 py-5 rounded-full shadow-2xl flex items-center gap-4 border border-white/20">
-            <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <span v-if="notification.type === 'success'" class="text-white font-black">✓</span>
-                <span v-else class="text-white font-black">!</span>
-            </div>
-            <p class="text-[10px] font-black text-white uppercase tracking-widest">{{ notification.message }}</p>
-        </div>
-    </transition>
+    <QuoteOrderModal
+      :show="showModal"
+      :models="models"
+      :materials="materials"
+      :selected-technology="selectedTechnology"
+      :selected-material="selectedMaterial"
+      :qty="qty"
+      :breakdown="breakdown"
+      :active-coupon="activeCoupon"
+      :previous-total="previousTotal"
+      :is-submitting="isSubmitting"
+      :notification="notification"
+      @close="showModal = false; modalStep = 1"
+      @submit="handleModalSubmit"
+    />
     <AppFooter />
   </div>
 </template>
@@ -777,5 +692,39 @@ const formatTime = (h) => {
 .technical-grid {
   background-size: 50px 50px;
   background-image: linear-gradient(to right, rgba(30, 58, 52, 0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 58, 52, 0.08) 1px, transparent 1px);
+}
+
+/* Count-up animation for price */
+.price-count {
+  display: inline-block;
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.price-count.bump {
+  animation: priceBump 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes priceBump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* Sidebar mobile transition */
+@media (max-width: 1023px) {
+  .quote-sidebar-enter { max-height: 0; opacity: 0; }
+  .quote-sidebar-enter-active { transition: all 0.4s ease-out; }
+  .quote-sidebar-enter-to { max-height: 2000px; opacity: 1; }
+}
+
+
+/* --- Scroll Reveal --- */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

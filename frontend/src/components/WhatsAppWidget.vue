@@ -1,7 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../services/api'
+import logger from '../utils/logger'
 
 const router = useRouter()
 
@@ -28,7 +29,7 @@ const fetchSettings = async () => {
             }
         }
     } catch (err) {
-        console.error('Error fetching WhatsApp settings:', err)
+        logger.error('Error fetching WhatsApp settings:', err)
     }
 }
 
@@ -69,9 +70,9 @@ const sendMessage = (msg) => {
             <div class="absolute -right-16 -top-16 w-48 h-48 bg-emerald-500/20 rounded-full blur-[60px] animate-pulse"></div>
             <!-- Close Button in Header -->
             <button 
-                @click="isOpen = false"
                 class="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all active:scale-95 z-20"
                 aria-label="Cerrar chat"
+                @click="isOpen = false"
             >
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -98,8 +99,8 @@ const sendMessage = (msg) => {
                     @keyup.enter="sendMessage()"
                 ></textarea>
                 <button 
-                    @click="sendMessage()"
                     class="absolute right-4 bottom-4 w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center hover:scale-110 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all shadow-lg active:scale-95 group/send"
+                    @click="sendMessage()"
                 >
                     <svg class="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                 </button>
@@ -115,8 +116,8 @@ const sendMessage = (msg) => {
                     <button 
                         v-for="reply in quickReplies" 
                         :key="reply.text"
-                        @click="handleQuickReply(reply)"
                         class="w-full p-5 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl text-[10px] font-black text-gray-700 dark:text-white uppercase tracking-[0.2em] hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:border-emerald-500/40 transition-all text-left flex items-center justify-between group/item"
+                        @click="handleQuickReply(reply)"
                     >
                         {{ reply.text }}
                         <div class="w-6 h-6 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center group-hover/item:bg-emerald-500 group-hover/item:text-white transition-colors">
@@ -137,9 +138,9 @@ const sendMessage = (msg) => {
 
     <!-- Toggle Button -->
     <button 
-        @click="isOpen = !isOpen"
         :class="isOpen ? 'bg-gray-900 rotate-180 scale-90 border-white/20' : 'bg-[#1e3a34] shadow-[0_20px_40px_rgba(30,58,52,0.6)] hover:scale-110 border-emerald-500/30'"
         class="w-16 h-16 rounded-full flex items-center justify-center text-white transition-all duration-700 active:scale-95 relative border-2 backdrop-blur-xl group/fab overflow-hidden"
+        @click="isOpen = !isOpen"
     >
         <!-- Industrial Background Glow -->
         <div class="absolute inset-0 bg-gradient-to-tr from-emerald-500/20 to-transparent opacity-0 group-hover/fab:opacity-100 transition-opacity"></div>

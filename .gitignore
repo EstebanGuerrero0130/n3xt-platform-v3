@@ -117,3 +117,8 @@ electron-main.js
 # ── Misc ─────────────────────────────────────────────────
 *.map
 query
+
+# ── Reserved names ──
+**/nul
+nul
+
