@@ -2,7 +2,7 @@
  * N3XT Settings Composable
  * Gestiona configuración del sistema, inventario e impresoras
  */
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import { api } from '../services/api'
 import logger from '../utils/logger'
 
@@ -12,10 +12,10 @@ interface UseSettingsOptions {
 
 export function useSettings({ showNotify }: UseSettingsOptions = {}) {
   const settings = ref({
-    infra: { luz_hr: 0, depr_hr: 0, mant_hr: 0, etiquetas: 0, load_factor: 0.4 },
-    prep: { mano_obra_hr: 0, prep_time_pct: 10 },
-    oper: { transporte: 0, ganancia: 0, marketing: 0, fallos: 0 },
-    margin: { iva: 0 },
+    infra: { luz_hr: 926, depr_hr: 400, mant_hr: 700, etiquetas: 500, load_factor: 0.4 },
+    prep: { mano_obra_hr: 1000, prep_time_pct: 10 },
+    oper: { transporte: 5, ganancia: 20, marketing: 10, fallos: 5 },
+    margin: { iva: 19 },
     company: { name: 'N3XT 3D TECHNOLOGY', nit: '10271500341', email: 'servicion3xt@gmail.com', phone: '+57 3118796416', address: 'Guateque-Boyaca', slogan: 'Manufactura Digital Avanzada', website: '' },
     web: {
       social: { tiktok: '', instagram: '', facebook: '', whatsapp: 'https://wa.me/573118796416', youtube: '' },
@@ -41,7 +41,7 @@ export function useSettings({ showNotify }: UseSettingsOptions = {}) {
     try {
       const res = await api.get('/materials')
       inventoryData.value = Array.isArray(res) ? res : (res?.data || [])
-    } catch (err) {
+    } catch (_err) {
       inventoryData.value = []
     }
   }
@@ -50,7 +50,7 @@ export function useSettings({ showNotify }: UseSettingsOptions = {}) {
     try {
       const res = await api.get('/admin/printers')
       printers.value = Array.isArray(res) ? res : (res?.data || [])
-    } catch (err) {
+    } catch (_err) {
       printers.value = []
     }
   }

@@ -4,7 +4,7 @@
 // Funciones que devuelven HTML string para renderizar e imprimir en iframe.
 
 /** Obtiene URL absoluta (maneja rutas relativas del storage) */
-export function getAbsoluteUrl(path: string, storageUrl?: string): string {
+export function getAbsoluteUrl(path: string, _storageUrl?: string): string {
   if (!path) return ''
   if (path.startsWith('http')) return path
   const base: string = window.location.origin

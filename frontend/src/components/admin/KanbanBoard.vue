@@ -90,7 +90,7 @@ const onDragChange = (evt: any, newStatus: any) => {
     <div v-if="loading" class="flex gap-6 md:gap-8 overflow-x-auto pb-8 snap-x no-scrollbar scroll-smooth animate-pulse">
       <div
 v-for="colIdx in 6" :key="'skel-col-'+colIdx" 
-        class="flex flex-col min-h-[75vh] min-w-[320px] md:min-w-[340px] w-[320px] md:w-[340px] snap-center"
+        class="flex flex-col min-h-[75vh] min-w-[280px] md:min-w-[340px] w-[280px] md:w-[340px] snap-center"
       >
         <!-- Column Header Skeleton -->
         <div class="flex items-center justify-between mb-6 px-6 py-4 bg-gray-100 dark:bg-[#151a22] rounded-[24px]">
@@ -152,7 +152,7 @@ v-for="(col, idx) in columns" :key="col.id"
         :style="{ animationDelay: (idx * 150) + 'ms' }"
       >
         <!-- Column Header: Premium Glass -->
-        <div class="flex items-center justify-between mb-6 px-6 py-4 bg-white/80 dark:bg-[#151a22]/90 backdrop-blur-2xl rounded-[24px] border border-white dark:border-[#21262d] shadow-xl shadow-gray-200/20 dark:shadow-none group/header relative overflow-hidden">
+        <div class="flex items-center justify-between mb-4 md:mb-6 px-4 md:px-6 py-3 md:py-4 bg-white/80 dark:bg-[#151a22]/90 backdrop-blur-2xl rounded-[20px] md:rounded-[24px] border border-white dark:border-[#21262d] shadow-xl shadow-gray-200/20 dark:shadow-none group/header relative overflow-hidden">
           <div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/header:opacity-100 transition-opacity"></div>
           <div class="flex items-center gap-4 relative z-10">
             <div :class="['w-4 h-4 rounded-full shadow-lg shadow-black/5 ring-4 ring-white dark:ring-gray-900', col.color]"></div>
@@ -168,7 +168,7 @@ v-for="(col, idx) in columns" :key="col.id"
           :list="groupedOrders[col.id]" 
           group="orders"
           item-key="id"
-          class="flex-1 bg-gray-100/30 dark:bg-white/5 backdrop-blur-sm rounded-[24px] p-5 space-y-6 border-2 border-dashed border-gray-200/50 dark:border-[#21262d] min-h-[600px] hover:bg-gray-100/50 dark:hover:bg-white/10 hover:border-primary/20"
+          class="flex-1 bg-gray-100/30 dark:bg-white/5 backdrop-blur-sm rounded-[20px] md:rounded-[24px] p-3 md:p-5 space-y-4 md:space-y-6 border-2 border-dashed border-gray-200/50 dark:border-[#21262d] min-h-[400px] md:min-h-[600px] hover:bg-gray-100/50 dark:hover:bg-white/10 hover:border-primary/20"
           ghost-class="opacity-50"
           drag-class="rotate-3 scale-105"
           @change="(evt: any) => onDragChange(evt, col.id)"

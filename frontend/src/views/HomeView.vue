@@ -4,7 +4,6 @@ import gsap from 'gsap'
 import { api } from '../services/api'
 import { sanitizeSVG } from '../utils/sanitize'
 import AppNavbar from '../components/AppNavbar.vue'
-import AppFooter from '../components/AppFooter.vue'
 import BrandTicker from '../components/BrandTicker.vue'
 import WaveDivider from '../components/WaveDivider.vue'
 import LegalModal from '../components/LegalModal.vue'
@@ -51,9 +50,7 @@ const vIntersection = {
         observer.observe(el)
     }
 }
-const currentImgIdx = ref({})
 
-const showMobileMenu = ref(false)
 
 const webSettings = ref({
   social: { tiktok: '#', instagram: '#', facebook: '#', whatsapp: '#', youtube: '#' },
@@ -596,7 +593,8 @@ v-for="step in [
                 </div>
 
             <!-- Botón: Ir a Galería debajo de Post-Producción -->
-            <div class="flex justify-center mt-16"><router-link to="/galeria"
+            <div class="flex justify-center mt-16"><router-link
+to="/galeria"
                 class="group inline-flex items-center gap-6 px-16 py-7 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-full font-black text-xs uppercase tracking-[0.4em] hover:bg-emerald-500 dark:hover:bg-emerald-500 hover:text-white transition-all duration-500 shadow-[0_20px_50px_-10px_rgba(16,185,129,0.3)] hover:scale-105">
                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -1006,7 +1004,7 @@ v-for="(post, idx) in webSettings.posts" :key="post.t"
                                 <h5 class="text-[9px] md:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] md:tracking-[0.45em]">Navegación</h5>
                             </div>
                             <ul class="space-y-4 md:space-y-5">
-                                <li v-for="(link, li) in [{n:'Inicio', p:'/'}, {n:'Catálogo', p:'/catalog'}, {n:'Cotizador', p:'/quote'}, {n:'Rastrear', p:'/track'}, {n:'Taller', p:'/admin/login'}]" :key="link.n">
+                                <li v-for="link in [{n:'Inicio', p:'/'}, {n:'Catálogo', p:'/catalog'}, {n:'Cotizador', p:'/quote'}, {n:'Rastrear', p:'/track'}, {n:'Taller', p:'/admin/login'}]" :key="link.n">
                                     <router-link :to="link.p" class="group flex items-center gap-4 text-[11px] font-black text-gray-400 hover:text-emerald-400 uppercase tracking-[0.25em] transition-all duration-300">
                                         <span class="w-5 h-px bg-gray-700 group-hover:w-10 group-hover:bg-emerald-500 transition-all duration-500"></span>
                                         <span class="group-hover:tracking-[0.35em] transition-all duration-300">{{ link.n }}</span>

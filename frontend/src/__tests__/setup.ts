@@ -1,5 +1,3 @@
-import { vi } from 'vitest'
-
 // Mock localStorage for tests
 const localStorageMock = (() => {
   let store = {}

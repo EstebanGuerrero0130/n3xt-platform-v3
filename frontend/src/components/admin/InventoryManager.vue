@@ -8,7 +8,7 @@ const props = defineProps({
   loading: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['add-item', 'edit-item', 'delete-item', 'update-stock'])
+defineEmits(['add-item', 'edit-item', 'delete-item', 'update-stock'])
 
 const activeMainTab = ref('Materiales')
 const searchQuery = ref('')
@@ -58,27 +58,25 @@ const getProgressColor = (type: any) => {
 </script>
 
 <template>
-  <div class="animate-fade-in">
-    
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12 lg:mb-16 px-6 lg:px-10 gap-10">
+  <div class="animate-fade-in">    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 md:mb-12 lg:mb-16 px-4 md:px-6 lg:px-10 gap-6 md:gap-10">
         <!-- TABS & ACTIONS -->
-        <div class="flex flex-col md:flex-row items-start md:items-center gap-6 w-full lg:w-auto">
+        <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full lg:w-auto">
             <div class="inline-flex bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-1.5 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 gap-1 overflow-x-auto no-scrollbar">
-                <button :class="activeMainTab === 'Materiales' ? 'bg-gray-900 dark:bg-primary text-white shadow-2xl shadow-black/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-8 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest" @click="activeMainTab = 'Materiales'; activeFilter = 'Todos'">Materiales</button>
-                <button :class="activeMainTab === 'Productos' ? 'bg-gray-900 dark:bg-primary text-white shadow-2xl shadow-black/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-8 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest" @click="activeMainTab = 'Productos'">Productos</button>
-                <button :class="activeMainTab === 'Postprocesado' ? 'bg-gray-900 dark:bg-primary text-white shadow-2xl shadow-black/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-8 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest" @click="activeMainTab = 'Postprocesado'">Postprocesado</button>
-            </div>
+                <button :class="activeMainTab === 'Materiales' ? 'bg-gray-900 dark:bg-primary text-white shadow-2xl shadow-black/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-4 md:px-8 py-2.5 md:py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest" @click="activeMainTab = 'Materiales'; activeFilter = 'Todos'">Materiales</button>
+                <button :class="activeMainTab === 'Productos' ? 'bg-gray-900 dark:bg-primary text-white shadow-2xl shadow-black/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-4 md:px-8 py-2.5 md:py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest" @click="activeMainTab = 'Productos'">Productos</button>
+                <button :class="activeMainTab === 'Postprocesado' ? 'bg-gray-900 dark:bg-primary text-white shadow-2xl shadow-black/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-4 md:px-8 py-2.5 md:py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest" @click="activeMainTab = 'Postprocesado'">Postprocesado</button>
+</div>
 
-            <button class="btn-primary w-full md:w-auto px-8 py-4" @click="$emit('add-item')">
+            <button class="btn-primary w-full md:w-auto px-6 md:px-8 py-3 md:py-4" @click="$emit('add-item')">
                 <span class="text-lg">+</span>
                 Registrar Nuevo Ítem
             </button>
         </div>
         
         <!-- Search with Debounce style (Visual) -->
-        <div class="w-full lg:max-w-md bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2rem] shadow-xl shadow-gray-200/20 dark:shadow-none flex items-center px-6 py-4 group focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5">
-            <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 group-focus-within:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            <input v-model="searchQuery" type="text" placeholder="Buscar en base de datos..." class="w-full bg-transparent border-none px-4 text-xs font-bold text-gray-800 dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600">
+        <div class="w-full lg:max-w-md bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[1.5rem] md:rounded-[2rem] shadow-xl shadow-gray-200/20 dark:shadow-none flex items-center px-4 md:px-6 py-3 md:py-4 group focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5">
+            <svg class="w-4 md:w-5 h-4 md:h-5 text-gray-300 dark:text-gray-600 group-focus-within:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input v-model="searchQuery" type="text" placeholder="Buscar en base de datos..." class="w-full bg-transparent border-none px-3 md:px-4 text-xs font-bold text-gray-800 dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600">
         </div>
     </div>
 
@@ -118,56 +116,56 @@ const getProgressColor = (type: any) => {
     </div>
 
     <!-- METRICS EXECUTIVE (real) -->
-    <div v-if="!loading" class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 px-6 lg:px-10 mb-16 lg:mb-20">
-        <div class="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-2xl shadow-gray-200/20 dark:shadow-none group relative overflow-hidden animate-slide-up animate-stagger-1">
+    <div v-if="!loading" class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 lg:gap-10 px-4 md:px-6 lg:px-10 mb-8 md:mb-16 lg:mb-20">
+        <div class="bg-white dark:bg-gray-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-2xl shadow-gray-200/20 dark:shadow-none group relative overflow-hidden animate-slide-up animate-stagger-1">
             <div class="absolute -right-6 -top-6 w-20 h-20 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all"></div>
-            <div class="flex items-center gap-4 mb-4">
-                <div class="w-10 h-10 bg-gray-50 dark:bg-white/5 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-[10px] font-black text-gray-400">T</div>
-                <span class="text-[10px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-widest">Base de Datos</span>
+            <div class="flex items-center gap-2 md:gap-4 mb-2 md:mb-4">
+                <div class="w-8 md:w-10 h-8 md:h-10 bg-gray-50 dark:bg-white/5 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-[10px] font-black text-gray-400">T</div>
+                <span class="text-[8px] md:text-[10px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-widest">Base de Datos</span>
             </div>
             <div class="flex items-end justify-between">
-                <span class="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">{{ totalItems }}</span>
-                <span class="text-[10px] font-bold text-emerald-500 uppercase flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></span> Activos</span>
+                <span class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter">{{ totalItems }}</span>
+                <span class="text-[8px] md:text-[10px] font-bold text-emerald-500 uppercase flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></span> Activos</span>
             </div>
         </div>
-        <div class="bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-2xl shadow-rose-500/10 dark:shadow-none group relative overflow-hidden animate-slide-up animate-stagger-2">
+        <div class="bg-white dark:bg-gray-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-2xl shadow-rose-500/10 dark:shadow-none group relative overflow-hidden animate-slide-up animate-stagger-2">
             <div class="absolute -right-6 -top-6 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl group-hover:bg-rose-500/10 transition-all"></div>
-            <div class="flex items-center gap-4 mb-4">
-                <div class="w-10 h-10 bg-rose-50 dark:bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform text-[10px] font-black">!</div>
-                <span class="text-[10px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-widest">Puntos Críticos</span>
+            <div class="flex items-center gap-2 md:gap-4 mb-2 md:mb-4">
+                <div class="w-8 md:w-10 h-8 md:h-10 bg-rose-50 dark:bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform text-[10px] font-black">!</div>
+                <span class="text-[8px] md:text-[10px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-widest">Puntos Críticos</span>
             </div>
             <div class="flex items-end justify-between">
-                <span class="text-4xl font-black text-rose-600 tracking-tighter">{{ lowStockCount }}</span>
-                <span class="text-[10px] font-bold text-rose-400 uppercase">Reponer</span>
+                <span class="text-2xl md:text-4xl font-black text-rose-600 tracking-tighter">{{ lowStockCount }}</span>
+                <span class="text-[8px] md:text-[10px] font-bold text-rose-400 uppercase">Reponer</span>
             </div>
         </div>
-        <div class="bg-gray-950 p-8 rounded-[3rem] shadow-2xl shadow-black/20 group relative overflow-hidden border border-white/5 animate-slide-up animate-stagger-3">
+        <div class="bg-gray-950 p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-2xl shadow-black/20 group relative overflow-hidden border border-white/5 animate-slide-up animate-stagger-3">
             <div class="absolute -right-6 -top-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
-            <div class="flex items-center gap-4 mb-4">
-                <div class="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform text-[10px] font-black">F</div>
-                <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Stock FDM</span>
+            <div class="flex items-center gap-2 md:gap-4 mb-2 md:mb-4">
+                <div class="w-8 md:w-10 h-8 md:h-10 bg-white/5 rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform text-[10px] font-black">F</div>
+                <span class="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest">Stock FDM</span>
             </div>
             <div class="flex items-end justify-between">
-                <span class="text-4xl font-black text-white tracking-tighter">{{ totalFilaments }}</span>
-                <span class="text-[10px] font-bold text-primary uppercase">Variedades</span>
+                <span class="text-2xl md:text-4xl font-black text-white tracking-tighter">{{ totalFilaments }}</span>
+                <span class="text-[8px] md:text-[10px] font-bold text-primary uppercase">Variedades</span>
             </div>
         </div>
-        <div class="bg-indigo-950 p-8 rounded-[3rem] shadow-2xl shadow-indigo-900/20 group relative overflow-hidden border border-white/5 animate-slide-up animate-stagger-4">
+        <div class="bg-indigo-950 p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-2xl shadow-indigo-900/20 group relative overflow-hidden border border-white/5 animate-slide-up animate-stagger-4">
             <div class="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
-            <div class="flex items-center gap-4 mb-4">
-                <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-indigo-300 group-hover:scale-110 transition-transform text-[10px] font-black">C</div>
-                <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Stock SLA</span>
+            <div class="flex items-center gap-2 md:gap-4 mb-2 md:mb-4">
+                <div class="w-8 md:w-10 h-8 md:h-10 bg-white/10 rounded-xl flex items-center justify-center text-indigo-300 group-hover:scale-110 transition-transform text-[10px] font-black">C</div>
+                <span class="text-[8px] md:text-[10px] font-black text-indigo-400 uppercase tracking-widest">Stock SLA</span>
             </div>
             <div class="flex items-end justify-between">
-                <span class="text-4xl font-black text-white tracking-tighter">{{ totalResins }}</span>
-                <span class="text-[10px] font-bold text-indigo-300 uppercase">Resinas</span>
+                <span class="text-2xl md:text-4xl font-black text-white tracking-tighter">{{ totalResins }}</span>
+                <span class="text-[8px] md:text-[10px] font-bold text-indigo-300 uppercase">Resinas</span>
             </div>
         </div>
     </div>
 
     <!-- SUB-FILTERS -->
-    <div v-if="activeMainTab === 'Materiales'" class="px-6 lg:px-10 mb-12 flex gap-3 overflow-x-auto no-scrollbar">
-        <button v-for="f in ['Todos', 'Filamentos', 'Resinas']" :key="f" :class="activeFilter === f ? 'bg-gray-100 dark:bg-primary text-gray-900 dark:text-white border-gray-200 dark:border-primary/20 shadow-inner' : 'bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-300 border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5'" class="px-8 py-3 rounded-2xl border font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap" @click="activeFilter = f">
+    <div v-if="activeMainTab === 'Materiales'" class="px-4 md:px-6 lg:px-10 mb-6 md:mb-12 flex gap-2 md:gap-3 overflow-x-auto no-scrollbar">
+        <button v-for="f in ['Todos', 'Filamentos', 'Resinas']" :key="f" :class="activeFilter === f ? 'bg-gray-100 dark:bg-primary text-gray-900 dark:text-white border-gray-200 dark:border-primary/20 shadow-inner' : 'bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-300 border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5'" class="px-4 md:px-8 py-2.5 md:py-3 rounded-2xl border font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap" @click="activeFilter = f">
             {{ f }}
         </button>
     </div>
@@ -175,8 +173,8 @@ const getProgressColor = (type: any) => {
 
     <!-- Section: Filaments (FDM) -->
     <div v-if="activeMainTab === 'Materiales' && filaments.length > 0" class="mb-20 lg:mb-24">
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-10 lg:gap-12 px-6 lg:px-10">
-        <div v-for="mat in filaments" :key="mat.id" class="group bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden animate-slide-up transition-all hover:border-primary/30 hover:shadow-2xl">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-8 lg:gap-12 px-4 md:px-6 lg:px-10">
+        <div v-for="mat in filaments" :key="mat.id" class="group bg-white dark:bg-gray-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden animate-slide-up transition-all hover:border-primary/30 hover:shadow-2xl">
           
           <div class="flex justify-between items-start mb-8 relative z-10">
             <div class="relative">
@@ -203,7 +201,7 @@ const getProgressColor = (type: any) => {
             </div>
           </div>
 
-          <div class="bg-gray-50/50 dark:bg-white/5 p-6 rounded-[2rem] border border-gray-100 dark:border-white/5 mb-8 space-y-4">
+          <div class="bg-gray-50/50 dark:bg-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-gray-100 dark:border-white/5 mb-6 md:mb-8 space-y-3 md:space-y-4">
               <div class="flex justify-between items-end">
                 <div>
                     <p class="text-[8px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-widest mb-1">Costo Unitario</p>
@@ -239,7 +237,7 @@ const getProgressColor = (type: any) => {
                     @keyup.enter="$emit('update-stock', mat.id, stockInputs[mat.id])"
                 >
                 <button 
-                    class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center shadow-lg shadow-emerald-500/10"@click="$emit('update-stock', mat.id, stockInputs[mat.id])" 
+                    class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center shadow-lg shadow-emerald-500/10" @click="$emit('update-stock', mat.id, stockInputs[mat.id])" 
                 >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg>
                 </button>
@@ -259,8 +257,8 @@ const getProgressColor = (type: any) => {
 
     <!-- Section: Resins (SLA) -->
     <div v-if="activeMainTab === 'Materiales' && resins.length > 0" class="mb-20 lg:mb-24">
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-10 lg:gap-12 px-6 lg:px-10">
-        <div v-for="mat in resins" :key="mat.id" class="group bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden transition-all duration-700 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-8 lg:gap-12 px-4 md:px-6 lg:px-10">
+        <div v-for="mat in resins" :key="mat.id" class="group bg-white dark:bg-gray-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden transition-all duration-700 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2">
           
           <div class="flex justify-between items-start mb-8 relative z-10">
             <div class="relative">
@@ -323,7 +321,7 @@ const getProgressColor = (type: any) => {
                     @keyup.enter="$emit('update-stock', mat.id, stockInputs[mat.id])"
                 >
                 <button 
-                    class="w-10 h-10 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center shadow-lg shadow-indigo-500/20"@click="$emit('update-stock', mat.id, stockInputs[mat.id])" 
+                    class="w-10 h-10 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center shadow-lg shadow-indigo-500/20" @click="$emit('update-stock', mat.id, stockInputs[mat.id])" 
                 >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg>
                 </button>
@@ -338,8 +336,8 @@ const getProgressColor = (type: any) => {
 
     <!-- Section: Products (Stock for direct sale) -->
     <div v-if="activeMainTab === 'Productos' && products.length > 0" class="mb-20 lg:mb-24">
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-10 lg:gap-12 px-6 lg:px-10">
-        <div v-for="mat in products" :key="mat.id" class="group bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden transition-all duration-700 hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-8 lg:gap-12 px-4 md:px-6 lg:px-10">
+        <div v-for="mat in products" :key="mat.id" class="group bg-white dark:bg-gray-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden transition-all duration-700 hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-2">
           
           <div class="flex justify-between items-start mb-8 relative z-10">
             <div class="w-16 h-16 rounded-[1.5rem] bg-emerald-50 dark:bg-emerald-500/10 border-8 border-gray-50 dark:border-gray-800 shadow-2xl flex items-center justify-center transform group-hover:scale-110 transition-transform duration-700 text-xl font-black text-emerald-500">M</div>
@@ -392,7 +390,7 @@ const getProgressColor = (type: any) => {
                     @keyup.enter="$emit('update-stock', mat.id, stockInputs[mat.id])"
                 >
                 <button 
-                    class="w-10 h-10 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all flex items-center justify-center shadow-lg shadow-emerald-500/20"@click="$emit('update-stock', mat.id, stockInputs[mat.id])" 
+                    class="w-10 h-10 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all flex items-center justify-center shadow-lg shadow-emerald-500/20" @click="$emit('update-stock', mat.id, stockInputs[mat.id])" 
                 >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg>
                 </button>
@@ -407,8 +405,8 @@ const getProgressColor = (type: any) => {
 
     <!-- Section: Utilities / Postprocesado -->
     <div v-if="activeMainTab === 'Postprocesado' && utilities.length > 0" class="mb-20 lg:mb-24">
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-10 lg:gap-12 px-6 lg:px-10">
-        <div v-for="mat in utilities" :key="mat.id" class="group bg-white dark:bg-gray-900 p-8 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden transition-all duration-700 hover:shadow-2xl hover:shadow-orange-500/10 hover:-translate-y-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-8 lg:gap-12 px-4 md:px-6 lg:px-10">
+        <div v-for="mat in utilities" :key="mat.id" class="group bg-white dark:bg-gray-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden transition-all duration-700 hover:shadow-2xl hover:shadow-orange-500/10 hover:-translate-y-2">
           
           <div class="flex justify-between items-start mb-8 relative z-10">
             <div class="w-16 h-16 rounded-[1.5rem] bg-orange-50 dark:bg-orange-500/10 border-8 border-gray-50 dark:border-gray-800 shadow-2xl flex items-center justify-center text-orange-500 font-black text-xs transform group-hover:rotate-12 transition-transform duration-700 italic">UTL</div>

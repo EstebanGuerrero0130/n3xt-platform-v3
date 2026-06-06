@@ -19,9 +19,9 @@ interface Logger {
 }
 
 const logger: Logger = {
-  log: isDev ? (...args: any[]) => console.log('[N3XT]', ...args) : noop,
-  info: isDev ? (...args: any[]) => console.info('[N3XT]', ...args) : noop,
-  debug: isDev ? (...args: any[]) => console.debug('[N3XT]', ...args) : noop,
+  log: isDev ? (...args: any[]) => console.log('[N3XT]', ...args) : noop, // eslint-disable-line no-console
+  info: isDev ? (...args: any[]) => console.info('[N3XT]', ...args) : noop, // eslint-disable-line no-console
+  debug: isDev ? (...args: any[]) => console.debug('[N3XT]', ...args) : noop, // eslint-disable-line no-console
   warn: (...args: any[]) => console.warn('[N3XT]', ...args),
   error: (...args: any[]) => console.error('[N3XT]', ...args),
 }

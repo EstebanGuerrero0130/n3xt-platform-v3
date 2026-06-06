@@ -28,18 +28,18 @@ watch(form, (val) => {
 <template>
     <div v-if="modelValue" class="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-[500] flex items-center justify-center p-4 overflow-y-auto">
       <div class="bg-white dark:bg-gray-900 rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 my-auto">
-        <div class="p-10 max-h-[90vh] overflow-y-auto no-scrollbar">
-          <div class="flex justify-between items-center mb-10">
-            <div>
-              <h3 class="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Registrar Nuevo Ítem</h3>
-              <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Configuración técnica de inventario</p>
+        <div class="p-6 md:p-10 max-h-[90vh] overflow-y-auto no-scrollbar">
+          <div class="flex justify-between items-start gap-4 mb-8 md:mb-10">
+            <div class="min-w-0">
+              <h3 class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter truncate">Registrar Nuevo Ítem</h3>
+              <p class="text-[9px] md:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Configuración técnica de inventario</p>
             </div>
-            <button class="w-12 h-12 bg-gray-50 dark:bg-white/5 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-all text-xl" @click="emit('update:modelValue', false)">
+            <button class="w-10 h-10 md:w-12 md:h-12 shrink-0 bg-gray-50 dark:bg-white/5 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-all text-lg md:text-xl" @click="emit('update:modelValue', false)">
               ✕
             </button>
           </div>
           
-          <div class="grid grid-cols-2 gap-8 mb-10">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-10">
             <!-- ID Automático (ReadOnly) -->
             <div class="space-y-2">
                 <label class="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
@@ -76,7 +76,7 @@ watch(form, (val) => {
             </div>
 
             <!-- Asistente de Paquete (Opcional) -->
-            <div class="col-span-2 p-6 bg-primary/5 rounded-[2rem] border border-primary/10 space-y-4">
+            <div class="col-span-1 sm:col-span-2 p-5 md:p-6 bg-primary/5 rounded-[2rem] border border-primary/10 space-y-4">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Asistente de Costo Pro</p>
@@ -93,7 +93,7 @@ watch(form, (val) => {
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                     <div class="space-y-1">
                         <label class="text-[8px] font-black text-gray-400 uppercase">Nº Paquetes</label>
                         <input v-model.number="form.package_units" type="number" placeholder="Ej: 2" class="w-full bg-white dark:bg-white/5 border-none rounded-xl p-3 font-bold text-xs outline-none focus:ring-2 focus:ring-primary/20 shadow-sm transition-all">
@@ -134,7 +134,7 @@ watch(form, (val) => {
             </div>
 
             <!-- Stock Inicial -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="space-y-2">
                     <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Stock de Apertura</label>
                     <input v-model.number="form.initial_stock" type="number" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl p-5 font-black text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">

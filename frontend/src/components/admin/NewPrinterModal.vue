@@ -28,9 +28,9 @@ watch(form, (val) => {
 <template>
     <div v-if="modelValue" class="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-[500] flex items-center justify-center p-4">
       <div class="bg-white dark:bg-gray-900 rounded-[3rem] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-        <div class="p-10">
-          <div class="flex justify-between items-center mb-8">
-            <h3 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Nueva Impresora</h3>
+        <div class="p-6 md:p-10 max-h-[90vh] overflow-y-auto no-scrollbar">
+          <div class="flex justify-between items-center mb-6 md:mb-8">
+            <h3 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Nueva Impresora</h3>
             <button class="text-gray-400 hover:text-gray-600 transition-colors text-2xl" @click="emit('update:modelValue', false)">
               ✕
             </button>

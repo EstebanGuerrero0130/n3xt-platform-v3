@@ -123,7 +123,7 @@ const handleAddPurchase = async () => {
         newPurchase.value.is_new_item = true
     }
 
-    const response = await api.post('/admin/purchases', newPurchase.value)
+    await api.post('/admin/purchases', newPurchase.value)
     
     showNewPurchaseModal.value = false
     await fetchPurchases()
@@ -162,8 +162,7 @@ const handleDeletePurchase = async (id: any) => {
     return
   }    // Eliminando compra
   try {
-    const res = await api.delete(`/admin/purchases/${id}`)
-    // Respuesta eliminación recibida
+    await api.delete(`/admin/purchases/${id}`)
     await fetchPurchases()
     emit('refresh-inventory')
     showNotify('Registro eliminado correctamente', 'success')

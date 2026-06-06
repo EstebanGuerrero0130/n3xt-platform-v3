@@ -3,7 +3,6 @@
  * Maneja la simulaci\u00f3n de costos de producci\u00f3n 3D
  */
 import { reactive, computed, type Ref } from 'vue'
-import { api } from '../services/api'
 
 interface SimulatorState {
   customer_id: string
@@ -48,7 +47,7 @@ interface UseSimulatorOptions {
   showNotify?: (msg: string, type?: string) => void
 }
 
-export function useSimulator({ inventoryData, settings, showNotify }: UseSimulatorOptions) {
+export function useSimulator({ inventoryData, settings, showNotify: _showNotify }: UseSimulatorOptions) {
   const simulator = reactive<SimulatorState>({ ...defaultSimulator })
 
   const simulatedResult = computed(() => {

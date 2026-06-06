@@ -59,7 +59,6 @@ const email = ref('')
 const order = ref<any>(null)
 const loading = ref(false)
 const error = ref('')
-const showMobileMenu = ref(false)
 const showScanner = ref(false)
 let scanner: any = null
 
@@ -69,7 +68,9 @@ let scanner: any = null
 const fetchSettings = async () => {
   try {
     await api.get('/settings')
-  } catch (err) {}
+  } catch (err) {
+    logger.error('Error fetching settings:', err)
+  }
 }
 
 const startScanner = () => {
@@ -95,7 +96,7 @@ const startScanner = () => {
         } catch (e) {
             logger.error("Error al procesar QR:", e)
         }
-    }, (error) => {});
+    }, (_error) => {});
   }, 100);
 }
 

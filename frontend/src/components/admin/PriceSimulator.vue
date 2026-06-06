@@ -14,10 +14,10 @@
           </button>
         </div>
 
-        <div class="p-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div class="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
           <!-- Left: Inputs -->
-          <div class="lg:col-span-3 space-y-5">
-            <div class="grid grid-cols-2 gap-4">
+          <div class="lg:col-span-3 space-y-4 md:space-y-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nombre del Proyecto</label>
                 <input v-model="form.job_name" placeholder="Ej: Engranaje Hélice" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-semibold text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all">
@@ -31,22 +31,22 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
               <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nombre</label>
-                <input v-model="form.customer_name" placeholder="Cliente" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                <input v-model="form.customer_name" placeholder="Cliente" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">WhatsApp</label>
-                <input v-model="form.customer_phone" placeholder="+57" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                <input v-model="form.customer_phone" placeholder="+57" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Correo</label>
-                <input v-model="form.customer_email" placeholder="email@ejemplo.com" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                <input v-model="form.customer_email" placeholder="email@ejemplo.com" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
               </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
               <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Material Base</label>
                 <select v-model="form.material_id" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
@@ -64,14 +64,14 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-3 md:gap-4">
               <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Piezas por Lote</label>
-                <input v-model.number="form.pieces_per_batch" type="number" min="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                <input v-model.number="form.pieces_per_batch" type="number" min="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">% Descuento</label>
-                <input v-model.number="form.discount_pct" type="number" min="0" max="100" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                <input v-model.number="form.discount_pct" type="number" min="0" max="100" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
               </div>
             </div>
 
@@ -80,7 +80,7 @@
               <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Insumos / Extras</label>
               <select class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all" @change="addExtra">
                 <option value="">Agregar insumo adicional...</option>
-                <option v-for="m in materials" :key="m.id" :value="m.id">{{ m.name }} (${{ m.cost_per_kg }}/{{ m.unit || 'unidad' }})</option>
+                <option v-for="m in extraMaterials" :key="m.id" :value="m.id">{{ m.name }} (${{ m.cost_per_kg }}/{{ m.unit || 'unidad' }})</option>
               </select>
               <div v-for="(item, idx) in form.extra_items" :key="idx" class="flex items-center gap-3 mt-3 bg-gray-800/50 rounded-xl px-4 py-3">
                 <span class="flex-1 text-white text-sm font-semibold">{{ item.name }}</span>
@@ -103,7 +103,7 @@
           </div>
 
           <!-- Right: Results -->
-          <div class="lg:col-span-2 space-y-4">
+          <div class="lg:col-span-2 space-y-3 md:space-y-4">
             <div class="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
               <div class="flex justify-between items-start mb-4">
                 <div>
@@ -115,44 +115,83 @@
                 </div>
               </div>
 
+              <!-- Metrics Cards -->
+              <div class="grid grid-cols-2 gap-2 mb-4">
+                <div class="bg-gray-900/80 rounded-xl p-3 border border-gray-700/30">
+                  <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Precio Unitario</p>
+                  <p class="text-lg font-black text-white mt-0.5">${{ result.unit_price.toLocaleString() }}</p>
+                </div>
+                <div class="bg-gray-900/80 rounded-xl p-3 border border-gray-700/30">
+                  <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Margen de Ganancia</p>
+                  <p class="text-lg font-black" :class="result.profit_margin_pct >= 20 ? 'text-emerald-400' : result.profit_margin_pct >= 10 ? 'text-amber-400' : 'text-red-400'">{{ result.profit_margin_pct.toFixed(1) }}%</p>
+                </div>
+                <div class="bg-gray-900/80 rounded-xl p-3 border border-gray-700/30">
+                  <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Costo / Hora</p>
+                  <p class="text-lg font-black text-white mt-0.5">${{ (result.production / (result.total_hours || 1)).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
+                </div>
+                <div class="bg-gray-900/80 rounded-xl p-3 border border-gray-700/30">
+                  <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Piezas por Lote</p>
+                  <p class="text-lg font-black text-white mt-0.5">{{ form.pieces_per_batch || 1 }}</p>
+                </div>
+              </div>
+
               <!-- Cost distribution bar -->
               <div class="h-3 rounded-full bg-gray-700 flex overflow-hidden mb-4">
-                <div v-for="(pct, key) in result.pcts" :key="key" :style="{ width: pct + '%' }" :class="['h-full transition-all', pct > 0 ? (key === 'profit' ? 'bg-emerald-500' : key === 'infra' ? 'bg-amber-500' : key === 'material' ? 'bg-blue-500' : 'bg-violet-500') : '']"></div>
+                <div :style="{ width: (result.material / (result.total || 1) * 100) + '%' }" class="h-full bg-blue-500 transition-all min-w-[2px]" :title="'Material: ' + ((result.material / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
+                <div :style="{ width: ((result.luz + result.labor + result.depr + result.mant + result.etiquetas) / (result.total || 1) * 100) + '%' }" class="h-full bg-amber-500 transition-all min-w-[2px]" :title="'Infraestructura: ' + (((result.luz + result.labor + result.depr + result.mant + result.etiquetas) / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
+                <div :style="{ width: (result.extras / (result.total || 1) * 100) + '%' }" class="h-full bg-violet-500 transition-all min-w-[2px]" :title="'Extras: ' + ((result.extras / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
+                <div :style="{ width: (result.logistics / (result.total || 1) * 100) + '%' }" class="h-full bg-cyan-500 transition-all min-w-[2px]" :title="'Logística: ' + ((result.logistics / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
+                <div :style="{ width: (result.marketing / (result.total || 1) * 100) + '%' }" class="h-full bg-pink-500 transition-all min-w-[2px]" :title="'Marketing: ' + ((result.marketing / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
+                <div :style="{ width: (result.failures / (result.total || 1) * 100) + '%' }" class="h-full bg-red-500 transition-all min-w-[2px]" :title="'Fallos: ' + ((result.failures / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
+                <div :style="{ width: (result.profit / (result.total || 1) * 100) + '%' }" class="h-full bg-emerald-500 transition-all min-w-[2px]" :title="'Ganancia: ' + ((result.profit / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
               </div>
 
               <!-- Breakdown -->
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between text-gray-400"><span>Material</span><span class="text-white font-bold">${{ result.material.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Energía</span><span class="text-white font-bold">${{ result.luz.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Mano de Obra</span><span class="text-white font-bold">${{ result.labor.toLocaleString() }}</span></div>
+                <div class="flex justify-between text-gray-400"><span>Energía <span class="text-[9px] text-gray-600">(carga: {{ ((settings.infra?.load_factor ?? 0.4) * 100).toFixed(0) }}%)</span></span><span class="text-white font-bold">${{ result.luz.toLocaleString() }}</span></div>
+                <div class="flex justify-between text-gray-400"><span>Mano de Obra <span class="text-[9px] text-gray-600">(prep: {{ settings.prep?.prep_time_pct ?? 10 }}%)</span></span><span class="text-white font-bold">${{ result.labor.toLocaleString() }}</span></div>
                 <div class="flex justify-between text-gray-400"><span>Depreciación</span><span class="text-white font-bold">${{ result.depr.toLocaleString() }}</span></div>
                 <div class="flex justify-between text-gray-400"><span>Mantenimiento</span><span class="text-white font-bold">${{ result.mant.toLocaleString() }}</span></div>
+                <div class="flex justify-between text-gray-400"><span>Etiquetas</span><span class="text-white font-bold">${{ result.etiquetas.toLocaleString() }}</span></div>
                 <div class="flex justify-between text-gray-400"><span>Extras</span><span class="text-white font-bold">${{ result.extras.toLocaleString() }}</span></div>
+                <div class="border-t border-gray-700/50 pt-2 mt-2">
+                  <div class="flex justify-between text-gray-400"><span class="font-bold text-gray-500 uppercase text-[10px] tracking-wider">Costos Operativos</span></div>
+                  <div class="flex justify-between text-gray-400 mt-1"><span class="pl-3">Logística ({{ form.transporte_pct }}%)</span><span class="text-white font-bold">${{ result.logistics.toLocaleString() }}</span></div>
+                  <div class="flex justify-between text-gray-400"><span class="pl-3">Marketing ({{ form.marketing_pct }}%)</span><span class="text-white font-bold">${{ result.marketing.toLocaleString() }}</span></div>
+                  <div class="flex justify-between text-gray-400"><span class="pl-3">Fallos ({{ form.fallos_pct }}%)</span><span class="text-white font-bold">${{ result.failures.toLocaleString() }}</span></div>
+                  <div class="flex justify-between text-emerald-400/80"><span class="pl-3">Ganancia ({{ form.profit_pct }}%)</span><span class="text-emerald-400 font-bold">${{ result.profit.toLocaleString() }}</span></div>
+                </div>
+                <div v-if="result.discount > 0" class="flex justify-between text-red-400"><span>Descuento (-{{ form.discount_pct }}%)</span><span class="text-red-400 font-bold">-${{ result.discount.toLocaleString() }}</span></div>
                 <div class="border-t border-gray-700 pt-2 mt-2">
-                  <div class="flex justify-between text-gray-400"><span>Subtotal</span><span class="text-white font-bold">${{ result.subtotal.toLocaleString() }}</span></div>
-                  <div class="flex justify-between text-gray-400"><span>IVA ({{ settings.margin?.iva || 0 }}%)</span><span class="text-white font-bold">${{ result.iva.toLocaleString() }}</span></div>
-                  <div class="flex justify-between text-emerald-400 text-base font-bold mt-2"><span>TOTAL</span><span>${{ result.total.toLocaleString() }}</span></div>
+                  <div class="flex justify-between text-gray-300"><span class="font-semibold">Subtotal</span><span class="text-white font-bold">${{ result.subtotal.toLocaleString() }}</span></div>
+                  <div class="flex justify-between text-gray-400"><span>IVA ({{ form.iva_pct }}%)</span><span class="text-white font-bold">${{ result.iva.toLocaleString() }}</span></div>
+                  <div class="flex justify-between text-emerald-400 text-base font-bold mt-2 pt-2 border-t border-gray-700/50"><span>TOTAL PROYECTADO</span><span>${{ result.total.toLocaleString() }}</span></div>
                 </div>
               </div>
             </div>
 
             <!-- Controls -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
               <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">% Logística</label>
-                <input v-model.number="form.transporte_pct" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% Logística</label>
+                <input v-model.number="form.transporte_pct" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
               </div>
               <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">% Marketing</label>
-                <input v-model.number="form.marketing_pct" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% Marketing</label>
+                <input v-model.number="form.marketing_pct" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
               </div>
               <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">% Fallos</label>
-                <input v-model.number="form.fallos_pct" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% Fallos</label>
+                <input v-model.number="form.fallos_pct" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
               </div>
               <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">% Ganancia (Obj)</label>
-                <input v-model.number="form.profit_pct" type="number" min="0" step="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% Ganancia (Obj)</label>
+                <input v-model.number="form.profit_pct" type="number" min="0" step="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+              </div>
+              <div>
+                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% IVA</label>
+                <input v-model.number="form.iva_pct" type="number" min="0" max="100" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
               </div>
             </div>
 
@@ -170,7 +209,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { reactive, computed } from 'vue'
 import { calcProductionCost, calcFinalPrice } from '../../services/costCalculator'
 
 const props = defineProps({
@@ -180,23 +219,34 @@ const props = defineProps({
   contacts: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['close', 'create-order', 'download-pdf'])
+defineEmits(['close', 'create-order', 'download-pdf'])
 
 const form = reactive({
   job_name: '', customer_id: '', customer_name: '', customer_company: '',
   customer_id_document: '', customer_email: '', customer_phone: '',
   shipping_address: '', shipping_city: '', shipping_zip: '', shipping_reference: '',
   material_id: '', weight_g: 0, time_str: '0:00', pieces_per_batch: 1,
-  profit_pct: 20, discount_pct: 0, transporte_pct: 5, marketing_pct: 10, fallos_pct: 5,
+  profit_pct: props.settings?.oper?.ganancia ?? 20,
+  discount_pct: 0,
+  transporte_pct: props.settings?.oper?.transporte ?? 5,
+  marketing_pct: props.settings?.oper?.marketing ?? 10,
+  fallos_pct: props.settings?.oper?.fallos ?? 5,
+  iva_pct: props.settings?.margin?.iva ?? 19,
   extra_items: [], comments: '',
 })
+
+const extraMaterials = computed(() =>
+  props.materials.filter(m => m.type !== 'material')
+)
 
 const result = computed(() => {
   const mat = props.materials.find(m => m.id === form.material_id)
   if (!mat || !props.settings.infra) return {
     material: 0, luz: 0, labor: 0, depr: 0, mant: 0, etiquetas: 0, extras: 0,
-    production: 0, subtotal: 0, iva: 0, total: 0, unit_price: 0, discount: 0,
-    isSafetyAlert: false, pcts: { material: 0, infra: 0, extras: 0, profit: 0 }
+    production: 0, logistics: 0, marketing: 0, failures: 0, profit: 0,
+    subtotal: 0, iva: 0, total: 0, unit_price: 0, discount: 0,
+    profit_margin_pct: 0, total_hours: 0,
+    isSafetyAlert: false, pcts: { material: 0, luz: 0, labor: 0, depr: 0, mant: 0, etiquetas: 0, extras: 0 }
   }
 
   const qty = Math.max(1, form.pieces_per_batch || 1)
@@ -213,7 +263,7 @@ const result = computed(() => {
     productionCost: prod.total,
     oper: { transporte: form.transporte_pct, marketing: form.marketing_pct, fallos: form.fallos_pct, ganancia: form.profit_pct },
     margin: { iva: props.settings.margin?.iva || 0 },
-    overrides: { discountPct: form.discount_pct },
+    overrides: { discountPct: form.discount_pct, ivaPct: form.iva_pct },
   })
 
   return {

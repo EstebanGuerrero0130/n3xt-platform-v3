@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 
-const props = defineProps({
-  activeTab: String,
-  subtext: { type: String, default: 'Taller Industrial' }
-})
-
 const showMobileMenu = ref(false)
 
 watch(showMobileMenu, (isOpen) => {

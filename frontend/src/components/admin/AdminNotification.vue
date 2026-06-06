@@ -28,7 +28,7 @@
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold">{{ props.notification.message }}</p>
           </div>
-          <button class="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity" @click="props.notification.show = false">
+          <button class="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity" @click="emit('close-notification')">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>

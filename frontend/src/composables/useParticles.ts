@@ -20,7 +20,6 @@ export function useParticles(options: {
     ],
     minSize = 3,
     maxSize = 12,
-    zIndex = 1,
   } = options
 
   const particlesRef = ref<HTMLElement | null>(null)

@@ -56,6 +56,7 @@ class AnalyticsController extends Controller
         $totalExtras = 0;
         $detailedOrders = [];
         
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Order> $activeOrders */
         $activeOrders = $orderQuery->get();
 
         foreach ($activeOrders as $order) {

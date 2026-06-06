@@ -6,7 +6,7 @@ const props = defineProps({
   loadingAnalytics: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['download-pdf', 'view-details', 'export-report', 'export-backup', 'import-backup', 'delete', 'print-label'])
+defineEmits(['export-report', 'view-details', 'download-pdf', 'print-label', 'delete'])
 
 const searchQuery = ref('')
 const statusFilter = ref('all')
@@ -98,51 +98,51 @@ const getStatusLabel = (status: any) => {
 <template>
   <div class="animate-in fade-in duration-700">
     <!-- Header -->
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-12 px-4">
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 md:gap-6 mb-8 md:mb-12 px-4">
       <div>
-        <h2 class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-2">Historial<span class="text-primary">.</span>OS</h2>
-        <div class="flex items-center gap-3">
-          <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse"></div>
-          <p class="text-gray-400 dark:text-gray-500 font-black uppercase tracking-[0.3em] text-[10px] md:text-[10px]">Auditoría Logística de Precisión</p>
+        <h2 class="text-xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-1 md:mb-2">Historial<span class="text-primary">.</span>OS</h2>
+        <div class="flex items-center gap-2 md:gap-3">
+          <div class="w-2 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse"></div>
+          <p class="text-gray-400 dark:text-gray-500 font-black uppercase tracking-[0.3em] text-[9px] md:text-[10px]">Auditoría Logística de Precisión</p>
         </div>
       </div>
       
-      <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+      <div class="flex flex-col sm:flex-row gap-3 md:gap-4 w-full lg:w-auto">
         <button 
           v-if="activeSubTab === 'list'"
           :disabled="loadingAnalytics" 
-          class="flex-1 lg:flex-none px-8 py-5 bg-gray-950 dark:bg-primary text-white rounded-[2rem] shadow-2xl shadow-black/20 hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 border border-white/10"
+          class="flex-1 lg:flex-none px-6 md:px-8 py-4 md:py-5 bg-gray-950 dark:bg-primary text-white rounded-[1.5rem] md:rounded-[2rem] shadow-2xl shadow-black/20 hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all font-black text-[9px] md:text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 md:gap-3 active:scale-95 disabled:opacity-50 border border-white/10"
           @click="$emit('export-report', { type: 'ledger', start: dateRange.start, end: dateRange.end, filteredOrders })"
         >
-          <svg class="w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> {{ loadingAnalytics ? 'Sincronizando...' : 'Libro de Auditoria' }}
+          <svg class="w-4 md:w-5 h-4 md:h-5 inline mr-1 md:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> {{ loadingAnalytics ? 'Sincronizando...' : 'Libro de Auditoria' }}
         </button>
       </div>
     </div>
 
     <!-- Sub-Navegación y Sincronización -->
-    <div class="flex flex-wrap items-center justify-between gap-6 mb-12 px-4 bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl p-6 rounded-[3rem] border border-gray-100/50 dark:border-white/5 shadow-xl overflow-x-auto no-scrollbar">
-      <div class="flex gap-3">
-        <button :class="activeSubTab === 'list' ? 'bg-gray-950 dark:bg-primary text-white shadow-2xl' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap" @click="activeSubTab = 'list'">Listado</button>
-        <button :class="activeSubTab === 'metrics' ? 'bg-gray-950 dark:bg-primary text-white shadow-2xl' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap" @click="activeSubTab = 'metrics'">Analíticas</button>
+    <div class="flex flex-wrap items-center justify-between gap-4 md:gap-6 mb-8 md:mb-12 px-4 bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl p-4 md:p-6 rounded-[1.5rem] md:rounded-[3rem] border border-gray-100/50 dark:border-white/5 shadow-xl overflow-x-auto no-scrollbar">
+      <div class="flex gap-2 md:gap-3">
+        <button :class="activeSubTab === 'list' ? 'bg-gray-950 dark:bg-primary text-white shadow-2xl' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-4 md:px-8 py-3 md:py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap" @click="activeSubTab = 'list'">Listado</button>
+        <button :class="activeSubTab === 'metrics' ? 'bg-gray-950 dark:bg-primary text-white shadow-2xl' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'" class="px-4 md:px-8 py-3 md:py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap" @click="activeSubTab = 'metrics'">Analíticas</button>
       </div>
     </div>
 
     <!-- Controles Maestros -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12 px-4">
       <!-- Buscador y Estado -->
-      <div class="lg:col-span-5 flex flex-col sm:flex-row gap-4">
+      <div class="lg:col-span-5 flex flex-col sm:flex-row gap-3 md:gap-4">
         <div class="relative flex-1 group">
-          <svg class="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 group-focus-within:text-primary transition-colors w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <svg class="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 group-focus-within:text-primary transition-colors w-3.5 md:w-4 h-3.5 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           <input 
             v-model="searchQuery" 
             type="text" 
             placeholder="Rastrear Orden o Cliente..." 
-            class="pl-16 pr-6 py-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2rem] text-sm font-bold text-gray-900 dark:text-white w-full outline-none focus:ring-4 focus:ring-primary/5 shadow-xl shadow-gray-200/20 dark:shadow-none transition-all"
+            class="pl-12 md:pl-16 pr-4 md:pr-6 py-4 md:py-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[1.5rem] md:rounded-[2rem] text-sm font-bold text-gray-900 dark:text-white w-full outline-none focus:ring-4 focus:ring-primary/5 shadow-xl shadow-gray-200/20 dark:shadow-none transition-all"
           >
         </div>
         <select 
           v-model="statusFilter" 
-          class="px-8 py-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2rem] text-[10px] font-black outline-none focus:ring-4 focus:ring-primary/5 shadow-xl shadow-gray-200/20 dark:shadow-none uppercase tracking-widest text-gray-500 dark:text-gray-400 min-w-[180px] appearance-none"
+          class="px-4 md:px-8 py-4 md:py-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[1.5rem] md:rounded-[2rem] text-[10px] font-black outline-none focus:ring-4 focus:ring-primary/5 shadow-xl shadow-gray-200/20 dark:shadow-none uppercase tracking-widest text-gray-500 dark:text-gray-400 min-w-[140px] md:min-w-[180px] appearance-none"
         >
           <option value="all">Estados: TODOS</option>
           <option value="completed">Terminados</option>
@@ -153,24 +153,24 @@ const getStatusLabel = (status: any) => {
       </div>
 
       <!-- Filtro de Fechas -->
-      <div class="lg:col-span-7 bg-white dark:bg-gray-900 p-3 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none flex flex-col sm:flex-row items-center gap-3 flex-wrap">
-        <div class="flex items-center gap-4 px-6 py-3 bg-gray-50/80 dark:bg-white/5 rounded-[1.5rem] border border-gray-50 dark:border-white/5 flex-1 w-full sm:w-auto min-w-0">
-          <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Desde</span>
-          <input v-model="dateRange.start" type="date" class="bg-transparent border-none text-xs font-black text-gray-900 dark:text-white outline-none p-0 flex-1 sm:w-32 uppercase tracking-tighter">
-          <div class="h-4 w-px bg-gray-200 dark:bg-white/10 mx-2"></div>
-          <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Hasta</span>
-          <input v-model="dateRange.end" type="date" class="bg-transparent border-none text-xs font-black text-gray-900 dark:text-white outline-none p-0 flex-1 sm:w-32 uppercase tracking-tighter">
+      <div class="lg:col-span-7 bg-white dark:bg-gray-900 p-2 md:p-3 rounded-[1.5rem] md:rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-gray-200/20 dark:shadow-none flex flex-col sm:flex-row items-center gap-2 md:gap-3 flex-wrap">
+        <div class="flex items-center gap-2 md:gap-4 px-3 md:px-6 py-2 md:py-3 bg-gray-50/80 dark:bg-white/5 rounded-[1.5rem] border border-gray-50 dark:border-white/5 flex-1 w-full sm:w-auto min-w-0">
+          <span class="text-[8px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Desde</span>
+          <input v-model="dateRange.start" type="date" class="bg-transparent border-none text-[10px] md:text-xs font-black text-gray-900 dark:text-white outline-none p-0 flex-1 sm:w-28 md:w-32 uppercase tracking-tighter">
+          <div class="h-3 md:h-4 w-px bg-gray-200 dark:bg-white/10 mx-1 md:mx-2"></div>
+          <span class="text-[8px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Hasta</span>
+          <input v-model="dateRange.end" type="date" class="bg-transparent border-none text-[10px] md:text-xs font-black text-gray-900 dark:text-white outline-none p-0 flex-1 sm:w-28 md:w-32 uppercase tracking-tighter">
         </div>
         
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-          <button class="flex-1 sm:flex-none px-6 py-3 bg-gray-950 dark:bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all shadow-lg" @click="setQuickMonth(0)">Mes Actual</button>
-          <button class="flex-1 sm:flex-none px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all" @click="setQuickMonth(-1)">Anterior</button>
+        <div class="flex items-center gap-1.5 md:gap-2 w-full sm:w-auto">
+          <button class="flex-1 sm:flex-none px-3 md:px-6 py-2 md:py-3 bg-gray-950 dark:bg-primary text-white text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all shadow-lg" @click="setQuickMonth(0)">Actual</button>
+          <button class="flex-1 sm:flex-none px-3 md:px-6 py-2 md:py-3 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all" @click="setQuickMonth(-1)">Anterior</button>
           <button 
             v-if="dateRange.start || dateRange.end"
-            class="p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0 border border-rose-100" 
+            class="p-2 md:p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0 border border-rose-100" 
             @click="dateRange.start = ''; dateRange.end = ''"
           >
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+            <svg class="w-4 md:w-5 h-4 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
       </div>
@@ -292,54 +292,54 @@ const getStatusLabel = (status: any) => {
         <table class="w-full text-left border-collapse min-w-[900px]">
           <thead>
             <tr class="border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
-              <th class="p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Registro</th>
-              <th class="p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Fecha / Hora</th>
-              <th class="p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Cliente Entidad</th>
-              <th class="p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Configuración</th>
-              <th class="p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Valuación</th>
-              <th class="p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap text-center">Protocolo</th>
-              <th class="p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap text-right">Auditoría</th>
+              <th class="p-4 md:p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Registro</th>
+              <th class="p-4 md:p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Fecha</th>
+              <th class="p-4 md:p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Cliente</th>
+              <th class="p-4 md:p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Config.</th>
+              <th class="p-4 md:p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap">Valor</th>
+              <th class="p-4 md:p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap text-center">Estado</th>
+              <th class="p-4 md:p-8 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] whitespace-nowrap text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="order in filteredOrders" :key="order.id" class="border-b border-gray-50 dark:border-white/5 hover:bg-gray-50/80 dark:hover:bg-white/5 transition-all group cursor-pointer">
-              <td class="p-8">
-                <span class="px-4 py-2 bg-gray-950 dark:bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-black/20">ID-{{ order.id }}</span>
+              <td class="p-4 md:p-8">
+                <span class="px-3 md:px-4 py-1.5 md:py-2 bg-gray-950 dark:bg-primary text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow-lg shadow-black/20">ID-{{ order.id }}</span>
               </td>
-              <td class="p-8 text-xs font-black text-gray-900 dark:text-white uppercase italic">
+              <td class="p-4 md:p-8 text-[11px] md:text-xs font-black text-gray-900 dark:text-white uppercase italic">
                 {{ new Date(order.created_at).toLocaleDateString() }}
               </td>
-              <td class="p-8">
-                <p class="text-sm font-black text-gray-900 dark:text-white tracking-tighter uppercase">{{ order.customer_name }}</p>
-                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ order.customer_email || 'Sin Contacto' }}</p>
+              <td class="p-4 md:p-8">
+                <p class="text-xs md:text-sm font-black text-gray-900 dark:text-white tracking-tighter uppercase truncate max-w-[100px] md:max-w-none">{{ order.customer_name }}</p>
+                <p class="text-[9px] md:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest truncate max-w-[100px] md:max-w-none">{{ order.customer_email || 'Sin Contacto' }}</p>
               </td>
-              <td class="p-8">
-                <div class="flex items-center gap-3">
-                  <span :class="order.technology === 'FDM' ? 'bg-indigo-600' : 'bg-primary'" class="px-3 py-1.5 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-md">{{ order.technology }}</span>
-                  <span class="text-[10px] font-black text-gray-900 dark:text-gray-300">{{ order.estimated_weight_g }}<span class="text-gray-300 dark:text-gray-700">g</span></span>
+              <td class="p-4 md:p-8">
+                <div class="flex items-center gap-2 md:gap-3">
+                  <span :class="order.technology === 'FDM' ? 'bg-indigo-600' : 'bg-primary'" class="px-2 md:px-3 py-1 md:py-1.5 text-white rounded-lg text-[8px] md:text-[10px] font-black uppercase tracking-widest shadow-md">{{ order.technology }}</span>
+                  <span class="text-[9px] md:text-[10px] font-black text-gray-900 dark:text-gray-300">{{ order.estimated_weight_g }}<span class="text-gray-300 dark:text-gray-700">g</span></span>
                 </div>
               </td>
-              <td class="p-8">
-                <p class="text-lg font-black text-gray-900 dark:text-white tracking-tighter">${{ Number(order.total_price).toLocaleString() }}</p>
+              <td class="p-4 md:p-8">
+                <p class="text-sm md:text-lg font-black text-gray-900 dark:text-white tracking-tighter">${{ Number(order.total_price).toLocaleString() }}</p>
               </td>
-              <td class="p-8 text-center">
-                <span :class="['px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm', getStatusColor(order.status)]">
+              <td class="p-4 md:p-8 text-center">
+                <span :class="['px-2 md:px-4 py-1 md:py-2 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm', getStatusColor(order.status)]">
                   {{ getStatusLabel(order.status) }}
                 </span>
               </td>
-              <td class="p-8">
-                <div class="flex items-center justify-end gap-2">
-                  <button class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Ver Detalles" @click="$emit('view-details', order)">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <td class="p-4 md:p-8">
+                <div class="flex items-center justify-end gap-1 md:gap-2">
+                  <button class="w-8 md:w-10 h-8 md:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Ver Detalles" @click="$emit('view-details', order)">
+                    <svg class="w-3.5 md:w-4 h-3.5 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                   </button>
-                  <button class="w-10 h-10 rounded-xl bg-gray-950 text-white flex items-center justify-center hover:bg-primary transition-all shadow-sm" title="Cotización PDF" @click="$emit('download-pdf', order)">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <button class="w-8 md:w-10 h-8 md:h-10 rounded-xl bg-gray-950 text-white flex items-center justify-center hover:bg-primary transition-all shadow-sm" title="Cotización PDF" @click="$emit('download-pdf', order)">
+                    <svg class="w-3.5 md:w-4 h-3.5 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                   </button>
-                  <button v-if="order.status === 'shipped'" class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Rótulo de Envío" @click="$emit('print-label', order)">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                  <button v-if="order.status === 'shipped'" class="w-8 md:w-10 h-8 md:h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Rótulo de Envío" @click="$emit('print-label', order)">
+                    <svg class="w-3.5 md:w-4 h-3.5 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                   </button>
-                  <button class="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Eliminar Registro" @click="$emit('delete', order.id)">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  <button class="w-8 md:w-10 h-8 md:h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Eliminar Registro" @click="$emit('delete', order.id)">
+                    <svg class="w-3.5 md:w-4 h-3.5 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
               </td>

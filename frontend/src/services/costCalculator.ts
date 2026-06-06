@@ -154,17 +154,24 @@ export function calcOrderDetailBreakdown(order: Record<string, any>, settings: R
   const etiquetas = parseFloat(infra.etiquetas || 0)
   const extras = parseFloat(order.extras_cost) || 0
 
-  const totalCost = material + luz + labor + depr + mant + etiquetas + extras
+  const rMaterial = Math.round(material)
+  const rLuz = Math.round(luz)
+  const rLabor = Math.round(labor)
+  const rDepr = Math.round(depr)
+  const rMant = Math.round(mant)
+  const rEtiquetas = Math.round(etiquetas)
+  const rExtras = Math.round(extras)
+  const rTotalCost = rMaterial + rLuz + rLabor + rDepr + rMant + rEtiquetas + rExtras
 
   return {
-    material: Math.round(material),
-    luz: Math.round(luz),
-    labor: Math.round(labor),
-    depr: Math.round(depr),
-    mant: Math.round(mant),
-    etiquetas: Math.round(etiquetas),
-    extras: Math.round(extras),
-    total_cost: Math.round(totalCost),
-    margin: Number(order.total_price) - Math.round(totalCost),
+    material: rMaterial,
+    luz: rLuz,
+    labor: rLabor,
+    depr: rDepr,
+    mant: rMant,
+    etiquetas: rEtiquetas,
+    extras: rExtras,
+    total_cost: rTotalCost,
+    margin: Number(order.total_price) - rTotalCost,
   }
 }

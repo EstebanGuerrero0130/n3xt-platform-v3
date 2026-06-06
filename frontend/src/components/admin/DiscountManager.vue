@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, type PropType } from 'vue'
+import { ref, type PropType } from 'vue'
 
 const props = defineProps({
   discounts: {

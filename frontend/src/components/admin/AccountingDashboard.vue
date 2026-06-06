@@ -27,7 +27,7 @@ const VChart = defineAsyncComponent(async () => {
   return VChart
 })
 
-const emit = defineEmits(['export', 'back']);
+defineEmits(['export', 'toggle-paid'])
 
 const props = defineProps({
   analytics: { type: Object as PropType<any>, default: null },

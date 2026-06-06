@@ -36,17 +36,6 @@ interface RequestOptions {
   body?: BodyInit | null
 }
 
-interface ApiClient {
-  baseUrl: string
-  storageUrl: string
-  checkAuth(): Promise<{ authenticated: boolean; user: any | null; role: string | null }>
-  get(endpoint: string): Promise<any>
-  post(endpoint: string, body?: any): Promise<any>
-  patch(endpoint: string, body?: any): Promise<any>
-  delete(endpoint: string): Promise<any>
-  handleResponse(res: Response, endpoint?: string): Promise<any>
-}
-
 /** Build base fetch options for Sanctum SPA */
 const baseOptions = (method: string, body?: any, isFormData?: boolean): RequestOptions => {
   const opts: RequestOptions = {

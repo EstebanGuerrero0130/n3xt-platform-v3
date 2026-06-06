@@ -75,7 +75,7 @@ const fetchOrders = async () => {
 const logout = async () => {
     try {
         await api.post('/customer/logout')
-    } catch (e) {
+    } catch {
         // Silent fail — session might already be invalid
     }
     router.push('/')

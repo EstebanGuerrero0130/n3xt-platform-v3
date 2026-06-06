@@ -6,7 +6,7 @@ const props = defineProps({
   loading: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['add-printer', 'edit-printer', 'delete-printer', 'sync', 'reset-printer', 'update-printer-status', 'maintenance-complete'])
+defineEmits(['sync', 'add-printer', 'update-printer-status', 'maintenance-complete', 'edit-printer', 'delete-printer'])
 
 const getStatusLabel = (status: any) => {
   const labels = {
@@ -54,20 +54,20 @@ const overduePrintersCount = computed(() => {
 <template>
   <div class="animate-fade-in">
     <!-- Main Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12 lg:mb-20 px-8 lg:px-10">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-6 mb-8 md:mb-12 lg:mb-20 px-4 md:px-8 lg:px-10">
       <div>
-        <h2 class="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-2">Monitor de Granja</h2>
-        <div class="flex items-center gap-3">
+        <h2 class="text-2xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-1 md:mb-2">Monitor de Granja</h2>
+        <div class="flex items-center gap-2 md:gap-3">
           <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <p class="text-gray-400 dark:text-gray-300 font-bold uppercase tracking-widest text-[10px] md:text-[10px]">Base de Datos Unificada</p>
+          <p class="text-gray-400 dark:text-gray-300 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">Base de Datos Unificada</p>
         </div>
       </div>
-      <div class="flex gap-4 w-full md:w-auto">
-        <button :disabled="loading" class="p-4 md:p-5 bg-white dark:bg-[#151a22] rounded-2xl md:rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-xl text-gray-400 dark:text-gray-300" @click="$emit('sync')">
-          <svg xmlns="http://www.w3.org/2000/svg" :class="`h-5 w-5 md:h-6 md:w-6 ${loading ? 'animate-spin' : ''}`" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+      <div class="flex gap-3 md:gap-4 w-full md:w-auto">
+        <button :disabled="loading" class="p-3 md:p-5 bg-white dark:bg-[#151a22] rounded-2xl md:rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-xl text-gray-400 dark:text-gray-300" @click="$emit('sync')">
+          <svg xmlns="http://www.w3.org/2000/svg" :class="`h-4 md:h-6 w-4 md:w-6 ${loading ? 'animate-spin' : ''}`" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
         </button>
-        <button class="btn-primary flex-1 md:flex-none px-6 md:px-10 py-4 md:py-5" @click="$emit('add-printer')">
-          <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Registrar Maquinaria
+        <button class="btn-primary flex-1 md:flex-none px-4 md:px-10 py-3 md:py-5" @click="$emit('add-printer')">
+          <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> <span class="hidden sm:inline">Registrar Maquinaria</span><span class="sm:hidden">Añadir</span>
         </button>
       </div>
     </div>
@@ -75,14 +75,13 @@ const overduePrintersCount = computed(() => {
     <!-- Emergency Maintenance Alert -->
     <div
 v-if="overduePrintersCount > 0" 
-         class="mx-8 lg:mx-10 mb-16 p-8 bg-rose-50 dark:bg-rose-500/10 border-2 border-rose-100 dark:border-rose-500/20 rounded-[24px] flex flex-col md:flex-row items-center justify-between gap-6 animate-zoom-in">
-        <div class="flex items-center gap-8">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-rose-500 text-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
+         class="mx-4 md:mx-8 lg:mx-10 mb-8 md:mb-16 p-4 md:p-8 bg-rose-50 dark:bg-rose-500/10 border-2 border-rose-100 dark:border-rose-500/20 rounded-[20px] md:rounded-[24px] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 animate-zoom-in">            <div class="flex items-center gap-4 md:gap-8">
+                <div class="w-10 h-10 md:w-12 md:h-12 bg-rose-500 text-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             </div>
             <div>
-                <h3 class="text-2xl font-black text-rose-900 dark:text-rose-100 uppercase tracking-tighter mb-1">Alerta de Mantenimiento Crítico</h3>
-                <p class="text-[10px] font-black text-rose-400 dark:text-rose-300/60 uppercase tracking-[0.2em]">Hay {{ overduePrintersCount }} impresoras que requieren revisión según el calendario técnico.</p>
+                <h3 class="text-lg md:text-2xl font-black text-rose-900 dark:text-rose-100 uppercase tracking-tighter mb-1">Alerta de Mantenimiento</h3>
+                <p class="text-[9px] md:text-[10px] font-black text-rose-400 dark:text-rose-300/60 uppercase tracking-[0.2em]">Hay {{ overduePrintersCount }} impresoras que requieren revisión.</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
@@ -126,10 +125,10 @@ v-for="p in printers.filter(isMaintenanceOverdue).slice(0, 3)" :key="p.id"
     </div>
 
     <!-- Machines Grid -->
-    <div v-if="!loading && printers.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 px-6 lg:px-8 pb-16">
+    <div v-if="!loading && printers.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-12 px-4 md:px-6 lg:px-8 pb-16">
       <div
 v-for="(printer, index) in printers" :key="printer.id" 
-        :class="['bg-white dark:bg-[#151a22] p-8 lg:p-12 rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm group relative overflow-hidden flex flex-col w-full animate-slide-up transition-all hover:shadow-2xl hover:border-primary/30 dark:hover:border-primary/20', 'animate-stagger-' + (index % 4 + 1)]"
+        :class="['bg-white dark:bg-[#151a22] p-4 md:p-8 lg:p-12 rounded-[20px] md:rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm group relative overflow-hidden flex flex-col w-full animate-slide-up transition-all hover:shadow-2xl hover:border-primary/30 dark:hover:border-primary/20', 'animate-stagger-' + (index % 4 + 1)]"
       >
         <!-- Maintenance Alert Pulse -->
         <div v-if="isMaintenanceNear(printer)" class="absolute top-0 left-0 w-full h-1.5 bg-rose-500 animate-pulse z-10"></div>
@@ -159,9 +158,8 @@ v-for="(printer, index) in printers" :key="printer.id"
           </div>
         </div>
 
-        <!-- Middle Section: Glassmorphism Info -->
-        <div class="flex-1 space-y-6 mb-6 md:mb-10 min-h-0">
-          <div class="bg-gray-50/80 dark:bg-[#0d1117]/60 backdrop-blur-sm p-6 md:p-8 rounded-[24px] border border-gray-100/50 dark:border-[#21262d] space-y-6">
+        <!-- Middle Section: Glassmorphism Info -->          <div class="flex-1 space-y-4 md:space-y-6 mb-4 md:mb-10 min-h-0">
+          <div class="bg-gray-50/80 dark:bg-[#0d1117]/60 backdrop-blur-sm p-4 md:p-8 rounded-[20px] md:rounded-[24px] border border-gray-100/50 dark:border-[#21262d] space-y-4 md:space-y-6">
                 <div class="space-y-4">
                     <div class="flex justify-between items-center px-1">
                         <span class="text-[10px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-widest">Vida Útil: {{ Math.round(printer.total_hours_run || 0) }}h</span>
@@ -181,32 +179,31 @@ v-for="(printer, index) in printers" :key="printer.id"
 
             <!-- Manual Control Panel -->
             <div class="pt-4 space-y-4">
-                <p class="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-center">Protocolo Operativo Manual</p>
-                <div class="flex gap-2 p-1.5 bg-white dark:bg-[#0d1117] rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-[#21262d]">
+                <p class="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-center">Protocolo Operativo Manual</p>                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 bg-white dark:bg-[#0d1117] rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-[#21262d]">
                     <button 
                         :class="[printer.status === 'idle' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-400 dark:text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400']"
-                        class="flex-1 py-3 rounded-2xl text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
+                        class="py-3 md:py-3 rounded-2xl text-[9px] md:text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
                         @click="$emit('update-printer-status', { id: printer.id, status: 'idle' })"
                     >
                         Libre
                     </button>
                     <button 
                         :class="[printer.status === 'printing' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'text-gray-400 dark:text-gray-300 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400']"
-                        class="flex-1 py-3 rounded-2xl text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
+                        class="py-3 md:py-3 rounded-2xl text-[9px] md:text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
                         @click="$emit('update-printer-status', { id: printer.id, status: 'printing' })"
                     >
                         Ocupada
                     </button>
                     <button 
                         :class="[printer.status === 'maintenance' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'text-gray-400 dark:text-gray-300 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400']"
-                        class="flex-1 py-3 rounded-2xl text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
+                        class="py-3 md:py-3 rounded-2xl text-[9px] md:text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
                         @click="$emit('update-printer-status', { id: printer.id, status: 'maintenance' })"
                     >
                         MANT.
                     </button>
                     <button 
                         :class="[printer.status === 'offline' ? 'bg-slate-400 text-white shadow-lg shadow-slate-400/30' : 'text-gray-400 dark:text-gray-300 hover:bg-slate-400/10 hover:text-slate-600 dark:hover:text-slate-400']"
-                        class="flex-1 py-3 rounded-2xl text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
+                        class="py-3 md:py-3 rounded-2xl text-[9px] md:text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
                         @click="$emit('update-printer-status', { id: printer.id, status: 'offline' })"
                     >
                         OFF

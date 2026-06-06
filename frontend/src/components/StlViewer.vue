@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, shallowRef } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import logger from '../utils/logger'
 
 // Three.js lazy-loaded via dynamic import — no vendor chunk on initial load

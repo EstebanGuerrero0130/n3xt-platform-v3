@@ -4,28 +4,28 @@
       <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
       <div class="relative bg-gray-900 border border-gray-700 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
         <!-- Header -->
-        <div class="sticky top-0 bg-gray-900 z-10 p-6 pb-4 border-b border-gray-800 flex justify-between items-start">
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-600/20 flex items-center justify-center">
-              <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div class="sticky top-0 bg-gray-900 z-10 p-4 md:p-6 pb-3 md:pb-4 border-b border-gray-800 flex justify-between items-start gap-3">
+          <div class="flex items-center gap-3 md:gap-4 min-w-0">
+            <div class="w-10 md:w-12 h-10 md:h-12 rounded-2xl bg-emerald-600/20 flex items-center justify-center shrink-0">
+              <svg class="w-5 md:w-6 h-5 md:h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
-            <div>
-              <h2 class="text-2xl font-black text-white tracking-tight">ORDEN #{{ order.id }}</h2>
+            <div class="min-w-0">
+              <h2 class="text-lg md:text-2xl font-black text-white tracking-tight truncate">ORDEN #{{ order.id }}</h2>
               <div class="flex items-center gap-2 mt-1">
-                <span :class="statusClass" class="text-xs font-bold px-3 py-1 rounded-full uppercase">{{ statusLabel }}</span>
+                <span :class="statusClass" class="text-[10px] md:text-xs font-bold px-2 md:px-3 py-0.5 md:py-1 rounded-full uppercase">{{ statusLabel }}</span>
               </div>
             </div>
           </div>
-          <button class="p-2 hover:bg-gray-800 rounded-xl transition-colors" @click="$emit('close')">
+          <button class="p-2 hover:bg-gray-800 rounded-xl transition-colors shrink-0" @click="$emit('close')">
             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
 
-        <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <!-- Left: General Info + Logistics + Timeline -->
           <div class="space-y-6">
             <!-- Customer Info -->
-            <div class="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
               <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">Cliente</h3>
               <p class="text-xl font-black text-white">{{ order.customer_name }}</p>
               <p v-if="order.customer_id_document" class="text-sm text-gray-500 mt-1">ID: {{ order.customer_id_document }}</p>
@@ -34,9 +34,9 @@
             </div>
 
             <!-- Technical Specs -->
-            <div class="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
               <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">Especificaciones Técnicas</h3>
-              <div class="grid grid-cols-2 gap-3 text-sm">
+              <div class="grid grid-cols-2 gap-2 md:gap-3 text-xs md:text-sm">
                 <div><span class="text-gray-500">Tecnología:</span><span class="text-white font-bold ml-2">{{ order.technology }}</span></div>
                 <div><span class="text-gray-500">Material:</span><span class="text-white font-bold ml-2">{{ materialName }}</span></div>
                 <div><span class="text-gray-500">Peso:</span><span class="text-white font-bold ml-2">{{ order.estimated_weight_g || 0 }}g</span></div>
@@ -45,7 +45,7 @@
             </div>
 
             <!-- Shipping / Logistics -->
-            <div v-if="order.status !== 'pending'" class="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+            <div v-if="order.status !== 'pending'" class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
               <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">Logística de Envío</h3>
               <div v-if="order.customer_phone || order.shipping_address" class="space-y-2 text-sm mb-4">
                 <p v-if="order.shipping_address" class="text-gray-400">{{ order.shipping_address }}</p>
@@ -54,21 +54,21 @@
               <div v-if="order.status === 'shipped'" class="space-y-3">
                 <div>
                   <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Transportadora</label>
-                  <input v-model="order.tracking_carrier" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm outline-none">
+                  <input v-model="localCarrier" type="text" placeholder="EJ: SERVIENTREGA" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm outline-none">
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Número de Guía</label>
-                  <div class="flex gap-2">
-                    <input v-model="order.tracking_guide" class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm outline-none">
-                    <button class="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-bold text-sm transition-colors" @click="saveTracking">Guardar</button>
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <input v-model="localGuide" type="text" placeholder="EJ: 982347123" class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white text-sm outline-none">
+                    <button class="w-full sm:w-auto px-4 py-2.5 md:py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-bold text-sm transition-colors" @click="saveTracking">Guardar</button>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- Timeline -->
-            <div class="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
-              <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-4">Línea de Producción</h3>
+            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
+              <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 md:mb-4">Línea de Producción</h3>
               <div class="flex items-center gap-1">
                 <div v-for="(step, idx) in statusSteps" :key="step.id" class="flex-1 flex flex-col items-center">
                   <div :class="['w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all', getStatusIndex(order.status) >= idx ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-gray-500']">
@@ -84,12 +84,12 @@
           <!-- Right: Economic Analysis + Extras -->
           <div class="space-y-6">
             <!-- Price & Profitability -->
-            <div class="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
-              <div class="flex justify-between items-center mb-4">
+            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
+              <div class="flex justify-between items-center mb-3 md:mb-4">
                 <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider">Análisis Económico</h3>
-                <span :class="profitClass" class="text-sm font-black">{{ breakdown?.profit_margin_pct || 0 }}% margen</span>
+                <span :class="profitClass" class="text-xs md:text-sm font-black">{{ breakdown?.profit_margin_pct || 0 }}% margen</span>
               </div>
-              <div class="text-3xl font-black text-emerald-400 mb-4">${{ (order.total_price || 0).toLocaleString() }}</div>
+              <div class="text-2xl md:text-3xl font-black text-emerald-400 mb-3 md:mb-4">${{ (order.total_price || 0).toLocaleString() }}</div>
 
               <div v-if="breakdown" class="space-y-2 text-sm">
                 <div class="flex justify-between text-gray-400"><span>Material</span><span class="text-white font-bold">${{ breakdown.material.toLocaleString() }}</span></div>
@@ -106,7 +106,7 @@
             </div>
 
             <!-- Registered Extras -->
-            <div class="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
               <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">Extras Registrados</h3>
               <div v-if="order.extra_items && order.extra_items.length" class="space-y-2 mb-4">
                 <div v-for="(item, idx) in order.extra_items" :key="idx" class="flex justify-between items-center text-sm bg-gray-800/50 rounded-xl px-4 py-2">
@@ -122,16 +122,16 @@
                   <option value="">Seleccionar insumo...</option>
                   <option v-for="m in materials" :key="m.id" :value="m.id">{{ m.name }}</option>
                 </select>
-                <div class="flex gap-2">
-                  <input v-model.number="newExtra.qty" type="number" min="1" class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm outline-none">
-                  <button class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-bold text-sm transition-colors" @click="addExtra">Agregar</button>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <input v-model.number="newExtra.qty" type="number" min="1" class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white text-sm outline-none">
+                  <button class="w-full sm:w-auto px-4 md:px-6 py-2.5 md:py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-bold text-sm transition-colors" @click="addExtra">Agregar</button>
                 </div>
               </div>
               <button v-else class="mt-3 text-sm text-emerald-400 hover:text-emerald-300 font-bold transition-colors" @click="showAddForm = true">+ Agregar Consumible</button>
             </div>
 
             <!-- Notes -->
-            <div v-if="order.comments" class="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+            <div v-if="order.comments" class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
               <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">Notas</h3>
               <p class="text-sm text-gray-400 whitespace-pre-wrap">{{ order.comments }}</p>
             </div>
@@ -143,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { api } from '../../services/api'
 import { calcOrderDetailBreakdown } from '../../services/costCalculator'
 import logger from '../../utils/logger'
@@ -154,10 +154,18 @@ const props = defineProps({
   settings: { type: Object, default: () => ({ infra: {}, prep: {}, margin: {} }) },
 })
 
-const emit = defineEmits(['close', 'updated'])
+const emit = defineEmits(['close', 'updated', 'update-order'])
 
 const showAddForm = ref(false)
 const newExtra = ref({ material_id: '', qty: 1 })
+
+// Local state for tracking fields to avoid prop mutation
+const localCarrier = ref(props.order?.tracking_carrier || '')
+const localGuide = ref(props.order?.tracking_guide || '')
+
+// Sync local state when prop changes
+watch(() => props.order?.tracking_carrier, (val) => { localCarrier.value = val || '' })
+watch(() => props.order?.tracking_guide, (val) => { localGuide.value = val || '' })
 
 const statusSteps = [
   { id: 'pending', label: 'Recibido', desc: 'En cola de revisión.' },
@@ -225,8 +233,8 @@ const addExtra = async () => {
 const saveTracking = async () => {
   try {
     await api.patch(`/admin/orders/${props.order.id}/status`, {
-      tracking_guide: props.order.tracking_guide,
-      tracking_carrier: props.order.tracking_carrier
+      tracking_guide: localGuide.value,
+      tracking_carrier: localCarrier.value
     }, true)
     emit('updated')
   } catch (err) {

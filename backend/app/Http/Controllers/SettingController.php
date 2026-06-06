@@ -29,7 +29,7 @@ class SettingController extends Controller
             // Retornamos los ajustes actuales para sincronizar el frontend sin recargar
             $allSettings = Setting::all()->pluck('value', 'key');
             return response()->json([
-                'message' => 'Settings updated successfully', 
+                'message' => 'Settings updated successfully',
                 'success' => true,
                 'settings' => $allSettings
             ]);
@@ -53,7 +53,7 @@ class SettingController extends Controller
 
             $file = $request->file('logo');
             $path = $file->store('logos', 'public');
-            
+
             Setting::updateOrCreate(['key' => 'company_logo'], ['value' => $path]);
 
             return response()->json([

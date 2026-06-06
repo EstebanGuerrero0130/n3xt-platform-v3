@@ -46,7 +46,7 @@ function getAbsoluteUrl(path: string): string {
   return path.startsWith('http') ? path : window.location.origin + (path.startsWith('/') ? '' : '/') + path
 }
 
-export function usePDF({ settings, inventoryData, showNotify }: UsePDFOptions) {
+export function usePDF({ settings, inventoryData, showNotify: _showNotify }: UsePDFOptions) {
   const companyLogo = (): string => {
     if (!settings.value?.company_logo) return window.location.origin + '/logo.png'
     if (settings.value.company_logo.startsWith('http')) return settings.value.company_logo

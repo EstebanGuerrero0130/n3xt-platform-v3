@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import AppNavbar from '../components/AppNavbar.vue'
 import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'

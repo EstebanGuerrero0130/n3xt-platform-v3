@@ -52,10 +52,10 @@ const setMetaTags = () => {
 
 // --- N3XT CORE DATA ---
 const appData = ref({
-    infra: { luz_hr: 926, depr_hr: 400, mant_hr: 700 },
-    prep: { mano_obra_hr: 1000 },
-    oper: { transporte: 50, ganancia: 50, marketing: 50, fallos: 30 },
-    margin: { iva: 19 }
+    infra: { luz_hr: 0, depr_hr: 0, mant_hr: 0, etiquetas: 0, load_factor: 0.4 },
+    prep: { mano_obra_hr: 0, prep_time_pct: 10 },
+    oper: { transporte: 0, ganancia: 0, marketing: 0, fallos: 0 },
+    margin: { iva: 0 }
 })
 const materials = ref<any[]>([])
 const utilities = ref<any[]>([])
@@ -230,7 +230,6 @@ const materialGuide = [
 
 const showModal = ref(false)
 const isSubmitting = ref(false)
-const showMobileMenu = ref(false)
 const previousTotal = ref(0)
 const showSidebar = ref(window.innerWidth >= 1024)
 const isDesktop = ref(window.innerWidth >= 1024)
@@ -453,17 +452,6 @@ const calculatePrice = () => {
   totalDuration *= qty.value
   
   // Costo de material
-  // Use shared service for production cost
-  const prodCalc = calcProductionCost({
-    weightG: totalWeight,
-    totalHours: totalDuration,
-    costPerKg: Number(mat.cost_per_kg) || 0,
-    infra: cfg.infra,
-    prep: cfg.prep,
-    extrasCost: 0,
-  })
-  const matCost = prodCalc.material
-  const infraCost = prodCalc.luz + prodCalc.depr + prodCalc.mant    // Extras/Consumibles
   let utilityCost = 0
   autoExtras.value = []
   if (selectedTechnology.value === 'SLA') {
@@ -561,15 +549,6 @@ onUnmounted(() => {
   injectedMetaEls = []
   if (resizeCleanup) resizeCleanup()
 })
-
-const formatTime = (h: any) => {
-    if (!h || h < 0) return "0m";
-    const hours = Math.floor(h);
-    const minutes = Math.round((h - hours) * 60);
-    if (hours === 0) return `${minutes}m`;
-    return `${hours}h ${minutes}m`;
-}
-
 
 </script>
 

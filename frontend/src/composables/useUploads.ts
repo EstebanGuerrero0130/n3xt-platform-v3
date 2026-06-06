@@ -62,7 +62,7 @@ export function useUploads({ settings, showNotify }: UseUploadsOptions) {
       } else {
         throw new Error(data?.error || 'Error en subida')
       }
-    } catch (err) {
+    } catch (_err) {
       if (showNotify) showNotify('ERROR SEO: Revisa tu conexi\u00f3n con el servidor.', 'error')
     }
   }

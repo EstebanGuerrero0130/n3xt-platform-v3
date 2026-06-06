@@ -158,7 +158,7 @@ const register = async () => {
   error.value = ''
   loading.value = true
   try {
-    const data = await api.post('/auth/unified-register', {
+    await api.post('/auth/unified-register', {
         name: name.value,
         email: email.value,
         password: password.value,

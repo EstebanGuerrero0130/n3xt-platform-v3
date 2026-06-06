@@ -6,7 +6,6 @@ import { api } from '../services/api'
 import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
 import logger from '../utils/logger'
-import gsap from 'gsap'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
 import { useParticles } from '../composables/useParticles'
@@ -116,13 +115,6 @@ const getDiscountPct = (item) => {
   return Math.round((1 - p / op) * 100)
 }
 
-const formatPrice = (p: any) => {
-  if (!p) return '$ 0'
-  if (typeof p === 'string' && p.toLowerCase().includes('cotizar')) return p.toUpperCase()
-  const val = parseFloat(String(p).replace(/[^0-9.-]+/g,""))
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val)
-}
-
 const isDiscounted = (item) => {
   if (!item.price || !item.original_price) return false
   const p = parseFloat(String(item.price).replace(/[^0-9.-]+/g,""))
@@ -182,7 +174,7 @@ const staggerKey = ref(0)
 const quickViewItem = ref<any>(null)
 
 // ─── PARTÍCULAS AMBIENTALES (GSAP) ───
-const { particlesRef } = useParticles({
+useParticles({
   count: 60,
   zIndex: 1,
 })

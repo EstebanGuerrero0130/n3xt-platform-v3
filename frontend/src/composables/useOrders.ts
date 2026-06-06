@@ -11,20 +11,6 @@ interface UseOrdersOptions {
   askConfirm?: (title: string, message: string, icon: string, onConfirm: () => Promise<void>) => void
 }
 
-interface OrderData {
-  id: number | string
-  status?: string
-  material_id?: string
-  printer_id?: string
-  is_paid?: boolean
-  estimated_weight_g?: number | string
-  estimated_duration_h?: number | string
-  extra_items?: Array<{ material_id?: string; name?: string }>
-  tracking_guide?: string
-  tracking_carrier?: string
-  [key: string]: any
-}
-
 export function useOrders({ showNotify, askConfirm }: UseOrdersOptions) {
   const orders = ref([])
   const selectedOrderForPrinter = ref(null)
@@ -144,7 +130,7 @@ export function useOrders({ showNotify, askConfirm }: UseOrdersOptions) {
       status: 'shipped', 
       tracking_guide: trackingGuide.value,
       tracking_carrier: trackingCarrier.value
-    }, { printers: ref([]), inventoryData: ref([]), settings: ref({}) })
+    }, { printers: ref([]), inventoryData: ref([]), settings: ref({}) } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
     orderToShip.value = null
   }
 

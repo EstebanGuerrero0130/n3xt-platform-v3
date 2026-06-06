@@ -46,7 +46,7 @@ const getMaterialName = (id) => {
   return mat ? mat.name : id
 }
 
-const formatTime = (h) => {
+const formatTime = (h: number) => {
   if (!h || h < 0) return '0m';
   const hours = Math.floor(h);
   const minutes = Math.round((h - hours) * 60);
@@ -206,7 +206,7 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
               </div>
             </div>
             <div class="mt-4 pt-4 border-t border-primary/10">
-              <div v-for="(m, mi) in models" :key="m.id" class="flex justify-between items-center py-1.5">
+              <div v-for="m in models" :key="m.id" class="flex justify-between items-center py-1.5">
                 <span class="text-[8px] font-black text-gray-500">{{ m.name }} <span v-if="m.hasModel" class="text-emerald-500">✓</span></span>
                 <span class="text-[9px] font-black dark:text-white">{{ m.hasModel ? m.dimensions.x.toFixed(0)+'x'+m.dimensions.y.toFixed(0)+'x'+m.dimensions.z.toFixed(0)+'mm' : 'Sin archivo' }}</span>
               </div>

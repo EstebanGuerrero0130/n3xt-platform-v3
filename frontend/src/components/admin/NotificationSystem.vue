@@ -78,7 +78,7 @@
 <script setup lang="ts">
 import { type PropType } from 'vue'
 
-const props = defineProps({
+defineProps({
   notification: { type: Object as PropType<any>, required: true },
   confirmDialog: { type: Object as PropType<any>, required: true },
   isDark: { type: Boolean, default: false }

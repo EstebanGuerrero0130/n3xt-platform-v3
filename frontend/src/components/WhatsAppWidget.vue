@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../services/api'
 import logger from '../utils/logger'
@@ -16,7 +16,8 @@ const quickReplies = [
     { text: 'Duda sobre materiales', msg: 'Hola! Tengo una consulta técnica sobre los materiales de impresión.' }
 ]
 
-const fetchSettings = async () => {
+/* fetchSettings used to load WhatsApp number from API */
+const _loadWhatsApp = async () => {
     try {
         const data = await api.get('/settings')
         if (data.web?.social?.whatsapp) {
