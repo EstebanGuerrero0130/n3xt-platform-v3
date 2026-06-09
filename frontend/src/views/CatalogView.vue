@@ -294,86 +294,102 @@ onUnmounted(() => {
           :key="'cat-' + staggerKey + '-' + index"
           :to="'/catalog/' + encodeURIComponent(item.name)"
           :style="{ '--stagger-delay': index * 80 + 'ms' }"
-          class="group bg-white dark:bg-[#0a0f14]/80 backdrop-blur-xl rounded-[4rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-4xl hover:border-emerald-500/30 transition-all duration-700 flex flex-col relative stagger-item"
+          class="group bg-white dark:bg-[#0d1117] rounded-[3.5rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:border-emerald-500/30 transition-all duration-500 hover:-translate-y-2 flex flex-col relative stagger-item"
         >
-          <!-- Badge de Categoria Neon -->
-          <div class="absolute top-8 left-8 z-30 inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 dark:bg-emerald-500/10 rounded-full border border-emerald-500/40 dark:border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-pulse">
-              <span class="w-1 h-1 bg-emerald-400 rounded-full"></span>
-              <span class="text-[7px] font-black text-emerald-400 uppercase tracking-[0.4em] italic">{{ item.category }}</span>
-          </div>
+          <!-- Contenedor de Imagen (Estilo Galería) -->
+          <div class="relative overflow-hidden aspect-square bg-gray-100 dark:bg-gray-800 shrink-0">
+            <div class="absolute inset-0 bg-radial-gradient from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10 pointer-events-none"></div>
+            
+            <img 
+              :src="getOptimizedImage(item.image)" 
+              :alt="'Catálogo N3XT 3D — ' + item.name" 
+              :fetchpriority="index === 0 ? 'high' : 'auto'" 
+              class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 z-0" 
+              loading="lazy" 
+              decoding="async" 
+              @error="(e: any) => e.target.style.display='none'" 
+            />
 
-          <!-- Badge de Oferta / Disponible -->
-          <div v-if="isDiscounted(item)" class="absolute -top-2 -right-2 z-30">
-            <div class="relative w-28 h-28">
-              <svg class="w-full h-full drop-shadow-[0_0_30px_rgba(239,68,68,0.6)]" viewBox="0 0 100 100">
-                <defs>
-                  <linearGradient id="fireGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#ef4444"/>
-                    <stop offset="50%" stop-color="#f97316"/>
-                    <stop offset="100%" stop-color="#dc2626"/>
-                  </linearGradient>
-                </defs>
-                <polygon points="50,2 96,20 96,60 50,98 4,60 4,20" fill="url(#fireGrad)" opacity="0.95"/>
-                <polygon points="50,20 82,34 82,60 50,82 18,60 18,34" fill="white" opacity="0.1"/>
-              </svg>
-              <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-1.5">
-                <span class="text-[7px] font-black text-white uppercase tracking-[0.15em] leading-tight drop-shadow-lg">OFERTA</span>
-                <span class="text-[11px] font-black text-yellow-200 leading-none drop-shadow-lg mt-0.5">{{ getDiscountPct(item) }}%</span>
+            <!-- Badges sobre la imagen (Top Left) -->
+            <div class="absolute top-6 left-6 z-20 flex gap-3 flex-wrap">
+              <span v-if="item.category" class="px-4 py-1.5 bg-emerald-500/90 backdrop-blur-sm text-white text-[9px] font-black rounded-full uppercase tracking-[0.25em] shadow-lg">
+                {{ item.category }}
+              </span>
+            </div>
+
+            <!-- Badges de Estado (Top Right) -->
+            <div v-if="isDiscounted(item)" class="absolute top-5 right-5 z-20">
+              <div class="relative w-20 h-20 group-hover:scale-110 transition-transform duration-500">
+                <svg class="w-full h-full drop-shadow-[0_0_20px_rgba(239,68,68,0.6)]" viewBox="0 0 100 100">
+                  <defs>
+                    <linearGradient id="fireGradCat" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#ef4444"/>
+                      <stop offset="50%" stop-color="#f97316"/>
+                      <stop offset="100%" stop-color="#dc2626"/>
+                    </linearGradient>
+                  </defs>
+                  <polygon points="50,2 96,20 96,60 50,98 4,60 4,20" fill="url(#fireGradCat)" opacity="0.95"/>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span class="text-[6px] font-black text-white uppercase tracking-[0.1em] leading-tight drop-shadow-lg">OFERTA</span>
+                  <span class="text-[9px] font-black text-yellow-200 leading-none drop-shadow-lg mt-0.5">{{ getDiscountPct(item) }}%</span>
+                </div>
               </div>
             </div>
-          </div>
-          <div v-else class="absolute top-8 right-8 z-30 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-            <span class="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></span>
-            <span class="text-[6px] font-black text-emerald-400 uppercase tracking-[0.3em]">Disponible</span>
-          </div>
-
-          <div class="aspect-square overflow-hidden relative p-12 flex items-center justify-center">
-            <!-- Pedestal de Luz Industrial -->
-            <div class="absolute inset-0 bg-radial-gradient from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-            
-            <img :src="getOptimizedImage(item.image)" :alt="'Catálogo N3XT 3D — ' + item.name + (item.category ? ' (' + item.category + ')' : '') + ', pieza fabricada con precisión industrial'" :fetchpriority="index === 0 ? 'high' : 'auto'" class="max-w-[85%] max-h-[85%] object-contain group-hover:scale-110 group-hover:-rotate-2 transition-all duration-1000 relative z-10" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
-          </div>
-
-          <div class="p-12 pt-0 text-center flex flex-col flex-1 relative z-10">
-            <!-- Trust Badges: Envío y Garantía -->
-            <div class="flex items-center justify-center gap-3 mb-5">
-              <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">
-                <svg class="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM5 11V5a1 1 0 011-1h6l4 4v7"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8h5.5a1 1 0 01.8.4l2.5 3.5a1 1 0 01.2.6V15h-2"/></svg>
-                <span class="text-[6px] font-black text-blue-400 uppercase tracking-[0.2em]">Envío Gratis</span>
-              </div>
-              <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-500/10 rounded-full border border-orange-500/20">
-                <svg class="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                <span class="text-[6px] font-black text-orange-400 uppercase tracking-[0.2em]">Garantía 6M</span>
-              </div>
+            <div v-else class="absolute top-6 right-6 z-20 px-4 py-1.5 bg-black/60 backdrop-blur-md text-emerald-400 text-[8px] font-black rounded-full uppercase tracking-[0.2em] border border-white/10 flex items-center gap-2 shadow-lg">
+              <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+              Disponible
             </div>
-            <h3 class="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4 italic leading-none group-hover:text-emerald-400 transition-colors">{{ item.name }}</h3>
+          </div>
+
+          <!-- Info (Estilo Galería) -->
+          <div class="p-8 flex flex-col flex-1 relative z-10">
+            <div class="flex-1">
+              <!-- Trust Badges -->
+              <div class="flex items-center gap-3 mb-6 flex-wrap">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">
+                  <svg class="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM5 11V5a1 1 0 011-1h6l4 4v7"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8h5.5a1 1 0 01.8.4l2.5 3.5a1 1 0 01.2.6V15h-2"/></svg>
+                  <span class="text-[7px] font-black text-blue-400 uppercase tracking-[0.2em]">Envío Gratis</span>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-500/10 rounded-full border border-orange-500/20">
+                  <svg class="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                  <span class="text-[7px] font-black text-orange-400 uppercase tracking-[0.2em]">Garantía 6M</span>
+                </div>
+              </div>
+
+              <!-- Titulo -->
+              <h3 class="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4 italic leading-none group-hover:text-emerald-400 transition-colors line-clamp-2">{{ item.name }}</h3>
+              
+              <!-- Divider -->
+              <div class="w-12 h-1 bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full mb-6"></div>
+            </div>
             
-            <div class="mt-auto pt-8 border-t border-gray-100 dark:border-white/5">
-               <div class="flex flex-col items-center gap-1 mb-10">
-                  <p v-if="isDiscounted(item)" class="text-[9px] font-black text-rose-400 dark:text-rose-400 uppercase tracking-[0.4em] mb-2 italic flex items-center gap-2">
-                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <div class="mt-auto">
+               <div class="flex flex-col gap-1 mb-8">
+                  <p v-if="isDiscounted(item)" class="text-[9px] font-black text-rose-500 dark:text-rose-400 uppercase tracking-[0.4em] mb-1 italic flex items-center gap-2">
                     Precio Oferta
                   </p>
-                  <p v-else class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em] mb-2 italic">Precio de Venta</p>
+                  <p v-else class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em] mb-1 italic">Precio de Venta</p>
+                  
                   <div class="flex items-center gap-4">
+                    <p :class="['text-5xl font-black tracking-tighter leading-none italic drop-shadow-[0_0_10px_rgba(16,185,129,0.2)]', isDiscounted(item) ? 'text-rose-600 dark:text-rose-500' : 'text-emerald-500 dark:text-emerald-400']">
+                      ${{ Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
+                    </p>
                     <p v-if="isDiscounted(item)" class="text-lg font-black text-gray-400 line-through opacity-50 leading-none italic tracking-tight">
                       ${{ Math.round(parseFloat(String(item.original_price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
                     </p>
-                    <p :class="['text-5xl font-black tracking-tighter leading-none italic drop-shadow-[0_0_10px_rgba(16,185,129,0.2)]', isDiscounted(item) ? 'text-rose-500 dark:text-rose-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'text-emerald-500 dark:text-emerald-400']">
-                      ${{ Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
-                    </p>
                   </div>
-                  <div v-if="isDiscounted(item) && item.original_price" class="mt-2 px-3 py-1 bg-rose-500/10 rounded-full border border-rose-500/20">
-                    <span class="text-[7px] font-black text-rose-400 uppercase tracking-widest">
+                  
+                  <div v-if="isDiscounted(item) && item.original_price" class="mt-3 self-start px-3 py-1 bg-rose-500/10 rounded-full border border-rose-500/20 inline-block">
+                    <span class="text-[8px] font-black text-rose-500 dark:text-rose-400 uppercase tracking-widest">
                       Ahorras ${{ (Math.round(parseFloat(String(item.original_price).replace(/[^0-9]+/g,"")) || 0) - Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0)).toLocaleString() }}
                     </span>
                   </div>
                </div>
                
-               <div :class="['split-btn w-full py-5 rounded-3xl text-[9px] font-black uppercase tracking-[0.5em] transition-all duration-500 shadow-xl flex items-center justify-center gap-4 cursor-pointer', isDiscounted(item) ? 'bg-rose-600 text-white border border-rose-500 hover:bg-rose-500 hover:shadow-rose-500/40' : 'bg-gray-950 dark:bg-[#0f172a] border border-transparent dark:border-white/10 text-white dark:text-gray-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-emerald-500/30']" @click.prevent.stop="quickViewItem = item">
-                   <span>{{ isDiscounted(item) ? 'Aprovechar Oferta' : 'Analizar pieza' }}</span>
-                   <svg v-if="!isDiscounted(item)" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                   <svg v-else class="w-5 h-5 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+               <!-- CTA (Estilo Galeria) -->
+               <div :class="['w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] transition-all duration-500 shadow-xl flex items-center justify-center gap-4 cursor-pointer', isDiscounted(item) ? 'bg-rose-600 text-white border border-rose-500 hover:bg-rose-500 hover:shadow-rose-500/40' : 'bg-gray-900 dark:bg-white/10 text-white border border-transparent dark:border-white/5 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-emerald-500/30']" @click.prevent.stop="quickViewItem = item">
+                   <span>{{ isDiscounted(item) ? 'Aprovechar Oferta' : 'Analizar Pieza →' }}</span>
                </div>
             </div>
           </div>
