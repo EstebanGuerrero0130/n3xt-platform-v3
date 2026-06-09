@@ -209,24 +209,25 @@ onUnmounted(() => {
       <div v-else class="mb-12"></div>
 
       <!-- Skeleton Loading -->
-      <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        <div v-for="i in 12" :key="i" class="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 animate-pulse">
-          <div class="aspect-square bg-gray-100 dark:bg-white/5"></div>
-          <div class="p-3 space-y-2">
-            <div class="h-3 bg-gray-100 dark:bg-white/5 rounded-lg w-3/4"></div>
-            <div class="h-2 bg-gray-100 dark:bg-white/5 rounded-lg w-1/2"></div>
+      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        <div v-for="i in 6" :key="i" class="bg-white dark:bg-[#0a0f14]/40 rounded-[3.5rem] overflow-hidden border border-gray-100 dark:border-white/5 p-8 flex flex-col relative">
+          <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent skeleton-scan"></div>
+          <div class="aspect-square bg-gray-50 dark:bg-white/5 rounded-[2.5rem] mb-8"></div>
+          <div class="space-y-4">
+            <div class="h-6 bg-gray-50 dark:bg-white/5 rounded-xl w-3/4"></div>
+            <div class="h-4 bg-gray-50 dark:bg-white/5 rounded-lg w-1/2"></div>
           </div>
         </div>
       </div>
 
       <!-- Gallery Grid -->
-      <div v-else-if="filtered.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <div v-else-if="filtered.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         <router-link
           v-for="(item, idx) in filtered" :key="idx"
           :data-reveal-index="idx"
           :to="'/galeria/' + encodeURIComponent(item.title || String(idx))"
           :class="[
-            'group bg-white dark:bg-[#0d1117] rounded-[2rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:border-emerald-500/30 transition-all duration-500 hover:-translate-y-1 flex flex-col',
+            'group bg-white dark:bg-[#0d1117] rounded-[3.5rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:border-emerald-500/30 transition-all duration-500 hover:-translate-y-2 flex flex-col',
             visibleCards.includes(idx) ? 'card-revealed' : 'card-hidden'
           ]"
           :style="{ '--reveal-delay': Math.min(idx * 80, 500) + 'ms' }"
@@ -259,41 +260,41 @@ onUnmounted(() => {
             </div>
 
             <!-- Badges sobre la imagen -->
-            <div class="absolute top-3 left-3 z-20 flex gap-2 flex-wrap">
-              <span v-if="item.category" class="px-3 py-1 bg-emerald-500/90 backdrop-blur-sm text-white text-[6px] font-black rounded-full uppercase tracking-[0.25em] shadow-lg">{{ item.category }}</span>
-              <span v-if="item.featured" class="px-3 py-1 bg-amber-400/90 backdrop-blur-sm text-black text-[6px] font-black rounded-full uppercase tracking-[0.25em] shadow-lg">⭐ Destacado</span>
+            <div class="absolute top-6 left-6 z-20 flex gap-3 flex-wrap">
+              <span v-if="item.category" class="px-4 py-1.5 bg-emerald-500/90 backdrop-blur-sm text-white text-[9px] font-black rounded-full uppercase tracking-[0.25em] shadow-lg">{{ item.category }}</span>
+              <span v-if="item.featured" class="px-4 py-1.5 bg-amber-400/90 backdrop-blur-sm text-black text-[9px] font-black rounded-full uppercase tracking-[0.25em] shadow-lg">⭐ Destacado</span>
             </div>
-            <div v-if="item.technology" class="absolute top-3 right-3 z-20 px-3 py-1 bg-black/50 backdrop-blur-md text-white/80 text-[6px] font-black rounded-full uppercase tracking-[0.2em] border border-white/10">{{ item.technology }}</div>
+            <div v-if="item.technology" class="absolute top-6 right-6 z-20 px-4 py-1.5 bg-black/50 backdrop-blur-md text-white/80 text-[9px] font-black rounded-full uppercase tracking-[0.2em] border border-white/10">{{ item.technology }}</div>
 
             <!-- Overlay de hover con contador de imágenes -->
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20 flex items-end p-4">
-              <span v-if="item.images && item.images.length > 0" class="text-[7px] font-black text-white/80 uppercase tracking-widest bg-black/40 backdrop-blur-sm rounded-full px-3 py-1">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20 flex items-end p-8">
+              <span v-if="item.images && item.images.length > 0" class="text-[10px] font-black text-white/80 uppercase tracking-widest bg-black/40 backdrop-blur-sm rounded-full px-4 py-2">
                 +{{ item.images.length }} fotos
               </span>
             </div>
           </div>
 
           <!-- Info -->
-          <div class="p-3 flex flex-col flex-1">
+          <div class="p-8 flex flex-col flex-1">
             <div class="flex-1">
-              <h3 class="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-tight leading-tight group-hover:text-emerald-500 transition-colors line-clamp-2">
+              <h3 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-tight group-hover:text-emerald-500 transition-colors line-clamp-2">
                 {{ item.title || 'Sin Título' }}
               </h3>
-              <p v-if="item.description" class="text-[8px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">{{ item.description }}</p>
+              <p v-if="item.description" class="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2 leading-relaxed">{{ item.description }}</p>
 
               <!-- Tags -->
-              <div v-if="normalizeTags(item.tags).length > 0" class="flex flex-wrap gap-1 mt-2">
+              <div v-if="normalizeTags(item.tags).length > 0" class="flex flex-wrap gap-2 mt-4">
                 <span
-                  v-for="tag in normalizeTags(item.tags).slice(0, 2)" :key="tag"
-                  class="text-[5px] font-black px-1.5 py-0.5 bg-gray-100 dark:bg-white/5 rounded-full uppercase tracking-[0.1em] text-gray-500">
+                  v-for="tag in normalizeTags(item.tags).slice(0, 3)" :key="tag"
+                  class="text-[9px] font-black px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-full uppercase tracking-[0.1em] text-gray-500">
                   {{ tag }}
                 </span>
               </div>
             </div>
 
             <!-- CTA -->
-            <div class="mt-3 w-full py-2 bg-gray-900 dark:bg-white/10 text-white rounded-xl text-[7px] font-black uppercase tracking-widest text-center group-hover:bg-emerald-500 transition-all duration-500">
-              Ver →
+            <div class="mt-8 w-full py-4 bg-gray-900 dark:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-center group-hover:bg-emerald-500 transition-all duration-500">
+              Analizar Pieza →
             </div>
           </div>
         </router-link>
