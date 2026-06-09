@@ -105,6 +105,9 @@ CREATE TABLE IF NOT EXISTS orders (
     id BIGSERIAL PRIMARY KEY,
     project_id BIGINT NULL,                               -- ID de proyecto agrupador
 
+    -- Nombre del proyecto
+    job_name VARCHAR(255) NULL,
+
     -- Datos del cliente
     customer_name VARCHAR(255) NOT NULL,
     customer_company VARCHAR(255) NULL,

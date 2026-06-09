@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import logger from '../../utils/logger'
 import { api } from '../../services/api'
-import VueDraggable from 'vuedraggable'
+import VueDraggableLib from 'vuedraggable'
+const VueDraggable = VueDraggableLib as any
 
 const props = defineProps<{
   settings: any
@@ -13,7 +14,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'save-settings', silent?: boolean, updatedData?: any): void
-  (e: 'upload-logo', event: Event): void
+
   (e: 'seo-optimize'): void
 }>()
 
@@ -117,6 +118,60 @@ const removeCatalogImage = (index: number, imgIdx: number) => {
 const uploadingGallery = ref(false)
 const isDragging = ref(false)
 
+const handleCreateGalleryProject = () => {
+  if (!props.settings.web.gallery) props.settings.web.gallery = []
+  
+  // Normalize existing string entries first
+  props.settings.web.gallery = props.settings.web.gallery.map((item: any, idx: number) => 
+    typeof item === 'string' ? { title: `Proyecto ${idx + 1}`, image: item, images: [], category: 'General', technology: 'SLA', tags: '', featured: false } : item
+  )
+
+  props.settings.web.gallery.unshift({
+    title: '',
+    category: 'General',
+    technology: 'SLA',
+    featured: false,
+    image: '',
+    images: [],
+    tags: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0]
+  })
+  props.showNotify('Proyecto creado. Recuerda guardar cambios.', 'success')
+}
+
+const handleGalleryImageUpload = async (e: Event, item: any, isMain: boolean = false) => {
+  const input = e.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+  const file = input.files[0]
+  
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await api.post('/admin/upload-image', formData)
+    if (res && res.secure_url) {
+      if (isMain) {
+        item.image = res.secure_url
+      } else {
+        if (!item.images) item.images = []
+        item.images.push(res.secure_url)
+      }
+      props.showNotify('Imagen subida correctamente', 'success')
+    }
+  } catch (err) {
+    logger.error('Error uploading image', err)
+    props.showNotify('Error al subir imagen', 'error')
+  } finally {
+    input.value = ''
+  }
+}
+
+const removeGalleryImage = (item: any, imgIdx: number) => {
+  if (item && item.images) {
+    item.images.splice(imgIdx, 1)
+  }
+}
+
 const processFiles = async (files: FileList | File[]) => {
   if (!files || files.length === 0) return
 
@@ -134,11 +189,18 @@ const processFiles = async (files: FileList | File[]) => {
       const res = await api.post('/admin/upload-image', formData)
       
       if (res && res.secure_url) {
-        props.settings.web.gallery.push(res.secure_url)
+        props.settings.web.gallery.push({
+          title: 'Nuevo Proyecto',
+          image: res.secure_url,
+          images: [],
+          category: 'General',
+          technology: 'SLA',
+          featured: false
+        })
       }
     } catch (err) {
       logger.error('Error subiendo imagen:', err)
-      props.showNotify?.('Error al subir imagen: ' + (err?.message || 'Error de red'), 'error')
+      props.showNotify?.('Error al subir imagen: ' + ((err as Error)?.message || 'Error de red'), 'error')
     }
   }
   
@@ -186,40 +248,21 @@ const handleDrop = async (e: DragEvent) => {
   await processFiles(imageFiles)
 }
 
-// Lightbox / Preview
-const previewIndex = ref<number | null>(null)
 
-const galleryImages = computed(() => props.settings?.web?.gallery || [])
 
-const openPreview = (idx: number) => {
-  previewIndex.value = idx
+
+const handleCatalogImageUpload = (e: Event, item: any) => {
+  const input = e.target as HTMLInputElement
+  const file = input?.files?.[0]
+  if (!file) return
+  const reader = new window.FileReader()
+  reader.onload = (ev: ProgressEvent<FileReader>) => {
+    if (!item.images) item.images = []
+    item.images.push(ev.target?.result)
+  }
+  reader.readAsDataURL(file)
+  input.value = ''
 }
-
-const closePreview = () => {
-  previewIndex.value = null
-}
-
-const prevImage = () => {
-  if (previewIndex.value === null) return
-  const len = galleryImages.value.length
-  previewIndex.value = (previewIndex.value - 1 + len) % len
-}
-
-const nextImage = () => {
-  if (previewIndex.value === null) return
-  const len = galleryImages.value.length
-  previewIndex.value = (previewIndex.value + 1) % len
-}
-
-const handlePreviewKeydown = (e: KeyboardEvent) => {
-  if (previewIndex.value === null) return
-  if (e.key === 'Escape') closePreview()
-  if (e.key === 'ArrowLeft') { e.preventDefault(); prevImage() }
-  if (e.key === 'ArrowRight') { e.preventDefault(); nextImage() }
-}
-
-onMounted(() => window.addEventListener('keydown', handlePreviewKeydown))
-onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
 </script>
 
 <template>
@@ -348,7 +391,7 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div v-for="(item, idx) in [
-            { label: 'Logo de empresa', done: !!settings?.company_logo, tab: 'general', hint: 'Sube el logo en General' },
+            { label: 'Logo de empresa', done: !!settings?.company_logo, tab: 'settings', hint: 'Sube el logo en Parámetros' },
             { label: 'Redes sociales configuradas', done: dashboardStats.hasSocial, tab: 'general', hint: 'Completa las redes en General' },
             { label: 'Información legal completa', done: dashboardStats.hasPrivacy, tab: 'general', hint: 'Agrega términos y privacidad' },
             { label: 'Galería con imágenes', done: dashboardStats.images > 0, tab: 'gallery', hint: 'Agrega imágenes en Galería' },
@@ -374,7 +417,7 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
       <div class="bg-white dark:bg-gray-900/70 backdrop-blur-xl p-8 md:p-10 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-lg">
         <div class="flex items-center gap-5">
           <div class="w-16 h-16 rounded-2xl overflow-hidden border-2 border-primary/20 bg-white dark:bg-gray-800 shrink-0">
-            <img v-if="settings?.company_logo" :src="settings.company_logo.startsWith('http') ? settings.company_logo : '/storage/' + settings.company_logo" class="w-full h-full object-contain" />
+            <img v-if="settings?.company_logo" :src="settings.company_logo.startsWith('http') ? settings.company_logo : api.storageUrl + '/' + settings.company_logo" class="w-full h-full object-contain" />
             <div v-else class="w-full h-full bg-gradient-to-br from-primary/80 via-emerald-600 to-teal-800 flex items-center justify-center">
               <span class="text-white font-black italic text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">N</span>
             </div>
@@ -435,23 +478,7 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
               <input v-model="settings.company.website" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 font-bold text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
             </div>
           </div>
-          <!-- Logo Upload -->
-          <div>
-            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Logo de la Empresa</label>
-            <div class="flex items-center gap-6">
-              <div class="w-20 h-20 rounded-2xl overflow-hidden border-2 border-primary/20 bg-white dark:bg-gray-800">
-                <img v-if="settings.company_logo" :src="settings.company_logo.startsWith('http') ? settings.company_logo : '/storage/' + settings.company_logo" class="w-full h-full object-contain" />
-                <div v-else class="w-full h-full bg-gradient-to-br from-primary via-emerald-500 to-teal-700 flex items-center justify-center relative overflow-hidden">
-                  <div class="absolute inset-0 bg-[radial-gradient(circle_at_35%_35%,rgba(255,255,255,0.25),transparent_60%)]"></div>
-                  <div class="absolute w-1 h-1 bg-white/30 rounded-full top-1 left-1 animate-ping"></div>
-                  <span class="relative z-10 text-white font-black italic text-sm drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)]">N</span>
-                </div>
-              </div>
-              <div class="flex-1">
-                <input type="file" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:text-xs file:font-black file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all" @change="emit('upload-logo', $event)" />
-              </div>
-            </div>
-          </div>
+
           <div>
             <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Estado del Taller</label>
             <select v-model="settings.web.workshop_status" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 font-bold text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
@@ -503,7 +530,7 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
       </div>
     </div>
 
-    <!-- ===== TAB: GALERÍA (con Drag & Drop) ===== -->
+    <!-- ===== TAB: GALERÍA (Gestión Completa de Proyectos) ===== -->
     <div 
       v-if="webSubTab === 'gallery'" 
       class="bg-white dark:bg-gray-900/70 backdrop-blur-xl p-10 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-lg relative overflow-hidden"
@@ -521,7 +548,7 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
           <svg class="w-10 h-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         </div>
         <p class="text-xl font-black text-primary uppercase tracking-tight">Suelta tus imágenes aquí</p>
-        <p class="text-sm text-primary/60 font-bold uppercase tracking-widest">Se subirán automáticamente a Cloudinary</p>
+        <p class="text-sm text-primary/60 font-bold uppercase tracking-widest">Crearán proyectos automáticamente</p>
       </div>
 
       <div
@@ -529,99 +556,116 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
       >
         <div class="flex items-center justify-between mb-10">
           <div>
-            <h3 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Galería de Imágenes</h3>
-            <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{{ (settings?.web?.gallery || []).length }} imágenes</p>
+            <h3 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Galería de Proyectos</h3>
+            <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{{ (settings?.web?.gallery || []).length }} proyectos</p>
+          </div>
+          <div class="flex gap-3">
+            <button class="px-6 py-4 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all" @click="handleCreateGalleryProject">+ Nuevo Proyecto</button>
           </div>
         </div>
         
-        <!-- Grid de imágenes con Drag & Drop -->
+        <!-- Lista de Proyectos con Drag & Drop -->
         <VueDraggable 
           v-model="settings.web.gallery" 
           tag="div"
-          class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8"
+          class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8"
           handle=".drag-handle"
           ghost-class="opacity-30 scale-95"
           :animation="250"
+          :item-key="(el: any, idx: number) => el.title + idx"
         >
-          <div v-for="(img, idx) in settings.web.gallery" :key="idx" class="relative group/img aspect-square rounded-2xl overflow-hidden border-2 border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 cursor-pointer" @click="openPreview(idx)">
-            <!-- Drag Handle -->
-            <div class="absolute top-2 left-2 w-7 h-7 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover/img:opacity-100 transition-all drag-handle shadow-lg z-10 hover:bg-white dark:hover:bg-gray-700" @click.stop title="Arrastrar para reordenar">
-              <svg class="w-3.5 h-3.5 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+          <template #item="{ element: item, index: idx }">
+            <div class="relative bg-gray-50 dark:bg-white/5 rounded-[2rem] p-6 border border-gray-100 dark:border-white/5 transition-all hover:shadow-md group/item">
+              <!-- Drag Handle -->
+              <div class="absolute top-6 right-6 w-8 h-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover/item:opacity-100 transition-all drag-handle shadow-sm z-10 hover:bg-white dark:hover:bg-gray-700" @click.stop title="Arrastrar para reordenar">
+                <svg class="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+              </div>
+
+              <!-- Content Row -->
+              <div class="flex flex-col md:flex-row gap-6">
+                <!-- Main Image Preview -->
+                <div class="w-full md:w-32 aspect-square rounded-2xl overflow-hidden border-2 border-gray-100 dark:border-white/10 bg-gray-100 dark:bg-gray-800 relative shrink-0">
+                  <img v-if="typeof item === 'object' ? item.image : item" :src="typeof item === 'object' ? item.image : item" class="w-full h-full object-cover" @error="(e) => { const t = e.target as HTMLImageElement; if (t) t.style.display = 'none' }" />
+                  <div v-else class="w-full h-full flex items-center justify-center">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  </div>
+                  
+                  <!-- Main Image Upload -->
+                  <label class="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity cursor-pointer flex flex-col items-center justify-center gap-2">
+                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span class="text-[8px] font-black text-white uppercase tracking-wider">Cambiar</span>
+                    <input type="file" accept="image/*" class="hidden" @change="(e) => handleGalleryImageUpload(e, item, true)" />
+                  </label>
+                </div>
+
+                <!-- Fields -->
+                <div class="flex-1 space-y-4 pr-10">
+                  <div class="flex items-center gap-3">
+                    <input v-model="item.title" placeholder="Título del Proyecto" class="flex-1 bg-transparent text-xl font-black text-gray-900 dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-700" />
+                    <!-- Featured Toggle -->
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" v-model="item.featured" class="w-4 h-4 text-emerald-500 rounded border-gray-300 focus:ring-emerald-500" />
+                      <span class="text-[9px] font-black uppercase text-gray-500">Destacado</span>
+                    </label>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="text-[8px] font-black text-gray-400 uppercase">Categoría</label>
+                      <input v-model="item.category" placeholder="Ej: Figuras, Industrial..." class="w-full bg-gray-100 dark:bg-white/5 rounded-xl px-3 py-2 text-[10px] font-bold text-gray-600 dark:text-gray-300 outline-none mt-1" />
+                    </div>
+                    <div>
+                      <label class="text-[8px] font-black text-gray-400 uppercase">Tecnología</label>
+                      <input v-model="item.technology" placeholder="Ej: SLA, FDM, Resina..." class="w-full bg-gray-100 dark:bg-white/5 rounded-xl px-3 py-2 text-[10px] font-bold text-gray-600 dark:text-gray-300 outline-none mt-1" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="text-[8px] font-black text-gray-400 uppercase">Etiquetas (Separadas por comas)</label>
+                    <input v-model="item.tags" placeholder="ej: anime, premium, pintado a mano" class="w-full bg-gray-100 dark:bg-white/5 rounded-xl px-3 py-2 text-[10px] font-bold text-gray-600 dark:text-gray-300 outline-none mt-1" />
+                  </div>
+                  
+                  <div class="pt-2">
+                    <label class="text-[8px] font-black text-gray-400 uppercase mb-2 block">Imágenes Adicionales del Proyecto</label>
+                    <div class="flex flex-wrap gap-2">
+                      <div v-for="(addImg, addIdx) in (item.images || [])" :key="addIdx" class="relative group/addimg">
+                        <img :src="addImg" class="w-12 h-12 rounded-lg object-cover border border-gray-200 dark:border-white/10" />
+                        <button class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] font-black flex items-center justify-center opacity-0 group-hover/addimg:opacity-100 transition-all shadow-lg" @click="removeGalleryImage(item, Number(addIdx))">✕</button>
+                      </div>
+                      <label class="w-12 h-12 rounded-lg border-2 border-dashed border-gray-300 dark:border-white/10 flex items-center justify-center cursor-pointer hover:border-primary transition-all bg-gray-50 dark:bg-transparent">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                        <input type="file" accept="image/*" class="hidden" @change="(e) => handleGalleryImageUpload(e, item, false)" />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Delete button -->
+              <button class="absolute bottom-6 right-6 p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl transition-all opacity-0 group-hover/item:opacity-100" @click="settings.web.gallery.splice(idx, 1); props.showNotify('Proyecto eliminado', 'warning')" title="Eliminar">
+                <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
             </div>
-            <img :src="img" class="w-full h-full object-cover pointer-events-none select-none" @error="(e) => e.target.style.display = 'none'" />
-            <button class="absolute top-2 right-2 w-7 h-7 bg-red-500/90 text-white rounded-full text-xs font-black flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all shadow-lg hover:bg-red-600 z-10" @click.stop="settings.web.gallery.splice(idx, 1)">✕</button>
-          </div>
+          </template>
         </VueDraggable>
         
-        <!-- Upload placeholder -->
+        <!-- URL input bulk add disabled or repurposed to just uploading -->
+        <!-- Upload placeholder (Bulk images to individual projects) -->
         <div class="flex justify-center mb-8">
-          <label :class="['w-full max-w-[200px] aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all bg-gray-50 dark:bg-transparent', uploadingGallery ? 'border-primary/30 bg-primary/5 pointer-events-none opacity-60' : 'border-gray-300 dark:border-white/20 cursor-pointer hover:border-primary/50 hover:bg-primary/5 group/upload']">
+          <label :class="['w-full max-w-sm py-8 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center transition-all bg-gray-50 dark:bg-transparent', uploadingGallery ? 'border-primary/30 bg-primary/5 pointer-events-none opacity-60' : 'border-gray-300 dark:border-white/20 cursor-pointer hover:border-primary/50 hover:bg-primary/5 group/upload']">
             <div v-if="uploadingGallery" class="flex flex-col items-center gap-2">
               <svg class="w-8 h-8 text-primary animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              <span class="text-[10px] font-black text-primary">Subiendo...</span>
+              <span class="text-[10px] font-black text-primary uppercase tracking-widest">Creando Proyectos...</span>
             </div>
             <template v-else>
               <svg class="w-8 h-8 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-              <span class="text-[10px] font-black text-gray-400 mt-1">Añadir</span>
+              <span class="text-[10px] font-black text-gray-400 mt-2 uppercase tracking-widest">Añadir Imágenes (Crea un proyecto por imagen)</span>
             </template>
             <input type="file" accept="image/*" multiple class="hidden" @change="uploadGalleryFiles" :disabled="uploadingGallery" />
           </label>
         </div>
-        
-        <!-- URL input -->
-        <div class="flex gap-3">
-          <input v-model="newGalleryUrl" @keyup.enter="addGalleryUrl" placeholder="O pega una URL de imagen (Cloudinary, etc)..." class="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
-          <button class="px-8 py-4 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all" @click="addGalleryUrl">+ Agregar URL</button>
-        </div>
       </div>
     </div>
-
-    <!-- Lightbox Preview (full-screen overlay) -->
-    <Teleport to="body">
-      <div 
-        v-if="previewIndex !== null"
-        class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xl flex items-center justify-center"
-        @click="closePreview"
-      >
-        <!-- Close button -->
-        <button class="absolute top-4 right-4 md:top-8 md:right-8 w-11 h-11 md:w-14 md:h-14 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center transition-all z-10 shadow-lg" @click.stop="closePreview">
-          <svg class="w-5 h-5 md:w-7 md:h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-        
-        <!-- Counter badge -->
-        <div class="absolute top-4 left-4 md:top-8 md:left-8 px-4 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 shadow-lg z-10">
-          <span class="text-white/80 text-[10px] md:text-xs font-black uppercase tracking-widest">{{ (previewIndex ?? 0) + 1 }} / {{ galleryImages.length }}</span>
-        </div>
-        
-        <!-- Prev button -->
-        <button 
-          class="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 w-11 h-11 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center transition-all z-10 shadow-lg group/prev"
-          @click.stop="prevImage"
-          :class="{ 'opacity-50 pointer-events-none': galleryImages.length <= 1 }"
-        >
-          <svg class="w-5 h-5 md:w-8 md:h-8 text-white ml-0.5 group-hover/prev:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        </button>
-        
-        <!-- Image container -->
-        <div class="flex items-center justify-center w-full h-full p-16 md:p-24" @click.stop>
-          <img 
-            v-if="previewIndex !== null && galleryImages[previewIndex]"
-            :src="galleryImages[previewIndex]"
-            class="max-w-full max-h-full object-contain rounded-2xl shadow-2xl select-none animate-in fade-in zoom-in-95 duration-200"
-            @error="(e) => e.target.style.display = 'none'"
-          />
-        </div>
-        
-        <!-- Next button -->
-        <button 
-          class="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 w-11 h-11 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center transition-all z-10 shadow-lg group/next"
-          @click.stop="nextImage"
-          :class="{ 'opacity-50 pointer-events-none': galleryImages.length <= 1 }"
-        >
-          <svg class="w-5 h-5 md:w-8 md:h-8 text-white mr-0.5 group-hover/next:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        </button>
-      </div>
-    </Teleport>
 
     <!-- ===== TAB: CATÁLOGO MASTER ===== -->
     <div v-if="webSubTab === 'catalog'" class="bg-white dark:bg-gray-900/70 backdrop-blur-xl p-10 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-lg">
@@ -701,11 +745,11 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
               <div class="flex flex-wrap gap-3">
                 <div v-for="(img, imgIdx) in (item.images || [])" :key="imgIdx" class="relative group/img">
                   <img :src="img" class="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-white/10" />
-                  <button class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[9px] font-black flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all shadow-lg" @click="removeCatalogImage(item.originalIndex, imgIdx)">✕</button>
+                  <button class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[9px] font-black flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all shadow-lg" @click="removeCatalogImage(Number(item.originalIndex), Number(imgIdx))">✕</button>
                 </div>
                 <label class="w-16 h-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-white/10 flex items-center justify-center cursor-pointer hover:border-primary transition-all bg-gray-50 dark:bg-transparent">
                   <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-                  <input type="file" accept="image/*" class="hidden" @change="(e: any) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (ev: any) => { if (!item.images) item.images = []; item.images.push(ev.target.result); }; reader.readAsDataURL(file); } e.target.value = ''; }" />
+                  <input type="file" accept="image/*" class="hidden" @change="(e: any) => handleCatalogImageUpload(e, item)" />
                 </label>
               </div>
               <!-- Link image -->
@@ -743,7 +787,7 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
         <div class="flex items-start justify-between mb-5">
           <div class="flex items-center gap-4 flex-1 min-w-0">
             <div class="w-14 h-14 rounded-2xl overflow-hidden bg-gray-200 dark:bg-gray-800 shrink-0 border border-gray-200 dark:border-white/10">
-              <img v-if="article.image" :src="article.image" class="w-full h-full object-cover" @error="(e) => e.target.style.display = 'none'" />
+              <img v-if="article.image" :src="article.image" class="w-full h-full object-cover" @error="(e) => { const t = e.target as HTMLImageElement; if (t) t.style.display = 'none' }" />
               <div v-else class="w-full h-full flex items-center justify-center">
                 <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               </div>
@@ -804,11 +848,11 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
             </div>
           </div>
           <div class="col-span-4 flex items-end justify-end gap-2">
-            <button v-if="idx > 0" class="px-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-gray-500 uppercase tracking-wider hover:bg-gray-50 transition-all" @click="const news = settings.web.news; [news[idx-1], news[idx]] = [news[idx], news[idx-1]]">
+            <button v-if="Number(idx) > 0" class="px-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-gray-500 uppercase tracking-wider hover:bg-gray-50 transition-all" @click="const news = settings.web.news; const i = Number(idx); [news[i-1], news[i]] = [news[i], news[i-1]]">
               <svg class="w-3.5 h-3.5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
               Subir
             </button>
-            <button v-if="idx < (settings?.web?.news?.length || 1) - 1" class="px-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-gray-500 uppercase tracking-wider hover:bg-gray-50 transition-all" @click="const news = settings.web.news; [news[idx], news[idx+1]] = [news[idx+1], news[idx]]">
+            <button v-if="Number(idx) < (settings?.web?.news?.length || 1) - 1" class="px-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-gray-500 uppercase tracking-wider hover:bg-gray-50 transition-all" @click="const news = settings.web.news; const i = Number(idx); [news[i], news[i+1]] = [news[i+1], news[i]]">
               <svg class="w-3.5 h-3.5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               Bajar
             </button>
@@ -904,10 +948,10 @@ onUnmounted(() => window.removeEventListener('keydown', handlePreviewKeydown))
             <input v-model="item.url" placeholder="https://..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
           </div>
           <div class="col-span-12 sm:col-span-3 flex items-end gap-2">
-            <button v-if="idx > 0" class="flex-1 px-3 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-gray-500 hover:bg-gray-50 transition-all" @click="const eco = settings.web.ecosystem; [eco[idx-1], eco[idx]] = [eco[idx], eco[idx-1]]" title="Mover arriba">
+            <button v-if="Number(idx) > 0" class="flex-1 px-3 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-gray-500 hover:bg-gray-50 transition-all" @click="const eco = settings.web.ecosystem; const i = Number(idx); [eco[i-1], eco[i]] = [eco[i], eco[i-1]]" title="Mover arriba">
               <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"/></svg>
             </button>
-            <button v-if="idx < (settings?.web?.ecosystem?.length || 1) - 1" class="flex-1 px-3 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-gray-500 hover:bg-gray-50 transition-all" @click="const eco = settings.web.ecosystem; [eco[idx], eco[idx+1]] = [eco[idx+1], eco[idx]]" title="Mover abajo">
+            <button v-if="Number(idx) < (settings?.web?.ecosystem?.length || 1) - 1" class="flex-1 px-3 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-gray-500 hover:bg-gray-50 transition-all" @click="const eco = settings.web.ecosystem; const i = Number(idx); [eco[i], eco[i+1]] = [eco[i+1], eco[i]]" title="Mover abajo">
               <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
             </button>
           </div>

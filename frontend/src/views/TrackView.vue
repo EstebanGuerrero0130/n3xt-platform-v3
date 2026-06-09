@@ -10,48 +10,23 @@ import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
 import { useParticles } from '../composables/useParticles'
+import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
 useSplitButton()
+
+usePageMeta({
+  title: 'Rastrear Pedido 3D | N3XT 3D',
+  description: 'Consulta el estado de tu pedido de impresion 3D en tiempo real. Rastreo por proyecto o envio.',
+  image: '/assets/n3xt_og_track.png',
+})
 
 const { particlesRef: heroParticlesRef } = useParticles({
   count: 30,
   zIndex: 1,
 })
 
-// --- SEO Meta Tags ---
-const seoMeta = {
-  title: 'Rastrear Pedido 3D | N3XT 3D',
-  description: 'Consulta el estado de tu pedido de impresion 3D en tiempo real. Rastreo por proyecto o envio.',
-  image: '/assets/n3xt_og_track.png'
-}
-
-let injectedMetaEls: any[] = []
-
-const setMetaTags = () => {
-  document.title = seoMeta.title
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
-  const metas = [
-    { name: 'og:title', prop: true, content: seoMeta.title },
-    { name: 'og:description', prop: true, content: seoMeta.description },
-    { name: 'og:image', prop: true, content: seoMeta.image },
-    { name: 'og:type', prop: true, content: 'website' },
-    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
-    { name: 'twitter:title', prop: false, content: seoMeta.title },
-    { name: 'twitter:description', prop: false, content: seoMeta.description },
-    { name: 'twitter:image', prop: false, content: seoMeta.image },
-    { name: 'description', prop: false, content: seoMeta.description }
-  ]
-  metas.forEach(({ name, prop, content }) => {
-    const el = document.createElement('meta')
-    if (prop) el.setAttribute('property', name)
-    el.setAttribute('name', name)
-    el.setAttribute('content', content)
-    document.head.appendChild(el)
-    injectedMetaEls.push(el)
-  })
-}
+// ─── SEO via @unhead/vue (usePageMeta at setup) ───
 
 const route = useRoute()
 const orderId = ref('')
@@ -109,7 +84,6 @@ const stopScanner = () => {
 }
 
 onMounted(() => {
-  setMetaTags()
   fetchSettings()
   // Si viene de QR o link directo, cargamos datos. 
   // Permitimos email vacío para que trackOrder maneje la validación o el error amigable.
@@ -122,8 +96,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (scanner) scanner.clear()
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
 })
 
 const searchMode = ref('project') // 'project' or 'shipping'
@@ -133,10 +105,6 @@ const carrier = ref('')
 const trackOrder = async () => {
   if (searchMode.value === 'project') {
     if (!orderId.value) return
-    if (!email.value) {
-      error.value = 'Se requiere el email del cliente para el rastreo público.'
-      return
-    }
   } else {
     if (!trackingGuide.value) return
   }
@@ -148,7 +116,12 @@ const trackOrder = async () => {
     let url = ''
 
     if (searchMode.value === 'project') {
-        url = `${api.baseUrl}/orders/track?order_id=${orderId.value}&email=${email.value}`
+      // Intentar primero sin email (fallback para QRs sin email)
+      if (email.value) {
+        url = `${api.baseUrl}/orders/track?order_id=${orderId.value}&email=${encodeURIComponent(email.value)}`
+      } else {
+        url = `${api.baseUrl}/orders/track?order_id=${orderId.value}`
+      }
     } else {
         url = `${api.baseUrl}/orders/track?tracking_guide=${trackingGuide.value}&carrier=${carrier.value}`
     }
@@ -156,6 +129,10 @@ const trackOrder = async () => {
     const res = await fetch(url)
     if (!res.ok) {
       const data = await res.json()
+      // Si el error es por falta de email, mostrar mensaje amigable
+      if (data.message?.toLowerCase().includes('email') || res.status === 422) {
+        throw new Error('Para rastrear este pedido ingresa tu correo electrónico en el campo de abajo.')
+      }
       throw new Error(data.message || 'Error al localizar el pedido.')
     }
     const data = await res.json()
@@ -269,9 +246,15 @@ const shareUrl = computed(() => {
                                 no este usando 'localhost' y que el firewall permita el puerto 8000.
                             </p>
                         </div>
-                        <div v-if="!error && orderId && !email && searchMode === 'project'" class="mt-8 text-center bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                        <div v-if="orderId && !email && searchMode === 'project'" class="mt-8 text-center bg-primary/5 p-6 rounded-2xl border border-primary/10">
                             <p class="text-primary font-bold text-[10px] uppercase tracking-widest mb-2">Verificacion necesaria</p>
-                            <p class="text-gray-600 dark:text-gray-400 text-xs font-medium">Por favor ingresa tu correo electronico para consultar el avance de la Orden #{{ orderId }}.</p>
+                            <p class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-4">Ingresa tu correo para consultar el avance de la Orden #{{ orderId }}.</p>
+                            <div class="flex gap-3 max-w-sm mx-auto">
+                              <input v-model="email" type="email" placeholder="tu@email.com" class="flex-1 bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+                              <button class="px-6 py-3 bg-primary text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95" @click="trackOrder">
+                                Buscar
+                              </button>
+                            </div>
                         </div>
                     </div>
                 </div>

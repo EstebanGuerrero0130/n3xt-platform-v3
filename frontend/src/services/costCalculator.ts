@@ -129,7 +129,7 @@ export function calcExtraCost(costPerKg: number, unit: string, qty: number): num
 
 interface OrderBreakdown {
   material: number; luz: number; labor: number; depr: number; mant: number
-  etiquetas: number; extras: number; total_cost: number; margin: number
+  prep_pack: number; extras: number; production_cost: number; operating_margin: number; profit_margin_pct: number
 }
 
 /**
@@ -163,15 +163,20 @@ export function calcOrderDetailBreakdown(order: Record<string, any>, settings: R
   const rExtras = Math.round(extras)
   const rTotalCost = rMaterial + rLuz + rLabor + rDepr + rMant + rEtiquetas + rExtras
 
+  const totalPrice = Number(order.total_price) || 0
+  const operatingMargin = totalPrice - rTotalCost
+  const profitMarginPct = rTotalCost > 0 ? ((operatingMargin) / totalPrice) * 100 : 0
+
   return {
     material: rMaterial,
     luz: rLuz,
     labor: rLabor,
     depr: rDepr,
     mant: rMant,
-    etiquetas: rEtiquetas,
+    prep_pack: rEtiquetas,
     extras: rExtras,
-    total_cost: rTotalCost,
-    margin: Number(order.total_price) - rTotalCost,
+    production_cost: rTotalCost,
+    operating_margin: operatingMargin,
+    profit_margin_pct: Math.round(profitMarginPct * 10) / 10,
   }
 }

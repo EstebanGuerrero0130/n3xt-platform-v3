@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { api } from '../../services/api'
 
 const props = defineProps<{
@@ -18,11 +18,16 @@ const emit = defineEmits<{
   (e: 'update:isSidebarOpen', val: boolean): void
 }>()
 
+const logoError = ref(false)
+
 const logoUrl = computed(() => {
   if (!props.settings?.company_logo) return '/logo.png'
   if (props.settings.company_logo.startsWith('http')) return props.settings.company_logo
   return `${api.storageUrl}/${props.settings.company_logo}`
 })
+
+// Reset error state when logo URL changes (e.g. after upload)
+watch(logoUrl, () => { logoError.value = false })
 </script>
 
 <template>
@@ -87,7 +92,12 @@ const logoUrl = computed(() => {
         </button>
 
         <div class="hidden sm:block w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl overflow-hidden border-2 border-primary/20 p-0.5 shadow-xl shadow-primary/10">
-          <img v-if="settings?.company_logo" :src="logoUrl" class="w-full h-full object-contain bg-white" />
+          <img
+            v-if="!logoError"
+            :src="logoUrl"
+            class="w-full h-full object-contain bg-white"
+            @error="logoError = true"
+          />
           <div v-else class="w-full h-full bg-gradient-to-br from-primary via-emerald-500 to-primary flex items-center justify-center relative overflow-hidden group">
             <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.2),transparent_60%)]"></div>
             <div class="absolute -inset-2 bg-gradient-to-tr from-emerald-300/20 to-transparent animate-pulse rounded-full blur-sm"></div>

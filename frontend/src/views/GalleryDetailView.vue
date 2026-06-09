@@ -7,9 +7,16 @@ import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
+import { usePageMeta } from '../composables/usePageMeta'
 
 const { applySplitTitle } = useSplitTitle()
 const { applySplitBtn } = useSplitButton()
+
+usePageMeta({
+  title: 'Detalle del Proyecto | N3XT 3D',
+  description: 'Explora en detalle nuestros proyectos de fabricación digital. Piezas únicas creadas con precisión industrial.',
+  image: '/assets/n3xt_og_gallery_detail.png',
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -75,7 +82,9 @@ const fetchData = async () => {
   try {
     const data = await api.get('/settings')
     if (data?.web?.gallery) {
-      webSettings.value.gallery = data.web.gallery
+      webSettings.value.gallery = data.web.gallery.map((item: any, idx: number) =>
+        typeof item === 'string' ? { image: item, title: `Imagen ${idx + 1}` } : item
+      )
       const rawSlug = route.params.id
       const decodedSlug = decodeURIComponent(rawSlug)
       item.value = webSettings.value.gallery.find(g =>
@@ -117,7 +126,6 @@ const setupRelatedReveal = () => {
 }
 
 onMounted(() => {
-  document.title = 'Detalle del Proyecto | N3XT 3D'
   fetchData()
 })
 
@@ -163,9 +171,10 @@ onUnmounted(() => {
 class="aspect-square rounded-[3rem] overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 relative group cursor-pointer"
                  @click="openLightbox(0)">
               <img
-v-if="!mainImageFailed" :src="getOptimizedImage(item.image)" :alt="item.title"
+v-if="!mainImageFailed" :src="getOptimizedImage(item.image)" :alt="'Proyecto de impresión 3D: ' + item.title + (item.category ? ' (' + item.category + ')' : '') + ' — N3XT 3D Galería'"
                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
                    fetchpriority="high"
+                   decoding="async"
                    @error="mainImageFailed = true" />
               <div v-if="!item.image || mainImageFailed" class="absolute inset-0 flex items-center justify-center">
                 <svg class="w-24 h-24 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -185,7 +194,7 @@ v-for="(img, idx) in allImages" :key="idx"
                       class="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all"
                       :class="idx === lightboxIdx && lightboxOpen ? 'border-emerald-500 scale-105' : 'border-transparent hover:border-gray-300 dark:hover:border-white/20'"
                       @click="openLightbox(idx)">
-                <img :src="getOptimizedImage(img)" class="w-full h-full object-cover" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
+                <img :src="getOptimizedImage(img)" :alt="'Vista previa del proyecto: ' + item.title + ' | N3XT 3D'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
               </button>
             </div>
           </div>
@@ -270,8 +279,8 @@ v-for="(related, idx) in webSettings.gallery.filter(g => g.title !== item.title)
               :style="{ '--rel-delay': (idx * 150) + 'ms' }">
               <div class="aspect-square overflow-hidden">
                 <img
-:src="getOptimizedImage(related.image)" :alt="related.title"
-                     class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
+:src="getOptimizedImage(related.image)" :alt="'Proyecto relacionado: ' + related.title + ' — N3XT 3D Galería'"
+                     class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" decoding="async" />
               </div>
               <div class="p-6 text-center">
                 <h3 class="text-sm font-black tracking-tighter uppercase group-hover:text-emerald-500 transition-colors">{{ related.title }}</h3>
@@ -321,7 +330,10 @@ v-if="lightboxIdx < allImages.length - 1" class="absolute right-6 z-10 w-14 h-14
           <img
 :key="lightboxIdx"
                :src="getOptimizedImage(allImages[lightboxIdx])"
-               class="max-w-full max-h-full object-contain rounded-2xl animate-in fade-in zoom-in-95 duration-500" />
+               :alt="'Imagen ' + (lightboxIdx + 1) + ' de ' + allImages.length + ' — ' + (item ? item.title : 'Proyecto N3XT 3D')"
+               class="max-w-full max-h-full object-contain rounded-2xl animate-in fade-in zoom-in-95 duration-500"
+               loading="lazy"
+               decoding="async" />
         </div>
 
         <!-- Thumbnails at bottom -->
@@ -331,7 +343,7 @@ v-for="(img, idx) in allImages" :key="idx"
                   class="w-12 h-12 rounded-xl overflow-hidden border-2 transition-all"
                   :class="idx === lightboxIdx ? 'border-emerald-500 scale-110' : 'border-white/20 opacity-50 hover:opacity-100'"
                   @click="lightboxIdx = idx">
-            <img :src="getOptimizedImage(img)" class="w-full h-full object-cover" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
+            <img :src="getOptimizedImage(img)" :alt="'Miniatura ' + (idx + 1) + ' — ' + (item ? item.title : 'Proyecto') + ' | N3XT 3D'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
           </button>
         </div>
       </div>

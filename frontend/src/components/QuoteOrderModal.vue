@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useCaptcha } from '../composables/useCaptcha'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -22,23 +23,23 @@ const customerForm = ref({
   name: '', company: '', document: '', email: '', phone: '',
   city: '', address: '', use: 'Funcional', comments: ''
 })
-const captchaChallenge = ref({ a: 0, b: 0, result: 0 })
-const captchaAnswer = ref('')
-
-const generateCaptcha = () => {
-  captchaChallenge.value.a = Math.floor(Math.random() * 10) + 1
-  captchaChallenge.value.b = Math.floor(Math.random() * 10) + 1
-  captchaChallenge.value.result = captchaChallenge.value.a + captchaChallenge.value.b
-  captchaAnswer.value = ''
-}
+const { challenge, answer, verify, isLocked, reset } = useCaptcha()
 
 const handleClose = () => {
   modalStep.value = 1
   emit('close')
 }
 
+const handleConfirm = () => {
+  if (!verify()) return
+  emit('submit', { customerForm, captchaVerified: true })
+}
+
 watch(() => props.show, (v) => {
-  if (v) generateCaptcha()
+  if (v) {
+    modalStep.value = 1
+    reset()
+  }
 })
 
 const getMaterialName = (id) => {
@@ -246,9 +247,10 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
               </div>
               <div class="flex-1">
                 <p class="text-[7px] font-black text-primary uppercase tracking-[0.3em]">Validacion Maker</p>
-                <p class="text-[10px] font-black dark:text-white uppercase">{{ captchaChallenge.a }} + {{ captchaChallenge.b }} = ?</p>
-              </div>
-              <input v-model="captchaAnswer" type="number" class="w-20 bg-white dark:bg-white/10 border-none rounded-xl p-3 text-center text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 shadow-inner">
+              <p class="text-[10px] font-black dark:text-white uppercase">{{ challenge.text }}</p>
+              <p v-if="isLocked" class="text-[7px] font-black text-rose-400 uppercase tracking-widest">🔒 Bloqueado 30s</p>
+            </div>
+            <input v-model="answer" type="number" :disabled="isLocked" class="w-20 bg-white dark:bg-white/10 border-none rounded-xl p-3 text-center text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 shadow-inner disabled:opacity-30" @keyup.enter="handleConfirm">
             </div>
           </div>
 
@@ -258,7 +260,7 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
             </button>
             <button
 :disabled="isSubmitting" class="px-10 py-4 bg-primary hover:bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 shadow-xl shadow-primary/20"
-              @click="$emit('submit', { customerForm, captchaAnswer: captchaChallenge.result === parseInt(captchaAnswer), captchaChallenge })">
+              @click="handleConfirm">
               <span v-if="isSubmitting" class="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
               <span>{{ isSubmitting ? 'PROCESANDO...' : 'CONFIRMAR PEDIDO' }}</span>
             </button>

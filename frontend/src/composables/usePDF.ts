@@ -55,7 +55,6 @@ export function usePDF({ settings, inventoryData, showNotify: _showNotify }: Use
 
   const handleDownloadQuotePDF = (order: any) => {
     const mat = inventoryData.value.find((m: any) => String(m.id) === String(order.material_id))
-    const logo = companyLogo()
     const trackingUrl = `${window.location.origin}/#/track?order_id=${order.id}&email=${order.customer_email || ''}`
     const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(trackingUrl)}`
     const cName = settings.value.company?.name || 'N3XT 3D'
@@ -96,7 +95,7 @@ body { font-family: 'Outfit', sans-serif; padding: 0; color: #0f172a; line-heigh
 @media print { body { -webkit-print-color-adjust: exact; } .total-box { background-color: #0f172a !important; color: white !important; } .rec-box, .cert-box { -webkit-print-color-adjust: exact; } }
 </style></head><body>
 <div class="header">
-  <div class="company-brand">${logo ? `<img src="${logo}" class="company-logo">` : ''}
+  <div class="company-brand">
     <div class="company-info">
       <div class="company-name">${cName}</div>
       <div>${cNit ? `NIT: ${cNit} | ` : ''}${cAddr}<br>${cPhone ? `TEL: ${cPhone} | ` : ''}${cEmail}</div>

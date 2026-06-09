@@ -622,32 +622,36 @@ const downloadFile = async (order) => {
 }
 
 
-const handleDownloadSimulationPDF = () => {
-  if (!simulator.material_id) {
+const handleDownloadSimulationPDF = (formData) => {
+  const materialId = formData?.material_id || simulator.material_id
+  if (!materialId) {
     showNotify('Selecciona un material para generar la cotizacion.', 'warning')
     return
   }
   
+  // Si viene data del PriceSimulator, la usamos; si no, del composable
+  const mat = inventoryData.value.find(m => m.id === materialId)
+  
   // Mapeamos los datos del simulador a una estructura que entienda el generador de PDF
   const fakeOrder = {
     id: 'SIM-' + Date.now().toString().slice(-4),
-    customer_name: simulator.customer_name || 'Cliente Prospecto',
-    customer_id_document: simulator.customer_id_document || '',
-    customer_company: simulator.customer_company || '',
-    customer_email: simulator.customer_email || 'Sin email',
-    customer_phone: simulator.customer_phone || 'Sin teléfono',
-    shipping_address: simulator.shipping_address || '',
-    shipping_city: simulator.shipping_city || '',
-    shipping_zip: simulator.shipping_zip || '',
-    shipping_reference: simulator.shipping_reference || '',
-    job_name: simulator.job_name || 'Simulación de Proyecto',
-    technology: inventoryData.value.find(m => m.id === simulator.material_id)?.category || 'FDM',
-    material_id: simulator.material_id,
-    estimated_weight_g: simulator.weight_g,
-    estimated_duration_h: simulatedResult.value.total_hours,
-    total_price: simulatedResult.value.total,
-    extras_cost: simulatedResult.value.extras,
-    extra_items: JSON.parse(JSON.stringify(simulator.extra_items))
+    customer_name: formData?.customer_name || simulator.customer_name || 'Cliente Prospecto',
+    customer_id_document: formData?.customer_id_document || simulator.customer_id_document || '',
+    customer_company: formData?.customer_company || simulator.customer_company || '',
+    customer_email: formData?.customer_email || simulator.customer_email || 'Sin email',
+    customer_phone: formData?.customer_phone || simulator.customer_phone || 'Sin teléfono',
+    shipping_address: formData?.shipping_address || simulator.shipping_address || '',
+    shipping_city: formData?.shipping_city || simulator.shipping_city || '',
+    shipping_zip: formData?.shipping_zip || simulator.shipping_zip || '',
+    shipping_reference: formData?.shipping_reference || simulator.shipping_reference || '',
+    job_name: formData?.job_name || simulator.job_name || 'Simulación de Proyecto',
+    technology: mat?.category || 'FDM',
+    material_id: materialId,
+    estimated_weight_g: formData?.weight_g || simulator.weight_g,
+    estimated_duration_h: formData?.total_hours || simulatedResult.value.total_hours,
+    total_price: formData?.total_price != null ? formData.total_price : (simulatedResult.value.total || 0),
+    extras_cost: formData?.extras_cost != null ? formData.extras_cost : (simulatedResult.value.extras || 0),
+    extra_items: formData?.extra_items ? JSON.parse(JSON.stringify(formData.extra_items)) : JSON.parse(JSON.stringify(simulator.extra_items))
   }
   
   handleDownloadQuotePDF(fakeOrder)
@@ -841,9 +845,19 @@ const handleLogoUpload = async (event) => {
   try {
     const res = await api.post('/admin/settings/logo', formData, true)
     
-    // Actualizamos el logo en el estado reactivo
-    if (res && res.logo_url) {
-      settings.value.company_logo = res.logo_url
+    // Actualizamos el logo en el estado reactivo con la ruta relativa
+    if (res && res.logo_path) {
+      settings.value.company_logo = res.logo_path
+      showNotify('IDENTIDAD ACTUALIZADA: Marca sincronizada con éxito', 'success')
+    } else if (res && res.logo_url) {
+      // Fallback: extraer la ruta relativa de la URL completa
+      const urlParts = res.logo_url.split('/storage/');
+      if (urlParts.length > 1) {
+        const path = urlParts[1].split('?')[0];
+        settings.value.company_logo = path;
+      } else {
+        settings.value.company_logo = res.logo_url;
+      }
       showNotify('IDENTIDAD ACTUALIZADA: Marca sincronizada con éxito', 'success')
     }
   } catch (err) {
@@ -891,43 +905,48 @@ const handleExportCSV = async () => {
 // --- Computed & Logic ---
 
 const openOrderDetails = (order) => {
-  // Integrity Logic: Use snapshot if available, fallback to current settings
-  const hasSnapshot = order.cost_snapshot && order.cost_snapshot.settings
-  const snap = hasSnapshot ? order.cost_snapshot : null
-  
-  const currentMat = inventoryData.value.find(m => m.id === order.material_id)
-  const matCostPerKg = hasSnapshot ? snap.material_cost_per_kg : (currentMat ? currentMat.cost_per_kg : 0)
-  
-  const s = hasSnapshot ? snap.settings : settings.value
-  
-  const totalHours = parseFloat(order.estimated_duration_h) || 0
-  const loadFactor = s.infra?.load_factor ?? 0.4
-  const prepTimePct = (s.prep?.prep_time_pct ?? 10) / 100
-  const luz = totalHours * loadFactor * (s.infra?.luz_hr || 0)
-  const labor = (totalHours * prepTimePct) * (s.prep?.mano_obra_hr || 0)
-  const depr = totalHours * (s.infra?.depr_hr || 0)
-  const mant = totalHours * (s.infra?.mant_hr || 0)
-  const etiquetas = parseFloat(s.infra?.etiquetas || 0)
-  
-  const materialCost = (order.estimated_weight_g / 1000) * matCostPerKg
-  const extrasCost = parseFloat(order.extras_cost) || 0
-  const productionCost = materialCost + luz + labor + depr + mant + etiquetas + extrasCost
+  try {
+    // Integrity Logic: Use snapshot if available, fallback to current settings
+    const hasSnapshot = order.cost_snapshot && order.cost_snapshot.settings
+    const snap = hasSnapshot ? order.cost_snapshot : null
+    
+    const currentMat = inventoryData.value.find(m => m.id === order.material_id)
+    const matCostPerKg = hasSnapshot ? snap.material_cost_per_kg : (currentMat ? currentMat.cost_per_kg : 0)
+    
+    const s = hasSnapshot ? snap.settings : settings.value
+    
+    const totalHours = parseFloat(order.estimated_duration_h) || 0
+    const loadFactor = s.infra?.load_factor ?? 0.4
+    const prepTimePct = (s.prep?.prep_time_pct ?? 10) / 100
+    const luz = totalHours * loadFactor * (s.infra?.luz_hr || 0)
+    const labor = (totalHours * prepTimePct) * (s.prep?.mano_obra_hr || 0)
+    const depr = totalHours * (s.infra?.depr_hr || 0)
+    const mant = totalHours * (s.infra?.mant_hr || 0)
+    const etiquetas = parseFloat(s.infra?.etiquetas || 0)
+    
+    const materialCost = (order.estimated_weight_g / 1000) * matCostPerKg
+    const extrasCost = parseFloat(order.extras_cost) || 0
+    const productionCost = materialCost + luz + labor + depr + mant + etiquetas + extrasCost
 
-  selectedOrderDetails.value = {
-    ...order,
-    breakdown: {
-      material: materialCost,
-      luz: luz,
-      labor: labor,
-      depr: depr,
-      mant: mant,
-      etiquetas: etiquetas,
-      extras: extrasCost,
-      total_cost: productionCost,
-      margin: Number(order.total_price) - productionCost
+    selectedOrderDetails.value = {
+      ...order,
+      breakdown: {
+        material: materialCost,
+        luz: luz,
+        labor: labor,
+        depr: depr,
+        mant: mant,
+        etiquetas: etiquetas,
+        extras: extrasCost,
+        total_cost: productionCost,
+        margin: Number(order.total_price) - productionCost
+      }
     }
+    modalState.orderDetails = true
+  } catch (err) {
+    logger.error('Error al abrir detalle de orden:', err)
+    showNotify('Error al abrir detalle: ' + (err.message || 'Error desconocido'), 'error')
   }
-  modalState.orderDetails = true
 }
 
 
@@ -935,33 +954,38 @@ const openOrderDetails = (order) => {
 let syncInterval
 
 // simulatedResult provided by useSimulator composable)
-const handleConvertSimulationToOrder = async () => {
+const handleConvertSimulationToOrder = async (formData) => {
   if (submitting.value) return
   submitting.value = true
   try {
-    const material = inventoryData.value.find(m => m.id === simulator.material_id)
+    const materialId = formData?.material_id || simulator.material_id
+    const material = inventoryData.value.find(m => m.id === materialId)
     const density = material?.density || 1.25
     const estimatedVolume = (simulator.weight_g / density) * 1000
 
-    const qty = Math.max(1, simulator.pieces_per_batch || 1)
-    const totalHours = (parseFloat(simulator.time_str.split(':')[0]) || 0) + ((parseFloat(simulator.time_str.split(':')[1]) || 0) / 60)
+    const qty = Math.max(1, formData?.pieces_per_batch || simulator.pieces_per_batch || 1)
+    const timeStr = formData?.time_str || simulator.time_str || '0:00'
+    const totalHours = (parseFloat(timeStr.split(':')[0]) || 0) + ((parseFloat(timeStr.split(':')[1]) || 0) / 60)
+    const extrasData = formData?.extra_items || simulator.extra_items
 
     await api.post('/orders', {
-      customer_id: simulator.customer_id || null,
-      customer_name: simulator.customer_name || 'Cliente Simulación',
-      customer_id_document: simulator.customer_id_document || '',
-      customer_email: simulator.customer_email || '',
-      customer_phone: simulator.customer_phone || '',
-      material_id: simulator.material_id,
+      job_name: formData?.job_name != null ? formData.job_name : (simulator.job_name || ''),
+      customer_id: formData?.customer_id != null ? formData.customer_id : (simulator.customer_id || null),
+      customer_name: formData?.customer_name != null ? formData.customer_name : (simulator.customer_name || 'Cliente Simulación'),
+      customer_id_document: formData?.customer_id_document != null ? formData.customer_id_document : (simulator.customer_id_document || ''),
+      customer_email: formData?.customer_email != null ? formData.customer_email : (simulator.customer_email || ''),
+      customer_phone: formData?.customer_phone != null ? formData.customer_phone : (simulator.customer_phone || ''),
+      material_id: materialId,
       volume_mm3: estimatedVolume,
-      estimated_weight_g: simulator.weight_g,
+      estimated_weight_g: formData?.weight_g != null ? formData.weight_g : (simulator.weight_g || 0),
       estimated_duration_h: totalHours,
-      total_price: simulatedResult.value.total,
-      technology: inventoryData.value.find(m => m.id === simulator.material_id)?.category || 'FDM',
-      comments: `SIMULACIÓN N3XT: ${simulator.job_name || 'Proyecto'}. Lote: ${qty} pzs.` + (simulator.comments ? `\n\nNOTAS INTERNAS:\n${simulator.comments}` : ''),
+      total_price: formData?.total_price != null ? formData.total_price : (simulatedResult.value.total || 0),
+      extras_cost: formData?.extras_cost != null ? formData.extras_cost : 0,
+      technology: material?.category || 'FDM',
+      comments: `SIMULACIÓN N3XT: ${formData?.job_name || formData?.customer_name || simulator.job_name || 'Proyecto'}. Lote: ${qty} pzs.` + ((formData?.comments || simulator.comments) ? `\n\nNOTAS INTERNAS:\n${formData?.comments || simulator.comments}` : ''),
       status: 'pending',
       qty: qty,
-      extra_items: simulator.extra_items.map(e => ({ material_id: e.id, qty: e.qty })),
+      extra_items: extrasData.map(function(e) { return { material_id: e.id, qty: e.qty }; }),
       cost_snapshot: {
         settings: JSON.parse(JSON.stringify(settings.value)),
         material_cost_per_kg: material?.cost_per_kg || 0,
@@ -1836,7 +1860,7 @@ const handlePurgeAll = () => {
       :order="selectedOrderDetails"
       :materials="inventoryData"
       :settings="settings"
-      @close="modalState.orderDetails = false"
+      @close="selectedOrderDetails = null; modalState.orderDetails = false"
       @updated="fetchOrders()"
     />
 
@@ -1848,7 +1872,6 @@ const handlePurgeAll = () => {
           :show-notify="showNotify"
           :ask-confirm="askConfirm"
           @save-settings="saveSettings"
-          @upload-logo="handleLogoUpload"
           @seo-optimize="globalSeoOptimizer"
         />
 

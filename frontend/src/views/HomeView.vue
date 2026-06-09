@@ -11,9 +11,16 @@ import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
 import { useParticles } from '../composables/useParticles'
+import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
 useSplitButton()
+
+usePageMeta({
+  title: 'N3XT 3D | Manufactura Digital y Coleccionables de Alta Precisión',
+  description: 'Especialistas en fabricación digital en Colombia. Miniaturas, figuras y piezas de colección creadas con precisión industrial e inspiradas en universos icónicos.',
+  image: '/assets/n3xt_og_home.png',
+})
 
 const { particlesRef: heroParticlesRef } = useParticles({
   count: 35,
@@ -34,10 +41,43 @@ onMounted(() => {
   }
 })
 
+// --- TypeScript interfaces ---
+interface GalleryItem {
+  image: string
+  title: string
+  category?: string
+  technology?: string
+  images?: string[]
+  featured?: boolean
+  tags?: string
+  subtitle?: string
+  description?: string
+  client?: string
+  date?: string
+  dimensions?: string
+  stats?: { val: string; label: string }[]
+}
+
+interface WebSettings {
+  social: { tiktok: string; instagram: string; facebook: string; whatsapp: string; youtube: string }
+  workshop_status: string
+  news: { t: string; d: string; tag: string; i: string; url: string }[]
+  gallery: GalleryItem[]
+  posts: { t: string; d: string; l: string; i: string; tag: string; url: string }[]
+  catalog: any[]
+  pdf_catalog_url: string
+  pdf_catalog_desc: string
+  company_name: string
+  ecosystem: any[]
+  privacy_policy?: string
+  terms_conditions?: string
+  cloudinary_name?: string
+}
+
 // --- PERFORMANCE & VISIBILITY PROTOCOL ---
-const visibleSections = reactive({})
+const visibleSections = reactive<Record<string, boolean>>({})
 const vIntersection = {
-    mounted(el, binding) {
+    mounted(el: HTMLElement, binding: { value: string }) {
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -52,7 +92,7 @@ const vIntersection = {
 }
 
 
-const webSettings = ref({
+const webSettings = ref<WebSettings>({
   social: { tiktok: '#', instagram: '#', facebook: '#', whatsapp: '#', youtube: '#' },
   workshop_status: 'OPERATIVO 24/7',
   news: [
@@ -124,6 +164,9 @@ const webSettings = ref({
   pdf_catalog_url: '',
   pdf_catalog_desc: '',
   company_name: 'N3XT 3D',
+  privacy_policy: '',
+  terms_conditions: '',
+  cloudinary_name: '',
   ecosystem: [
     {
       type: 'image',
@@ -172,10 +215,10 @@ const companySettings = ref({
 
 const isReady = ref(false)
 
-const normalizeTags = (tags) => Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : [])
-const brokenGalleryImgs = ref({})
+const normalizeTags = (tags: any): string[] => Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [])
+const brokenGalleryImgs = ref<Record<number, boolean>>({})
 
-const getOptimizedImage = (url, width = 600) => {
+const getOptimizedImage = (url: string, width = 600): string => {
   if (!url) return ''
   if (!webSettings.value.cloudinary_name || !url.includes('cloudinary.com')) return url
   return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`)
@@ -195,9 +238,9 @@ const openLegal = (type: any) => {
 
 // Lógica de Carrusel Automático para Tarjetas de Ecosistema
 const activeIndices = ref([0, 0, 0])
-const getImages = (iString) => iString.split(',').map(s => s.trim())
+const getImages = (iString: string): string[] => iString.split(',').map((s: string) => s.trim())
 
-let carouselInterval = null
+let carouselInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
     carouselInterval = setInterval(() => {
@@ -235,7 +278,15 @@ const fetchSettings = async () => {
         privacy_policy: dbWeb.privacy_policy || '',
         terms_conditions: dbWeb.terms_conditions || '',
         ecosystem: (dbWeb.ecosystem && dbWeb.ecosystem.length > 0) ? dbWeb.ecosystem : webSettings.value.ecosystem,
-        gallery: (dbWeb.gallery && dbWeb.gallery.length > 0) ? dbWeb.gallery : webSettings.value.gallery,
+        gallery: (dbWeb.gallery && dbWeb.gallery.length > 0)
+          ? dbWeb.gallery
+              .map((item: any, idx: number) =>
+                typeof item === 'string'
+                  ? { image: item, title: `Imagen ${idx + 1}`, category: 'General', technology: '', images: [], featured: false, tags: '' }
+                  : { images: [], tags: '', featured: false, ...item }
+              )
+              .filter((item: any) => item.image || item.title)
+          : webSettings.value.gallery,
         company_name: data.company?.name || webSettings.value.company_name
       }
     }
@@ -254,7 +305,6 @@ const fetchSettings = async () => {
 }
 
 onMounted(() => {
-  document.title = 'N3XT 3D | Manufactura Digital y Coleccionables de Alta Precisión'
   fetchSettings()
 
   // Sistema de Revelación por Scroll (AOS Native) Bidireccional Optimizado
@@ -716,7 +766,7 @@ to="/project/init"
     <WaveDivider color="#10b981" opacity="0.04" height="50px" />
 
     <!-- Sección: Trabajos Destacados de la Galería (N3XT Portfolio) -->
-    <section v-if="webSettings.gallery && webSettings.gallery.filter(g => g.featured).length > 0" class="py-28 bg-white dark:bg-[#0a0f14] px-6 relative overflow-hidden transition-colors duration-500">
+    <section v-if="webSettings.gallery && webSettings.gallery.length > 0" class="py-28 bg-white dark:bg-[#0a0f14] px-6 relative overflow-hidden transition-colors duration-500">
       <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
           <div>
@@ -734,19 +784,30 @@ to="/project/init"
           </router-link>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">            <router-link
-v-for="(work, idx) in webSettings.gallery.filter(g => g.featured).slice(0, 6)" :key="work.id || idx"
-              :to="'/galeria/' + encodeURIComponent(work.title || idx)"
-              class="group bg-white dark:bg-white/5 rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-white/10 hover:border-emerald-500/40 transition-all duration-500 shadow-sm hover:shadow-xl hover:-translate-y-1">
-              <!-- Image -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <router-link
+            v-for="(work, idx) in (webSettings.gallery.filter(g => g.featured).length > 0 ? webSettings.gallery.filter(g => g.featured) : webSettings.gallery).slice(0, 6)" :key="idx"
+            :to="'/galeria/' + encodeURIComponent(work.title || idx)"
+            class="group bg-white dark:bg-white/5 rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-white/10 hover:border-emerald-500/40 transition-all duration-500 shadow-sm hover:shadow-xl hover:-translate-y-1">
+            <!-- Image -->
               <div class="p-4 pb-0">
                 <div class="aspect-square rounded-2xl overflow-hidden relative bg-gray-100 dark:bg-gray-800">
+                  <!-- Imagen Secundaria (aparece en hover si existe) -->
                   <img
-v-if="!brokenGalleryImgs[work.id || idx]" :src="getOptimizedImage(work.image)" :alt="work.title"
-                       class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                       loading="lazy"
-                       @error="brokenGalleryImgs[work.id || idx] = true" />
-                  <div v-if="!work.image || brokenGalleryImgs[work.id || idx]" class="absolute inset-0 flex items-center justify-center">
+                    v-if="work.images && work.images.length > 0"
+                    :src="getOptimizedImage(work.images[0])"
+                    class="absolute inset-0 w-full h-full object-cover scale-110 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700 z-10"
+                    loading="lazy"
+                  />
+                  <!-- Imagen Principal -->
+                  <img
+                    v-if="!brokenGalleryImgs[idx]"
+                    :src="getOptimizedImage(work.image)" :alt="work.title"
+                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 relative z-0"
+                    loading="lazy"
+                    @error="brokenGalleryImgs[idx] = true"
+                  />
+                  <div v-if="!work.image || brokenGalleryImgs[idx]" class="absolute inset-0 flex items-center justify-center">
                   <svg class="w-12 h-12 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
                 <div class="absolute top-3 left-3 px-3 py-1 bg-emerald-500/90 text-white text-[7px] font-black rounded-full uppercase tracking-[0.25em] shadow-lg">{{ work.category }}</div>

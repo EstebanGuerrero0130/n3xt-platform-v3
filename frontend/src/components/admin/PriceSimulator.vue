@@ -111,7 +111,7 @@
                   <p class="text-3xl font-black text-emerald-400 mt-1">${{ result.total.toLocaleString() }}</p>
                 </div>
                 <div class="flex gap-2">
-                  <button class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold text-white transition-colors" @click="$emit('download-pdf')">PDF</button>
+                  <button class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold text-white transition-colors" @click="emitFormData('download-pdf')">PDF</button>
                 </div>
               </div>
 
@@ -197,7 +197,7 @@
 
             <button
               class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-black text-white text-lg tracking-tight transition-all hover:shadow-lg hover:shadow-emerald-600/30"
-              @click="$emit('create-order')"
+              @click="emitFormData('create-order')"
             >
               CONVERTIR A ORDEN REAL
             </button>
@@ -212,14 +212,19 @@
 import { reactive, computed } from 'vue'
 import { calcProductionCost, calcFinalPrice } from '../../services/costCalculator'
 
-const props = defineProps({
-  visible: Boolean,
-  settings: { type: Object, default: () => ({ infra: {}, prep: {}, oper: {}, margin: {} }) },
-  materials: { type: Array, default: () => [] },
-  contacts: { type: Array, default: () => [] },
+const props = withDefaults(defineProps<{
+  visible: boolean
+  settings?: Record<string, any>
+  materials?: Array<any>
+  contacts?: Array<any>
+}>(), {
+  visible: false,
+  settings: () => ({ infra: {}, prep: {}, oper: {}, margin: {} }),
+  materials: () => [],
+  contacts: () => []
 })
 
-defineEmits(['close', 'create-order', 'download-pdf'])
+const emit = defineEmits(['close', 'create-order', 'download-pdf'])
 
 const form = reactive({
   job_name: '', customer_id: '', customer_name: '', customer_company: '',
@@ -232,7 +237,7 @@ const form = reactive({
   marketing_pct: props.settings?.oper?.marketing ?? 10,
   fallos_pct: props.settings?.oper?.fallos ?? 5,
   iva_pct: props.settings?.margin?.iva ?? 19,
-  extra_items: [], comments: '',
+  extra_items: [] as Array<{ id: string; name: string; cost: number; unit: string; qty: number }>, comments: '',
 })
 
 const extraMaterials = computed(() =>
@@ -280,7 +285,7 @@ const result = computed(() => {
   }
 })
 
-const selectCustomer = (e) => {
+const selectCustomer = (e: any) => {
   const c = props.contacts.find(c => String(c.id) === String(e.target.value))
   if (c) {
     form.customer_id = c.id; form.customer_name = c.name
@@ -293,7 +298,43 @@ const selectCustomer = (e) => {
   }
 }
 
-const addExtra = (e) => {
+const emitFormData = (action: 'download-pdf' | 'create-order') => {
+  const [hours, minutes] = form.time_str.split(':').map(Number)
+  const totalHours = (hours || 0) + ((minutes || 0) / 60)
+  const extrasCost = form.extra_items.reduce((acc, item) => acc + item.cost * item.qty, 0)
+  const mat = props.materials.find(m => m.id === form.material_id)
+  
+  const payload = {
+    job_name: form.job_name,
+    material_id: form.material_id,
+    weight_g: form.weight_g,
+    time_str: form.time_str,
+    total_hours: totalHours,
+    total_price: result.value.total,
+    pieces_per_batch: form.pieces_per_batch,
+    profit_pct: form.profit_pct,
+    discount_pct: form.discount_pct,
+    extra_items: form.extra_items,
+    extras_cost: extrasCost,
+    comments: form.comments,
+    customer_id: form.customer_id,
+    customer_name: form.customer_name,
+    customer_company: form.customer_company,
+    customer_id_document: form.customer_id_document,
+    customer_email: form.customer_email,
+    customer_phone: form.customer_phone,
+    shipping_address: form.shipping_address,
+    shipping_city: form.shipping_city,
+    shipping_zip: form.shipping_zip,
+    shipping_reference: form.shipping_reference,
+    transportation_pct: form.transporte_pct,
+    marketing_pct: form.marketing_pct,
+    failures_pct: form.fallos_pct,
+  }
+  emit(action, payload)
+}
+
+const addExtra = (e: any) => {
   const matId = e.target.value
   if (!matId) return
   const item = props.materials.find(m => m.id === matId)
@@ -305,5 +346,5 @@ const addExtra = (e) => {
   e.target.value = ''
 }
 
-const removeExtra = (idx) => { form.extra_items.splice(idx, 1) }
+const removeExtra = (idx: number) => { form.extra_items.splice(idx, 1) }
 </script>

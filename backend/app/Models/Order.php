@@ -16,7 +16,8 @@ class Order extends Model
         'tracking_guide', 'tracking_carrier', 'dimensions_mm', 'scale_factor',
         'printer_id', 'estimated_duration_h',
         'extras_cost', 'extra_items', 'cost_snapshot', 'is_paid',
-        'stock_deducted', 'hours_added_to_printer', 'project_id'
+        'stock_deducted', 'hours_added_to_printer', 'project_id',
+        'job_name'
     ];
 
     protected $casts = [

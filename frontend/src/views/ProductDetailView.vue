@@ -9,44 +9,17 @@ import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
+import { usePageMeta } from '../composables/usePageMeta'
 
 const { applySplitTitle } = useSplitTitle()
 const { applySplitBtn } = useSplitButton()
 
-// --- SEO Meta Tags ---
-const seoMeta = {
+usePageMeta({
   title: 'Detalles del Producto | N3XT 3D Shop',
   description: 'Explora nuestros productos 3D de alta precision. Figuras, prototipos y piezas industriales.',
-  image: '/assets/n3xt_og_product.png'
-}
-
-let injectedMetaEls: any[] = []
-
-const setMetaTags = (customTitle) => {
-  const title = customTitle || seoMeta.title
-  document.title = title
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
-  const metas = [
-    { name: 'og:title', prop: true, content: title },
-    { name: 'og:description', prop: true, content: seoMeta.description },
-    { name: 'og:image', prop: true, content: seoMeta.image },
-    { name: 'og:type', prop: true, content: 'product' },
-    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
-    { name: 'twitter:title', prop: false, content: title },
-    { name: 'twitter:description', prop: false, content: seoMeta.description },
-    { name: 'twitter:image', prop: false, content: seoMeta.image },
-    { name: 'description', prop: false, content: seoMeta.description }
-  ]
-  metas.forEach(({ name, prop, content }) => {
-    const el = document.createElement('meta')
-    if (prop) el.setAttribute('property', name)
-    el.setAttribute('name', name)
-    el.setAttribute('content', content)
-    document.head.appendChild(el)
-    injectedMetaEls.push(el)
-  })
-}
+  image: '/assets/n3xt_og_product.png',
+  type: 'product',
+})
 
 useRevealAnim({ delay: 200 })
 
@@ -95,7 +68,7 @@ const fetchProduct = async () => {
     if (found) {
       product.value = found
       selectedImage.value = found.images && found.images.length > 0 ? found.images[0] : found.image
-      setMetaTags(`${found.name} | N3XT 3D Shop`)
+      usePageMeta({ title: `${found.name} | N3XT 3D Shop`, description: found.description || 'Explora nuestros productos 3D de alta precision.', image: found.image || '/assets/n3xt_og_product.png', type: 'product' })
     }
   } catch (err) {
     logger.error('Error fetching product:', err)
@@ -130,13 +103,10 @@ const isDiscounted = computed(() => {
 })
 
 onMounted(() => {
-  setMetaTags()
   fetchProduct()
 })
 
 onUnmounted(() => {
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
 })
 
 // Observar cambios en la URL para recargar el producto (Navegación entre relacionados)
@@ -179,7 +149,7 @@ watch(() => route.params.id, () => {
         <!-- Columna Galería -->
         <div class="space-y-6 animate-in fade-in slide-in-from-left-4 duration-1000 lg:sticky lg:top-24">
           <div class="aspect-square bg-gray-50 dark:bg-gray-900 rounded-[3rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-2xl relative group p-10 flex items-center justify-center">
-            <img :src="selectedImage || product.image" :alt="'Detalle de producto: ' + product.name" class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-[2s]" fetchpriority="high" @error="(e: any) => e.target.style.display='none'" />
+            <img :src="selectedImage || product.image" :alt="'Detalle de producto 3D: ' + product.name + (product.category ? ' (' + product.category + ')' : '') + ' — N3XT 3D Shop'" class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-[2s]" fetchpriority="high" decoding="async" @error="(e: any) => e.target.style.display='none'" />
             <!-- Cloudinary Optimization Note Tag (Invisible to user) -->
             <div class="absolute top-8 right-8 px-4 py-2 bg-black/40 backdrop-blur-md rounded-xl border border-white/10">
                 <span class="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Alta definicion</span>
@@ -188,7 +158,7 @@ watch(() => route.params.id, () => {
           <!-- Miniaturas -->
           <div v-if="product.images && product.images.length > 1" class="grid grid-cols-4 gap-4">
              <div v-for="(img, i) in product.images" :key="i" :class="[selectedImage === img ? 'border-primary opacity-100 ring-2 ring-primary/30' : 'border-gray-200 dark:border-white/10 opacity-50']" class="aspect-square bg-gray-100 dark:bg-white/5 rounded-2xl border overflow-hidden cursor-pointer hover:opacity-100 hover:border-primary transition-all" @click="selectedImage = img">
-                <img :src="img" :alt="'Vista previa ' + (i + 1) + ' de ' + product.name" class="w-full h-full object-cover" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
+                <img :src="img" :alt="'Vista previa ' + (i + 1) + ' de ' + product.name + ' — N3XT 3D Shop'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
              </div>
           </div>
         </div>
@@ -303,7 +273,7 @@ v-for="spec in [
                class="group block space-y-6"
             >
                <div class="aspect-square bg-gray-50 dark:bg-gray-900/50 rounded-3xl overflow-hidden border border-gray-100 dark:border-white/5 p-8 flex items-center justify-center group-hover:scale-[1.02] transition-all duration-500">
-                  <img :src="rel.image" :alt="rel.name" class="max-w-full max-h-full object-contain" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
+                  <img :src="rel.image" :alt="'Producto relacionado: ' + rel.name + ' | N3XT 3D Shop'" class="max-w-full max-h-full object-contain" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
                </div>
                <div class="px-4">
                   <p class="text-[8px] font-black text-primary uppercase tracking-widest mb-1">{{ rel.category }}</p>

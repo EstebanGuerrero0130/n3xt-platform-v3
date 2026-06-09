@@ -12,43 +12,16 @@ import QuoteOrderModal from '../components/QuoteOrderModal.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
+import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
 useSplitButton()
 
-// --- SEO Meta Tags ---
-const seoMeta = {
+usePageMeta({
   title: 'Cotizador 3D Industrial | N3XT 3D',
   description: 'Cotiza tus piezas 3D al instante. Precios precisos con motor de calculo industrial.',
-  image: '/assets/n3xt_og_quote.png'
-}
-
-let injectedMetaEls: any[] = []
-
-const setMetaTags = () => {
-  document.title = seoMeta.title
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
-  const metas = [
-    { name: 'og:title', prop: true, content: seoMeta.title },
-    { name: 'og:description', prop: true, content: seoMeta.description },
-    { name: 'og:image', prop: true, content: seoMeta.image },
-    { name: 'og:type', prop: true, content: 'website' },
-    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
-    { name: 'twitter:title', prop: false, content: seoMeta.title },
-    { name: 'twitter:description', prop: false, content: seoMeta.description },
-    { name: 'twitter:image', prop: false, content: seoMeta.image },
-    { name: 'description', prop: false, content: seoMeta.description }
-  ]
-  metas.forEach(({ name, prop, content }) => {
-    const el = document.createElement('meta')
-    if (prop) el.setAttribute('property', name)
-    el.setAttribute('name', name)
-    el.setAttribute('content', content)
-    document.head.appendChild(el)
-    injectedMetaEls.push(el)
-  })
-}
+  image: '/assets/n3xt_og_quote.png',
+})
 
 // --- N3XT CORE DATA ---
 const appData = ref({
@@ -128,7 +101,6 @@ const setupResizeListener = () => {
 }
 
 onMounted(async () => {
-  setMetaTags()
   loadingQuote.value = true
   quoteMessage.value = 'Cargando materiales y configuración...'
   await fetchSettings()
@@ -281,27 +253,15 @@ const notify = (msg, type = 'info') => {
   }
 
 const handleModalSubmit = (payload: any) => {
-  if (!payload.captchaAnswer) {
+  if (!payload.captchaVerified) {
     notify('Error de Verificación', 'error')
-    generateCaptcha()
     return
   }
-  // Sincronizar datos del formulario del modal al componente padre
   customerForm.value = { ...customerForm.value, ...payload.customerForm }
   submitOrder()
 }
 
-const captchaChallenge = ref({ a: 0, b: 0, result: 0 })
-const captchaAnswer = ref('')
-const generateCaptcha = () => {
-    captchaChallenge.value.a = Math.floor(Math.random() * 10) + 1
-    captchaChallenge.value.b = Math.floor(Math.random() * 10) + 1
-    captchaChallenge.value.result = captchaChallenge.value.a + captchaChallenge.value.b
-    captchaAnswer.value = ''
-}
-
 const openModal = () => {
-  generateCaptcha()
   showModal.value = true
 }
 
@@ -319,12 +279,6 @@ const submitOrder = async () => {
   if (now - lastSubmitTime.value < 10000) {
     notify("Por favor espera unos segundos antes de enviar otra solicitud.", "warning");
     return;
-  }
-
-  if (parseInt(captchaAnswer.value) !== captchaChallenge.value.result) {
-    notify("Error de Verificación", "error")
-    generateCaptcha()
-    return
   }
   
   isSubmitting.value = true
@@ -545,8 +499,6 @@ const handleError = (msg: any) => {
 
 onUnmounted(() => {
   if (_timerNotif.value) clearTimeout(_timerNotif.value)
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
   if (resizeCleanup) resizeCleanup()
 })
 

@@ -9,6 +9,12 @@ use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\UnifiedAuthController;
+use App\Http\Controllers\SitemapController;
+
+// Ruta login para Sanctum (redirección cuando no autenticado)
+Route::any('/login', function() {
+    return response()->json(['message' => 'Unauthenticated.'], 401);
+})->name('login');
 
 // --- PROTOCOLO DE ACCESO UNIFICADO N3XT ---
 Route::any('/ping', function() { return response()->json(['status' => 'online', 'timestamp' => now()]); });
@@ -17,6 +23,9 @@ Route::middleware('throttle:5,1')->post('/auth/unified-register', [UnifiedAuthCo
 
 // Ruta de Diagnóstico para el Lanzador N3XT
 Route::get('/health-check', function() { return response()->json(['status' => 'online', 'version' => '3.5.0']); });
+
+// Sitemap dinámico (catalog + gallery desde settings)
+Route::get('/sitemap', [SitemapController::class, 'index'])->name('sitemap');
 
 // Ruta pública protegida por rate limit
 Route::middleware('throttle:5,1')->post('/orders', [OrderController::class, 'store']);

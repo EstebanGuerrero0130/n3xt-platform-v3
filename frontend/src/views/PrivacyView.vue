@@ -2,41 +2,15 @@
 import { onMounted, onUnmounted } from 'vue'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
+import { usePageMeta } from '../composables/usePageMeta'
 
-const seoMeta = {
+usePageMeta({
   title: 'Política de Privacidad | N3XT 3D',
-  description: 'Política de privacidad y protección de datos de N3XT 3D. Conoce cómo gestionamos tu información personal.'
-}
-
-let injectedMetaEls: any[] = []
-
-const setMetaTags = () => {
-  document.title = seoMeta.title
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
-  const metas = [
-    { name: 'og:title', prop: true, content: seoMeta.title },
-    { name: 'og:description', prop: true, content: seoMeta.description },
-    { name: 'description', prop: false, content: seoMeta.description }
-  ]
-  metas.forEach(({ name, prop, content }) => {
-    const el = document.createElement('meta')
-    if (prop) el.setAttribute('property', name)
-    el.setAttribute('name', name)
-    el.setAttribute('content', content)
-    document.head.appendChild(el)
-    injectedMetaEls.push(el)
-  })
-}
-
-onMounted(() => {
-  setMetaTags()
-  window.scrollTo(0, 0)
+  description: 'Política de privacidad y protección de datos de N3XT 3D. Conoce cómo gestionamos tu información personal.',
 })
 
-onUnmounted(() => {
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
+onMounted(() => {
+  window.scrollTo(0, 0)
 })
 </script>
 

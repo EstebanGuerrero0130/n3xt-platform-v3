@@ -6,40 +6,14 @@ import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
+import { usePageMeta } from '../composables/usePageMeta'
 
-// --- SEO Meta Tags ---
-const seoMeta = {
+usePageMeta({
   title: 'Panel del Cliente | N3XT 3D',
   description: 'Gestiona tus pedidos de impresion 3D. Consulta el estado de tus proyectos y solicita nuevas cotizaciones.',
-  image: '/assets/n3xt_og_dashboard.png'
-}
-
-let injectedMetaEls = []
-
-const setMetaTags = () => {
-  document.title = seoMeta.title
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
-  const metas = [
-    { name: 'og:title', prop: true, content: seoMeta.title },
-    { name: 'og:description', prop: true, content: seoMeta.description },
-    { name: 'og:image', prop: true, content: seoMeta.image },
-    { name: 'og:type', prop: true, content: 'website' },
-    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
-    { name: 'twitter:title', prop: false, content: seoMeta.title },
-    { name: 'twitter:description', prop: false, content: seoMeta.description },
-    { name: 'twitter:image', prop: false, content: seoMeta.image },
-    { name: 'description', prop: false, content: seoMeta.description }
-  ]
-  metas.forEach(({ name, prop, content }) => {
-    const el = document.createElement('meta')
-    if (prop) el.setAttribute('property', name)
-    el.setAttribute('name', name)
-    el.setAttribute('content', content)
-    document.head.appendChild(el)
-    injectedMetaEls.push(el)
-  })
-}
+  image: '/assets/n3xt_og_dashboard.png',
+  noIndex: true,
+})
 
 useRevealAnim({ delay: 200 })
 
@@ -82,13 +56,11 @@ const logout = async () => {
 }
 
 onMounted(() => {
-  setMetaTags()
   fetchProfile()
 })
 
 onUnmounted(() => {
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
+  // @unhead/vue handles meta cleanup automatically
 })
 
 const getStatusColor = (status) => {

@@ -128,17 +128,17 @@
                           <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Costos fijos operacionales</p>
                         </div>
                       </div>
-                      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div v-for="(item, key) in { luz_hr: {label: 'Energía / Luz', sug: '926'}, depr_hr: {label: 'Depreciación', sug: '400'}, mant_hr: {label: 'Mantenimiento', sug: '700'}, etiquetas: {label: 'Etiquetas/Empaque', sug: '500'} }" :key="key"
-                          class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/60 hover:border-rose-500/40 hover:bg-gray-800/80 hover:shadow-lg transition-all duration-300 group">
-                          <p class="text-[10px] font-bold text-rose-400/70 uppercase mb-3 group-hover:text-rose-400 transition-colors">{{ item.label }}</p>
-                          <div class="flex items-baseline gap-1">
-                            <span class="text-rose-500/50 font-bold text-base">$</span>
+                          class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/60 hover:border-rose-500/40 hover:bg-gray-800/80 hover:shadow-lg transition-all duration-300 group min-w-0">
+                          <p class="text-[10px] font-bold text-rose-400/70 uppercase mb-3 group-hover:text-rose-400 transition-colors truncate" :title="item.label">{{ item.label }}</p>
+                          <div class="flex items-baseline gap-1 min-w-0">
+                            <span class="text-rose-500/50 font-bold text-base shrink-0">$</span>
                             <input v-model.number="localSettings.infra[key]" type="number" min="0" step="any"
-                              class="w-full bg-transparent border-none p-0 font-black text-2xl text-white outline-none focus:text-rose-300 transition-colors no-spinner"
+                              class="flex-1 min-w-0 bg-transparent border-none p-0 font-black text-2xl text-white outline-none focus:text-rose-300 transition-colors no-spinner"
                               :placeholder="item.sug">
                           </div>
-                          <p class="text-[9px] text-rose-400/40 font-medium mt-2">{{ defaultSuggestions[key] }}</p>
+                          <p class="text-[9px] text-rose-400/40 font-medium mt-2 truncate">{{ defaultSuggestions[key] }}</p>
                         </div>
                         
                         <!-- Factor de Carga con Explicación Premium -->
@@ -187,61 +187,61 @@
                           <p class="text-[9px] text-emerald-400/40 font-medium mt-3">{{ defaultSuggestions.ganancia }}</p>
                         </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                          <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/60 hover:border-primary/40 hover:bg-gray-800/80 hover:shadow-lg transition-all duration-300 group">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase mb-3 group-hover:text-primary transition-colors">Mano de Obra ($/Hr)</p>
-                            <div class="flex items-baseline gap-1">
-                              <span class="text-primary/50 font-bold text-base group-hover:text-primary/70 transition-colors">$</span>
-                              <input v-model.number="localSettings.prep.mano_obra_hr" type="number" min="0" step="any" placeholder="1000" class="w-full bg-transparent border-none p-0 font-black text-2xl text-white outline-none no-spinner">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/60 hover:border-primary/40 hover:bg-gray-800/80 hover:shadow-lg transition-all duration-300 group min-w-0">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase mb-3 group-hover:text-primary transition-colors truncate" title="Mano de Obra ($/Hr)">Mano de Obra ($/Hr)</p>
+                            <div class="flex items-baseline gap-1 min-w-0">
+                              <span class="text-primary/50 font-bold text-base group-hover:text-primary/70 transition-colors shrink-0">$</span>
+                              <input v-model.number="localSettings.prep.mano_obra_hr" type="number" min="0" step="any" placeholder="1000" class="flex-1 min-w-0 bg-transparent border-none p-0 font-black text-2xl text-white outline-none no-spinner">
                             </div>
-                            <p class="text-[9px] text-primary/40 font-medium mt-2">{{ defaultSuggestions.mano_obra_hr }}</p>
+                            <p class="text-[9px] text-primary/40 font-medium mt-2 truncate">{{ defaultSuggestions.mano_obra_hr }}</p>
                           </div>
                           
-                          <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/60 hover:border-primary/40 hover:bg-gray-800/80 hover:shadow-lg transition-all duration-300 group">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase mb-3 group-hover:text-primary transition-colors">% Prep / Post</p>
-                            <div class="flex items-baseline gap-1">
-                              <input v-model.number="localSettings.prep.prep_time_pct" type="number" min="0" max="100" placeholder="10" class="w-full bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right no-spinner">
-                              <span class="text-primary/50 font-bold text-base group-hover:text-primary/70 transition-colors">%</span>
+                          <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/60 hover:border-primary/40 hover:bg-gray-800/80 hover:shadow-lg transition-all duration-300 group min-w-0">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase mb-3 group-hover:text-primary transition-colors truncate" title="% Prep / Post">% Prep / Post</p>
+                            <div class="flex items-baseline gap-1 min-w-0">
+                              <input v-model.number="localSettings.prep.prep_time_pct" type="number" min="0" max="100" placeholder="10" class="flex-1 min-w-0 bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right no-spinner">
+                              <span class="text-primary/50 font-bold text-base group-hover:text-primary/70 transition-colors shrink-0">%</span>
                             </div>
-                            <p class="text-[9px] text-primary/40 font-medium mt-2">{{ defaultSuggestions.prep_time_pct }}</p>
+                            <p class="text-[9px] text-primary/40 font-medium mt-2 truncate">{{ defaultSuggestions.prep_time_pct }}</p>
                           </div>
 
-                          <div class="bg-gray-800/60 p-5 rounded-2xl border border-rose-900/40 hover:border-rose-500/40 hover:bg-gray-800/80 hover:shadow-lg transition-all duration-300 group">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase mb-3 group-hover:text-rose-400 transition-colors">Fallas & Scrap</p>
-                            <div class="flex items-baseline gap-1">
-                              <input v-model.number="localSettings.oper.fallos" type="number" min="0" max="100" placeholder="5" class="w-full bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right no-spinner">
-                              <span class="text-rose-500/50 font-bold text-base group-hover:text-rose-300/70 transition-colors">%</span>
+                          <div class="bg-gray-800/60 p-5 rounded-2xl border border-rose-900/40 hover:border-rose-500/40 hover:bg-gray-800/80 hover:shadow-lg transition-all duration-300 group min-w-0">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase mb-3 group-hover:text-rose-400 transition-colors truncate" title="Fallas & Scrap">Fallas & Scrap</p>
+                            <div class="flex items-baseline gap-1 min-w-0">
+                              <input v-model.number="localSettings.oper.fallos" type="number" min="0" max="100" placeholder="5" class="flex-1 min-w-0 bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right no-spinner">
+                              <span class="text-rose-500/50 font-bold text-base group-hover:text-rose-300/70 transition-colors shrink-0">%</span>
                             </div>
-                            <p class="text-[9px] text-rose-500/40 font-medium mt-2">{{ defaultSuggestions.fallos }}</p>
+                            <p class="text-[9px] text-rose-500/40 font-medium mt-2 truncate">{{ defaultSuggestions.fallos }}</p>
                           </div>
 
-                          <div class="bg-indigo-950/60 p-5 rounded-2xl border border-indigo-900/50 hover:border-indigo-400/50 transition-all duration-300 group">
-                             <p class="text-[10px] font-bold text-indigo-300 uppercase mb-3">IVA / Fiscal</p>
-                             <div class="flex items-baseline gap-1">
-                               <input v-model.number="localSettings.margin.iva" type="number" min="0" max="100" placeholder="19" class="w-full bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right focus:text-indigo-300 transition-colors no-spinner">
-                               <span class="text-indigo-400/60 font-bold text-base">%</span>
+                          <div class="bg-indigo-950/60 p-5 rounded-2xl border border-indigo-900/50 hover:border-indigo-400/50 transition-all duration-300 group min-w-0">
+                             <p class="text-[10px] font-bold text-indigo-300 uppercase mb-3 truncate" title="IVA / Fiscal">IVA / Fiscal</p>
+                             <div class="flex items-baseline gap-1 min-w-0">
+                               <input v-model.number="localSettings.margin.iva" type="number" min="0" max="100" placeholder="19" class="flex-1 min-w-0 bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right focus:text-indigo-300 transition-colors no-spinner">
+                               <span class="text-indigo-400/60 font-bold text-base shrink-0">%</span>
                              </div>
-                             <p class="text-[9px] text-indigo-400/40 font-medium mt-2">{{ defaultSuggestions.iva }}</p>
+                             <p class="text-[9px] text-indigo-400/40 font-medium mt-2 truncate">{{ defaultSuggestions.iva }}</p>
                           </div>
 
                           <!-- % Logística -->
-                          <div class="bg-cyan-950/60 p-5 rounded-2xl border border-cyan-900/50 hover:border-cyan-400/50 transition-all duration-300 group">
-                             <p class="text-[10px] font-bold text-cyan-300 uppercase mb-3">% Logística</p>
-                             <div class="flex items-baseline gap-1">
-                               <input v-model.number="localSettings.oper.transporte" type="number" min="0" max="100" step="0.5" placeholder="5" class="w-full bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right focus:text-cyan-300 transition-colors no-spinner">
-                               <span class="text-cyan-400/60 font-bold text-base">%</span>
+                          <div class="bg-cyan-950/60 p-5 rounded-2xl border border-cyan-900/50 hover:border-cyan-400/50 transition-all duration-300 group min-w-0">
+                             <p class="text-[10px] font-bold text-cyan-300 uppercase mb-3 truncate" title="% Logística">% Logística</p>
+                             <div class="flex items-baseline gap-1 min-w-0">
+                               <input v-model.number="localSettings.oper.transporte" type="number" min="0" max="100" step="0.5" placeholder="5" class="flex-1 min-w-0 bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right focus:text-cyan-300 transition-colors no-spinner">
+                               <span class="text-cyan-400/60 font-bold text-base shrink-0">%</span>
                              </div>
-                             <p class="text-[9px] text-cyan-400/40 font-medium mt-2">{{ defaultSuggestions.transporte }}</p>
+                             <p class="text-[9px] text-cyan-400/40 font-medium mt-2 truncate">{{ defaultSuggestions.transporte }}</p>
                           </div>
 
                           <!-- % Marketing -->
-                          <div class="bg-pink-950/60 p-5 rounded-2xl border border-pink-900/50 hover:border-pink-400/50 transition-all duration-300 group">
-                             <p class="text-[10px] font-bold text-pink-300 uppercase mb-3">% Marketing</p>
-                             <div class="flex items-baseline gap-1">
-                               <input v-model.number="localSettings.oper.marketing" type="number" min="0" max="100" step="0.5" placeholder="10" class="w-full bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right focus:text-pink-300 transition-colors no-spinner">
-                               <span class="text-pink-400/60 font-bold text-base">%</span>
+                          <div class="bg-pink-950/60 p-5 rounded-2xl border border-pink-900/50 hover:border-pink-400/50 transition-all duration-300 group min-w-0">
+                             <p class="text-[10px] font-bold text-pink-300 uppercase mb-3 truncate" title="% Marketing">% Marketing</p>
+                             <div class="flex items-baseline gap-1 min-w-0">
+                               <input v-model.number="localSettings.oper.marketing" type="number" min="0" max="100" step="0.5" placeholder="10" class="flex-1 min-w-0 bg-transparent border-none p-0 font-black text-2xl text-white outline-none text-right focus:text-pink-300 transition-colors no-spinner">
+                               <span class="text-pink-400/60 font-bold text-base shrink-0">%</span>
                              </div>
-                             <p class="text-[9px] text-pink-400/40 font-medium mt-2">{{ defaultSuggestions.marketing }}</p>
+                             <p class="text-[9px] text-pink-400/40 font-medium mt-2 truncate">{{ defaultSuggestions.marketing }}</p>
                           </div>
                         </div>
                       </div>

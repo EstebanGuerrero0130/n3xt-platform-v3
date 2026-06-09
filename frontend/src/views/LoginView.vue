@@ -5,58 +5,27 @@ import { api } from '../services/api'
 import store from '../utils/cache'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
+import { useCaptcha } from '../composables/useCaptcha'
+import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
 useSplitButton()
 
-// --- SEO Meta Tags ---
-const seoMeta = {
+usePageMeta({
   title: 'Acceso N3XT 3D | Login',
   description: 'Accede al panel de control N3XT 3D. Inicia sesion como cliente o administrador.',
-  image: '/assets/n3xt_og_login.png'
-}
+  image: '/assets/n3xt_og_login.png',
+})
 
-let injectedMetaEls: any[] = []
-
-const setMetaTags = () => {
-  document.title = seoMeta.title
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
-  const metas = [
-    { name: 'og:title', prop: true, content: seoMeta.title },
-    { name: 'og:description', prop: true, content: seoMeta.description },
-    { name: 'og:image', prop: true, content: seoMeta.image },
-    { name: 'og:type', prop: true, content: 'website' },
-    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
-    { name: 'twitter:title', prop: false, content: seoMeta.title },
-    { name: 'twitter:description', prop: false, content: seoMeta.description },
-    { name: 'twitter:image', prop: false, content: seoMeta.image },
-    { name: 'description', prop: false, content: seoMeta.description }
-  ]
-  metas.forEach(({ name, prop, content }) => {
-    const el = document.createElement('meta')
-    if (prop) el.setAttribute('property', name)
-    el.setAttribute('name', name)
-    el.setAttribute('content', content)
-    document.head.appendChild(el)
-    injectedMetaEls.push(el)
-  })
-}
+// ─── SEO via @unhead/vue (usePageMeta at setup) ───
 
 const mode = ref('password') // 'password' or 'register'
 
 // --- CAPTCHA PROTOCOL ---
-const captchaChallenge = ref({ a: 0, b: 0, result: 0 })
-const captchaAnswer = ref('')
-const generateCaptcha = () => {
-    captchaChallenge.value.a = Math.floor(Math.random() * 10) + 1
-    captchaChallenge.value.b = Math.floor(Math.random() * 10) + 1
-    captchaChallenge.value.result = captchaChallenge.value.a + captchaChallenge.value.b
-    captchaAnswer.value = ''
-}
+const { challenge, answer, verify, reset, isLocked } = useCaptcha()
 
 watch(mode, (newMode) => {
-    if (newMode === 'register') generateCaptcha()
+    if (newMode === 'register') reset()
 })
 
 const email = ref('')
@@ -73,7 +42,6 @@ const lastAttemptTime = ref(0)
 const selectedRole = ref(window.location.pathname.includes('admin') ? 'admin' : 'customer')
 
 onMounted(async () => {
-  setMetaTags()
   // Redirigir si ya hay sesión activa
   const authStatus = await api.checkAuth()
   
@@ -92,8 +60,6 @@ onMounted(async () => {
 
 
 onUnmounted(() => {
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
 })
 
 const login = async () => {
@@ -148,9 +114,10 @@ const register = async () => {
     return;
   }
 
-  if (parseInt(captchaAnswer.value) !== captchaChallenge.value.result) {
-    error.value = "Error de Verificación: Resuelve el reto matemático correctamente."
-    generateCaptcha()
+  if (!verify()) {
+    error.value = isLocked.value
+      ? "Demasiados intentos. Espera 30 segundos."
+      : "Error de Verificación: Resuelve el reto matemático correctamente."
     return
   }
   
@@ -297,9 +264,10 @@ const register = async () => {
                             <div class="p-6 bg-gray-900 dark:bg-black rounded-[2.5rem] text-white flex items-center justify-between gap-6 border border-gray-800 dark:border-white/5">
                                 <div class="flex-1">
                                     <p class="text-[8px] font-black text-primary uppercase tracking-[0.4em] mb-1">Verificacion de seguridad</p>
-                                    <p class="text-sm font-black italic uppercase">Resuelve: {{ captchaChallenge.a }} + {{ captchaChallenge.b }} = ?</p>
+                                    <p class="text-sm font-black italic uppercase">{{ challenge.text }}</p>
+                                    <p v-if="isLocked" class="text-[8px] font-black text-rose-400 uppercase mt-1 tracking-widest">🔒 Bloqueado 30s</p>
                                 </div>
-                                <input v-model="captchaAnswer" type="number" required placeholder="?" class="w-20 bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-2xl p-4 text-center text-white font-black outline-none focus:border-primary transition-all">
+                                <input v-model="answer" type="number" required placeholder="?" :disabled="isLocked" class="w-20 bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-2xl p-4 text-center text-white font-black outline-none focus:border-primary transition-all disabled:opacity-30">
                             </div>
 
                             <button type="submit" :disabled="loading" class="split-btn w-full bg-primary text-white font-black py-6 rounded-3xl shadow-2xl hover:bg-gray-900 transition-all active:scale-95 text-[10px] uppercase tracking-[0.2em] mt-4">

@@ -39,7 +39,7 @@ onUnmounted(() => {
       <router-link to="/catalog" :class="[activeTab === 'catalog' ? 'text-white bg-white/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-gray-400 hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Catálogo</router-link>
       <router-link to="/quote" :class="[activeTab === 'quote' ? 'text-white bg-white/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-gray-400 hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Cotizador</router-link>
       <router-link to="/track" :class="[activeTab === 'track' ? 'text-white bg-white/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-gray-400 hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Rastrear</router-link>
-      <router-link to="/project/init" :class="[activeTab === 'contact' ? 'text-white bg-white/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-gray-400 hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Iniciar Proyecto 3D</router-link>
+      <router-link to="/project/init" :class="[activeTab === 'contact' ? 'text-white bg-white/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-gray-400 hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Contáctanos</router-link>
       
 
     </nav>
@@ -74,7 +74,7 @@ onUnmounted(() => {
       <router-link to="/catalog" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Catálogo</router-link>
       <router-link to="/quote" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Cotizador</router-link>
       <router-link to="/track" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Rastrear</router-link>
-      <router-link to="/project/init" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Iniciar Proyecto 3D</router-link>
+      <router-link to="/project/init" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Contáctanos</router-link>
       
       <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="mt-8 text-sm font-bold uppercase tracking-[0.2em] btn-primary px-12 py-4" @click="showMobileMenu = false">
         {{ isAdmin ? 'Ir al Taller' : 'Acceso Taller' }}

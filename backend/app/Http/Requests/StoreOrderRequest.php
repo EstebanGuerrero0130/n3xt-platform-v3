@@ -30,6 +30,8 @@ class StoreOrderRequest extends FormRequest
             'shipping_reference'        => 'nullable|string|max:255',
 
             // Order-specific fields
+            'job_name'                  => 'nullable|string|max:255',
+            'extras_cost'               => 'nullable|numeric',
             'comments'                  => 'nullable|string',
             'volume_mm3'                => 'required|numeric',
             'estimated_weight_g'        => 'required|numeric',

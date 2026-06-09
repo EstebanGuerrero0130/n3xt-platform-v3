@@ -8,48 +8,23 @@ import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
 import { useParticles } from '../composables/useParticles'
+import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
 useSplitButton()
+
+usePageMeta({
+  title: 'Iniciar Proyecto 3D | N3XT 3D',
+  description: 'Configura tu proyecto de impresion 3D. Selecciona tipo, tecnologia, acabado y urgencia.',
+  image: '/assets/n3xt_og_project.png',
+})
 
 const { particlesRef: heroParticlesRef } = useParticles({
   count: 30,
   zIndex: 1,
 })
 
-// --- SEO Meta Tags ---
-const seoMeta = {
-  title: 'Iniciar Proyecto 3D | N3XT 3D',
-  description: 'Configura tu proyecto de impresion 3D. Selecciona tipo, tecnologia, acabado y urgencia.',
-  image: '/assets/n3xt_og_project.png'
-}
-
-let injectedMetaEls: any[] = []
-
-const setMetaTags = () => {
-  document.title = seoMeta.title
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
-  const metas = [
-    { name: 'og:title', prop: true, content: seoMeta.title },
-    { name: 'og:description', prop: true, content: seoMeta.description },
-    { name: 'og:image', prop: true, content: seoMeta.image },
-    { name: 'og:type', prop: true, content: 'website' },
-    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
-    { name: 'twitter:title', prop: false, content: seoMeta.title },
-    { name: 'twitter:description', prop: false, content: seoMeta.description },
-    { name: 'twitter:image', prop: false, content: seoMeta.image },
-    { name: 'description', prop: false, content: seoMeta.description }
-  ]
-  metas.forEach(({ name, prop, content }) => {
-    const el = document.createElement('meta')
-    if (prop) el.setAttribute('property', name)
-    el.setAttribute('name', name)
-    el.setAttribute('content', content)
-    document.head.appendChild(el)
-    injectedMetaEls.push(el)
-  })
-}
+// ─── SEO via @unhead/vue (usePageMeta at setup) ───
 
 useRevealAnim({ delay: 200 })
 
@@ -69,13 +44,10 @@ const fetchSettings = async () => {
 }
 
 onMounted(() => {
-  setMetaTags()
   fetchSettings()
 })
 
 onUnmounted(() => {
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
 })
 
 // --- DATA DE CONFIGURACIÓN ---

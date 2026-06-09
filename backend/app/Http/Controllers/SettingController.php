@@ -58,7 +58,8 @@ class SettingController extends Controller
 
             return response()->json([
                 'message' => 'Logo actualizado con éxito',
-                'logo_url' => asset('storage/' . $path) . '?t=' . time()
+                'logo_url' => asset('storage/' . $path) . '?t=' . time(),
+                'logo_path' => $path
             ]);
         }
 

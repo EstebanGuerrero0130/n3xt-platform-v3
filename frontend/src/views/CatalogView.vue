@@ -9,9 +9,16 @@ import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
 import { useParticles } from '../composables/useParticles'
+import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
 const { applySplitBtn } = useSplitButton()
+
+usePageMeta({
+  title: 'Catálogo de Piezas 3D | N3XT 3D',
+  description: 'Explora nuestra galería de piezas fabricadas con precisión industrial. Figuras, prototipos y coleccionables en 3D.',
+  image: '/assets/n3xt_og_catalog.png',
+})
 
 const { particlesRef: headerParticlesRef } = useParticles({
   count: 30,
@@ -23,39 +30,7 @@ const tickerVisible = ref(true)
 
 const loading = ref(true)
 
-// ─── SEO Meta Tags ───
-const seoMeta = {
-  title: 'Catálogo de Piezas 3D | N3XT 3D',
-  description: 'Explora nuestra galería de piezas fabricadas con precisión industrial. Figuras, prototipos y coleccionables en 3D.',
-  image: '/assets/n3xt_og_catalog.png'
-}
-
-let injectedMetaEls: any[] = []
-
-const setMetaTags = () => {
-  document.title = seoMeta.title
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
-  const metas = [
-    { name: 'og:title', prop: true, content: seoMeta.title },
-    { name: 'og:description', prop: true, content: seoMeta.description },
-    { name: 'og:image', prop: true, content: seoMeta.image },
-    { name: 'og:type', prop: true, content: 'website' },
-    { name: 'twitter:card', prop: false, content: 'summary_large_image' },
-    { name: 'twitter:title', prop: false, content: seoMeta.title },
-    { name: 'twitter:description', prop: false, content: seoMeta.description },
-    { name: 'twitter:image', prop: false, content: seoMeta.image },
-    { name: 'description', prop: false, content: seoMeta.description }
-  ]
-  metas.forEach(({ name, prop, content }) => {
-    const el = document.createElement('meta')
-    if (prop) el.setAttribute('property', name)
-    el.setAttribute('name', name)
-    el.setAttribute('content', content)
-    document.head.appendChild(el)
-    injectedMetaEls.push(el)
-  })
-}
+// ─── SEO via @unhead/vue (usePageMeta at setup) ───
 
 useRevealAnim()
 
@@ -216,7 +191,6 @@ watch([activeCategory, activeSubcategory], () => {
 })
 
 onMounted(() => {
-  setMetaTags()
   fetchSettings()  
 
   // Pausar el ticker de marcas cuando no está visible (ahorra CPU/GPU)
@@ -231,8 +205,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  injectedMetaEls.forEach(el => el.remove())
-  injectedMetaEls = []
 })
 </script>
 
@@ -359,7 +331,7 @@ onUnmounted(() => {
             <!-- Pedestal de Luz Industrial -->
             <div class="absolute inset-0 bg-radial-gradient from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
             
-            <img :src="getOptimizedImage(item.image)" :alt="'Pieza de catálogo 3D: ' + item.name" :fetchpriority="index === 0 ? 'high' : 'auto'" class="max-w-[85%] max-h-[85%] object-contain group-hover:scale-110 group-hover:-rotate-2 transition-all duration-1000 relative z-10" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
+            <img :src="getOptimizedImage(item.image)" :alt="'Catálogo N3XT 3D — ' + item.name + (item.category ? ' (' + item.category + ')' : '') + ', pieza fabricada con precisión industrial'" :fetchpriority="index === 0 ? 'high' : 'auto'" class="max-w-[85%] max-h-[85%] object-contain group-hover:scale-110 group-hover:-rotate-2 transition-all duration-1000 relative z-10" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
           </div>
 
           <div class="p-12 pt-0 text-center flex flex-col flex-1 relative z-10">
@@ -438,7 +410,7 @@ onUnmounted(() => {
             <!-- Left: Image -->
             <div class="aspect-square md:aspect-auto md:h-full bg-gray-900/50 p-10 md:p-14 flex items-center justify-center relative min-h-[300px]">
               <div class="absolute inset-0 bg-radial-gradient from-emerald-500/5 to-transparent"></div>
-              <img :src="getOptimizedImage(quickViewItem.image)" :alt="quickViewItem.name" class="max-w-full max-h-full object-contain relative z-10 hover:scale-105 transition-transform duration-700" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
+              <img :src="getOptimizedImage(quickViewItem.image)" :alt="'Vista rápida: ' + quickViewItem.name + ' - Catálogo N3XT 3D'" class="max-w-full max-h-full object-contain relative z-10 hover:scale-105 transition-transform duration-700" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
             </div>
 
             <!-- Right: Info -->

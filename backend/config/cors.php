@@ -30,7 +30,7 @@ return [
     | Ejemplo: CORS_ALLOWED_ORIGINS=https://n3xt3d.com,https://admin.n3xt3d.com
     |
     */
-    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:8000,http://127.0.0.1:5173,http://127.0.0.1:8000')),
+    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:8000,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:8000,http://127.0.0.1:4173')),
 
     'allowed_origins_patterns' => [],
 

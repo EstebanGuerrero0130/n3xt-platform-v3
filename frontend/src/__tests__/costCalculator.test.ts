@@ -176,19 +176,19 @@ describe('calcOrderDetailBreakdown', () => {
     expect(r.depr).toBe(1600)
     // mant = 4 * 700 = 2800
     expect(r.mant).toBe(2800)
-    // etiquetas = 500
-    expect(r.etiquetas).toBe(500)
+    // prep_pack = 500
+    expect(r.prep_pack).toBe(500)
     // extras = 10000
     expect(r.extras).toBe(10000)
-    // total_cost = 24000 + 1482 + 400 + 1600 + 2800 + 500 + 10000 = 40782
-    expect(r.total_cost).toBe(40782)
-    // margin = 250000 - 40782 = 209218
-    expect(r.margin).toBe(209218)
+    // production_cost = 24000 + 1482 + 400 + 1600 + 2800 + 500 + 10000 = 40782
+    expect(r.production_cost).toBe(40782)
+    // operating_margin = 250000 - 40782 = 209218
+    expect(r.operating_margin).toBe(209218)
   })
 
   it('handles missing settings gracefully', () => {
     const r = calcOrderDetailBreakdown({ total_price: '0' }, {}, 0)
-    expect(r.total_cost).toBe(0)
-    expect(r.margin).toBe(0)
+    expect(r.production_cost).toBe(0)
+    expect(r.operating_margin).toBe(0)
   })
 })
