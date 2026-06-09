@@ -30,21 +30,40 @@ const tickerVisible = ref(true)
 
 const loading = ref(true)
 
-// ─── SEO via @unhead/vue (usePageMeta at setup) ───
-
 useRevealAnim()
 
-const webSettings = ref({
+// ─── TypeScript Interfaces ───
+interface CatalogItem {
+  name: string
+  image: string
+  category?: string
+  subcategory?: string
+  status?: string
+  price?: string | number
+  original_price?: string | number
+  description?: string
+  [key: string]: any
+}
+
+interface WebSettings {
+  catalog: CatalogItem[]
+  pdf_catalog_url: string
+  pdf_catalog_desc: string
+  cloudinary_name?: string
+}
+
+const webSettings = ref<WebSettings>({
   catalog: [],
   pdf_catalog_url: '',
-  pdf_catalog_desc: ''
+  pdf_catalog_desc: '',
+  cloudinary_name: ''
 })
 
 const activeCategory = ref('Todos')
 const activeSubcategory = ref('Todos')
 
 // Iconografía Técnica Industrial
-const categoryIcons = {
+const categoryIcons: Record<string, string> = {
   'Todos': `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>`,
   'Mecanico': `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
   'Joyería': `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>`,
@@ -52,13 +71,13 @@ const categoryIcons = {
   'Decoración': `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`,
 }
 
-const getIcon = (cat) => {
+const getIcon = (cat: string) => {
     return categoryIcons[cat] || categoryIcons['Todos']
 }
 
 const categories = computed(() => {
-  const cats = new Set(webSettings.value.catalog.map(i => i.category))
-  return ['Todos', ...Array.from(cats)]
+  const cats = new Set(webSettings.value.catalog.map(i => i.category).filter(Boolean))
+  return ['Todos', ...Array.from(cats)] as string[]
 })
 
 const availableSubcategories = computed(() => {
@@ -68,7 +87,7 @@ const availableSubcategories = computed(() => {
       .filter(i => i.category === activeCategory.value && i.subcategory)
       .map(i => i.subcategory)
   )]
-  return subs.length > 0 ? ['Todos', ...subs] : []
+  return subs.length > 0 ? ['Todos', ...subs] as string[] : []
 })
 
 const filteredItems = computed(() => {
@@ -82,7 +101,7 @@ const filteredItems = computed(() => {
   return all
 })
 
-const getDiscountPct = (item) => {
+const getDiscountPct = (item: CatalogItem) => {
   if (!item.price || !item.original_price) return 0
   const p = parseFloat(String(item.price).replace(/[^0-9.-]+/g,""))
   const op = parseFloat(String(item.original_price).replace(/[^0-9.-]+/g,""))
@@ -90,14 +109,14 @@ const getDiscountPct = (item) => {
   return Math.round((1 - p / op) * 100)
 }
 
-const isDiscounted = (item) => {
+const isDiscounted = (item: CatalogItem) => {
   if (!item.price || !item.original_price) return false
   const p = parseFloat(String(item.price).replace(/[^0-9.-]+/g,""))
   const op = parseFloat(String(item.original_price).replace(/[^0-9.-]+/g,""))
   return p < op && p > 0
 }
 
-const getOptimizedImage = (url) => {
+const getOptimizedImage = (url: string) => {
   if (!url) return ''
   if (!webSettings.value.cloudinary_name || !url.includes('cloudinary.com')) return url
   // Si es cloudinary, forzar auto-format y auto-quality
