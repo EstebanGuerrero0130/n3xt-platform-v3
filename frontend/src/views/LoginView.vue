@@ -143,7 +143,7 @@ const register = async () => {
 </script>
 
 <template>
- <div class="min-h-screen bg-[#f8fafc] dark:bg-black flex flex-col items-center justify-center p-6 md:p-12 overflow-hidden relative transition-colors duration-500">
+ <main class="min-h-screen bg-[#f8fafc] dark:bg-black flex flex-col items-center justify-center p-6 md:p-12 overflow-hidden relative transition-colors duration-500">
  <!-- Technical Background -->
  <div class="absolute inset-0 technical-grid opacity-30 dark:opacity-20 pointer-events-none"></div>
  <div class="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#08872b]/5 rounded-[60px] blur-[140px] pointer-events-none"></div>
@@ -214,14 +214,14 @@ const register = async () => {
  <form v-if="mode === 'password'" class="space-y-6" @submit.prevent="login">
  <div v-if="error" class="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-500 dark:text-rose-400 p-5 rounded-[24px] text-[10px] font-black uppercase tracking-widest text-center">{{ error }}</div>
  <div class="space-y-3">
- <label class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Correo Electrónico</label>
- <input v-model="email" type="email" required placeholder="tu@ejemplo.com" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
+ <label for="login-email" class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Correo Electrónico</label>
+ <input id="login-email" v-model="email" type="email" required placeholder="tu@ejemplo.com" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
  </div>
  <div class="space-y-3">
- <label class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Contraseña</label>
+ <label for="login-password" class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Contraseña</label>
  <div class="relative group">
- <input v-model="password" :type="showPassword ? 'text' : 'password'" required placeholder="••••••••" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all pr-16">
- <button type="button" class="absolute right-6 top-1/2 -translate-y-1/2 text-[#c3c4c5] hover:text-[#8dd6ff] transition-colors p-2" @click="showPassword = !showPassword">
+ <input id="login-password" v-model="password" :type="showPassword ? 'text' : 'password'" required placeholder="••••••••" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all pr-16">
+ <button type="button" aria-label="Alternar visibilidad de contraseña" class="absolute right-6 top-1/2 -translate-y-1/2 text-[#c3c4c5] hover:text-[#8dd6ff] transition-colors p-2" @click="showPassword = !showPassword">
  <svg v-if="!showPassword" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
  <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057-5.064-7-9.542-7-4.477 0-8.268-2.943-9.542-7zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18"/></svg>
  </button>
@@ -242,32 +242,32 @@ const register = async () => {
  <form v-else-if="mode === 'register'" class="space-y-6 animate-in slide-in-from-right-10 duration-500" @submit.prevent="register">
  <div v-if="error" class="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-500 dark:text-rose-400 p-5 rounded-[24px] text-[10px] font-black uppercase tracking-widest text-center">{{ error }}</div>
  <div class="space-y-3">
- <label class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Nombre Completo</label>
- <input v-model="name" type="text" required placeholder="Juan Pérez" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
+ <label for="register-name" class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Nombre Completo</label>
+ <input id="register-name" v-model="name" type="text" required placeholder="Juan Pérez" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
  </div>
  <div class="space-y-3">
- <label class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Email Principal</label>
- <input v-model="email" type="email" required placeholder="tu@correo.com" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
+ <label for="register-email" class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Email Principal</label>
+ <input id="register-email" v-model="email" type="email" required placeholder="tu@correo.com" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
  </div>
  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div class="space-y-3">
- <label class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Contraseña</label>
- <input v-model="password" type="password" required placeholder="••••••••" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
+ <label for="register-password" class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Contraseña</label>
+ <input id="register-password" v-model="password" type="password" required placeholder="••••••••" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
  </div>
  <div class="space-y-3">
- <label class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Confirmar</label>
- <input v-model="password_confirmation" type="password" required placeholder="••••••••" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
+ <label for="register-password-confirm" class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest ml-5">Confirmar</label>
+ <input id="register-password-confirm" v-model="password_confirmation" type="password" required placeholder="••••••••" class="w-full bg-[#151a22]/50 dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] rounded-[24px] p-6 text-[#ffffff] dark:text-white font-bold text-base outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all">
  </div>
  </div>
 
  <!-- Human Verification -->
  <div class="p-6 bg-[#151a22] dark:bg-black rounded-[2.5rem] text-white flex items-center justify-between gap-6 border border-gray-800 dark:border-[#21262d]">
- <div class="flex-1">
+ <label for="captcha-answer" class="flex-1">
  <p class="text-[8px] font-black text-[#8dd6ff] uppercase tracking-[0.4em] mb-1">Verificacion de seguridad</p>
  <p class="text-sm font-black italic uppercase">{{ challenge.text }}</p>
  <p v-if="isLocked" class="text-[8px] font-black text-rose-400 uppercase mt-1 tracking-widest">🔒 Bloqueado 30s</p>
- </div>
- <input v-model="answer" type="number" required placeholder="?" :disabled="isLocked" class="w-20 bg-[#151a22]/10 dark:bg-[#151a22]/5 border border-white/20 dark:border-[#21262d] rounded-[24px] p-4 text-center text-white font-black outline-none focus:border-primary transition-all disabled:opacity-30">
+ </label>
+ <input id="captcha-answer" v-model="answer" type="number" required placeholder="?" :disabled="isLocked" class="w-20 bg-[#151a22]/10 dark:bg-[#151a22]/5 border border-white/20 dark:border-[#21262d] rounded-[24px] p-4 text-center text-white font-black outline-none focus:border-primary transition-all disabled:opacity-30">
  </div>
 
  <button type="submit" :disabled="loading" class="split-btn w-full bg-[#08872b] text-white font-black py-6 rounded-[24px] hover:bg-[#151a22] transition-all active:scale-95 text-[10px] uppercase tracking-[0.2em] mt-4">
@@ -287,7 +287,7 @@ const register = async () => {
  </div>
  </div>
  </div>
- </div>
+ </main>
 </template>
 
 <style scoped>
