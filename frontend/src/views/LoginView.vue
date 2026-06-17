@@ -96,7 +96,7 @@ const login = async () => {
  } else {
  window.location.href = '/customer/dashboard'
  }
- } catch (err) {
+ } catch (err: any) {
  error.value = err.response?.data?.message || err.message
  } finally {
  loading.value = false
@@ -134,7 +134,7 @@ const register = async () => {
  
  // Sanctum SPA: session cookie is set automatically
  router.push('/customer/dashboard')
- } catch (err) {
+ } catch (err: any) {
  error.value = err.response?.data?.message || err.message
  } finally {
  loading.value = false
