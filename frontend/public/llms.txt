@@ -1,0 +1,18 @@
+# N3XT 3D - AI Agent Documentation
+
+## Overview
+This is the official `llms.txt` file for N3XT 3D, providing structured information for AI agents interacting with our web platform. N3XT 3D is a premium 3D manufacturing studio specializing in industrial precision and high-quality collectibles.
+
+## Structure
+- The platform uses Vue 3 and TailwindCSS
+- We provide services such as 3D printing (FDM, SLA), airbrushing, and project quoting.
+- All technical documentation and public pages are structured with accessibility in mind.
+
+## Navigation
+To navigate our ecosystem, agents can safely index:
+- `/` - Home
+- `/catalog` - Curated Catalog
+- `/gallery` - Past Projects
+- `/project/init` - Quotation Request
+
+For any automated indexing or assistance, respect our API rate limits and structural semantics.

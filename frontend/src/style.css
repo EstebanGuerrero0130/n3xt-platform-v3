@@ -20,20 +20,39 @@
   --color-faded-silver: #f0f6fc;
 }
 
-:root {
-  --bg-main: #f0f4f8;
-  --bg-surface: #ffffff;
-  --text-main: #0d1117;
-  --text-muted: #57606a;
-  --border-main: rgba(0, 0, 0, 0.08);
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.2);
+:root, .dark {
+  /* Colors */
+  --color-midnight-canvas: #0d1117;
+  --color-abyss-surface: #090d0a;
+  --color-void-black: #000000;
+  --color-elevated-surface: #151a22;
+  --color-card-surface: #283041;
+  --color-border-subtle: #21262d;
+  --color-border-muted: #818b98;
+  --color-border-strong: #9198a1;
+  --color-text-primary: #ffffff;
+  --color-text-cool-white: #f0f6fc;
+  --color-text-muted: #a4aea6;
+  --color-text-subtle: #c3c4c5;
+  --color-vibrant-mint: #5fed83;
+  --color-emerald-cta: #08872b;
+  --color-sky-link: #8dd6ff;
+  --color-vivid-violet: #8c93fb;
 
-  --color-primary: #08872b;
+  /* Legacy variable mappings to new theme */
+  --bg-main: var(--color-midnight-canvas);
+  --bg-surface: var(--color-elevated-surface);
+  --text-main: var(--color-text-primary);
+  --text-muted: var(--color-text-muted);
+  --border-main: var(--color-border-subtle);
+  --glass-bg: rgba(13, 17, 23, 0.7);
+  --glass-border: var(--color-border-subtle);
+
+  --color-primary: var(--color-emerald-cta);
   --color-primary-dark: #066b22;
   --color-primary-light: #10a33a;
-  --color-secondary: #f0f6fc;
-  --color-dark: #0d1117;
+  --color-secondary: var(--color-text-cool-white);
+  --color-dark: var(--color-midnight-canvas);
 
   --ease-elastic: cubic-bezier(0.68, -0.6, 0.32, 1.6);
   --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
@@ -41,32 +60,14 @@
   --transition-main: 0.4s var(--ease-out-expo);
   --transition-fast: 0.2s var(--ease-out-expo);
 
-  color-scheme: light;
-}
-
-.dark {
-  --bg-main: #0d1117; /* Deep Space */
-  --bg-surface: #151a22; /* Code Canvas */
-  --text-main: #ffffff; /* Ghost White */
-  --text-muted: #f0f6fc; /* Faded Silver */
-  --border-main: #21262d; /* Subtle Gray */
-  --glass-bg: rgba(13, 17, 23, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
-
-  --color-primary: #08872b;
-  --color-primary-dark: #066b22;
-  --color-primary-light: #10a33a;
-  --color-secondary: #f0f6fc;
-  --color-dark: #0d1117;
-
   color-scheme: dark;
 }
 
 body {
-  background-color: var(--bg-main);
-  color: var(--text-main);
+  background-color: var(--color-midnight-canvas);
+  color: var(--color-text-cool-white);
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Mona Sans', 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   transition: background-color var(--transition-main), color var(--transition-main), border-color var(--transition-main);
 }
@@ -281,7 +282,7 @@ h1, h2, h3, h4, h5, h6 {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   border-radius: 6px; /* 6px border radius */
-  padding: 8px 28px; /* 6px vertical (using 8px for standard height), 28px horizontal */
+  padding: 8px 16px; /* 8px vertical, 16px horizontal */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -312,8 +313,8 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-polar-blue, #8dd6ff);
   background-color: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2); /* transparent/subtle border default */
-  border-radius: 8px; /* 8px border radius */
-  padding: 8px 28px; /* 6px vertical (using 8px for standard height), 28px horizontal */
+  border-radius: 6px; /* 6px border radius */
+  padding: 8px 16px; /* 8px vertical, 16px horizontal */
   font-family: 'Inter', sans-serif;
   font-weight: 700;
   text-transform: uppercase;
@@ -372,10 +373,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Floating Content Card */
 .floating-card {
-  background-color: rgba(255, 255, 255, 0.03); /* transparent or semi-transparent background */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15); /* subtle gray border 1px solid rgba(255,255,255,0.2) */
+  background-color: var(--color-elevated-surface);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 24px; /* 24px border radius */
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
   transition: transform var(--transition-fast), border-color var(--transition-fast);
@@ -386,14 +385,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-secondary {
-  background-color: var(--bg-surface);
-  color: var(--text-muted);
-  border-radius: 1.25rem;
-  font-weight: 900;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 1rem 1.5rem;
+  background-color: transparent;
+  color: var(--color-text-cool-white);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -404,40 +404,39 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-secondary:hover {
-  background-color: var(--bg-main);
-  color: var(--text-main);
-  transform: translateY(-2px);
+  background-color: var(--color-border-subtle);
+  color: var(--color-text-primary);
+  transform: none;
 }
 
 .btn-danger {
   background-color: #f43f5e;
   color: white;
-  border-radius: 1.25rem;
-  font-weight: 900;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 1rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.2);
   border: none;
   cursor: pointer;
 }
 
 .btn-pdf {
-  background: var(--bg-surface);
-  color: var(--text-main);
-  border: 1px solid var(--border-main);
-  border-radius: 1.25rem;
-  font-weight: 900;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  padding: 1rem 1.5rem;
+  background: transparent;
+  color: var(--color-text-cool-white);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -458,7 +457,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.75rem;
+  border-radius: 6px;
   transition: all 0.3s;
   border: none;
   cursor: pointer;
