@@ -254,7 +254,8 @@ v-for="stat in item.stats" :key="stat.label"
 
  <!-- CTA -->
  <div class="flex flex-wrap gap-4 pt-4">
- <router-link to="/project/init"
+ <router-link
+to="/project/init"
  class="split-btn px-10 py-5 bg-emerald-500 text-white rounded-[24px] font-black text-[10px] uppercase tracking-widest hover:bg-emerald-400 transition-all -emerald-500/20 hover:scale-[1.02] active:scale-95">
  Contáctanos →
  </router-link>

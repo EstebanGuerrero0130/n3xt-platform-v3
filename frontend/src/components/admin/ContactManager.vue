@@ -373,7 +373,7 @@ const handleViewShippingLabel = (customer: any) => {
  </h3>
  <p class="text-[#c3c4c5] text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Actualiza la ficha del contacto</p>
  </div>
- <button class="text-white text-2xl hover:rotate-90 transition-transform px-4 outline-none" @click="showAddModal = false" aria-label="Botón interactivo">✕</button>
+ <button class="text-white text-2xl hover:rotate-90 transition-transform px-4 outline-none" aria-label="Botón interactivo" @click="showAddModal = false">✕</button>
  </div>
  
  <div class="p-6 md:p-10 space-y-6 overflow-y-auto h-[calc(100%-120px)] md:h-auto md:max-h-[70vh] no-scrollbar">

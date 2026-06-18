@@ -1583,7 +1583,7 @@ const handlePurgeAll = () => {
  :is-open="isSidebarOpen"
  :active-tab="activeTab === 'accounting' ? 'accounting' : activeTab"
  :pending-orders-count="orders.filter(o => o.status === 'pending').length"
- @update:activeTab="(tab) => { activeTab = tab === 'analytics' ? 'accounting' : tab; isSidebarOpen = false }"
+ @update:active-tab="(tab) => { activeTab = tab === 'analytics' ? 'accounting' : tab; isSidebarOpen = false }"
  @close="isSidebarOpen = false"
  @logout="logout"
  />
@@ -1830,7 +1830,7 @@ const handlePurgeAll = () => {
  v-model="modalState.newPrinter"
  :new-printer="newPrinter"
  :submitting="submitting"
-   @update:newPrinter="Object.assign(newPrinter, $event)"
+   @update:new-printer="Object.assign(newPrinter, $event)"
  @add-printer="addPrinter"
  />
 

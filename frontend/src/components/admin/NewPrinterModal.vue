@@ -31,7 +31,7 @@ watch(form, (val) => {
  <div class="p-6 md:p-10 max-h-[90vh] overflow-y-auto no-scrollbar">
  <div class="flex justify-between items-center mb-6 md:mb-8">
  <h3 class="text-xl md:text-2xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter">Nueva Impresora</h3>
- <button class="text-[#c3c4c5] hover:text-[#a4aea6] transition-colors text-2xl" @click="emit('update:modelValue', false)" aria-label="Botón interactivo">
+ <button class="text-[#c3c4c5] hover:text-[#a4aea6] transition-colors text-2xl" aria-label="Botón interactivo" @click="emit('update:modelValue', false)">
  ✕
  </button>
  </div>

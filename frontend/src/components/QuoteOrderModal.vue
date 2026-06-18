@@ -65,7 +65,7 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
  
  <!-- Header -->
  <div class="bg-[#08872b] px-8 md:px-12 pt-10 pb-6 text-white relative shrink-0">
- <button class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-[#151a22]/20 rounded-[60px] hover:bg-[#151a22] hover:text-[#8dd6ff] transition-all text-lg" @click="handleClose" aria-label="Botón interactivo">✕</button>
+ <button class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-[#151a22]/20 rounded-[60px] hover:bg-[#151a22] hover:text-[#8dd6ff] transition-all text-lg" aria-label="Botón interactivo" @click="handleClose">✕</button>
  <p class="text-[9px] font-black uppercase tracking-[0.5em] mb-2 text-white/80">N3XT Protocol</p>
  <h2 class="text-3xl md:text-4xl font-black tracking-tighter uppercase leading-none">Finalizar Solicitud</h2>
  

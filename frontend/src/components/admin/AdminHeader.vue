@@ -96,8 +96,8 @@ watch(logoUrl, () => { logoError.value = false })
  v-if="!logoError"
  :src="logoUrl"
  class="w-full h-full object-contain bg-[#151a22]"
- @error="logoError = true"
-  alt="Imagen N3XT 3D" />
+ alt="Imagen N3XT 3D"
+  @error="logoError = true" />
  <div v-else class="w-full h-full bg-gradient-to-br from-primary via-emerald-500 to-primary flex items-center justify-center relative overflow-hidden group">
  <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.2),transparent_60%)]"></div>
  <div class="absolute -inset-2 bg-gradient-to-tr from-emerald-300/20 to-transparent animate-pulse rounded-[60px] blur-sm"></div>

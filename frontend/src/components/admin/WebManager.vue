@@ -422,7 +422,8 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  Checklist de Publicación
  </h3>
  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
- <div v-for="(item, idx) in [
+ <div
+v-for="(item, idx) in [
  { label: 'Logo de empresa', done: !!settings?.company_logo, tab: 'settings', hint: 'Sube el logo en Parámetros' },
  { label: 'Redes sociales configuradas', done: dashboardStats.hasSocial, tab: 'general', hint: 'Completa las redes en General' },
  { label: 'Información legal completa', done: dashboardStats.hasPrivacy, tab: 'general', hint: 'Agrega términos y privacidad' },
@@ -431,7 +432,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  { label: 'Noticias publicadas', done: dashboardStats.articlesPublished > 0, tab: 'news', hint: 'Publica noticias en el tab Noticias' },
  { label: 'Plataformas vinculadas', done: dashboardStats.platforms > 0, tab: 'social', hint: 'Agrega plataformas en Social' },
  ]" :key="idx">
- <div @click="webSubTab = item.tab" class="flex items-center gap-4 p-4 rounded-[24px] transition-all cursor-pointer" :class="item.done ? 'bg-emerald-500/5 hover:bg-emerald-500/10' : 'bg-[#151a22] dark:bg-[#151a22]/5 hover:bg-[#151a22] dark:hover:bg-[#151a22]/10'">
+ <div class="flex items-center gap-4 p-4 rounded-[24px] transition-all cursor-pointer" :class="item.done ? 'bg-emerald-500/5 hover:bg-emerald-500/10' : 'bg-[#151a22] dark:bg-[#151a22]/5 hover:bg-[#151a22] dark:hover:bg-[#151a22]/10'" @click="webSubTab = item.tab">
  <div :class="item.done ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-[#151a22]/10 text-[#c3c4c5]'" class="w-8 h-8 rounded-[6px] flex items-center justify-center shrink-0 transition-all">
  <svg v-if="item.done" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
  <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
@@ -530,7 +531,8 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  Redes Sociales
  </h3>
  <div class="space-y-5">
- <div v-for="(social, key) in [
+ <div
+v-for="(social, key) in [
  {k: 'tiktok', label: 'TikTok', ph: '@n3xt3d', color: 'text-pink-500'},
  {k: 'instagram', label: 'Instagram', ph: '@n3xt_3d', color: 'text-purple-500'},
  {k: 'facebook', label: 'Facebook', ph: 'N3XT3D', color: 'text-blue-500'},
@@ -609,7 +611,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <template #item="{ element: item, index: idx }">
  <div class="relative bg-[#151a22] dark:bg-[#151a22]/5 rounded-[2rem] p-6 border border-[#21262d] dark:border-[#21262d] transition-all hover: group/item">
  <!-- Drag Handle -->
- <div class="absolute top-6 right-6 w-8 h-8 bg-[#151a22]/80 dark:bg-[#283041]/80 backdrop-blur-sm rounded-[60px] flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover/item:opacity-100 transition-all drag-handle z-10 hover:bg-[#151a22] dark:hover:bg-gray-700" @click.stop title="Arrastrar para reordenar">
+ <div class="absolute top-6 right-6 w-8 h-8 bg-[#151a22]/80 dark:bg-[#283041]/80 backdrop-blur-sm rounded-[60px] flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover/item:opacity-100 transition-all drag-handle z-10 hover:bg-[#151a22] dark:hover:bg-gray-700" title="Arrastrar para reordenar" @click.stop>
  <svg class="w-4 h-4 text-[#a4aea6]" fill="currentColor" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
  </div>
 
@@ -642,7 +644,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <div class="flex items-center gap-3">
  <input v-model="item.title" placeholder="Título del Proyecto" class="flex-1 bg-transparent text-xl font-black text-[#ffffff] dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-700 autofill:bg-transparent" autocomplete="off" spellcheck="false" />
  <!-- Featured Toggle - clickable star -->
- <button type="button" @click.stop="item.featured = !item.featured" class="relative w-9 h-9 rounded-[60px] flex items-center justify-center shrink-0 transition-all duration-300 hover:scale-110 active:scale-90" :class="item.featured ? 'text-amber-400 drop--[0_0_8px_rgba(251,191,36,0.6)]' : 'text-gray-300 dark:text-[#a4aea6] hover:text-[#c3c4c5]'" :title="item.featured ? 'Quitar destacado' : 'Marcar como destacado'">
+ <button type="button" class="relative w-9 h-9 rounded-[60px] flex items-center justify-center shrink-0 transition-all duration-300 hover:scale-110 active:scale-90" :class="item.featured ? 'text-amber-400 drop--[0_0_8px_rgba(251,191,36,0.6)]' : 'text-gray-300 dark:text-[#a4aea6] hover:text-[#c3c4c5]'" :title="item.featured ? 'Quitar destacado' : 'Marcar como destacado'" @click.stop="item.featured = !item.featured">
  <svg class="w-5 h-5 transition-all" :class="item.featured ? 'fill-amber-400' : 'fill-none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
  <span v-if="item.featured" class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-[60px] animate-ping"></span>
  </button>
@@ -669,7 +671,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <div class="flex flex-wrap gap-2 items-center">
  <div v-for="(addImg, addIdx) in (item.images || [])" :key="addIdx" class="relative group/addimg">
  <img :src="addImg" class="w-12 h-12 rounded-[6px] object-cover border border-[#21262d] dark:border-[#21262d]"  alt="Imagen N3XT 3D" />
- <button class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-[60px] text-[8px] font-black flex items-center justify-center opacity-0 group-hover/addimg:opacity-100 transition-all " @click="removeGalleryImage(item, Number(addIdx))" aria-label="Botón interactivo">✕</button>
+ <button class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-[60px] text-[8px] font-black flex items-center justify-center opacity-0 group-hover/addimg:opacity-100 transition-all " aria-label="Botón interactivo" @click="removeGalleryImage(item, Number(addIdx))">✕</button>
  </div>
  <!-- Upload desde computador -->
  <label class="w-12 h-12 rounded-[6px] border-2 border-dashed border-gray-300 dark:border-[#21262d] flex items-center justify-center cursor-pointer hover:border-primary transition-all bg-[#151a22] dark:bg-transparent shrink-0" title="Subir desde computador">
@@ -678,8 +680,8 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </label>
  <!-- URL desde Cloudinary -->
  <div class="flex items-center gap-1 h-12">
- <input v-model="item._newImgUrl" @keyup.enter="addImageByUrl(item)" placeholder="URL Cloudinary..." class="w-24 bg-[#151a22] dark:bg-[#090d0a]/50 border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-2.5 py-2 text-[8px] font-mono text-[#a4aea6] dark:text-[#c3c4c5] outline-none border border-[#21262d] dark:border-[#21262d] placeholder:text-gray-300 dark:placeholder:text-gray-700 h-full" @click.stop />
- <button class="w-8 h-full rounded-[6px] bg-[#08872b]/10 hover:bg-[#08872b]/20 flex items-center justify-center text-[#8dd6ff] transition-all shrink-0" @click.stop="addImageByUrl(item)" title="Añadir por URL">
+ <input v-model="item._newImgUrl" placeholder="URL Cloudinary..." class="w-24 bg-[#151a22] dark:bg-[#090d0a]/50 border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-2.5 py-2 text-[8px] font-mono text-[#a4aea6] dark:text-[#c3c4c5] outline-none border border-[#21262d] dark:border-[#21262d] placeholder:text-gray-300 dark:placeholder:text-gray-700 h-full" @keyup.enter="addImageByUrl(item)" @click.stop />
+ <button class="w-8 h-full rounded-[6px] bg-[#08872b]/10 hover:bg-[#08872b]/20 flex items-center justify-center text-[#8dd6ff] transition-all shrink-0" title="Añadir por URL" @click.stop="addImageByUrl(item)">
  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
  </button>
  </div>
@@ -689,7 +691,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </div>
 
  <!-- Delete button -->
- <button class="absolute bottom-6 right-6 p-2 hover:bg-gray-200 dark:hover:bg-[#151a22]/10 rounded-[6px] transition-all opacity-0 group-hover/item:opacity-100" @click="settings.web.gallery.splice(idx, 1); props.showNotify('Proyecto eliminado', 'warning')" title="Eliminar">
+ <button class="absolute bottom-6 right-6 p-2 hover:bg-gray-200 dark:hover:bg-[#151a22]/10 rounded-[6px] transition-all opacity-0 group-hover/item:opacity-100" title="Eliminar" @click="settings.web.gallery.splice(idx, 1); props.showNotify('Proyecto eliminado', 'warning')">
  <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
  </button>
  </div>
@@ -708,7 +710,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <svg class="w-8 h-8 text-gray-300 dark:text-[#a4aea6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
  <span class="text-[10px] font-black text-[#c3c4c5] mt-2 uppercase tracking-widest">Añadir Imágenes (Crea un proyecto por imagen)</span>
  </template>
- <input type="file" accept="image/*" multiple class="hidden" @change="uploadGalleryFiles" :disabled="uploadingGallery" />
+ <input type="file" accept="image/*" multiple class="hidden" :disabled="uploadingGallery" @change="uploadGalleryFiles" />
  </label>
  </div>
  </div>
@@ -735,7 +737,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </div>
 
  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
- <div v-for="(item, idx) in group" :key="item.originalIndex" :id="`catalog-item-${item.originalIndex}`" class="bg-[#151a22] dark:bg-[#151a22]/5 rounded-[2rem] p-6 border border-[#21262d] dark:border-[#21262d] transition-all hover: group/item">
+ <div v-for="(item, idx) in group" :id="`catalog-item-${item.originalIndex}`" :key="item.originalIndex" class="bg-[#151a22] dark:bg-[#151a22]/5 rounded-[2rem] p-6 border border-[#21262d] dark:border-[#21262d] transition-all hover: group/item">
  <div class="flex items-start justify-between mb-4">
  <div class="flex-1">
  <input v-model="item.name" placeholder="Nombre del Producto" class="w-full bg-transparent text-lg font-black text-[#ffffff] dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-700" />
@@ -751,7 +753,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </div>
  </div>
  <div class="flex items-center gap-2">
- <button class="p-2 hover:bg-gray-200 dark:hover:bg-[#151a22]/10 rounded-[6px] transition-all opacity-0 group-hover/item:opacity-100" @click="settings.web.catalog.splice(item.originalIndex, 1); props.showNotify('Producto eliminado', 'warning')" title="Eliminar">
+ <button class="p-2 hover:bg-gray-200 dark:hover:bg-[#151a22]/10 rounded-[6px] transition-all opacity-0 group-hover/item:opacity-100" title="Eliminar" @click="settings.web.catalog.splice(item.originalIndex, 1); props.showNotify('Producto eliminado', 'warning')">
  <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
  </button>
  </div>
@@ -809,15 +811,15 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
   <div class="flex flex-wrap gap-2 items-center">
   <div v-for="(addImg, addIdx) in (item.images || [])" :key="addIdx" class="relative group/addimg">
   <img :src="addImg" class="w-12 h-12 rounded-[6px] object-cover border border-[#21262d] dark:border-[#21262d]"  alt="Imagen N3XT 3D" />
-  <button class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-[60px] text-[8px] font-black flex items-center justify-center opacity-0 group-hover/addimg:opacity-100 transition-all " @click="removeCatalogImage(Number(item.originalIndex), Number(addIdx))" aria-label="Botón interactivo">✕</button>
+  <button class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-[60px] text-[8px] font-black flex items-center justify-center opacity-0 group-hover/addimg:opacity-100 transition-all " aria-label="Botón interactivo" @click="removeCatalogImage(Number(item.originalIndex), Number(addIdx))">✕</button>
   </div>
   <label class="w-12 h-12 rounded-[6px] border-2 border-dashed border-gray-300 dark:border-[#21262d] flex items-center justify-center cursor-pointer hover:border-primary transition-all bg-[#151a22] dark:bg-transparent shrink-0" title="Subir desde computador">
   <svg class="w-4 h-4 text-[#c3c4c5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
   <input type="file" accept="image/*" class="hidden" @change="(e) => handleGalleryImageUpload(e, item, false)" />
   </label>
   <div class="flex items-center gap-1 h-12">
-  <input v-model="item._newImgUrl" @keyup.enter="addImageByUrl(item)" placeholder="URL Cloudinary..." class="w-24 bg-[#151a22] dark:bg-[#090d0a]/50 border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-2.5 py-2 text-[8px] font-mono text-[#a4aea6] dark:text-[#c3c4c5] outline-none h-full" @click.stop />
-  <button class="w-8 h-full rounded-[6px] bg-[#08872b]/10 hover:bg-[#08872b]/20 flex items-center justify-center text-[#8dd6ff] transition-all shrink-0" @click.stop="addImageByUrl(item)" title="Añadir por URL">
+  <input v-model="item._newImgUrl" placeholder="URL Cloudinary..." class="w-24 bg-[#151a22] dark:bg-[#090d0a]/50 border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-2.5 py-2 text-[8px] font-mono text-[#a4aea6] dark:text-[#c3c4c5] outline-none h-full" @keyup.enter="addImageByUrl(item)" @click.stop />
+  <button class="w-8 h-full rounded-[6px] bg-[#08872b]/10 hover:bg-[#08872b]/20 flex items-center justify-center text-[#8dd6ff] transition-all shrink-0" title="Añadir por URL" @click.stop="addImageByUrl(item)">
   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
   </button>
   </div>
@@ -863,7 +865,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </div>
  </div>
  </div>
- <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[6px] transition-all shrink-0 ml-3" @click="settings.web.news.splice(idx, 1)" title="Eliminar noticia">
+ <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[6px] transition-all shrink-0 ml-3" title="Eliminar noticia" @click="settings.web.news.splice(idx, 1)">
  <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
  </button>
  </div>
@@ -905,7 +907,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest block mb-1.5">URL Amigable (Slug)</label>
  <div class="flex gap-2">
  <input v-model="article.slug" placeholder="auto-generado-del-titulo" class="flex-1 bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-4 py-2.5 text-xs font-mono text-[#a4aea6] dark:text-[#c3c4c5] outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
- <button class="px-4 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 hover:bg-gray-200 dark:hover:bg-[#151a22]/10 rounded-[6px] text-[9px] font-black text-[#a4aea6] uppercase tracking-wider transition-all shrink-0" @click="article.slug = article.t?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'') || ''" title="Generar slug automático">
+ <button class="px-4 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 hover:bg-gray-200 dark:hover:bg-[#151a22]/10 rounded-[6px] text-[9px] font-black text-[#a4aea6] uppercase tracking-wider transition-all shrink-0" title="Generar slug automático" @click="article.slug = article.t?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'') || ''">
  <svg class="w-3.5 h-3.5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
  </button>
  </div>
@@ -954,7 +956,8 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <svg class="w-5 h-5 text-[#a4aea6]" fill="currentColor" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
  </div>
  <!-- Platform Icon Preview -->
- <div class="w-12 h-12 rounded-[24px] flex items-center justify-center shrink-0 border-2" 
+ <div
+class="w-12 h-12 rounded-[24px] flex items-center justify-center shrink-0 border-2" 
  :class="{
  'bg-blue-500/10 border-blue-500/30 text-blue-500': item.platform === 'facebook',
  'bg-pink-500/10 border-pink-500/30 text-pink-500': item.platform === 'instagram',
@@ -983,7 +986,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </div>
  </div>
  </div>
- <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[6px] transition-all shrink-0 ml-3 opacity-0 group-hover/social:opacity-100" @click="settings.web.social_links.splice(idx, 1)" title="Eliminar">
+ <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[6px] transition-all shrink-0 ml-3 opacity-0 group-hover/social:opacity-100" title="Eliminar" @click="settings.web.social_links.splice(idx, 1)">
  <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
  </button>
  </div>
@@ -1011,10 +1014,10 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <input v-model="item.url" placeholder="https://..." class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-4 py-2.5 text-xs text-[#a4aea6] dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
  </div>
  <div class="col-span-1 xl:col-span-3 flex items-end gap-2">
- <button v-if="Number(idx) > 0" class="flex-1 px-3 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[6px] text-[9px] font-black text-[#a4aea6] hover:bg-[#151a22] transition-all" @click="const eco = settings.web.social_links; const i = Number(idx); [eco[i-1], eco[i]] = [eco[i], eco[i-1]]" title="Mover arriba">
+ <button v-if="Number(idx) > 0" class="flex-1 px-3 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[6px] text-[9px] font-black text-[#a4aea6] hover:bg-[#151a22] transition-all" title="Mover arriba" @click="const eco = settings.web.social_links; const i = Number(idx); [eco[i-1], eco[i]] = [eco[i], eco[i-1]]">
  <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"/></svg>
  </button>
- <button v-if="Number(idx) < (settings?.web?.social_links?.length || 1) - 1" class="flex-1 px-3 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[6px] text-[9px] font-black text-[#a4aea6] hover:bg-[#151a22] transition-all" @click="const eco = settings.web.social_links; const i = Number(idx); [eco[i], eco[i+1]] = [eco[i+1], eco[i]]" title="Mover abajo">
+ <button v-if="Number(idx) < (settings?.web?.social_links?.length || 1) - 1" class="flex-1 px-3 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[6px] text-[9px] font-black text-[#a4aea6] hover:bg-[#151a22] transition-all" title="Mover abajo" @click="const eco = settings.web.social_links; const i = Number(idx); [eco[i], eco[i+1]] = [eco[i+1], eco[i]]">
  <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
  </button>
  </div>
@@ -1057,7 +1060,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </div>
  <div class="w-16 h-16 rounded-[16px] flex items-center justify-center shrink-0 border border-[#21262d] dark:border-[#21262d] bg-[#151a22] dark:bg-[#283041] overflow-hidden">
  <img v-if="item.type === 'image' && item.i" :src="item.i.split(',')[0]" class="w-full h-full object-cover" />
- <span v-else-if="item.type === 'icon' && item.i" v-html="item.i" class="text-emerald-500 w-8 h-8 flex items-center justify-center"></span>
+ <span v-else-if="item.type === 'icon' && item.i" class="text-emerald-500 w-8 h-8 flex items-center justify-center" v-html="item.i"></span>
  <svg v-else class="w-6 h-6 text-[#c3c4c5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
  </div>
  <div class="min-w-0 flex-1">
@@ -1073,7 +1076,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </div>
  </div>
  </div>
- <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[6px] transition-all shrink-0 ml-3 opacity-0 group-hover/eco:opacity-100" @click="settings.web.ecosystem.splice(idx, 1)" title="Eliminar Tarjeta">
+ <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[6px] transition-all shrink-0 ml-3 opacity-0 group-hover/eco:opacity-100" title="Eliminar Tarjeta" @click="settings.web.ecosystem.splice(idx, 1)">
  <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
  </button>
  </div>
@@ -1096,10 +1099,10 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <input v-model="stat.val" placeholder="Valor (ej: +500)" class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-3 py-1.5 text-[10px] font-black text-white outline-none mb-1" />
  <input v-model="stat.label" placeholder="Etiqueta (ej: Productos)" class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-3 py-1.5 text-[8px] font-bold text-[#a4aea6] uppercase outline-none" />
  </div>
- <button @click="item.stats.splice(sidx, 1)" class="text-red-400 hover:text-red-300 px-1 shrink-0">✕</button>
+ <button class="text-red-400 hover:text-red-300 px-1 shrink-0" @click="item.stats.splice(sidx, 1)">✕</button>
  </div>
  </div>
- <button v-if="(item.stats || []).length < 3" @click="if(!item.stats) item.stats = []; item.stats.push({val: '', label: ''})" class="mt-3 text-[9px] font-black text-[#8dd6ff] uppercase tracking-widest hover:text-[#08872b] transition-colors">+ Añadir Stat</button>
+ <button v-if="(item.stats || []).length < 3" class="mt-3 text-[9px] font-black text-[#8dd6ff] uppercase tracking-widest hover:text-[#08872b] transition-colors" @click="if(!item.stats) item.stats = []; item.stats.push({val: '', label: ''})">+ Añadir Stat</button>
  </div>
 
  </div>

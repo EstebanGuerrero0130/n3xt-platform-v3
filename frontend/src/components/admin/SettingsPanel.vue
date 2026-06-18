@@ -129,12 +129,14 @@
  </div>
  </div>
  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
- <div v-for="(item, key) in { luz_hr: {label: 'Energía / Luz', sug: '926'}, depr_hr: {label: 'Depreciación', sug: '400'}, mant_hr: {label: 'Mantenimiento', sug: '700'}, etiquetas: {label: 'Etiquetas/Empaque', sug: '500'} }" :key="key"
+ <div
+v-for="(item, key) in { luz_hr: {label: 'Energía / Luz', sug: '926'}, depr_hr: {label: 'Depreciación', sug: '400'}, mant_hr: {label: 'Mantenimiento', sug: '700'}, etiquetas: {label: 'Etiquetas/Empaque', sug: '500'} }" :key="key"
  class="bg-[#283041]/60 p-5 rounded-[24px] border border-gray-700/60 hover:border-rose-500/40 hover:bg-[#283041]/80 hover: transition-all duration-300 group min-w-0">
  <p class="text-[10px] font-bold text-rose-400/70 uppercase mb-3 group-hover:text-rose-400 transition-colors truncate" :title="item.label">{{ item.label }}</p>
  <div class="flex items-baseline gap-1 min-w-0">
  <span class="text-rose-500/50 font-bold text-base shrink-0">$</span>
- <input v-model.number="localSettings.infra[key]" type="number" min="0" step="any"
+ <input
+v-model.number="localSettings.infra[key]" type="number" min="0" step="any"
  class="flex-1 min-w-0 bg-transparent border-none p-0 font-black text-2xl text-white outline-none focus:text-rose-300 transition-colors no-spinner"
  :placeholder="item.sug">
  </div>

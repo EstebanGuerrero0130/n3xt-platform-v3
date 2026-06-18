@@ -315,7 +315,7 @@ v-for="info in [
  <div class="bg-[#151a22] dark:bg-[#0a0f14] w-full max-w-2xl rounded-[3rem] border border-[#21262d] dark:border-[#21262d] relative overflow-hidden p-8 md:p-12">
  <div class="flex justify-between items-center mb-8">
  <h3 class="text-xl font-black uppercase tracking-[0.3em] italic text-[#ffffff] dark:text-white">Escaner QR</h3>
- <button class="w-10 h-10 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[60px] flex items-center justify-center text-[#c3c4c5] hover:text-white transition-all" @click="stopScanner" aria-label="Botón interactivo">✕</button>
+ <button class="w-10 h-10 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[60px] flex items-center justify-center text-[#c3c4c5] hover:text-white transition-all" aria-label="Botón interactivo" @click="stopScanner">✕</button>
  </div>
  <div id="reader" class="rounded-[24px] overflow-hidden border-4 border-primary/20"></div>
  </div>

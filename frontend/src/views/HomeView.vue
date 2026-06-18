@@ -56,7 +56,7 @@ interface GalleryItem {
 interface WebSettings {
  social: { tiktok: string; instagram: string; facebook: string; whatsapp: string; youtube: string }
  workshop_status: string
- news: { t: string; d: string; tag: string; i: string; url: string }[]
+ news: { t: string; d?: string; st?: string; tag?: string; category?: string; i?: string; image?: string; url?: string; slug?: string }[]
  gallery: GalleryItem[]
  posts: { t: string; d: string; l: string; i: string; tag: string; url: string }[]
  catalog: any[]
@@ -233,7 +233,10 @@ const openLegal = (type: any) => {
 
 // Lógica de Carrusel Automático para Tarjetas de Ecosistema
 const activeIndices = ref([0, 0, 0])
-const getImages = (iString: string): string[] => iString.split(',').map((s: string) => s.trim())
+const getImages = (iString?: string): string[] => {
+  if (!iString) return []
+  return iString.split(',').map((s: string) => s.trim()).filter(Boolean)
+}
 
 let carouselInterval: ReturnType<typeof setInterval> | null = null
 
@@ -332,6 +335,8 @@ onMounted(() => {
 <template>
  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-[#ffffff] dark:text-white overflow-x-hidden selection:bg-[#08872b]/20 transition-colors duration-500">
  <AppNavbar active-tab="home" subtext="Centro de Precisión Industrial" />
+
+<main id="main-content">
 
 <main id="main-content">
 
@@ -698,10 +703,9 @@ v-for="(card, cidx) in webSettings.ecosystem" :key="cidx"
  :alt="card.t1"
  class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
  loading="lazy"
- @error="(e: any) => e.target.style.display='none'" />
+ @error="(e: any) => e.target.src = 'https://images.unsplash.com/photo-1638202993928-7267aad84c31?auto=format&fit=crop&q=80&w=800'" />
  <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
- <!-- Badge -->
- <div class="absolute top-4 left-4 px-4 py-1.5 bg-emerald-500 text-white text-[9px] font-black rounded-[60px] uppercase tracking-[0.3em] ">NOVEDADES</div>
+ 
  <!-- Indicador carrusel -->
  <div v-if="getImages(card.i).length > 1" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
  <div
@@ -714,7 +718,7 @@ v-for="(_, dotIdx) in getImages(card.i)" :key="dotIdx"
  <!-- Icono (clean icon container) -->
  <div v-else-if="card.type === 'icon'" class="p-6 pb-0 flex justify-center">
  <div class="w-16 h-16 bg-emerald-500/10 rounded-[24px] flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:border-emerald-500 transition-all duration-500">
- <span :innerHTML="sanitizeSVG(card.i)" class="text-emerald-400 group-hover:text-white transition-colors duration-500"></span>
+ <span class="text-emerald-400 group-hover:text-white transition-colors duration-500" v-html="sanitizeSVG(card.i)"></span>
  </div>
  </div>
 
@@ -893,8 +897,8 @@ v-for="(item, idx) in webSettings.news" :key="item.t"
  </div>
  <!-- Content -->
  <div class="p-5 flex-1 flex flex-col gap-3">
- <h2 class="text-base font-black text-[#ffffff] dark:text-white uppercase tracking-tight leading-tight group-hover:text-emerald-500 transition-colors">{{ item.t }}</h2>
- <p class="text-[10px] text-[#c3c4c5] font-bold leading-relaxed uppercase tracking-tight flex-1">{{ item.d }}</p>
+ <h2 class="text-base font-black text-[#ffffff] dark:text-white uppercase tracking-tight leading-tight group-hover:text-emerald-500 transition-colors">{{ item.t || 'Nueva Noticia' }}</h2>
+ <p class="text-[10px] text-[#c3c4c5] font-bold leading-relaxed uppercase tracking-tight flex-1">{{ item.st || item.d }}</p>
  <!-- CTA rounded-[60px] como referencia -->
  <a
 :href="item.url || '#'" target="_blank" 
@@ -961,7 +965,7 @@ v-for="(post, idx) in webSettings.posts" :key="post.t"
  <!-- Imagen clean aspect-square rounded-[24px] como referencia -->
  <div class="p-4 pb-0">
  <div class="aspect-square w-full rounded-[24px] overflow-hidden relative bg-[#151a22] dark:bg-[#283041]">
- <img :src="post.i" :alt="'Publicación social de ' + post.t" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
+ <img :src="post.i" :alt="'Publicación social de ' + post.t" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" @error="(e: any) => e.target.src = 'https://images.unsplash.com/photo-1638202993928-7267aad84c31?auto=format&fit=crop&q=80&w=800'" />
  <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
  <!-- Likes badge -->
  <div class="absolute bottom-3 right-3 bg-black/50 backdrop-blur-md px-3.5 py-1.5 rounded-[60px] border border-white/10 flex items-center gap-2">

@@ -217,7 +217,7 @@ v-for="spec in [
  <div class="flex items-center bg-[#151a22] dark:bg-[#151a22] rounded-[1.5rem] p-1.5 border border-[#21262d] dark:border-[#21262d]">
  <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-[#8dd6ff] transition-colors hover:bg-[#151a22]/5 rounded-[6px]" @click="quantity > 1 ? quantity-- : null">-</button>
  <span class="w-14 text-center font-black text-xl italic tracking-tighter">{{ quantity }}</span>
- <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-[#8dd6ff] transition-colors hover:bg-[#151a22]/5 rounded-[6px]" @click="quantity++" aria-label="Botón interactivo">+</button>
+ <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-[#8dd6ff] transition-colors hover:bg-[#151a22]/5 rounded-[6px]" aria-label="Botón interactivo" @click="quantity++">+</button>
  </div>
  <p class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest max-w-[120px] leading-tight italic">Disponibilidad inmediata bajo pedido industrial</p>
  </div>

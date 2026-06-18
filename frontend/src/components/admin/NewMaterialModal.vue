@@ -34,7 +34,7 @@ watch(form, (val) => {
  <h3 class="text-2xl md:text-3xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter truncate">Registrar Nuevo Ítem</h3>
  <p class="text-[9px] md:text-xs text-[#c3c4c5] font-bold uppercase tracking-widest mt-1">Configuración técnica de inventario</p>
  </div>
- <button class="w-10 h-10 md:w-12 md:h-12 shrink-0 bg-[#151a22] dark:bg-[#151a22]/5 text-[#c3c4c5] rounded-[24px] flex items-center justify-center hover:bg-[#151a22] dark:hover:bg-[#151a22]/10 transition-all text-lg md:text-xl" @click="emit('update:modelValue', false)" aria-label="Botón interactivo">
+ <button class="w-10 h-10 md:w-12 md:h-12 shrink-0 bg-[#151a22] dark:bg-[#151a22]/5 text-[#c3c4c5] rounded-[24px] flex items-center justify-center hover:bg-[#151a22] dark:hover:bg-[#151a22]/10 transition-all text-lg md:text-xl" aria-label="Botón interactivo" @click="emit('update:modelValue', false)">
  ✕
  </button>
  </div>

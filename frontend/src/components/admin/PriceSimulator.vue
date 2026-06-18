@@ -85,9 +85,9 @@
  <div v-for="(item, idx) in form.extra_items" :key="idx" class="flex items-center gap-3 mt-3 bg-[#283041]/50 rounded-[6px] px-4 py-3">
  <span class="flex-1 text-white text-sm font-semibold">{{ item.name }}</span>
  <div class="flex items-center gap-2">
- <button class="w-8 h-8 rounded-[6px] bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors" @click="item.qty = Math.max(1, item.qty - 1)" aria-label="Botón interactivo">-</button>
+ <button class="w-8 h-8 rounded-[6px] bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors" aria-label="Botón interactivo" @click="item.qty = Math.max(1, item.qty - 1)">-</button>
  <span class="text-white font-bold w-8 text-center">{{ item.qty }}</span>
- <button class="w-8 h-8 rounded-[6px] bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors" @click="item.qty++" aria-label="Botón interactivo">+</button>
+ <button class="w-8 h-8 rounded-[6px] bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors" aria-label="Botón interactivo" @click="item.qty++">+</button>
  </div>
  <span class="text-emerald-400 font-bold w-24 text-right">${{ (item.cost * item.qty).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
  <button class="p-1 hover:bg-red-900/50 rounded-[6px] transition-colors" @click="removeExtra(idx)">

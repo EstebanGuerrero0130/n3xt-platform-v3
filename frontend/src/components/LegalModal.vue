@@ -33,7 +33,7 @@ defineExpose({ openLegal, setContent })
  <div class="absolute inset-0 bg-black/90 backdrop-blur-xl" @click="legalModal.show = false"></div>
  <div class="relative w-full max-w-4xl bg-[#0a0f14] border border-white/10 rounded-[3rem] p-10 md:p-16 overflow-hidden max-h-[80vh] flex flex-col">
  <div class="absolute top-0 right-0 p-8">
- <button class="w-12 h-12 rounded-[24px] bg-[#151a22]/5 text-white flex items-center justify-center hover:bg-[#08872b] transition-colors text-2xl" @click="legalModal.show = false" aria-label="Botón interactivo">✕</button>
+ <button class="w-12 h-12 rounded-[24px] bg-[#151a22]/5 text-white flex items-center justify-center hover:bg-[#08872b] transition-colors text-2xl" aria-label="Botón interactivo" @click="legalModal.show = false">✕</button>
  </div>
  
  <div class="mb-12">

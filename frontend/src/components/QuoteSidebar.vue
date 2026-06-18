@@ -131,9 +131,9 @@ const hasSlicingOrSLA = computed(() =>
  <div>
  <label class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Cantidad</label>
  <div class="flex items-center bg-[#151a22] dark:bg-[#151a22]/5 rounded-[24px] overflow-hidden">
- <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" @click="localQty = Math.max(1, localQty - 1)" aria-label="Botón interactivo">-</button>
+ <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" aria-label="Botón interactivo" @click="localQty = Math.max(1, localQty - 1)">-</button>
  <input v-model.number="localQty" type="number" min="1" class="flex-1 bg-transparent text-center text-lg font-black text-[#ffffff] dark:text-white outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
- <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" @click="localQty++" aria-label="Botón interactivo">+</button>
+ <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" aria-label="Botón interactivo" @click="localQty++">+</button>
  </div>
  </div>
  </div> <!-- SECCION 3: Opciones Adicionales -->
