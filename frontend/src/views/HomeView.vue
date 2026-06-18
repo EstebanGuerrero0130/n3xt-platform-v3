@@ -58,7 +58,7 @@ interface WebSettings {
  workshop_status: string
  news: { t: string; d?: string; st?: string; tag?: string; category?: string; i?: string; image?: string; url?: string; slug?: string }[]
  gallery: GalleryItem[]
- posts: { t: string; d: string; l: string; i: string; tag: string; url: string }[]
+ posts: { t: string; d: string; l: string; c?: string; s?: string; i: string; tag: string; url: string }[]
  catalog: any[]
  pdf_catalog_url: string
  pdf_catalog_desc: string
@@ -963,7 +963,7 @@ v-for="(post, idx) in webSettings.posts" :key="post.t"
  <!-- Imagen clean aspect-square rounded-[24px] como referencia -->
  <div class="p-4 pb-0">
  <div class="aspect-square w-full rounded-[24px] overflow-hidden relative bg-[#151a22] dark:bg-[#283041]">
- <img :src="post.i" :alt="'Publicación social de ' + post.t" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" @error="(e: any) => e.target.src = 'https://images.unsplash.com/photo-1638202993928-7267aad84c31?auto=format&fit=crop&q=80&w=800'" />
+ <img :src="post.i || 'https://images.unsplash.com/photo-1638202993928-7267aad84c31?auto=format&fit=crop&q=80&w=800'" :alt="'Publicación social de ' + post.t" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" @error="(e: any) => e.target.src = 'https://images.unsplash.com/photo-1638202993928-7267aad84c31?auto=format&fit=crop&q=80&w=800'" />
  <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
  <!-- Likes badge -->
  <div class="absolute bottom-3 right-3 bg-black/50 backdrop-blur-md px-3.5 py-1.5 rounded-[60px] border border-white/10 flex items-center gap-2">
@@ -996,12 +996,12 @@ v-for="(post, idx) in webSettings.posts" :key="post.t"
  </div>
  <div class="w-px h-6 bg-gray-200 dark:bg-[#151a22]/10"></div>
  <div class="flex flex-col items-center gap-0.5">
- <span class="text-[10px] font-black text-[#ffffff] dark:text-white">24</span>
+ <span class="text-[10px] font-black text-[#ffffff] dark:text-white">{{ post.c || '24' }}</span>
  <span class="text-[7px] font-bold text-[#c3c4c5] uppercase tracking-wider">Comentarios</span>
  </div>
  <div class="w-px h-6 bg-gray-200 dark:bg-[#151a22]/10"></div>
  <div class="flex flex-col items-center gap-0.5">
- <span class="text-[10px] font-black text-[#ffffff] dark:text-white">156</span>
+ <span class="text-[10px] font-black text-[#ffffff] dark:text-white">{{ post.s || '156' }}</span>
  <span class="text-[7px] font-bold text-[#c3c4c5] uppercase tracking-wider">Compartidos</span>
  </div>
  </div>
