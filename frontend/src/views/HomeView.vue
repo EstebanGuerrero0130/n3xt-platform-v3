@@ -881,8 +881,8 @@ v-for="(item, idx) in webSettings.news" :key="item.t"
  <div class="p-4 pb-0">
  <div class="aspect-square w-full rounded-[24px] overflow-hidden relative bg-[#151a22] dark:bg-[#283041]">
  <img
-:src="item.i" 
- :alt="'Noticia: ' + item.t"
+:src="item.image || item.i || 'https://images.unsplash.com/photo-1631033031102-f855d4872494?auto=format&fit=crop&q=80&w=800'" 
+ :alt="'Noticia: ' + (item.t || 'N3XT')"
  class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
  loading="lazy"
  @error="(e: any) => e.target.src = 'https://images.unsplash.com/photo-1631033031102-f855d4872494?auto=format&fit=crop&q=80&w=800'"
@@ -899,7 +899,7 @@ v-for="(item, idx) in webSettings.news" :key="item.t"
  <p class="text-[10px] text-[#c3c4c5] font-bold leading-relaxed uppercase tracking-tight flex-1">{{ item.st || item.d }}</p>
  <!-- CTA rounded-[60px] como referencia -->
  <a
-:href="item.url || '#'" target="_blank" 
+:href="item.url || (item.slug ? '/noticias/' + item.slug : '#')" :target="(item.url && item.url !== '#') ? '_blank' : '_self'" 
  class="mt-2 flex items-center justify-center gap-2 w-full py-3.5 bg-[#151a22] dark:bg-[#151a22]/10 hover:bg-emerald-500 text-white rounded-[60px] text-[8px] font-black uppercase tracking-[0.35em] transition-all duration-500 ">
  <span>Leer</span>
  <svg class="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>

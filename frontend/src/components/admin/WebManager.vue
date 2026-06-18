@@ -902,6 +902,12 @@ v-for="(social, key) in [
  <textarea v-model="article.body" rows="5" placeholder="Escribe el contenido completo de la noticia aquí..." class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[24px] px-5 py-4 text-sm font-medium text-[#a4aea6] dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-y leading-relaxed"></textarea>
  </div>
 
+  <div class="mb-4">
+  <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest block mb-1.5">URL del Articulo (boton Leer)</label>
+  <input v-model="article.url" placeholder="https://ejemplo.com/noticia" class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-4 py-2.5 text-xs text-[#a4aea6] dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+  <p class="text-[8px] text-[#a4aea6] mt-1">Enlace externo (abre en pestaña nueva). Si lo dejas vacio usa el slug de la noticia.</p>
+  </div>
+
  <div class="grid grid-cols-12 gap-4">
  <div class="col-span-8">
  <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest block mb-1.5">URL Amigable (Slug)</label>
@@ -933,7 +939,7 @@ v-for="(social, key) in [
  <p class="text-xs text-[#a4aea6] mt-1">Agrega artículos para mostrar en la landing page</p>
  </div>
 
- <button class="px-6 py-4 bg-[#08872b]/10 hover:bg-[#08872b]/20 text-[#8dd6ff] rounded-[24px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="settings.web.news.push({ t: '', st: '', image: '', body: '', date: new Date().toISOString().split('T')[0], status: 'draft', category: '', slug: '' })">
+ <button class="px-6 py-4 bg-[#08872b]/10 hover:bg-[#08872b]/20 text-[#8dd6ff] rounded-[24px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="settings.web.news.push({ t: '', st: '', image: '', body: '', url: '', date: new Date().toISOString().split('T')[0], status: 'draft', category: '', slug: '' })">
  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
  Nueva Noticia
  </button>
