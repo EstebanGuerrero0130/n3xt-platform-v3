@@ -338,8 +338,6 @@ onMounted(() => {
 
 <main id="main-content">
 
-<main id="main-content">
-
  <!-- Partículas ambientales -->
  <!-- Hero Section -->
  <section class="relative pt-20 pb-32 px-6 overflow-hidden">
