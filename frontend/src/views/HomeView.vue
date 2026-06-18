@@ -887,7 +887,7 @@ v-for="(item, idx) in webSettings.news" :key="item.t"
  />
  <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
  <div class="absolute top-3 left-3">
- <span class="px-3.5 py-1.5 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-[0.25em] rounded-[60px] -emerald-500/20">{{ item.tag }}</span>
+ <span class="px-3.5 py-1.5 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-[0.25em] rounded-[60px] -emerald-500/20">{{ item.category || item.tag || 'NOTICIA' }}</span>
  </div>
  </div>
  </div>

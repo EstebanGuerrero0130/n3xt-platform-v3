@@ -318,7 +318,8 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  {id: 'gallery', n: 'Galería', i: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'},
  {id: 'catalog', n: 'Catálogo', i: 'M4 6h16M4 10h16M4 14h16M4 18h16'},
  {id: 'news', n: 'Noticias', i: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2zM7 8h5M7 12h8M7 16h8'}, 
- {id: 'social', n: 'Social', i: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'}
+ {id: 'social', n: 'Social', i: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'},
+ {id: 'ecosystem', n: 'Ecosistema', i: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'}
  ]" 
  :key="st.id"
  :class="[
@@ -940,12 +941,12 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <div v-if="webSubTab === 'social'" class="bg-[#151a22] dark:bg-[#151a22]/70 backdrop-blur-xl p-10 rounded-[3rem] border border-[#21262d] dark:border-[#21262d] ">
  <div class="flex items-center justify-between mb-8">
  <div>
- <h3 class="text-2xl font-black text-[#ffffff] dark:text-white uppercase tracking-tight">Ecosistema Digital</h3>
- <p class="text-xs text-[#c3c4c5] font-bold uppercase tracking-widest mt-1">{{ settings?.web?.ecosystem?.length || 0 }} plataformas vinculadas</p>
+ <h3 class="text-2xl font-black text-[#ffffff] dark:text-white uppercase tracking-tight">Plataformas Sociales</h3>
+ <p class="text-xs text-[#c3c4c5] font-bold uppercase tracking-widest mt-1">{{ settings?.web?.social_links?.length || 0 }} plataformas vinculadas</p>
  </div>
  </div>
 
- <div v-for="(item, idx) in settings?.web?.ecosystem || []" :key="idx" class="p-5 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[2rem] mb-4 border border-[#21262d] dark:border-[#21262d] hover: transition-all group/social">
+ <div v-for="(item, idx) in settings?.web?.social_links || []" :key="idx" class="p-5 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[2rem] mb-4 border border-[#21262d] dark:border-[#21262d] hover: transition-all group/social">
  <div class="flex items-start justify-between mb-4">
  <div class="flex items-center gap-4 flex-1 min-w-0">
  <!-- Drag Handle -->
@@ -982,7 +983,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </div>
  </div>
  </div>
- <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[6px] transition-all shrink-0 ml-3 opacity-0 group-hover/social:opacity-100" @click="settings.web.ecosystem.splice(idx, 1)" title="Eliminar">
+ <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[6px] transition-all shrink-0 ml-3 opacity-0 group-hover/social:opacity-100" @click="settings.web.social_links.splice(idx, 1)" title="Eliminar">
  <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
  </button>
  </div>
@@ -1010,10 +1011,10 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  <input v-model="item.url" placeholder="https://..." class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-4 py-2.5 text-xs text-[#a4aea6] dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
  </div>
  <div class="col-span-1 xl:col-span-3 flex items-end gap-2">
- <button v-if="Number(idx) > 0" class="flex-1 px-3 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[6px] text-[9px] font-black text-[#a4aea6] hover:bg-[#151a22] transition-all" @click="const eco = settings.web.ecosystem; const i = Number(idx); [eco[i-1], eco[i]] = [eco[i], eco[i-1]]" title="Mover arriba">
+ <button v-if="Number(idx) > 0" class="flex-1 px-3 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[6px] text-[9px] font-black text-[#a4aea6] hover:bg-[#151a22] transition-all" @click="const eco = settings.web.social_links; const i = Number(idx); [eco[i-1], eco[i]] = [eco[i], eco[i-1]]" title="Mover arriba">
  <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"/></svg>
  </button>
- <button v-if="Number(idx) < (settings?.web?.ecosystem?.length || 1) - 1" class="flex-1 px-3 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[6px] text-[9px] font-black text-[#a4aea6] hover:bg-[#151a22] transition-all" @click="const eco = settings.web.ecosystem; const i = Number(idx); [eco[i], eco[i+1]] = [eco[i+1], eco[i]]" title="Mover abajo">
+ <button v-if="Number(idx) < (settings?.web?.social_links?.length || 1) - 1" class="flex-1 px-3 py-2.5 bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[6px] text-[9px] font-black text-[#a4aea6] hover:bg-[#151a22] transition-all" @click="const eco = settings.web.social_links; const i = Number(idx); [eco[i], eco[i+1]] = [eco[i+1], eco[i]]" title="Mover abajo">
  <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
  </button>
  </div>
@@ -1025,17 +1026,87 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
  </div>
  </div>
 
- <div v-if="!settings?.web?.ecosystem?.length" class="text-center py-16">
+ <div v-if="!settings?.web?.social_links?.length" class="text-center py-16">
  <div class="w-16 h-16 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[2rem] flex items-center justify-center mx-auto mb-4">
  <svg class="w-8 h-8 text-[#c3c4c5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
  </div>
  <p class="text-sm font-black text-[#c3c4c5] uppercase tracking-tight">Sin plataformas vinculadas</p>
- <p class="text-xs text-[#a4aea6] mt-1">Agrega enlaces a tu ecosistema digital</p>
+ <p class="text-xs text-[#a4aea6] mt-1">Agrega enlaces a tus plataformas sociales</p>
  </div>
 
- <button class="px-6 py-4 bg-[#08872b]/10 hover:bg-[#08872b]/20 text-[#8dd6ff] rounded-[24px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="settings.web.ecosystem.push({ name: '', url: '', platform: '', description: '' })">
+ <button class="px-6 py-4 bg-[#08872b]/10 hover:bg-[#08872b]/20 text-[#8dd6ff] rounded-[24px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="if(!settings.web.social_links) settings.web.social_links = []; settings.web.social_links.push({ name: '', url: '', platform: '', description: '' })">
  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
  Añadir Plataforma
+ </button>
+ </div>
+
+ <!-- ===== TAB: ECOSISTEMA N3XT 3D ===== -->
+ <div v-if="webSubTab === 'ecosystem'" class="bg-[#151a22] dark:bg-[#151a22]/70 backdrop-blur-xl p-10 rounded-[3rem] border border-[#21262d] dark:border-[#21262d] ">
+ <div class="flex items-center justify-between mb-8">
+ <div>
+ <h3 class="text-2xl font-black text-[#ffffff] dark:text-white uppercase tracking-tight">Ecosistema N3XT 3D</h3>
+ <p class="text-xs text-[#c3c4c5] font-bold uppercase tracking-widest mt-1">{{ settings?.web?.ecosystem?.length || 0 }} tarjetas configuradas</p>
+ </div>
+ </div>
+
+ <div v-for="(item, idx) in settings?.web?.ecosystem || []" :key="idx" class="p-5 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[2rem] mb-6 border border-[#21262d] dark:border-[#21262d] hover:border-[#08872b]/40 transition-all group/eco">
+ <div class="flex items-start justify-between mb-4">
+ <div class="flex items-center gap-4 flex-1 min-w-0">
+ <div class="cursor-grab active:cursor-grabbing opacity-20 group-hover/eco:opacity-60 transition-opacity select-none" title="Arrastrar para reordenar">
+ <svg class="w-5 h-5 text-[#a4aea6]" fill="currentColor" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+ </div>
+ <div class="w-16 h-16 rounded-[16px] flex items-center justify-center shrink-0 border border-[#21262d] dark:border-[#21262d] bg-[#151a22] dark:bg-[#283041] overflow-hidden">
+ <img v-if="item.type === 'image' && item.i" :src="item.i.split(',')[0]" class="w-full h-full object-cover" />
+ <span v-else-if="item.type === 'icon' && item.i" v-html="item.i" class="text-emerald-500 w-8 h-8 flex items-center justify-center"></span>
+ <svg v-else class="w-6 h-6 text-[#c3c4c5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+ </div>
+ <div class="min-w-0 flex-1">
+ <div class="flex gap-2">
+ <input v-model="item.t1" placeholder="N3XT" class="w-1/2 bg-transparent text-lg font-black text-[#ffffff] dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-700" />
+ <input v-model="item.t2" placeholder="LAB" class="w-1/2 bg-transparent text-lg font-black text-emerald-500 outline-none placeholder:text-emerald-500/50" />
+ </div>
+ <div class="mt-2">
+ <select v-model="item.type" class="bg-[#151a22] dark:bg-[#090d0a]/50 border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-2 py-1 text-[9px] font-bold text-[#a4aea6] dark:text-white outline-none">
+ <option value="image">Imagen</option>
+ <option value="icon">Icono (SVG)</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[6px] transition-all shrink-0 ml-3 opacity-0 group-hover/eco:opacity-100" @click="settings.web.ecosystem.splice(idx, 1)" title="Eliminar Tarjeta">
+ <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+ </button>
+ </div>
+
+ <div class="mb-4">
+ <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest block mb-1.5">Fuente de Medios (URL Imagen o Código SVG)</label>
+ <textarea v-model="item.i" rows="2" placeholder="URL(s) de imagen separadas por comas, o código <svg>..." class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[12px] px-4 py-2.5 text-xs text-[#a4aea6] dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-mono resize-y"></textarea>
+ </div>
+
+ <div class="mb-4">
+ <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest block mb-1.5">Descripción</label>
+ <textarea v-model="item.d" rows="2" placeholder="Descripción de esta sección del ecosistema..." class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[12px] px-4 py-2.5 text-xs text-[#a4aea6] dark:text-[#c3c4c5] outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-y"></textarea>
+ </div>
+
+ <div class="bg-[#151a22] dark:bg-[#090d0a]/30 rounded-[1rem] p-4 border border-[#21262d] dark:border-[#21262d]">
+ <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest block mb-3">Estadísticas (Stats)</label>
+ <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+ <div v-for="(stat, sidx) in item.stats || []" :key="sidx" class="flex gap-2">
+ <div class="flex-1">
+ <input v-model="stat.val" placeholder="Valor (ej: +500)" class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-3 py-1.5 text-[10px] font-black text-white outline-none mb-1" />
+ <input v-model="stat.label" placeholder="Etiqueta (ej: Productos)" class="w-full bg-[#151a22] dark:bg-[#283041] border border-[#21262d] dark:border-[#21262d] rounded-[6px] px-3 py-1.5 text-[8px] font-bold text-[#a4aea6] uppercase outline-none" />
+ </div>
+ <button @click="item.stats.splice(sidx, 1)" class="text-red-400 hover:text-red-300 px-1 shrink-0">✕</button>
+ </div>
+ </div>
+ <button v-if="(item.stats || []).length < 3" @click="if(!item.stats) item.stats = []; item.stats.push({val: '', label: ''})" class="mt-3 text-[9px] font-black text-[#8dd6ff] uppercase tracking-widest hover:text-[#08872b] transition-colors">+ Añadir Stat</button>
+ </div>
+
+ </div>
+
+ <button class="px-6 py-4 bg-[#08872b]/10 hover:bg-[#08872b]/20 text-[#8dd6ff] rounded-[24px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="if(!settings.web.ecosystem) settings.web.ecosystem = []; settings.web.ecosystem.push({ type: 'image', t1: 'NUEVA', t2: 'TARJETA', d: '', i: '', stats: [] })">
+ <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+ Añadir Tarjeta de Ecosistema
  </button>
  </div>
 
