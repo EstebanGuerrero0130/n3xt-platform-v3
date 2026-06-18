@@ -1320,17 +1320,17 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
  <div class="hero-grid">
  <div class="card">
  <div class="card-label">Ingresos Brutos</div>
- <div class="card-val">$${Number(reportData.summary.total_revenue).toLocaleString()}</div>
+ <div class="card-val">$${Number(reportData.summary.total_revenue).toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
  <div class="card-sub">${reportData.summary.orders_count} órdenes procesadas</div>
  </div>
  <div class="card">
  <div class="card-label">Gastos de Operación</div>
- <div class="card-val" style="color: #ef4444;">$${Number(reportData.summary.total_expenses).toLocaleString()}</div>
+ <div class="card-val" style="color: #ef4444;">$${Number(reportData.summary.total_expenses).toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
  <div class="card-sub">Costo de producción base</div>
  </div>
  <div class="card emerald">
  <div class="card-label">Utilidad Neta Real</div>
- <div class="card-val">$${Number(reportData.summary.net_profit).toLocaleString()}</div>
+ <div class="card-val">$${Number(reportData.summary.net_profit).toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
  <div class="card-sub" style="color: #4ade80;">Flujo de caja positivo</div>
  </div>
  <div class="card">
@@ -1354,7 +1354,7 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
  <!-- Waste Management -->
  <div class="section">
  <div class="section-header"><div class="dot" style="background: #ef4444;"></div><div class="section-title">Control de Pérdidas</div></div>
- <div class="data-item"><span class="item-label">Costo por Fallos</span><span class="item-val neg">$${Number(reportData.summary.waste_cost).toLocaleString()}</span></div>
+ <div class="data-item"><span class="item-label">Costo por Fallos</span><span class="item-val neg">$${Number(reportData.summary.waste_cost).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
  <div class="data-item"><span class="item-label">Material Desperdiciado</span><span class="item-val">${reportData.summary.waste_weight_g} g</span></div>
  </div>
 
@@ -1375,15 +1375,15 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
  <div class="section">
  <div class="section-header"><div class="dot"></div><div class="section-title">Estado de Gastos Detallado</div></div>
  
- <div class="data-item"><span class="item-label">Materia Prima e Insumos</span><span class="item-val">$${Number(reportData.summary.total_material_cost).toLocaleString()}</span></div>
- <div class="data-item sub-item"><span class="item-label">Consumo FDM</span><span class="item-val">$${Number(reportData.summary.breakdown.mat_fdm).toLocaleString()}</span></div>
- <div class="data-item sub-item"><span class="item-label">Consumo SLA</span><span class="item-val">$${Number(reportData.summary.breakdown.mat_sla).toLocaleString()}</span></div>
+ <div class="data-item"><span class="item-label">Materia Prima e Insumos</span><span class="item-val">$${Number(reportData.summary.total_material_cost).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+ <div class="data-item sub-item"><span class="item-label">Consumo FDM</span><span class="item-val">$${Number(reportData.summary.breakdown.mat_fdm).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+ <div class="data-item sub-item"><span class="item-label">Consumo SLA</span><span class="item-val">$${Number(reportData.summary.breakdown.mat_sla).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
  
- <div class="data-item"><span class="item-label">Mano de Obra Especializada</span><span class="item-val">$${Number(reportData.summary.breakdown.labor).toLocaleString()}</span></div>
- <div class="data-item"><span class="item-label">Costos de Energía y Luz</span><span class="item-val">$${Number(reportData.summary.breakdown.luz).toLocaleString()}</span></div>
- <div class="data-item"><span class="item-label">Plan de Mantenimiento</span><span class="item-val">$${Number(reportData.summary.breakdown.mant).toLocaleString()}</span></div>
- <div class="data-item"><span class="item-label">Depreciación Activos</span><span class="item-val">$${Number(reportData.summary.breakdown.depr).toLocaleString()}</span></div>
- <div class="data-item"><span class="item-label">Logística y Extras</span><span class="item-val">$${Number(reportData.summary.total_extras_cost).toLocaleString()}</span></div>
+ <div class="data-item"><span class="item-label">Mano de Obra Especializada</span><span class="item-val">$${Number(reportData.summary.breakdown.labor).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+ <div class="data-item"><span class="item-label">Costos de Energía y Luz</span><span class="item-val">$${Number(reportData.summary.breakdown.luz).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+ <div class="data-item"><span class="item-label">Plan de Mantenimiento</span><span class="item-val">$${Number(reportData.summary.breakdown.mant).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+ <div class="data-item"><span class="item-label">Depreciación Activos</span><span class="item-val">$${Number(reportData.summary.breakdown.depr).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+ <div class="data-item"><span class="item-label">Logística y Extras</span><span class="item-val">$${Number(reportData.summary.total_extras_cost).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
  </div>
 
  <!-- Top Customers -->
@@ -1400,7 +1400,7 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
  ${reportData.top_customers.slice(0, 5).map(c => `
  <tr>
  <td style="font-weight: 700;">${c.customer_name} <span style="font-size: 7px; color: #94a3b8; display: block;">${c.orders_count} órdenes registradas</span></td>
- <td style="text-align: right; font-weight: 900; color: #1e3a34; font-size: 12px;">$${Number(c.total_spent).toLocaleString()}</td>
+ <td style="text-align: right; font-weight: 900; color: #1e3a34; font-size: 12px;">$${Number(c.total_spent).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
  </tr>
  `).join('')}
  </tbody>
@@ -1414,7 +1414,7 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
  <div class="sys-stamp">
  SISTEMA DE GESTIÓN N3XT CORE | VERSIÓN 3.2.4<br>
  ID ÚNICO DE AUDITORÍA: ${Math.random().toString(36).substr(2, 9).toUpperCase()}<br>
- EMISIÓN: ${new Date().toLocaleString()}
+ EMISIÓN: ${new Date().toLocaleString(undefined, {maximumFractionDigits: 0})}
  </div>
  <div class="sign-box">
  <div style="font-size: 7px; color: #94a3b8; font-weight: 700; margin-bottom: 20px;">VERIFICACIÓN DIGITAL REQUERIDA</div>
@@ -1495,12 +1495,12 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
  <td style="color: #64748b;">${o.job_name || 'Servicio de Impresión'}</td>
  <td><span class="tech-badge">${o.technology}</span></td>
  <td>${o.estimated_weight_g}g</td>
- <td class="price-cell">$${Number(o.total_price).toLocaleString()}</td>
+ <td class="price-cell">$${Number(o.total_price).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
  </tr>
  `).join('')}
  <tr class="summary-row">
  <td colspan="6" style="text-align: right; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 10px;">Venta Total del Periodo</td>
- <td style="text-align: right; font-size: 18px; font-weight: 900;">$${filteredOrders.reduce((acc, o) => acc + parseFloat(o.total_price), 0).toLocaleString()}</td>
+ <td style="text-align: right; font-size: 18px; font-weight: 900;">$${filteredOrders.reduce((acc, o) => acc + parseFloat(o.total_price), 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
  </tr>
  </tbody>
  </table>
@@ -1548,7 +1548,7 @@ const handlePurgeAll = () => {
  'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
  async () => {
  try {
- await api.post('/admin/purge-all');
+ await api.post('/admin/purge-all', { confirm_purge: 'PURGE_ALL_CONFIRMED' });
  showNotify('SISTEMA PURGADO EXITOSAMENTE. ENTORNO CERO INICIADO.', 'success');
  orders.value = [];
  inventoryData.value = [];
@@ -1689,7 +1689,7 @@ const handlePurgeAll = () => {
  <div class="absolute -right-10 -top-10 w-32 h-32 bg-[#08872b]/5 rounded-[60px] blur-2xl group-hover:bg-[#08872b]/10 transition-all"></div>
  <p class="text-[7px] md:text-[8px] font-black text-[#a4aea6] uppercase tracking-[0.2em] md:tracking-[0.3em] mb-2">Eficiencia Bruta</p>
  <div class="flex items-end gap-2">
- <h3 class="text-lg md:text-2xl font-black text-white tracking-tighter leading-none">${{ Math.round(orders.reduce((acc, o) => acc + (o.status === 'completed' ? o.total_price : 0), 0)).toLocaleString() }}</h3>
+ <h3 class="text-lg md:text-2xl font-black text-white tracking-tighter leading-none">${{ Math.round(orders.reduce((acc, o) => acc + (o.status === 'completed' ? o.total_price : 0), 0)).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</h3>
  <span class="text-[7px] md:text-[8px] font-black text-[#8dd6ff] uppercase tracking-widest mb-0.5 italic">COP</span>
  </div>
  </div>
@@ -1830,6 +1830,7 @@ const handlePurgeAll = () => {
  v-model="modalState.newPrinter"
  :new-printer="newPrinter"
  :submitting="submitting"
+   @update:newPrinter="Object.assign(newPrinter, $event)"
  @add-printer="addPrinter"
  />
 

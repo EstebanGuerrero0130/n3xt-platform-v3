@@ -203,16 +203,16 @@ class="text-6xl lg:text-7xl font-black tracking-tighter italic text-white relati
 
  <div v-if="breakdown.discount > 0" class="flex justify-between items-center px-4 py-2">
  <span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Descuento</span>
- <span class="text-xs font-black text-emerald-400">-${{ Math.round(breakdown.discount).toLocaleString() }}</span>
+ <span class="text-xs font-black text-emerald-400">-${{ Math.round(breakdown.discount).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
  </div>
  <div class="border-t border-white/10 pt-3 mt-2">
  <div class="flex justify-between items-center px-4 py-2">
  <span class="text-[9px] font-black text-white/50 uppercase tracking-widest">Subtotal</span>
- <span class="text-sm font-black text-white">${{ Math.round(breakdown.subtotal).toLocaleString() }}</span>
+ <span class="text-sm font-black text-white">${{ Math.round(breakdown.subtotal).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
  </div>
  <div class="flex justify-between items-center px-4 py-2">
  <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">IVA (19%)</span>
- <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.iva).toLocaleString() }}</span>
+ <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.iva).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
  </div>
  </div>
  </div>

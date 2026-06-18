@@ -309,14 +309,14 @@ export function quotePDFHTML(order: OrderData, material: any, settings: Settings
       <td style="font-weight: 800; color: #0f172a;">${order.job_name || 'Fabricación Digital Bajo Demanda'}<br><span style="font-size: 13px; color: #64748b; font-weight: 500;">Producción 3D Especializada - Prototipado / Final</span></td>
       <td>${order.technology}</td>
       <td>${material ? material.name : (order.material_name || order.material_id)}</td>
-      <td style="text-align: right; font-weight: 900; color: #0f172a;">$${Number(order.total_price - (order.extras_cost || 0)).toLocaleString()}</td>
+      <td style="text-align: right; font-weight: 900; color: #0f172a;">$${Number(order.total_price - (order.extras_cost || 0)).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
     </tr>
     ${(order.extra_items || []).map(extra => `
     <tr>
       <td>${extra.name} (Adicional / Empaque)</td>
       <td>N/A</td>
       <td>${extra.qty} x Und</td>
-      <td style="text-align: right; font-weight: 900; color: #0f172a;">$${Number(extra.cost * extra.qty).toLocaleString()}</td>
+      <td style="text-align: right; font-weight: 900; color: #0f172a;">$${Number(extra.cost * extra.qty).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
     </tr>`).join('')}
   </tbody>
 </table>
@@ -337,7 +337,7 @@ export function quotePDFHTML(order: OrderData, material: any, settings: Settings
 <div class="total-section">
   <div class="total-box">
     <div class="total-label">Inversión Total del Proyecto</div>
-    <div class="total-val-main">$${Number(order.total_price).toLocaleString()}</div>
+    <div class="total-val-main">$${Number(order.total_price).toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
     <div style="font-size: 11px; margin-top: 10px; opacity: 0.9; font-weight: 700; color: #10b981; text-transform: uppercase;">IVA INCLUIDO (${settings.margin?.iva || 0}%) • VALIDEZ: 15 DÍAS • ANTICIPO: 50%</div>
   </div>
 </div>
@@ -345,7 +345,7 @@ export function quotePDFHTML(order: OrderData, material: any, settings: Settings
   <p style="margin-bottom: 5px; font-weight: 800;">${company.name || 'N3XT 3D Administrative System'} • Soluciones de Manufactura Aditiva de Alta Precisión</p>
   <p>© 2026 ${company.name || 'N3XT 3D SYSTEMS'} - Tecnología Digital Avanzada</p>
   <p>Email: ${company.email || 'ventas@n3xt.com'} • ${company.address || ''}</p>
-  <p style="font-size: 8px; opacity: 0.5; margin-top: 10px;">Generado el ${new Date().toLocaleString()} • Copia Digital Autenticada</p>
+  <p style="font-size: 8px; opacity: 0.5; margin-top: 10px;">Generado el ${new Date().toLocaleString(undefined, {maximumFractionDigits: 0})} • Copia Digital Autenticada</p>
 </div></body></html>`
 }
 
@@ -416,9 +416,9 @@ export function metricsReportHTML(reportData: Record<string, any>, settings: Set
     </div>
   </div>
   <div class="hero-grid">
-    <div class="card"><div class="card-label">Ingresos Brutos</div><div class="card-val">$${Number(reportData.summary.total_revenue).toLocaleString()}</div><div class="card-sub">${reportData.summary.orders_count} órdenes procesadas</div></div>
-    <div class="card"><div class="card-label">Gastos de Operación</div><div class="card-val" style="color: #ef4444;">$${Number(reportData.summary.total_expenses).toLocaleString()}</div><div class="card-sub">Costo de producción base</div></div>
-    <div class="card emerald"><div class="card-label">Utilidad Neta Real</div><div class="card-val">$${Number(reportData.summary.net_profit).toLocaleString()}</div><div class="card-sub" style="color: #4ade80;">Flujo de caja positivo</div></div>
+    <div class="card"><div class="card-label">Ingresos Brutos</div><div class="card-val">$${Number(reportData.summary.total_revenue).toLocaleString(undefined, {maximumFractionDigits: 0})}</div><div class="card-sub">${reportData.summary.orders_count} órdenes procesadas</div></div>
+    <div class="card"><div class="card-label">Gastos de Operación</div><div class="card-val" style="color: #ef4444;">$${Number(reportData.summary.total_expenses).toLocaleString(undefined, {maximumFractionDigits: 0})}</div><div class="card-sub">Costo de producción base</div></div>
+    <div class="card emerald"><div class="card-label">Utilidad Neta Real</div><div class="card-val">$${Number(reportData.summary.net_profit).toLocaleString(undefined, {maximumFractionDigits: 0})}</div><div class="card-sub" style="color: #4ade80;">Flujo de caja positivo</div></div>
     <div class="card"><div class="card-label">Margen de Beneficio</div><div class="card-val">${reportData.summary.profit_margin_pct}%</div><div class="card-sub">Retorno sobre inversión</div></div>
   </div>
   <div class="content-grid">
@@ -429,7 +429,7 @@ export function metricsReportHTML(reportData: Record<string, any>, settings: Set
         <div class="data-item"><span class="item-label">Tasa de Entrega</span><span class="item-val">${reportData.summary.completed_count} / ${reportData.summary.orders_count}</span></div>
       </div>
       <div class="section"><div class="section-header"><div class="dot" style="background: #ef4444;"></div><div class="section-title">Control de Pérdidas</div></div>
-        <div class="data-item"><span class="item-label">Costo por Fallos</span><span class="item-val neg">$${Number(reportData.summary.waste_cost).toLocaleString()}</span></div>
+        <div class="data-item"><span class="item-label">Costo por Fallos</span><span class="item-val neg">$${Number(reportData.summary.waste_cost).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
         <div class="data-item"><span class="item-label">Material Desperdiciado</span><span class="item-val">${reportData.summary.waste_weight_g} g</span></div>
       </div>
       <div class="section"><div class="section-header"><div class="dot" style="background: #64748b;"></div><div class="section-title">Mix Tecnológico</div></div>
@@ -438,24 +438,24 @@ export function metricsReportHTML(reportData: Record<string, any>, settings: Set
     </div>
     <div class="right-col">
       <div class="section"><div class="section-header"><div class="dot"></div><div class="section-title">Estado de Gastos Detallado</div></div>
-        <div class="data-item"><span class="item-label">Materia Prima e Insumos</span><span class="item-val">$${Number(reportData.summary.total_material_cost).toLocaleString()}</span></div>
-        <div class="data-item sub-item"><span class="item-label">Consumo FDM</span><span class="item-val">$${Number(reportData.summary.breakdown?.mat_fdm || 0).toLocaleString()}</span></div>
-        <div class="data-item sub-item"><span class="item-label">Consumo SLA</span><span class="item-val">$${Number(reportData.summary.breakdown?.mat_sla || 0).toLocaleString()}</span></div>
-        <div class="data-item"><span class="item-label">Mano de Obra Especializada</span><span class="item-val">$${Number(reportData.summary.breakdown?.labor || 0).toLocaleString()}</span></div>
-        <div class="data-item"><span class="item-label">Costos de Energía y Luz</span><span class="item-val">$${Number(reportData.summary.breakdown?.luz || 0).toLocaleString()}</span></div>
-        <div class="data-item"><span class="item-label">Plan de Mantenimiento</span><span class="item-val">$${Number(reportData.summary.breakdown?.mant || 0).toLocaleString()}</span></div>
-        <div class="data-item"><span class="item-label">Depreciación Activos</span><span class="item-val">$${Number(reportData.summary.breakdown?.depr || 0).toLocaleString()}</span></div>
-        <div class="data-item"><span class="item-label">Logística y Extras</span><span class="item-val">$${Number(reportData.summary.total_extras_cost).toLocaleString()}</span></div>
+        <div class="data-item"><span class="item-label">Materia Prima e Insumos</span><span class="item-val">$${Number(reportData.summary.total_material_cost).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+        <div class="data-item sub-item"><span class="item-label">Consumo FDM</span><span class="item-val">$${Number(reportData.summary.breakdown?.mat_fdm || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+        <div class="data-item sub-item"><span class="item-label">Consumo SLA</span><span class="item-val">$${Number(reportData.summary.breakdown?.mat_sla || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+        <div class="data-item"><span class="item-label">Mano de Obra Especializada</span><span class="item-val">$${Number(reportData.summary.breakdown?.labor || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+        <div class="data-item"><span class="item-label">Costos de Energía y Luz</span><span class="item-val">$${Number(reportData.summary.breakdown?.luz || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+        <div class="data-item"><span class="item-label">Plan de Mantenimiento</span><span class="item-val">$${Number(reportData.summary.breakdown?.mant || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+        <div class="data-item"><span class="item-label">Depreciación Activos</span><span class="item-val">$${Number(reportData.summary.breakdown?.depr || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+        <div class="data-item"><span class="item-label">Logística y Extras</span><span class="item-val">$${Number(reportData.summary.total_extras_cost).toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
       </div>
       <div class="section"><div class="section-header"><div class="dot"></div><div class="section-title">Contribuyentes Principales (LTV)</div></div>
         <table class="audit-table"><thead><tr><th>Identificación Cliente</th><th style="text-align: right">Contribución Total</th></tr></thead>
-        <tbody>${(reportData.top_customers || []).slice(0, 5).map(c => `<tr><td style="font-weight: 700;">${c.customer_name} <span style="font-size: 7px; color: #94a3b8; display: block;">${c.orders_count} órdenes registradas</span></td><td style="text-align: right; font-weight: 900; color: #1e3a34; font-size: 12px;">$${Number(c.total_spent).toLocaleString()}</td></tr>`).join('')}</tbody>
+        <tbody>${(reportData.top_customers || []).slice(0, 5).map(c => `<tr><td style="font-weight: 700;">${c.customer_name} <span style="font-size: 7px; color: #94a3b8; display: block;">${c.orders_count} órdenes registradas</span></td><td style="text-align: right; font-weight: 900; color: #1e3a34; font-size: 12px;">$${Number(c.total_spent).toLocaleString(undefined, {maximumFractionDigits: 0})}</td></tr>`).join('')}</tbody>
         </table>
       </div>
     </div>
   </div>
   <div class="footer">
-    <div class="sys-stamp">SISTEMA DE GESTIÓN N3XT CORE | VERSIÓN 3.2.4<br>ID ÚNICO DE AUDITORÍA: ${Math.random().toString(36).substr(2, 9).toUpperCase()}<br>EMISIÓN: ${new Date().toLocaleString()}</div>
+    <div class="sys-stamp">SISTEMA DE GESTIÓN N3XT CORE | VERSIÓN 3.2.4<br>ID ÚNICO DE AUDITORÍA: ${Math.random().toString(36).substr(2, 9).toUpperCase()}<br>EMISIÓN: ${new Date().toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
     <div class="sign-box"><div style="font-size: 7px; color: #94a3b8; font-weight: 700; margin-bottom: 20px;">VERIFICACIÓN DIGITAL REQUERIDA</div><div class="sign-line">Firma Autorizada Auditoría</div><div style="font-size: 8px; font-weight: 600; margin-top: 4px;">${company.name}</div></div>
   </div>
 </div></body></html>`
@@ -492,8 +492,8 @@ export function ledgerReportHTML(filteredOrders: OrderData[], settings: Settings
 </style></head><body>
 <div class="header"><div class="header-left">${companyLogo ? `<img src="${companyLogo}" class="logo-img">` : ''}<div><div class="doc-title">Reporte de Libro Mayor</div><div class="logo">N3XT<span> 3D</span></div></div></div><div style="text-align: right"><div style="font-weight: 900; font-size: 14px;">${filteredOrders.length} ÓRDENES</div><div style="font-weight: 600; font-size: 10px; color: #94a3b8;">FILTRO: TODOS / TODOS</div><div style="font-size: 7px; color: #10b981; font-weight: 900; margin-top: 5px; text-transform: uppercase;">Auditoria Financiera Validada</div></div></div>
 <table><thead><tr><th>ID</th><th>Fecha</th><th>Cliente</th><th>Proyecto / Trabajo</th><th>Tec</th><th>Masa</th><th style="text-align: right">Monto Total</th></tr></thead>
-<tbody>${filteredOrders.map(o => `<tr><td class="id-cell">#${String(o.id).padStart(5, '0')}</td><td>${new Date(o.created_at).toLocaleDateString()}</td><td style="color: #0f172a; font-weight: 700;">${o.customer_name}</td><td style="color: #64748b;">${o.job_name || 'Servicio de Impresión'}</td><td><span class="tech-badge">${o.technology}</span></td><td>${o.estimated_weight_g}g</td><td class="price-cell">$${Number(o.total_price).toLocaleString()}</td></tr>`).join('')}</tbody>
-<tr class="summary-row"><td colspan="6" style="text-align: right; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 10px;">Venta Total del Periodo</td><td style="text-align: right; font-size: 18px; font-weight: 900;">$${totalSales.toLocaleString()}</td></tr>
+<tbody>${filteredOrders.map(o => `<tr><td class="id-cell">#${String(o.id).padStart(5, '0')}</td><td>${new Date(o.created_at).toLocaleDateString()}</td><td style="color: #0f172a; font-weight: 700;">${o.customer_name}</td><td style="color: #64748b;">${o.job_name || 'Servicio de Impresión'}</td><td><span class="tech-badge">${o.technology}</span></td><td>${o.estimated_weight_g}g</td><td class="price-cell">$${Number(o.total_price).toLocaleString(undefined, {maximumFractionDigits: 0})}</td></tr>`).join('')}</tbody>
+<tr class="summary-row"><td colspan="6" style="text-align: right; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 10px;">Venta Total del Periodo</td><td style="text-align: right; font-size: 18px; font-weight: 900;">$${totalSales.toLocaleString(undefined, {maximumFractionDigits: 0})}</td></tr>
 </table>
 <div class="footer"><div>EMITIDO POR SISTEMA N3XT | ID: ${Math.random().toString(36).substr(2, 9).toUpperCase()}</div><div>${company.name} | NIT: ${company.nit} | PÁGINA 1 DE 1</div></div>
 </body></html>`

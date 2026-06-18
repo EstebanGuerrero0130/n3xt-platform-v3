@@ -87,7 +87,7 @@ watch(form, (val) => {
  <p class="text-xs font-black text-emerald-700">
  $ {{ (form.package_price / (form.package_qty * (form.package_units || 1))).toLocaleString(undefined, {minimumFractionDigits: 2}) }} / {{ form.unit }}
  <span v-if="form.unit === 'g' || form.unit === 'ml'" class="text-[8px] opacity-70 ml-1">
- ($ {{ ((form.package_price / (form.package_qty * (form.package_units || 1))) * 1000).toLocaleString() }} x Kg/L)
+ ($ {{ ((form.package_price / (form.package_qty * (form.package_units || 1))) * 1000).toLocaleString(undefined, {maximumFractionDigits: 0}) }} x Kg/L)
  </span>
  </p>
  </div>
@@ -110,7 +110,7 @@ watch(form, (val) => {
  
  <div v-if="form.package_qty > 0" class="pt-2 border-t border-primary/5 flex justify-between items-center text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest">
  <span>Cantidad total a ingresar:</span>
- <span class="text-[#8dd6ff]">{{ (form.package_qty * (form.package_units || 1)).toLocaleString() }} {{ form.unit }}</span>
+ <span class="text-[#8dd6ff]">{{ (form.package_qty * (form.package_units || 1)).toLocaleString(undefined, {maximumFractionDigits: 0}) }} {{ form.unit }}</span>
  </div>
  </div>
 

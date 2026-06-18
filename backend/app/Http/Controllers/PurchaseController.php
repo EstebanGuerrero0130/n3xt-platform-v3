@@ -99,7 +99,7 @@ class PurchaseController extends Controller
 
                 // Lógica de Doble Vía (Dual-Path Logic)
                 if ($validated['category'] === 'inventory_restock' && !empty($materialId)) {
-                    $inventory = Inventory::where('material_id', $materialId)->first();
+                    $inventory = Inventory::query()->where(['material_id' => $materialId])->first();
                     if ($inventory) {
                         $inventory->stock_available += $finalQty;
                         $inventory->save();
@@ -126,7 +126,7 @@ class PurchaseController extends Controller
 
                 // Revert stock and recalculate cost if it was an inventory restock
                 if ($purchase->category === 'inventory_restock' && $purchase->material_id) {
-                    $inventory = Inventory::where('material_id', $purchase->material_id)->first();
+                    $inventory = Inventory::query()->where(['material_id' => $purchase->material_id])->first();
                     if ($inventory) {
                         $inventory->stock_available -= $purchase->qty;
                         if ($inventory->stock_available < 0) $inventory->stock_available = 0;
@@ -136,8 +136,8 @@ class PurchaseController extends Controller
                     // Recalcular el costo unitario basándose en la compra anterior más reciente
                     $purchase->delete(); // Borramos primero para que no salga en la búsqueda
 
-                    $lastPurchase = Purchase::where('material_id', $purchase->material_id)
-                        ->where('category', 'inventory_restock')
+                    $lastPurchase = Purchase::query()->where(['material_id' => $purchase->material_id])
+                        ->where(['category' => 'inventory_restock'])
                         ->orderBy('purchase_date', 'desc')
                         ->orderBy('id', 'desc')
                         ->first();

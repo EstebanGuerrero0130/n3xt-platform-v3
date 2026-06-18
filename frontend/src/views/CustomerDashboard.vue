@@ -193,7 +193,7 @@ const getStatusLabel = (status) => {
  <div class="flex flex-col items-end gap-1">
  <p class="text-[9px] font-black text-gray-300 dark:text-[#a4aea6] uppercase tracking-widest">Inversión</p>
  <div class="text-lg sm:text-2xl font-black text-[#ffffff] dark:text-white tracking-tighter leading-none">
- ${{ Number(order.total_price).toLocaleString() }}
+ ${{ Number(order.total_price).toLocaleString(undefined, {maximumFractionDigits: 0}) }}
  </div>
  </div>
  <router-link :to="'/track?id=' + order.id" class="w-10 h-10 sm:w-14 sm:h-14 bg-[#151a22] dark:bg-emerald-600 text-white rounded-[6px] sm:rounded-[24px] hover:bg-[#08872b] transition-all flex items-center justify-center hover:-primary/30 group-hover:translate-x-1 duration-500 shrink-0">

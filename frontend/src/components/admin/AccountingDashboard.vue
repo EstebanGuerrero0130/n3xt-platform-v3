@@ -128,7 +128,7 @@ const lineChartOption = computed(() => {
  fontWeight: 600,
  color: isD ? '#f0f6fc' : '#94a3b8',
  fontFamily: 'Inter, sans-serif',
- formatter: (v: any) => '$' + v.toLocaleString()
+ formatter: (v: any) => '$' + v.toLocaleString(undefined, {maximumFractionDigits: 0})
  },
  axisLine: { show: false },
  axisTick: { show: false }
@@ -295,8 +295,8 @@ const techChartOption = computed(() => {
 })
 const formatPrice = (val: any) => {
  const num = Number(val || 0)
- if (num < 0) return `-$${Math.abs(num).toLocaleString()}`
- return `$${num.toLocaleString()}`
+ if (num < 0) return `-$${Math.abs(num).toLocaleString(undefined, {maximumFractionDigits: 0})}`
+ return `$${num.toLocaleString(undefined, {maximumFractionDigits: 0})}`
 }
 
 const selectedOrderId = ref<any>(null)

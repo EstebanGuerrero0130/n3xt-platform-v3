@@ -16,7 +16,7 @@ const dateRange = ref({
  end: ''
 })
 
-const setQuickMonth = (offset) => {
+const setQuickMonth = (offset: number) => {
  const now = new Date()
  const start = new Date(now.getFullYear(), now.getMonth() + offset, 1)
  const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0)
@@ -72,8 +72,8 @@ const topCustomers = computed(() => {
  return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 3)
 })
 
-const getStatusColor = (status: any) => {
- const map = {
+const getStatusColor = (status: string) => {
+ const map: Record<string, string> = {
  pending: 'bg-red-50 text-red-600 border-red-200',
  printing: 'bg-amber-50 text-amber-600 border-amber-200',
  'post-processing': 'bg-blue-50 text-blue-600 border-blue-200',
@@ -83,8 +83,8 @@ const getStatusColor = (status: any) => {
  return map[status] || 'bg-[#151a22] text-[#a4aea6] border-[#21262d]'
 }
 
-const getStatusLabel = (status: any) => {
- const map = {
+const getStatusLabel = (status: string) => {
+ const map: Record<string, string> = {
  pending: 'Pendiente',
  printing: 'En Máquina',
  'post-processing': 'Post-Proceso',
@@ -191,7 +191,7 @@ const getStatusLabel = (status: any) => {
  </div>
  <div class="p-8 rounded-[2.5rem] bg-[#151a22]/5 border border-white/10 hover:bg-[#151a22]/10 transition-all duration-500">
  <span class="text-[10px] md:text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-3">Capitalizado</span>
- <div class="text-3xl md:text-6xl font-black tracking-tighter">$ {{ Math.round(metricsSummary.total).toLocaleString() }}</div>
+ <div class="text-3xl md:text-6xl font-black tracking-tighter">$ {{ Math.round(metricsSummary.total).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</div>
  </div>
  <div class="col-span-2 md:col-span-1 p-8 rounded-[2.5rem] bg-[#151a22]/5 border border-white/10 hover:bg-[#151a22]/10 transition-all duration-500">
  <span class="text-[10px] md:text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-3">Producción</span>
@@ -229,7 +229,7 @@ const getStatusLabel = (status: any) => {
  <div class="text-xs font-black text-[#ffffff] dark:text-white uppercase truncate max-w-[150px]">{{ customer.name }}</div>
  <div class="text-[10px] font-bold text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest">{{ customer.count }} órdenes registradas</div>
  </div>
- <div class="text-sm font-black text-[#ffffff] dark:text-white">${{ customer.total.toLocaleString() }}</div>
+ <div class="text-sm font-black text-[#ffffff] dark:text-white">${{ customer.total.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</div>
  </div>
 
  <div v-if="topCustomers.length === 0" class="py-10 text-center">
@@ -320,7 +320,7 @@ const getStatusLabel = (status: any) => {
  </div>
  </td>
  <td class="p-4 md:p-8">
- <p class="text-sm md:text-lg font-black text-[#ffffff] dark:text-white tracking-tighter">${{ Number(order.total_price).toLocaleString() }}</p>
+ <p class="text-sm md:text-lg font-black text-[#ffffff] dark:text-white tracking-tighter">${{ Number(order.total_price).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
  </td>
  <td class="p-4 md:p-8 text-center">
  <span :class="['px-2 md:px-4 py-1 md:py-2 rounded-[6px] text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em] border ', getStatusColor(order.status)]">

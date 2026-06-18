@@ -139,7 +139,7 @@ const isStalled = computed(() => {
  </h4>
  <div class="flex items-baseline gap-1 mb-6 md:mb-8">
  <span class="text-xs font-black text-[#c3c4c5] dark:text-gray-300 uppercase tracking-widest">$</span>
- <span class="text-2xl md:text-3xl font-black text-[#ffffff] dark:text-white tracking-tighter">{{ Number(order.total_price).toLocaleString() }}</span>
+ <span class="text-2xl md:text-3xl font-black text-[#ffffff] dark:text-white tracking-tighter">{{ Number(order.total_price).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
  <span v-if="order.extra_items && order.extra_items.length > 0" class="ml-2 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[8px] font-black uppercase rounded-[60px] tracking-widest">
  + Extras
  </span>

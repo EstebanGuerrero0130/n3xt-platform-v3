@@ -205,7 +205,7 @@ const getProgressColor = (type: any) => {
  <div class="flex justify-between items-end">
  <div>
  <p class="text-[8px] font-black text-[#c3c4c5] dark:text-gray-300 uppercase tracking-widest mb-1">Costo Unitario</p>
- <p class="text-xl font-black text-[#ffffff] dark:text-white tracking-tighter">${{ Number(mat.cost_per_kg).toLocaleString() }} <span class="text-xs text-[#c3c4c5] dark:text-[#a4aea6] font-bold">/Kg</span></p>
+ <p class="text-xl font-black text-[#ffffff] dark:text-white tracking-tighter">${{ Number(mat.cost_per_kg).toLocaleString(undefined, {maximumFractionDigits: 0}) }} <span class="text-xs text-[#c3c4c5] dark:text-[#a4aea6] font-bold">/Kg</span></p>
  </div>
  <div class="text-right">
  <p class="text-[8px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-1">Stock Actual</p>
@@ -289,7 +289,7 @@ const getProgressColor = (type: any) => {
  <div class="flex justify-between items-end">
  <div>
  <p class="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Costo Unitario</p>
- <p class="text-xl font-black text-indigo-900 dark:text-white tracking-tighter">${{ Number(mat.cost_per_kg).toLocaleString() }} <span class="text-xs text-indigo-400 font-bold">/L</span></p>
+ <p class="text-xl font-black text-indigo-900 dark:text-white tracking-tighter">${{ Number(mat.cost_per_kg).toLocaleString(undefined, {maximumFractionDigits: 0}) }} <span class="text-xs text-indigo-400 font-bold">/L</span></p>
  </div>
  <div class="text-right">
  <p class="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Volumen Actual</p>
@@ -364,7 +364,7 @@ const getProgressColor = (type: any) => {
  <div class="flex justify-between items-end">
  <div>
  <p class="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Precio Unitario</p>
- <p class="text-xl font-black text-emerald-950 dark:text-white tracking-tighter">${{ Number(mat.cost_per_kg).toLocaleString() }}</p>
+ <p class="text-xl font-black text-emerald-950 dark:text-white tracking-tighter">${{ Number(mat.cost_per_kg).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
  </div>
  <div class="text-right">
  <p class="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Stock Disponible</p>
@@ -433,7 +433,7 @@ const getProgressColor = (type: any) => {
  <div class="flex justify-between items-end">
  <div>
  <p class="text-[8px] font-black text-orange-400 uppercase tracking-widest mb-1">Costo Unitario</p>
- <p class="text-xl font-black text-orange-900 dark:text-white tracking-tighter">${{ Number(mat.cost_per_kg).toLocaleString() }}</p>
+ <p class="text-xl font-black text-orange-900 dark:text-white tracking-tighter">${{ Number(mat.cost_per_kg).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
  </div>
  <div class="text-right">
  <p class="text-[8px] font-black text-orange-400 uppercase tracking-widest mb-1">Disponibilidad</p>

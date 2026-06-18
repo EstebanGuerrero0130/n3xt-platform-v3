@@ -89,18 +89,18 @@
  <h3 class="text-xs font-black text-[#c3c4c5] uppercase tracking-wider">Análisis Económico</h3>
  <span :class="profitClass" class="text-xs md:text-sm font-black">{{ breakdown?.profit_margin_pct || 0 }}% margen</span>
  </div>
- <div class="text-2xl md:text-3xl font-black text-emerald-400 mb-3 md:mb-4">${{ (order.total_price || 0).toLocaleString() }}</div>
+ <div class="text-2xl md:text-3xl font-black text-emerald-400 mb-3 md:mb-4">${{ (order.total_price || 0).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</div>
 
  <div v-if="breakdown" class="space-y-2 text-sm">
- <div class="flex justify-between text-[#c3c4c5]"><span>Material</span><span class="text-white font-bold">${{ breakdown.material.toLocaleString() }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Energía</span><span class="text-white font-bold">${{ breakdown.luz.toLocaleString() }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Mano de Obra</span><span class="text-white font-bold">${{ breakdown.labor.toLocaleString() }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Depreciación</span><span class="text-white font-bold">${{ breakdown.depr.toLocaleString() }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Mantenimiento</span><span class="text-white font-bold">${{ breakdown.mant.toLocaleString() }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Prep/Empaque</span><span class="text-white font-bold">${{ breakdown.prep_pack.toLocaleString() }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Material</span><span class="text-white font-bold">${{ breakdown.material.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Energía</span><span class="text-white font-bold">${{ breakdown.luz.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Mano de Obra</span><span class="text-white font-bold">${{ breakdown.labor.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Depreciación</span><span class="text-white font-bold">${{ breakdown.depr.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Mantenimiento</span><span class="text-white font-bold">${{ breakdown.mant.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Prep/Empaque</span><span class="text-white font-bold">${{ breakdown.prep_pack.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
  <div class="border-t border-gray-700 pt-2 mt-2">
- <div class="flex justify-between text-emerald-400 font-bold"><span>Costo Producción</span><span>${{ breakdown.production_cost.toLocaleString() }}</span></div>
- <div class="flex justify-between text-white font-bold text-base mt-1"><span>Margen Operativo</span><span>${{ breakdown.operating_margin.toLocaleString() }}</span></div>
+ <div class="flex justify-between text-emerald-400 font-bold"><span>Costo Producción</span><span>${{ breakdown.production_cost.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-white font-bold text-base mt-1"><span>Margen Operativo</span><span>${{ breakdown.operating_margin.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
  </div>
  </div>
  </div>
@@ -111,7 +111,7 @@
  <div v-if="order.extra_items && order.extra_items.length" class="space-y-2 mb-4">
  <div v-for="(item, idx) in order.extra_items" :key="idx" class="flex justify-between items-center text-sm bg-[#283041]/50 rounded-[6px] px-4 py-2">
  <span class="text-white">{{ item.name }}</span>
- <span class="text-emerald-400 font-bold">${{ (item.cost * item.qty).toLocaleString() }}</span>
+ <span class="text-emerald-400 font-bold">${{ (item.cost * item.qty).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
  </div>
  </div>
  <p v-else class="text-sm text-[#a4aea6]">Sin extras registrados</p>

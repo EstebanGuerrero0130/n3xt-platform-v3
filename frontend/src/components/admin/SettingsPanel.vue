@@ -83,7 +83,7 @@
  <p class="text-[10px] text-rose-400 font-bold uppercase mb-8 tracking-widest text-center">Purga y mantenimiento profundo</p>
 
  <button 
- class="px-8 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all duration-300 -rose-500/30 hover:-rose-500/50 active:scale-95 flex items-center gap-3 z-20 relative"
+ class="w-full md:w-auto px-6 md:px-8 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-[24px] font-black uppercase tracking-widest text-[10px] md:text-xs transition-all duration-300 -rose-500/30 hover:-rose-500/50 active:scale-95 flex justify-center items-center gap-2 md:gap-3 z-20 relative"
  @click="handlePurgeAll"
  >
  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

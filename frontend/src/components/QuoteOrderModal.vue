@@ -225,7 +225,7 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
  </div>
  <div v-if="activeCoupon" class="px-4 py-2 bg-emerald-500/10 rounded-[6px] border border-emerald-500/20 mb-4 flex items-center gap-3">
  <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
- <span class="text-[8px] font-black text-emerald-400 uppercase tracking-widest">{{ activeCoupon.label }} aplicado — Ahorras ${{ Math.round(breakdown.discount).toLocaleString() }}</span>
+ <span class="text-[8px] font-black text-emerald-400 uppercase tracking-widest">{{ activeCoupon.label }} aplicado — Ahorras ${{ Math.round(breakdown.discount).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
  </div>
  <div class="space-y-2">
  <div class="flex justify-between items-center px-3 py-2 bg-[#151a22]/5 rounded-[6px]">

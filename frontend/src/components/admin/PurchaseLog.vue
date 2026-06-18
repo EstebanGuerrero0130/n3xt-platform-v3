@@ -192,8 +192,8 @@ const handleDeletePurchase = async (id: any) => {
  <div class="supplier-info">PROVEEDOR: ${p.supplier || 'SIN ESPECIFICAR'}</div>
  </td>
  <td><span class="category-badge ${p.category === 'inventory_restock' ? 'inv' : 'exp'}">${p.category === 'inventory_restock' ? 'STOCK' : 'GASTO'}</span></td>
- <td class="qty-cell">${parseFloat(p.units).toLocaleString()} x ${parseFloat(p.unit_amount).toLocaleString()}${p.category === 'inventory_restock' ? 'g/ml' : ' ud'}</td>
- <td class="price-cell">$ ${parseFloat(p.total_cost).toLocaleString()}</td>
+ <td class="qty-cell">${parseFloat(p.units).toLocaleString(undefined, {maximumFractionDigits: 0})} x ${parseFloat(p.unit_amount).toLocaleString(undefined, {maximumFractionDigits: 0})}${p.category === 'inventory_restock' ? 'g/ml' : ' ud'}</td>
+ <td class="price-cell">$ ${parseFloat(p.total_cost).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
  </tr>
  `;
  });
@@ -307,11 +307,11 @@ const handleDeletePurchase = async (id: any) => {
  <div class="summary-grid">
  <div class="summary-card dark">
  <span class="card-label">Total Inversión Periodo</span>
- <div class="card-val">$ ${total.toLocaleString()}</div>
+ <div class="card-val">$ ${total.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
  </div>
  <div class="summary-card">
  <span class="card-label">Restock de Inventario</span>
- <div class="card-val" style="color: #10b981;">$ ${totalInv.toLocaleString()}</div>
+ <div class="card-val" style="color: #10b981;">$ ${totalInv.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
  </div>
  </div>
 
@@ -333,7 +333,7 @@ const handleDeletePurchase = async (id: any) => {
  <div class="footer">
  <div>
  <div style="text-transform: uppercase; margin-bottom: 5px; font-weight: 900; color: #64748b;">Documento de Auditoría Interna</div>
- <div>Fecha Emisión: ${new Date().toLocaleString()} | ID: ${Math.random().toString(36).substr(2, 6).toUpperCase()}</div>
+ <div>Fecha Emisión: ${new Date().toLocaleString(undefined, {maximumFractionDigits: 0})} | ID: ${Math.random().toString(36).substr(2, 6).toUpperCase()}</div>
  <div class="signature-box">Firma Responsable de Finanzas</div>
  </div>
  <div style="text-align: right;">
@@ -491,15 +491,15 @@ onMounted(() => {
  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12 px-4">
  <div class="bg-[#151a22] dark:bg-[#151a22] p-6 md:p-8 rounded-[24px] md:rounded-[2.5rem] border border-[#21262d] dark:border-[#21262d] dark:-none flex flex-col justify-between group hover: transition-all">
  <p class="text-[10px] md:text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 text-center">Gasto Periodo</p>
- <h3 class="text-2xl md:text-4xl font-black text-[#ffffff] dark:text-white tracking-tighter text-center">$ {{ stats.total.toLocaleString() }}</h3>
+ <h3 class="text-2xl md:text-4xl font-black text-[#ffffff] dark:text-white tracking-tighter text-center">$ {{ stats.total.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</h3>
  </div>
  <div class="bg-[#151a22] dark:bg-[#151a22] p-6 md:p-8 rounded-[24px] md:rounded-[2.5rem] border border-[#21262d] dark:border-[#21262d] dark:-none flex flex-col justify-between group hover: transition-all">
  <p class="text-[10px] md:text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 text-center">Stock</p>
- <h3 class="text-2xl md:text-4xl font-black text-[#8dd6ff] tracking-tighter text-center">$ {{ stats.inventory.toLocaleString() }}</h3>
+ <h3 class="text-2xl md:text-4xl font-black text-[#8dd6ff] tracking-tighter text-center">$ {{ stats.inventory.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</h3>
  </div>
  <div class="bg-[#151a22] dark:bg-[#151a22] p-6 md:p-8 rounded-[24px] md:rounded-[2.5rem] border border-[#21262d] dark:border-[#21262d] dark:-none flex flex-col justify-between group hover: transition-all">
  <p class="text-[10px] md:text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 text-center">Mant.</p>
- <h3 class="text-2xl md:text-4xl font-black text-[#ffffff] dark:text-white tracking-tighter text-center">$ {{ stats.maintenance.toLocaleString() }}</h3>
+ <h3 class="text-2xl md:text-4xl font-black text-[#ffffff] dark:text-white tracking-tighter text-center">$ {{ stats.maintenance.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</h3>
  </div>
  <div class="bg-[#151a22] dark:bg-[#151a22] p-6 md:p-8 rounded-[24px] md:rounded-[2.5rem] border border-[#21262d] dark:border-[#21262d] dark:-none flex flex-col justify-between group hover: transition-all">
  <p class="text-[10px] md:text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 text-center">Registros</p>
@@ -556,14 +556,14 @@ v-for="p in filteredPurchases" :key="p.id"
  <div class="flex flex-col">
  <span class="text-[8px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest">Carga Detalle</span>
  <span class="text-xs font-black text-[#f0f6fc] dark:text-gray-200">
- {{ parseFloat(p.units).toLocaleString() }} 
+ {{ parseFloat(p.units).toLocaleString(undefined, {maximumFractionDigits: 0}) }} 
  <span class="text-[10px] text-[#c3c4c5] dark:text-[#a4aea6] font-bold">{{ p.category === 'inventory_restock' ? 'uds' : 'piezas' }}</span>
  </span>
  </div>
  <div class="text-right">
  <span class="text-[8px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest">Contenido</span>
  <p class="text-xs font-black text-[#8dd6ff]">
- {{ parseFloat(p.unit_amount).toLocaleString() }} 
+ {{ parseFloat(p.unit_amount).toLocaleString(undefined, {maximumFractionDigits: 0}) }} 
  <span class="text-[10px] opacity-70">{{ p.material ? p.material.unit : (p.category === 'inventory_restock' ? 'ud' : 'ud') }}</span>
  </p>
  </div>
@@ -573,7 +573,7 @@ v-for="p in filteredPurchases" :key="p.id"
  <div class="flex justify-between items-end">
  <div class="flex flex-col">
  <span class="text-[8px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-1">Inversión Total</span>
- <span class="text-2xl font-black text-[#ffffff] dark:text-white tracking-tighter">$ {{ parseFloat(p.total_cost).toLocaleString() }}</span>
+ <span class="text-2xl font-black text-[#ffffff] dark:text-white tracking-tighter">$ {{ parseFloat(p.total_cost).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
  </div>
  <div class="w-12 h-12 bg-[#151a22] rounded-[24px] flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:translate-x-0 translate-x-4 transition-all duration-500">
  <svg class="w-5 h-5 text-[#c3c4c5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -763,7 +763,7 @@ v-for="p in filteredPurchases" :key="p.id"
  <div class="flex justify-between items-center mb-6">
  <span class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.3em]">Carga Total de Stock</span>
  <span class="text-3xl font-black text-white tracking-tighter">
- {{ (newPurchase.units * newPurchase.unit_amount).toLocaleString() }} 
+ {{ (newPurchase.units * newPurchase.unit_amount).toLocaleString(undefined, {maximumFractionDigits: 0}) }} 
  <span class="text-xs text-[#a4aea6] uppercase">{{ isNewMaterial ? newPurchase.material_data.unit : (inventory.find((m: any) => m.id === newPurchase.material_id)?.unit || 'g') }}</span>
  </span>
  </div>
@@ -791,7 +791,7 @@ v-for="p in filteredPurchases" :key="p.id"
  </div>
  <div v-if="isNewMaterial && (newPurchase.material_data.unit === 'g' || newPurchase.material_data.unit === 'ml')" class="bg-[#151a22]/50 px-6 py-4 rounded-[24px] border border-emerald-100/50">
  <p class="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Costo Proyectado Kg/L</p>
- <p class="text-xl font-black text-emerald-600">$ {{ ((newPurchase.total_cost / (newPurchase.units * newPurchase.unit_amount)) * 1000).toLocaleString() }}</p>
+ <p class="text-xl font-black text-emerald-600">$ {{ ((newPurchase.total_cost / (newPurchase.units * newPurchase.unit_amount)) * 1000).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
  </div>
  </div>
 

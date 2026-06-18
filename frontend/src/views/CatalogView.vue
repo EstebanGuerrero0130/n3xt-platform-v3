@@ -384,16 +384,16 @@ onUnmounted(() => {
  
  <div class="flex items-center gap-4">
  <p :class="['text-5xl font-black tracking-tighter leading-none italic drop--[0_0_10px_rgba(16,185,129,0.2)]', isDiscounted(item) ? 'text-rose-600 dark:text-rose-500' : 'text-emerald-500 dark:text-emerald-400']">
- ${{ Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
+ ${{ Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0).toLocaleString(undefined, {maximumFractionDigits: 0}) }}
  </p>
  <p v-if="isDiscounted(item)" class="text-lg font-black text-[#c3c4c5] line-through opacity-50 leading-none italic tracking-tight">
- ${{ Math.round(parseFloat(String(item.original_price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
+ ${{ Math.round(parseFloat(String(item.original_price).replace(/[^0-9]+/g,"")) || 0).toLocaleString(undefined, {maximumFractionDigits: 0}) }}
  </p>
  </div>
  
  <div v-if="isDiscounted(item) && item.original_price" class="mt-3 self-start px-3 py-1 bg-rose-500/10 rounded-[60px] border border-rose-500/20 inline-block">
  <span class="text-[8px] font-black text-rose-500 dark:text-rose-400 uppercase tracking-widest">
- Ahorras ${{ (Math.round(parseFloat(String(item.original_price).replace(/[^0-9]+/g,"")) || 0) - Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0)).toLocaleString() }}
+ Ahorras ${{ (Math.round(parseFloat(String(item.original_price).replace(/[^0-9]+/g,"")) || 0) - Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0)).toLocaleString(undefined, {maximumFractionDigits: 0}) }}
  </span>
  </div>
  </div>
@@ -461,11 +461,11 @@ onUnmounted(() => {
  <div>
  <p class="text-[9px] font-black text-[#a4aea6] uppercase tracking-[0.3em] mb-1">Precio</p>
  <p :class="['text-4xl font-black tracking-tighter leading-none italic', isDiscounted(quickViewItem) ? 'text-rose-400 drop--[0_0_15px_rgba(239,68,68,0.3)]' : 'text-emerald-400 drop--[0_0_15px_rgba(16,185,129,0.2)]']">
- ${{ Math.round(parseFloat(String(quickViewItem.price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
+ ${{ Math.round(parseFloat(String(quickViewItem.price).replace(/[^0-9]+/g,"")) || 0).toLocaleString(undefined, {maximumFractionDigits: 0}) }}
  </p>
  </div>
  <p v-if="isDiscounted(quickViewItem)" class="text-lg font-black text-[#a4aea6] line-through opacity-50 leading-none mb-0.5">
- ${{ Math.round(parseFloat(String(quickViewItem.original_price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
+ ${{ Math.round(parseFloat(String(quickViewItem.original_price).replace(/[^0-9]+/g,"")) || 0).toLocaleString(undefined, {maximumFractionDigits: 0}) }}
  </p>
  </div>
 
