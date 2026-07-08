@@ -52,7 +52,7 @@ const startScanner = () => {
  aspectRatio: 1.0
  });
  
- scanner.render((decodedText) => {
+ const onScanSuccess = (decodedText: string) => {
  try {
  if (decodedText.includes('order_id=')) {
  const url = new URL(decodedText.replace('#/', ''));
@@ -66,13 +66,17 @@ const startScanner = () => {
  } catch (e) {
  logger.error("Error al procesar QR:", e)
  }
- }, (_error) => {});
+ };
+ 
+ const onScanError = (_error: any) => {};
+ 
+ scanner.render(onScanSuccess, onScanError);
  }, 100);
 }
 
 const stopScanner = () => {
  if (scanner) {
- scanner.clear().catch(err => logger.error("Error clearing scanner:", err))
+ scanner.clear().catch((err: any) => logger.error("Error clearing scanner:", err))
  scanner = null
  }
  showScanner.value = false
@@ -201,7 +205,7 @@ const shareUrl = computed(() => {
  <label class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-[0.3em] ml-1">ID DE PROYECTO</label>
  <div class="relative">
  <input v-model="orderId" type="text" placeholder="EJ: 1024" class="w-full bg-[#151a22] dark:bg-black/40 border-2 border-transparent dark:border-[#21262d] rounded-[1.5rem] p-5 text-[#ffffff] dark:text-white font-bold text-lg focus:border-primary/50 transition-all outline-none">
- <button class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-gray-200 dark:bg-[#151a22]/5 rounded-[6px] flex items-center justify-center hover:bg-[#08872b] transition-all text-[#a4aea6] dark:text-white" @click="startScanner">
+ <button aria-label="Iniciar escáner de QR" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-gray-200 dark:bg-[#151a22]/5 rounded-[6px] flex items-center justify-center hover:bg-[#08872b] transition-all text-[#a4aea6] dark:text-white" @click="startScanner">
  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
  </button>
  </div>

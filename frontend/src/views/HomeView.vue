@@ -790,6 +790,7 @@ to="/project/init"
  <img
  v-if="work.images && work.images.length > 0"
  :src="getOptimizedImage(work.images[0])"
+ :alt="work.title + ' preview'"
  class="absolute inset-0 w-full h-full object-cover scale-110 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700 z-10"
  loading="lazy"
  />

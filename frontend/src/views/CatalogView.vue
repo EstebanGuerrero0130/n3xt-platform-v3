@@ -446,7 +446,7 @@ onUnmounted(() => {
  <!-- Modal Content -->
  <div class="relative w-full max-w-4xl max-h-[90vh] bg-[#151a22] border border-white/10 rounded-[3rem] overflow-y-auto -black/50 animate-in fade-in zoom-in-95 duration-500">
  <!-- Close Button -->
- <button class="absolute top-6 right-6 z-20 w-12 h-12 bg-[#151a22]/5 hover:bg-[#151a22]/10 rounded-[24px] flex items-center justify-center transition-all group border border-white/10" @click="quickViewItem = null">
+ <button aria-label="Cerrar vista rápida" class="absolute top-6 right-6 z-20 w-12 h-12 bg-[#151a22]/5 hover:bg-[#151a22]/10 rounded-[24px] flex items-center justify-center transition-all group border border-white/10" @click="quickViewItem = null">
  <svg class="w-5 h-5 text-[#c3c4c5] group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
  </button>
 
