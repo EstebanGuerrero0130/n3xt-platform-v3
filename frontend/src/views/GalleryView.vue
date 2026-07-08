@@ -110,6 +110,7 @@ watch(filtered, () => {
  nextTick(() => observeCards())
 }, { deep: false })
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getOptimizedImage = (url: string): string => {
  if (!url) return ''
  if (!webSettings.value.cloudinary_name || !url.includes('cloudinary.com')) return url
@@ -165,13 +166,13 @@ onUnmounted(() => {
  <div class="relative text-center mb-16 overflow-hidden">
   <div class="inline-flex items-center gap-3 px-4 py-2 bg-[#08872b]/10 rounded-[60px] border border-primary/20 mb-6">
  <span class="w-2 h-2 bg-[#08872b] rounded-[60px] animate-pulse"></span>
- <span class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.4em]">Portafolio</span>
+ <span class="text-label text-[#8dd6ff]">Portafolio</span>
  </div>
- <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.85] mb-6 animate-fade-in">
+ <h1 class="text-6xl md:text-8xl lg:text-9xl font-black text-slate-900 dark:text-white tracking-normal uppercase leading-[0.85] mb-6 animate-fade-in">
  NUESTROS <br class="md:hidden" />
  <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-primary to-emerald-300 dark:from-emerald-400 dark:via-primary dark:to-emerald-300 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] italic">TRABAJOS</span>
  </h1>
- <p class="text-[#a4aea6] dark:text-[#c3c4c5] text-xs md:text-sm font-bold uppercase tracking-[0.3em] max-w-xl mx-auto">
+ <p class="text-caption uppercase max-w-xl mx-auto">
  Piezas fabricadas con precisión industrial. Cada proyecto cuenta una historia de detalle y calidad.
  </p>
  </div>
@@ -183,7 +184,7 @@ onUnmounted(() => {
  :class="[activeFilter === cat
  ? 'bg-[#08872b] text-white -primary/20'
  : 'bg-[#151a22] dark:bg-[#151a22]/5 text-[#a4aea6] border border-[#21262d] dark:border-[#21262d] hover:border-primary/30 hover:text-[#8dd6ff]',
- 'px-5 py-2.5 rounded-[24px] text-[8px] font-black uppercase tracking-widest transition-all']"
+ 'px-8 py-4 rounded-[30px] text-sm font-black uppercase tracking-widest transition-all']"
  @click="activeFilter = cat">
  {{ cat }}
  </button>
@@ -196,7 +197,7 @@ onUnmounted(() => {
  :class="[activeTech === t
  ? 'bg-[#08872b]/10 text-[#8dd6ff] border-primary/30'
  : 'bg-transparent text-[#c3c4c5] border-[#21262d] dark:border-[#21262d] hover:border-primary/40 hover:text-[#8dd6ff]',
- 'px-4 py-1.5 rounded-[6px] text-[7px] font-black uppercase tracking-[0.2em] border transition-all']"
+ 'px-6 py-2.5 rounded-[12px] text-[10px] font-black uppercase tracking-[0.2em] border transition-all']"
  @click="activeTech = t">
  {{ t }}
  </button>
@@ -272,24 +273,24 @@ onUnmounted(() => {
  <!-- Info -->
  <div class="p-8 flex flex-col flex-1">
  <div class="flex-1">
- <h3 class="text-2xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter leading-tight group-hover:text-emerald-500 transition-colors line-clamp-2">
+ <h2 class="text-3xl font-black text-[#ffffff] dark:text-white uppercase tracking-normal leading-tight group-hover:text-emerald-500 transition-colors line-clamp-2">
  {{ item.title || 'Sin Título' }}
- </h3>
+ </h2>
  <p v-if="item.description" class="text-sm text-[#a4aea6] dark:text-[#c3c4c5] mt-3 line-clamp-2 leading-relaxed">{{ item.description }}</p>
 
  <!-- Tags -->
  <div v-if="normalizeTags(item.tags).length > 0" class="flex flex-wrap gap-2 mt-4">
  <span
  v-for="tag in normalizeTags(item.tags).slice(0, 3)" :key="tag"
- class="text-[9px] font-black px-3 py-1 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[60px] uppercase tracking-[0.1em] text-[#a4aea6]">
+ class="text-xs font-bold px-3 py-1 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[60px] uppercase tracking-[0.1em] text-[#a4aea6]">
  {{ tag }}
  </span>
  </div>
  </div>
 
  <!-- CTA -->
- <div class="mt-8 w-full py-4 bg-gray-100 dark:bg-white text-gray-900 dark:text-black border border-gray-200 dark:border-white/20 rounded-[24px] shadow-md hover:shadow-lg text-[10px] font-black uppercase tracking-[0.4em] text-center group-hover:bg-emerald-500 transition-all duration-500">
- Analizar Pieza →
+ <div class="mt-8 w-full py-4 bg-[#151a22] text-white border border-[#21262d] rounded-[60px] shadow-md hover:shadow-lg text-[10px] md:text-xs font-black uppercase tracking-[0.4em] text-center hover:bg-emerald-500 transition-all duration-500">
+ VER PROYECTO
  </div>
  </div>
  </router-link>

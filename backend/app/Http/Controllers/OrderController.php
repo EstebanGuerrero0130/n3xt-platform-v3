@@ -44,15 +44,15 @@ class OrderController extends Controller
         $infill = (int)$request->input('infill', 20);
         $layerHeight = (float)$request->input('layer_height', 0.2);
 
-        // --- PROTOCOLO N3XT: CURAENGINE BRIDGE ---
-        // En un entorno con CuraEngine instalado, aquí se ejecutaría el binario.
-        // Mientras tanto, usamos el Simulador de Alta Fidelidad (Cura Simulation Algorithm)
+        // --- PROTOCOLO N3XT: ORCAENGINE BRIDGE v2 ---
+        // En un entorno con CuraEngine/OrcaSlicer CLI instalado, aquí se ejecutaría el binario.
+        // Mientras tanto, usamos el Simulador de Alta Fidelidad OrcaEngine v2.
         
         $analysis = $this->simulateCuraAnalysis($fullPath, $infill, $layerHeight);
         
         Storage::disk('local')->delete($tempPath);
 
-        return $this->success($analysis, 'Análisis de motor CuraEngine (N3XT Virtual) completado.');
+        return $this->success($analysis, 'Análisis OrcaEngine v2 (N3XT Industrial) completado.');
     }
 
     /**
@@ -120,13 +120,22 @@ class OrderController extends Controller
                 }
             }
 
-            // Capture Cost Snapshot for Historical Integrity
+            // Capture Cost Snapshot for Historical Integrity + OrcaEngine Traceability (#10)
             $settings = Setting::all()->pluck('value', 'key');
             $material = Material::find($validated['material_id']);
             $costSnapshot = [
-                'settings' => $settings,
+                'settings'             => $settings,
                 'material_cost_per_kg' => $material ? $material->cost_per_kg : 0,
-                'captured_at' => now()->toIso8601String()
+                'captured_at'          => now()->toIso8601String(),
+                // Factores del OrcaEngine para auditoría y recalculo exacto
+                'orca_factors'         => [
+                    'infill'          => $validated['infill'] ?? null,
+                    'layer_height'    => $request->input('layer_height'),
+                    'technology'      => $validated['technology'] ?? null,
+                    'nozzle_mm'       => $request->input('nozzle_diameter', 0.4),
+                    'wall_count'      => $request->input('wall_count', 2),
+                    'algorithm'       => 'OrcaEngine-v2',
+                ],
             ];
 
             $order = Order::create(array_merge($validated, [
@@ -433,65 +442,151 @@ class OrderController extends Controller
     }
 
     /**
-     * SIMULADOR CURAENGINE N3XT PRO
-     * Calcula pesos exactos basados en la geometría real (Shell + Infill + Support)
+     * ORCAENGINE v2 — N3XT 3D Industrial Slicer
+     *
+     * Mejoras v2:
+     *  - Shell dinámico por nozzle_diameter × wall_count (FDM) o espesor de recubrimiento (SLA)
+     *  - Perfiles de velocidad calibrados por layer_height (draft / normal / quality / ultra)
+     *  - Lógica SLA independiente: tiempo por exposición + lift por capa
+     *  - Purga condicional: solo FDM
+     *  - Payload enriquecido con metadatos de algoritmo para cost_snapshot trazable
      */
     private function simulateCuraAnalysis($path, $infill, $layerHeight)
     {
         $request = request();
-        $totalArea = (float)$request->input('total_area', 0);
-        $volumeMm3 = (float)$request->input('volume_mm3', 0);
+        $totalArea   = (float)$request->input('total_area', 0);
+        $volumeMm3   = (float)$request->input('volume_mm3', 0);
         $supportArea = (float)$request->input('support_area', 0);
-        $density = (float)$request->input('density', 1.25); 
-        
+        $density     = (float)$request->input('density', 1.24);  // PLA default
+        $technology  = strtoupper((string)$request->input('technology', 'FDM'));
+
         // --- GUARDIA N3XT: Evitar Division by Zero ---
-        if ($density <= 0) $density = 1.25;
+        if ($density <= 0)     $density     = 1.24;
         if ($layerHeight <= 0) $layerHeight = 0.2;
 
-        // 1. CÁLCULO DE PAREDES (SHELL) - Perfil Bambu Standard (2 walls)
-        $shellThickness = 0.8; 
-        $shellVolume = ($totalArea * $shellThickness); 
-        if ($shellVolume > $volumeMm3) $shellVolume = $volumeMm3 * 0.45; 
-        
-        $shellWeight = ($shellVolume / 1000) * $density; 
-        
-        // 2. CÁLCULO DE RELLENO (INFILL)
-        $internalVolume = $volumeMm3 - $shellVolume;
-        $infillDensityFactor = ($infill / 100);
-        $internalWeight = ($internalVolume / 1000) * $infillDensityFactor * $density; 
-        
-        // 3. CÁLCULO DE SOPORTES (Perfil Bambu Slim)
-        $supportVolume = ($supportArea * 0.35); 
-        $supportWeight = ($supportVolume / 1000) * $density; 
+        // ── FDM PATH ──────────────────────────────────────────────────────────
+        if ($technology === 'FDM') {
 
-        // 4. LONGITUD Y MASA TOTAL (Incluye Brim/Balsa + Purga ~3.0g)
-        $purgeWeight = 3.0; // Offset fijo para adherencia y purga
-        $estimatedWeight = $shellWeight + $internalWeight + $supportWeight + $purgeWeight;
-        
-        $totalVolumePlastic = ($estimatedWeight / $density) * 1000;
-        $filamentLengthM = $totalVolumePlastic / 2.405 / 1000;
+            // 1. SHELL DINÁMICO — nozzle diameter × number of walls
+            $nozzleDiameter = (float)$request->input('nozzle_diameter', 0.4);
+            $wallCount      = (int)$request->input('wall_count', 2);
+            if ($nozzleDiameter <= 0) $nozzleDiameter = 0.4;
+            if ($wallCount <= 0)      $wallCount = 2;
+            $shellThickness = $nozzleDiameter * $wallCount; // e.g. 0.4×2 = 0.8mm
 
-        // 5. DESGLOSE DE TIEMPO (Perfil Bambu A1 EQUILIBRADO + 5min Setup)
-        $volumetricFlowHr = 15500; 
-        $resolutionFactor = 0.2 / $layerHeight;
-        $prepTimeH = 0.233; // 14 mins (9 iniciales + 5 extra de balsa/calibración)
-        $printTimeH = (($totalVolumePlastic / $volumetricFlowHr) * $resolutionFactor); 
+            $shellVolume = $totalArea * $shellThickness;
+            if ($shellVolume > $volumeMm3) $shellVolume = $volumeMm3 * 0.45;
+            $shellWeight = ($shellVolume / 1000) * $density;
+
+            // 2. RELLENO (INFILL)
+            $internalVolume    = max(0, $volumeMm3 - $shellVolume);
+            $infillDensityFactor = ($infill / 100);
+            $internalWeight    = ($internalVolume / 1000) * $infillDensityFactor * $density;
+
+            // 3. SOPORTES (densidad reducida Bambu Slim ~35%)
+            $supportVolume  = $supportArea * 0.35;
+            $supportWeight  = ($supportVolume / 1000) * $density;
+
+            // 4. PURGA + BRIM (solo FDM)
+            $purgeWeight = 3.0;
+            $estimatedWeight = $shellWeight + $internalWeight + $supportWeight + $purgeWeight;
+
+            // 5. LONGITUD DE FILAMENTO
+            $filamentRadius  = 1.75 / 2;
+            $filamentAreaMm2 = M_PI * ($filamentRadius ** 2); // ≈ 2.405 mm²
+            $totalVolumePlastic = ($estimatedWeight / $density) * 1000;
+            $filamentLengthM    = $totalVolumePlastic / $filamentAreaMm2 / 1000;
+
+            // 6. PERFILES DE VELOCIDAD calibrados por layer_height
+            //    (flujo volumétrico efectivo en mm³/h)
+            if ($layerHeight >= 0.28) {
+                $volumetricFlowHr = 18000; // Borrador rápido
+                $profileName      = 'Draft';
+            } elseif ($layerHeight >= 0.18) {
+                $volumetricFlowHr = 15500; // Normal Bambu A1
+                $profileName      = 'Normal';
+            } elseif ($layerHeight >= 0.08) {
+                $volumetricFlowHr = 8000;  // Calidad — aceleración limitada
+                $profileName      = 'Quality';
+            } else {
+                $volumetricFlowHr = 4000;  // Ultra — microresinas/SLA híbrido
+                $profileName      = 'Ultra';
+            }
+
+            $resolutionFactor = 0.2 / $layerHeight; // factor relativo a capa base
+            $prepTimeH  = 0.233; // 14 min (calibración + brim)
+            $printTimeH = ($totalVolumePlastic / $volumetricFlowHr) * $resolutionFactor;
+
+            return [
+                'engine'  => 'OrcaEngine v2 — N3XT Industrial (FDM)',
+                'status'  => 'success',
+                'factors' => [
+                    'resolution'        => round($resolutionFactor, 4),
+                    'infill_density'    => $infillDensityFactor,
+                    'shell_weight_g'    => round((float)$shellWeight, 4),
+                    'internal_weight_g' => round((float)$internalWeight, 4),
+                    'support_weight_g'  => round((float)$supportWeight, 4),
+                    'purge_weight_g'    => $purgeWeight,
+                    'filament_length_m' => round((float)$filamentLengthM, 4),
+                    'prep_time_h'       => (float)$prepTimeH,
+                    'print_time_h'      => round((float)$printTimeH, 4),
+                    'nozzle_mm'         => $nozzleDiameter,
+                    'wall_count'        => $wallCount,
+                    'shell_thickness_mm'=> $shellThickness,
+                    'speed_profile'     => $profileName,
+                    'flow_mm3_hr'       => $volumetricFlowHr,
+                    'algorithm'         => 'OrcaEngine-FDM-v2 (Bambu-Sync)',
+                ],
+            ];
+        }
+
+        // ── SLA / DLP PATH ────────────────────────────────────────────────────
+        // Para resina: el peso se basa directamente en volumen × densidad
+        // El tiempo se calcula por capas: (exposición + lift) × número de capas
+        $heightMm   = (float)$request->input('height_mm', 0);
+        if ($heightMm <= 0) {
+            // Fallback: estimar altura desde volumen (cubo equivalente)
+            $heightMm = pow($volumeMm3, 1/3);
+        }
+        $layerCount = ($heightMm > 0 && $layerHeight > 0)
+            ? ceil($heightMm / $layerHeight)
+            : 0;
+
+        // Tiempo de exposición por capa (configurable en el futuro via settings)
+        $exposureTimeS = 3.0;  // segundos de exposición UV por capa
+        $liftTimeS     = 6.5;  // segundos de ascenso/descenso del build plate
+        $printTimeH    = ($layerCount * ($exposureTimeS + $liftTimeS)) / 3600;
+        $prepTimeH     = 0.167; // 10 min de calentamiento + nivelado
+
+        // Peso: volumen sólido × densidad (resina no tiene infill vacío)
+        $resinVolumeCm3 = $volumeMm3 / 1000;
+        $resinWeight    = $resinVolumeCm3 * $density;
+
+        // Soporte en resina (~50% densidad, no 35%)
+        $supportVolumeCm3 = ($supportArea * 0.30) / 1000;
+        $supportWeight    = $supportVolumeCm3 * $density;
+
+        $totalWeight = $resinWeight + $supportWeight;
 
         return [
-            'engine' => 'CuraEngine 5.0 Industrial (Bambu-Sync)',
-            'status' => 'success',
+            'engine'  => 'OrcaEngine v2 — N3XT Industrial (SLA/DLP)',
+            'status'  => 'success',
             'factors' => [
-                'resolution' => $resolutionFactor,
-                'infill_density' => $infillDensityFactor,
-                'shell_weight_g' => (float)$shellWeight,
-                'internal_weight_g' => (float)$internalWeight,
-                'support_weight_g' => (float)$supportWeight,
-                'purge_weight_g' => $purgeWeight,
-                'filament_length_m' => (float)$filamentLengthM,
-                'prep_time_h' => (float)$prepTimeH,
-                'print_time_h' => (float)$printTimeH,
-                'algorithm' => 'Bambu-Accelerated Geometry Analysis'
-            ]
+                'resolution'        => round(0.05 / $layerHeight, 4), // relativo a 50µm base
+                'infill_density'    => 1.0, // resina siempre sólida
+                'shell_weight_g'    => round((float)$resinWeight, 4),
+                'internal_weight_g' => 0.0, // no aplica en resina
+                'support_weight_g'  => round((float)$supportWeight, 4),
+                'purge_weight_g'    => 0.0, // no aplica en SLA
+                'filament_length_m' => 0.0, // no aplica en SLA
+                'prep_time_h'       => (float)$prepTimeH,
+                'print_time_h'      => round((float)$printTimeH, 4),
+                'layer_count'       => (int)$layerCount,
+                'exposure_time_s'   => $exposureTimeS,
+                'lift_time_s'       => $liftTimeS,
+                'height_mm'         => $heightMm,
+                'algorithm'         => 'OrcaEngine-SLA-v2 (Layer-Exposure)',
+            ],
         ];
     }
 }

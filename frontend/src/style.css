@@ -59,6 +59,112 @@
   --transition-main: 0.4s var(--ease-out-expo);
   --transition-fast: 0.2s var(--ease-out-expo);
 
+  /* === TYPOGRAPHY SYSTEM === */
+
+  /* Font Family Tokens */
+  --font-heading: 'Outfit', sans-serif;
+  --font-ui: 'Inter', sans-serif;
+  --font-body: 'Mona Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+
+  /* Font Weight Tokens (aprovechando pesos 300, 500, 600 añadidos) */
+  --weight-thin: 100;
+  --weight-extralight: 200;
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-extrabold: 800;
+  --weight-black: 900;
+
+  /* Modular Type Scale (1.25 ratio) */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+  --text-4xl: 2.25rem;   /* 36px */
+  --text-5xl: 3rem;      /* 48px */
+  --text-6xl: 3.75rem;   /* 60px */
+  --text-7xl: 4.5rem;    /* 72px */
+  --text-8xl: 6rem;      /* 96px */
+  --text-9xl: 8rem;      /* 128px */
+
+  /* Line Heights */
+  --leading-none: 1;
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+
+  /* Letter Spacing */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+
+  /* === SEMANTIC TYPOGRAPHY TOKENS === */
+
+  /* Display / Hero */
+  --text-display: var(--text-8xl);
+  --weight-display: var(--weight-black);
+
+  /* Headings con peso progresivo */
+  --text-h1: var(--text-7xl);   /* 72px — hero impactante */
+  --weight-h1: var(--weight-black);
+
+  --text-h2: var(--text-5xl);   /* 48px — secciones */
+  --weight-h2: var(--weight-bold);
+
+  --text-h3: var(--text-4xl);   /* 36px — cards */
+  --weight-h3: var(--weight-semibold);
+
+  --text-h4: var(--text-2xl);   /* 24px */
+  --weight-h4: var(--weight-medium);
+
+  --text-h5: var(--text-xl);    /* 20px */
+  --weight-h5: var(--weight-semibold);
+
+  --text-h6: var(--text-lg);    /* 18px */
+  --weight-h6: var(--weight-medium);
+
+  /* Body Text (uso del peso 300 para legibilidad en texto largo) */
+  --text-body: var(--text-base);
+  --weight-body: var(--weight-light);
+
+  --text-body-sm: var(--text-sm);
+  --weight-body-sm: var(--weight-light);
+
+  --text-body-lg: var(--text-lg);
+  --weight-body-lg: var(--weight-light);
+
+  /* Subtítulos (peso 600 semibold, al nivel de h3 para jerarquía correcta) */
+  --text-subtitle: var(--text-lg);
+  --weight-subtitle: var(--weight-semibold);
+
+  --text-subtitle-sm: var(--text-sm);
+  --weight-subtitle-sm: var(--weight-semibold);
+
+  /* Labels / Etiquetas (peso 900 black para máximo impacto) */
+  --text-label: 0.625rem;  /* 10px */
+  --weight-label: var(--weight-black);
+
+  --text-label-lg: var(--text-xs);
+  --weight-label-lg: var(--weight-black);
+
+  /* Descripciones (peso 700 bold para que se vean) */
+  --text-caption: var(--text-xs);
+  --weight-caption: var(--weight-bold);
+
+  --text-micro: 0.5rem;  /* 8px */
+  --weight-micro: var(--weight-black);
+
   color-scheme: dark;
 }
 
@@ -66,20 +172,179 @@ body {
   background-color: var(--color-midnight-canvas);
   color: var(--color-text-cool-white);
   margin: 0;
-  font-family: 'Mona Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
+  font-weight: var(--weight-body);
+  font-size: var(--text-body);
+  line-height: var(--leading-relaxed);
   -webkit-font-smoothing: antialiased;
   transition: background-color var(--transition-main), color var(--transition-main), border-color var(--transition-main);
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-family: var(--font-heading);
+  letter-spacing: var(--tracking-normal);
+}
+
+
+/* === FONT WEIGHT UTILITIES (aprovechando pesos 300, 500, 600) === */
+
+.font-heading { font-family: var(--font-heading); }
+.font-ui { font-family: var(--font-ui); }
+.font-body { font-family: var(--font-body); }
+.font-mono { font-family: var(--font-mono); }
+
+/* Semantic text roles usando los nuevos pesos */
+.text-subtitle {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-subtitle);
+  font-size: var(--text-subtitle);
+  letter-spacing: var(--tracking-tight);
+}
+
+.text-subtitle-sm {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-subtitle-sm);
+  font-size: var(--text-subtitle-sm);
+  letter-spacing: var(--tracking-tight);
+}
+
+.text-label {
+  font-family: var(--font-ui);
+  font-weight: var(--weight-label);
+  font-size: var(--text-label);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+}
+
+.text-label-lg {
+  font-family: var(--font-ui);
+  font-weight: var(--weight-label-lg);
+  font-size: var(--text-label-lg);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+}
+
+.text-caption {
+  font-family: var(--font-body);
+  font-weight: var(--weight-caption);
+  font-size: var(--text-caption);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+
+.text-micro {
+  font-family: var(--font-ui);
+  font-weight: var(--weight-micro);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+}
+
+.text-body-large {
+  font-family: var(--font-body);
+  font-weight: var(--weight-body-lg);
+  font-size: var(--text-body-lg);
+  line-height: var(--leading-relaxed);
+}
+
+.text-body-small {
+  font-family: var(--font-body);
+  font-weight: var(--weight-body-sm);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-relaxed);
 }
 
 /* Tap highlight removal - transitions handled per-component for performance */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* === FOCUS INDICATORS ===
+ * All interactive elements must have a visible focus ring.
+ * Uses :focus-visible to show only on keyboard navigation, not mouse clicks.
+ */
+
+/* Global focus-visible: all interactive elements */
+:focus-visible {
+  outline: 2px solid var(--color-polar-blue, #8dd6ff);
+  outline-offset: 2px;
+}
+
+/* Remove default browser outline from :focus (non-visible) so it doesn't
+ * conflict with the custom :focus-visible ring above */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Specific overrides for elements that need a different ring style */
+
+/* Buttons - use the emerald CTA color for primary actions */
+.btn-primary:focus-visible {
+  outline: 2px solid var(--color-primary-light, #10a33a);
+  outline-offset: 2px;
+}
+
+.btn-outlined:focus-visible {
+  outline: 2px solid var(--color-polar-blue, #8dd6ff);
+  outline-offset: 2px;
+}
+
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--color-polar-blue, #8dd6ff);
+  outline-offset: 2px;
+}
+
+.btn-danger:focus-visible {
+  outline: 2px solid #f43f5e;
+  outline-offset: 2px;
+}
+
+.btn-pdf:focus-visible {
+  outline: 2px solid var(--color-polar-blue, #8dd6ff);
+  outline-offset: 2px;
+}
+
+.pill-ghost-btn:focus-visible {
+  outline: 2px solid var(--color-polar-blue, #8dd6ff);
+  outline-offset: 2px;
+}
+
+.ghost-header-btn:focus-visible {
+  outline: 2px solid var(--color-polar-blue, #8dd6ff);
+  outline-offset: 2px;
+}
+
+.icon-btn:focus-visible,
+.icon-btn-danger:focus-visible {
+  outline: 2px solid var(--color-polar-blue, #8dd6ff);
+  outline-offset: 2px;
+}
+
+/* Form elements */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-polar-blue, #8dd6ff);
+  outline-offset: 0px;
+}
+
+/* Links */
+a:focus-visible {
+  outline: 2px solid var(--color-polar-blue, #8dd6ff);
+  outline-offset: 2px;
+}
+
+/* Dark mode: preserve specific button colors, use vibrant mint as global fallback */
+.dark :focus-visible {
+  outline-color: var(--color-vibrant-mint, #5fed83);
+}
+
+.dark .btn-primary:focus-visible {
+  outline-color: var(--color-primary-light, #10a33a);
+}
+
+.dark .btn-danger:focus-visible {
+  outline-color: #fb7185;
 }
 
 /* Accessibility: respect user motion preferences */
@@ -118,6 +383,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 .split-btn > div {
   display: inline-block;
+}
+
+/* Evita que tracking-tighter corte la última letra de títulos animados */
+.split-title {
+  overflow: visible;
+}
+.split-title .char {
+  overflow: visible;
 }
 
 .animate-progress {
@@ -262,6 +535,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .animate-stagger-4 {
   animation-delay: 0.4s;
+}
+
+/* Reset de estilos base para navegador */
+p {
+  font-family: var(--font-body);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-muted);
 }
 
 /* Glassmorphism System */

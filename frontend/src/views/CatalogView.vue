@@ -56,6 +56,8 @@ const webSettings = ref<WebSettings>({
 
 const activeCategory = ref('Todos')
 const activeSubcategory = ref('Todos')
+const searchQuery = ref('')
+const staggerKey = ref(0)
 
 // Iconografía Técnica Industrial
 const categoryIcons: Record<string, string> = {
@@ -86,14 +88,14 @@ const availableSubcategories = computed(() => {
 })
 
 const filteredItems = computed(() => {
- let all = webSettings.value.catalog.filter(i => i.status === 'active' || !i.status)
- if (activeCategory.value !== 'Todos') {
- all = all.filter(i => i.category === activeCategory.value)
- }
- if (activeSubcategory.value !== 'Todos') {
- all = all.filter(i => i.subcategory === activeSubcategory.value)
- }
- return all
+  let items = webSettings.value.catalog.filter(i => i.status === 'active' || !i.status)
+  if (activeCategory.value !== 'Todos') items = items.filter(i => i.category === activeCategory.value)
+  if (activeSubcategory.value !== 'Todos') items = items.filter(i => i.subcategory === activeSubcategory.value)
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    items = items.filter(i => i.name?.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q))
+  }
+  return items
 })
 
 const getDiscountPct = (item: CatalogItem) => {
@@ -159,7 +161,6 @@ const fetchSettings = async () => {
  }
 }
 
-const staggerKey = ref(0)
 const quickViewItem = ref<any>(null)
 
 
@@ -196,7 +197,7 @@ const tickerBrands = computed(() => {
 })
 
 // Watch filter changes to trigger stagger animation
-watch([activeCategory, activeSubcategory], () => {
+watch([activeCategory, activeSubcategory, searchQuery], () => {
  staggerKey.value++
 })
 
@@ -225,22 +226,22 @@ onUnmounted(() => {
  <!-- Partículas ambientales flotantes -->
  <main class="max-w-7xl mx-auto px-6 py-20 relative">
  <!-- Catalog Header -->
- <div class="relative flex flex-col md:flex-row justify-between items-end gap-10 mb-20 overflow-hidden">
+ <div class="relative flex flex-col md:flex-row justify-between items-end gap-10 mb-20">
 
  <div class="max-w-2xl text-left">
  <div class="inline-flex items-center gap-3 px-4 py-2 bg-[#08872b]/10 rounded-[60px] border border-primary/20 mb-6">
  <span class="w-2 h-2 bg-[#08872b] rounded-[60px] animate-pulse"></span>
- <span class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.4em]">Coleccion de piezas</span>
+ <span class="text-label text-[#8dd6ff]">Coleccion de piezas</span>
  </div>
- <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.85] mb-6 animate-fade-in">
+ <h1 class="text-6xl md:text-8xl lg:text-9xl font-black text-slate-900 dark:text-white tracking-normal uppercase leading-[0.85] mb-6 animate-fade-in">
  NUESTRO <br class="md:hidden" />
  <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-primary to-emerald-300 dark:from-emerald-400 dark:via-primary dark:to-emerald-300 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] italic">CATÁLOGO</span>
  </h1>
- <p class="text-[#a4aea6] dark:text-[#c3c4c5] text-xs md:text-sm font-bold uppercase tracking-[0.3em] mt-6">Explora las piezas creadas en nuestros videos y proyectos industriales.</p>
+ <p class="text-caption uppercase mt-6">Explora las piezas creadas en nuestros videos y proyectos industriales.</p>
  </div>
 
  <div class="flex flex-col items-start md:items-end gap-6">
- <p class="text-[10px] font-black text-[#a4aea6] dark:text-[#c3c4c5] uppercase tracking-widest text-left md:text-right max-w-[200px] leading-relaxed italic">
+ <p class="text-subtitle text-[#a4aea6] dark:text-[#c3c4c5] max-w-[200px] text-left md:text-right">
  {{ webSettings.pdf_catalog_desc }}
  </p>
  <a 
@@ -253,6 +254,22 @@ onUnmounted(() => {
  </a>
  </div>
  </div>
+
+ <!-- Búsqueda y Filtros -->
+  <div class="flex flex-col md:flex-row gap-6 mb-8 items-center">
+    <!-- Buscador -->
+    <div class="relative w-full md:w-96 flex-shrink-0 animate-fade-in">
+      <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+        <svg class="w-5 h-5 text-[#a4aea6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
+      <input 
+        v-model="searchQuery" 
+        type="text" 
+        placeholder="Buscar modelo, pieza o palabra clave..." 
+        class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] text-white rounded-[24px] pl-12 pr-4 py-4 text-sm font-bold uppercase tracking-wide focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-[#a4aea6]/50"
+      />
+    </div>
+  </div>
 
  <div class="flex flex-wrap gap-4 mb-16 bg-[#151a22] dark:bg-[#151a22]/5 reveal p-4 rounded-[2rem] border border-[#21262d] dark:border-[#21262d] backdrop-blur-sm">
  <button 
@@ -360,16 +377,16 @@ onUnmounted(() => {
  <div class="flex items-center gap-3 mb-6 flex-wrap">
  <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 rounded-[60px] border border-blue-500/20">
  <svg class="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM5 11V5a1 1 0 011-1h6l4 4v7"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8h5.5a1 1 0 01.8.4l2.5 3.5a1 1 0 01.2.6V15h-2"/></svg>
- <span class="text-[7px] font-black text-blue-400 uppercase tracking-[0.2em]">Envío Gratis</span>
+ <span class="text-micro text-blue-400">Envío Gratis</span>
  </div>
  <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-500/10 rounded-[60px] border border-orange-500/20">
  <svg class="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
- <span class="text-[7px] font-black text-orange-400 uppercase tracking-[0.2em]">Garantía 6M</span>
+ <span class="text-micro text-orange-400">Garantía 6M</span>
  </div>
  </div>
 
  <!-- Titulo -->
- <h3 class="text-3xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter mb-4 italic leading-none group-hover:text-emerald-400 transition-colors line-clamp-2">{{ item.name }}</h3>
+ <h2 class="text-4xl font-black text-[#ffffff] dark:text-white uppercase tracking-normal mb-4 italic leading-none group-hover:text-emerald-400 transition-colors line-clamp-2">{{ item.name }}</h2>
  
  <!-- Divider -->
  <div class="w-12 h-1 bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-[60px] mb-6"></div>
@@ -450,7 +467,7 @@ onUnmounted(() => {
  </div>
 
  <!-- Name -->
- <h2 class="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter leading-tight italic">{{ quickViewItem.name }}</h2>
+ <h2 class="text-4xl md:text-5xl font-black text-white uppercase tracking-normal leading-tight italic">{{ quickViewItem.name }}</h2>
 
  <!-- Description -->
  <p v-if="quickViewItem.description" class="text-sm text-[#c3c4c5] leading-relaxed font-medium">{{ quickViewItem.description }}</p>
@@ -473,11 +490,11 @@ onUnmounted(() => {
  <div class="flex flex-wrap gap-3 pt-2">
  <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 rounded-[60px] border border-blue-500/20">
  <svg class="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM5 11V5a1 1 0 011-1h6l4 4v7"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8h5.5a1 1 0 01.8.4l2.5 3.5a1 1 0 01.2.6V15h-2"/></svg>
- <span class="text-[7px] font-black text-blue-400 uppercase tracking-[0.2em]">Envío Gratis</span>
+ <span class="text-micro text-blue-400">Envío Gratis</span>
  </div>
  <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-500/10 rounded-[60px] border border-orange-500/20">
  <svg class="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
- <span class="text-[7px] font-black text-orange-400 uppercase tracking-[0.2em]">Garantía 6M</span>
+ <span class="text-micro text-orange-400">Garantía 6M</span>
  </div>
  </div>
  </div>
@@ -508,9 +525,9 @@ class="w-full py-4 bg-[#151a22]/5 text-[#c3c4c5] rounded-[24px] font-black text-
  <div class="max-w-7xl mx-auto px-6 mb-12 md:mb-16 text-center relative">
  <div class="inline-flex items-center gap-3 px-4 py-2 bg-emerald-500/10 rounded-[60px] border border-emerald-500/20 mb-6">
  <span class="w-2 h-2 bg-emerald-400 rounded-[60px] animate-pulse"></span>
- <span class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">FRANQUICIAS</span>
+ <span class="text-label text-emerald-400">FRANQUICIAS</span>
  </div>
- <h2 class="text-4xl md:text-6xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter leading-[0.9] fade-title">
+ <h2 class="text-5xl md:text-7xl font-black text-[#ffffff] dark:text-white uppercase tracking-normal leading-[0.9] fade-title">
  <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">Universos icónicos</span><br/>
  que cobran vida en nuestras manos
  </h2>

@@ -56,8 +56,8 @@ const startScanner = () => {
  try {
  if (decodedText.includes('order_id=')) {
  const url = new URL(decodedText.replace('#/', ''));
- orderId.value = url.searchParams.get('order_id')
- email.value = url.searchParams.get('email')
+ orderId.value = url.searchParams.get('order_id') ?? ''
+ email.value = url.searchParams.get('email') ?? ''
  } else {
  orderId.value = decodedText
  }
@@ -83,8 +83,8 @@ onMounted(() => {
  // Si viene de QR o link directo, cargamos datos. 
  // Permitimos email vacío para que trackOrder maneje la validación o el error amigable.
  if (route.query.order_id) {
- orderId.value = route.query.order_id
- email.value = route.query.email || ''
+ orderId.value = Array.isArray(route.query.order_id) ? (route.query.order_id[0] ?? '') : (route.query.order_id ?? '')
+ email.value = Array.isArray(route.query.email) ? (route.query.email[0] ?? '') : (route.query.email ?? '')
  trackOrder()
  }
 })
@@ -132,8 +132,8 @@ const trackOrder = async () => {
  }
  const data = await res.json()
  order.value = data.data || data
- } catch (err) {
- error.value = err.message
+ } catch (err: unknown) {
+ error.value = err instanceof Error ? err.message : 'Error desconocido'
  } finally {
  loading.value = false
  }
@@ -147,7 +147,7 @@ const statusSteps = [
 ]
 
 const getStatusIndex = (status: any) => {
- const mapping = { 
+ const mapping: Record<string, number> = { 
  'pending': 0, 
  'printing': 1, 
  'post-processing': 2, 
@@ -177,7 +177,7 @@ const shareUrl = computed(() => {
  <div class="w-full max-w-4xl z-10">
  <!-- Titular HUD -->
  <div class="relative mb-16 text-center animate-in fade-in slide-in-from-top-4 duration-1000 overflow-hidden">
- <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.85] mb-6 animate-fade-in">
+ <h1 class="text-6xl md:text-8xl lg:text-9xl font-black text-slate-900 dark:text-white tracking-normal uppercase leading-[0.85] mb-6 animate-fade-in">
  RASTREO <br class="md:hidden" />
  <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-primary to-emerald-300 dark:from-emerald-400 dark:via-primary dark:to-emerald-300 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] italic">3D</span>
  </h1>
@@ -231,7 +231,7 @@ const shareUrl = computed(() => {
  </button>
  <div v-if="error" class="mt-8 text-center bg-rose-500/10 p-6 rounded-[24px] border border-rose-500/20">
  <p class="text-rose-500 font-black text-[10px] uppercase tracking-widest mb-2">No se encontro el pedido</p>
- <p class="text-[#a4aea6] dark:text-[#c3c4c5] text-xs font-bold">{{ error }}</p>
+ <p class="text-caption">{{ error }}</p>
  <p v-if="error.includes('fetch')" class="mt-4 text-[9px] text-rose-400 font-medium uppercase leading-relaxed">
  Nota: Si estas en celular, verifica que el PC <br>
  no este usando 'localhost' y que el firewall permita el puerto 8000.
@@ -259,12 +259,12 @@ const shareUrl = computed(() => {
  <span class="text-[9px] font-black text-[#8dd6ff] bg-[#08872b]/10 px-3 py-1.5 rounded-[60px] uppercase tracking-[0.3em] border border-primary/20">Monitor de Estado</span>
  <span class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest">ID: #{{ order.id }}</span>
  </div>
- <h2 class="text-4xl md:text-5xl font-black text-[#ffffff] dark:text-white tracking-tighter leading-tight uppercase italic">Hola, <span class="text-[#8dd6ff] not-italic">{{ order.customer_name }}</span></h2>
+ <h2 class="text-5xl md:text-6xl font-black text-[#ffffff] dark:text-white tracking-normal leading-tight uppercase italic">Hola, <span class="text-[#8dd6ff] not-italic">{{ order.customer_name }}</span></h2>
  <p class="text-[#a4aea6] dark:text-[#c3c4c5] font-bold mt-4 uppercase text-[10px] tracking-[0.4em]">TECNOLOGÍA: {{ order.technology }} • MATERIAL: {{ order.material_name || 'ESTÁNDAR' }}</p>
  </div>
  <div class="bg-[#151a22] p-4 rounded-[2.5rem] border-8 border-primary/10 flex flex-col items-center gap-4 group hover:scale-105 transition-transform">
  <qrcode-vue :value="shareUrl" :size="120" level="H" :render-as="'svg'" background="#ffffff" foreground="#000000" />
- <span class="text-[8px] font-black text-black uppercase tracking-widest opacity-40">Compartir enlace</span>
+ <span class="text-micro text-black opacity-40">Compartir enlace</span>
  </div>
  </div>
 

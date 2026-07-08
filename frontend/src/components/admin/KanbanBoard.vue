@@ -43,7 +43,7 @@ const rebuildGroups = (ordersList: any) => {
  
  if (!ordersList) return
 
- ordersList.forEach(o => {
+ ordersList.forEach((o: any) => {
  const rawStatus = o.status?.toLowerCase() || 'pending'
  let status = rawStatus
  
@@ -152,16 +152,16 @@ v-for="(col, idx) in columns" :key="col.id"
  :style="{ animationDelay: (idx * 150) + 'ms' }"
  >
  <!-- Column Header: Premium Glass -->
- <div class="flex items-center justify-between mb-4 md:mb-6 px-4 md:px-6 py-3 md:py-4 bg-[#151a22]/80 dark:bg-[#151a22]/90 backdrop-blur-2xl rounded-[20px] md:rounded-[24px] border border-white dark:border-[#21262d] -gray-200/20 dark:-none group/header relative overflow-hidden">
- <div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/header:opacity-100 transition-opacity"></div>
- <div class="flex items-center gap-4 relative z-10">
- <div :class="['w-4 h-4 rounded-[60px] -black/5 ring-4 ring-white dark:ring-gray-900', col.color]"></div>
- <h3 class="font-black text-[#ffffff] dark:text-white uppercase tracking-[0.2em] text-[10px]">{{ col.title }}</h3>
- </div>
- <span class="bg-[#151a22] dark:bg-[#151a22] text-white dark:text-[#ffffff] text-[10px] font-black px-3 py-1 rounded-[60px] tabular-nums relative z-10">
- {{ (groupedOrders[col.id] || []).length }}
- </span>
- </div>
+ <div class="flex items-center justify-between mb-3 px-4 py-2.5 bg-[#151a22] rounded-[16px] border border-[#21262d] group/header relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/header:opacity-100 transition-opacity"></div>
+  <div class="flex items-center gap-3 relative z-10">
+  <div :class="['w-3 h-3 rounded-[60px]', col.color]"></div>
+  <h3 class="font-black text-[#ffffff] dark:text-white uppercase tracking-[0.1em] text-xs">{{ col.title }}</h3>
+  </div>
+  <span class="bg-[#21262d] text-white dark:text-[#ffffff] text-[10px] font-black px-2 py-0.5 rounded-[60px] tabular-nums relative z-10">
+  {{ (groupedOrders[col.id] || []).length }}
+  </span>
+  </div>
 
  <!-- Column Content (Draggable Area) -->
  <draggable 

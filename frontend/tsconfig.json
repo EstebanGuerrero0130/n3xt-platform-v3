@@ -16,11 +16,9 @@
     ],
     "skipLibCheck": true,
     "noEmit": true,
-    "ignoreDeprecations": "5.0",
-    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ]
     },
     "types": [
@@ -32,6 +30,8 @@
     "src/**/*.d.ts",
     "src/**/*.vue",
     "src/**/*.test.ts",
+    "e2e/**/*.ts",
+    "playwright.config.ts",
     "vite.config.js"
   ],
   "exclude": [

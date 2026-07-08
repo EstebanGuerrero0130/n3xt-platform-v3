@@ -67,7 +67,7 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
  <div class="bg-[#08872b] px-8 md:px-12 pt-10 pb-6 text-white relative shrink-0">
  <button class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-[#151a22]/20 rounded-[60px] hover:bg-[#151a22] hover:text-[#8dd6ff] transition-all text-lg" aria-label="Botón interactivo" @click="handleClose">✕</button>
  <p class="text-[9px] font-black uppercase tracking-[0.5em] mb-2 text-white/80">N3XT Protocol</p>
- <h2 class="text-3xl md:text-4xl font-black tracking-tighter uppercase leading-none">Finalizar Solicitud</h2>
+ <h2 class="tracking-tighter uppercase leading-none">Finalizar Solicitud</h2>
  
  <!-- Step Indicators -->
  <div class="flex items-center gap-2 mt-8">
@@ -98,32 +98,32 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
  </div>
  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
  <div>
- <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Nombre Completo *</label>
- <input v-model="customerForm.name" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+ <label for="quote-name" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Nombre Completo *</label>
+ <input id="quote-name" v-model="customerForm.name" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
  </div>
  <div>
- <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Empresa / Razon Social</label>
- <input v-model="customerForm.company" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+ <label for="quote-company" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Empresa / Razon Social</label>
+ <input id="quote-company" v-model="customerForm.company" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
  </div>
  </div>
  <div class="grid grid-cols-2 gap-4">
  <div>
- <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">NIT / Documento</label>
- <input v-model="customerForm.document" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+ <label for="quote-document" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">NIT / Documento</label>
+ <input id="quote-document" v-model="customerForm.document" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
  </div>
  <div>
- <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Email Corporativo *</label>
- <input v-model="customerForm.email" type="email" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+ <label for="quote-email" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Email Corporativo *</label>
+ <input id="quote-email" v-model="customerForm.email" type="email" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
  </div>
  </div>
  <div class="grid grid-cols-2 gap-4">
  <div>
- <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">WhatsApp / Tel *</label>
- <input v-model="customerForm.phone" type="tel" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+ <label for="quote-phone" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">WhatsApp / Tel *</label>
+ <input id="quote-phone" v-model="customerForm.phone" type="tel" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
  </div>
  <div>
- <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Ciudad / Ubicacion</label>
- <input v-model="customerForm.city" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+ <label for="quote-city" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Ciudad / Ubicacion</label>
+ <input id="quote-city" v-model="customerForm.city" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
  </div>
  </div>
  <div class="pt-4 flex justify-end">
@@ -145,13 +145,13 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
  </div>
  </div>
  <div>
- <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Direccion de Envio *</label>
- <input v-model="customerForm.address" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+ <label for="quote-address" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Direccion de Envio *</label>
+ <input id="quote-address" v-model="customerForm.address" type="text" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
  </div>
  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
  <div>
- <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Uso de la Pieza</label>
- <select v-model="customerForm.use" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer">
+ <label for="quote-use" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Uso de la Pieza</label>
+ <select id="quote-use" v-model="customerForm.use" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer">
  <option value="Prototipo">Prototipo Rapido</option>
  <option value="Funcional">Pieza Mecanica / Funcional</option>
  <option value="Decorativo">Arte / Decorativo</option>
@@ -160,8 +160,8 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
  </select>
  </div>
  <div>
- <label class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Notas Tecnicas</label>
- <textarea v-model="customerForm.comments" rows="2" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none" placeholder="EJ. ACABADO ESPEJO..."></textarea>
+ <label for="quote-comments" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest mb-1.5 block ml-4">Notas Tecnicas</label>
+ <textarea id="quote-comments" v-model="customerForm.comments" rows="2" class="w-full bg-[#0d1117] dark:bg-[#0f172a] border border-transparent dark:border-[#21262d] rounded-[24px] px-5 py-3.5 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none" placeholder="EJ. ACABADO ESPEJO..."></textarea>
  </div>
  </div>
  <div class="pt-4 flex justify-between">
@@ -250,7 +250,7 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
  <p class="text-[10px] font-black dark:text-white uppercase">{{ challenge.text }}</p>
  <p v-if="isLocked" class="text-[7px] font-black text-rose-400 uppercase tracking-widest">🔒 Bloqueado 30s</p>
  </div>
- <input v-model="answer" type="number" :disabled="isLocked" class="w-20 bg-[#151a22] dark:bg-[#151a22]/10 border-none rounded-[6px] p-3 text-center text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30" @keyup.enter="handleConfirm">
+ <input id="quote-captcha" v-model="answer" type="number" :disabled="isLocked" class="w-20 bg-[#151a22] dark:bg-[#151a22]/10 border-none rounded-[6px] p-3 text-center text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30" aria-label="Respuesta del desafío matemático" @keyup.enter="handleConfirm">
  </div>
  </div>
 
@@ -259,7 +259,7 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/></svg> Atras
  </button>
  <button
-:disabled="isSubmitting" class="px-10 py-4 bg-[#08872b] hover:bg-emerald-600 text-white rounded-[24px] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 -primary/20"
+:disabled="isSubmitting" class="px-10 py-4 bg-[#08872b] hover:bg-emerald-600 text-white rounded-[24px] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 shadow-[0_0_15px_rgba(8,135,43,0.2)]"
  @click="handleConfirm">
  <span v-if="isSubmitting" class="w-5 h-5 border-3 border-white/30 border-t-white rounded-[60px] animate-spin"></span>
  <span>{{ isSubmitting ? 'PROCESANDO...' : 'CONFIRMAR PEDIDO' }}</span>

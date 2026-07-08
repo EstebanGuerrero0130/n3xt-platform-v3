@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../services/api'
 import { useRevealAnim } from '../composables/useRevealAnim'
@@ -17,8 +17,10 @@ usePageMeta({
 
 useRevealAnim({ delay: 200 })
 
-const customer = ref(null)
-const orders = ref([])
+interface Customer { name?: string; email?: string }
+interface Order { id: string | number; project_name?: string; material_name?: string; estimated_weight_g?: number | string; status?: string; total_price?: string | number }
+const customer = ref<Customer | null>(null)
+const orders = ref<Order[]>([])
 const loading = ref(true)
 const router = useRouter()
 
@@ -59,11 +61,8 @@ onMounted(() => {
  fetchProfile()
 })
 
-onUnmounted(() => {
- // @unhead/vue handles meta cleanup automatically
-})
 
-const getStatusColor = (status) => {
+const getStatusColor = (status: string): string => {
  switch (status) {
  case 'pending': return 'bg-amber-500'
  case 'printing': return 'bg-[#08872b]'
@@ -73,7 +72,7 @@ const getStatusColor = (status) => {
  }
 }
 
-const getStatusLabel = (status) => {
+const getStatusLabel = (status: string): string => {
  switch (status) {
  case 'pending': return 'Pendiente'
  case 'printing': return 'En Impresión'
@@ -100,10 +99,9 @@ const getStatusLabel = (status) => {
  {{ customer?.name?.charAt(0) || 'U' }}
  </div>
  <div>
- <p class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.3em] mb-1">Acceso Autorizado</p>
- <h1 class="text-2xl md:text-4xl font-black text-[#ffffff] dark:text-white tracking-tighter uppercase italic leading-none">
- Misión: <span class="text-[#8dd6ff]">{{ customer?.name?.split(' ')[0] || 'Maker' }}</span>
- </h1>
+ <p class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.3em] mb-1">Acceso Autorizado</p><h1 class="text-6xl md:text-8xl lg:text-9xl font-black text-slate-900 dark:text-white tracking-normal uppercase italic leading-[0.85] mb-6 animate-fade-in">
+                    Misión: <span class="text-[#8dd6ff]">{{ customer?.name?.split(' ')[0] || 'Maker' }}</span>
+                    </h1>
  </div>
  </div>
  
@@ -120,18 +118,18 @@ const getStatusLabel = (status) => {
  <div class="bg-[#151a22]/60 dark:bg-[#151a22]/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white dark:border-[#21262d] animate-in slide-in-from-bottom-2 duration-500">
  <p class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-4">Pedidos Activos</p>
  <div class="flex items-end gap-3">
- <h3 class="text-4xl font-black text-[#ffffff] dark:text-white tracking-tighter">{{ orders.filter(o => o.status !== 'delivered').length }}</h3>
+ <h3 class="text-3xl md:text-4xl font-black text-[#ffffff] dark:text-white tracking-normal">{{ orders.filter(o => o.status !== 'delivered').length }}</h3>
  <div class="w-2 h-2 bg-emerald-500 rounded-[60px] animate-pulse mb-2"></div>
  </div>
  </div>
  <div class="bg-[#151a22]/60 dark:bg-[#151a22]/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white dark:border-[#21262d] animate-in slide-in-from-bottom-2 duration-700">
  <p class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-4">Material Consumido</p>
- <h3 class="text-4xl font-black text-[#ffffff] dark:text-white tracking-tighter">-- <span class="text-sm font-bold opacity-40">g</span></h3>
+ <h3 class="text-2xl md:text-3xl font-black text-[#ffffff] dark:text-white tracking-tighter">-- <span class="text-sm font-bold opacity-40">g</span></h3>
  </div>
  <div class="bg-[#151a22]/60 dark:bg-[#151a22]/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white dark:border-[#21262d] animate-in slide-in-from-bottom-2 duration-1000">
  <p class="text-[10px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-4">Ahorro Estimado</p>
  <div class="flex items-center gap-3">
- <h3 class="text-4xl font-black text-emerald-500 tracking-tighter">15%</h3>
+ <h3 class="text-3xl md:text-4xl font-black text-emerald-500 tracking-normal">15%</h3>
  <span class="text-[8px] font-black text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-[6px]">TIER 1</span>
  </div>
  </div>
@@ -142,7 +140,7 @@ const getStatusLabel = (status) => {
  <!-- Orders List -->
  <div class="lg:col-span-2 space-y-6">
  <div class="flex justify-between items-center mb-4">
- <h2 class="text-xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter italic">Mis Impresiones 3D</h2>
+ <h2 class="text-4xl md:text-5xl font-black text-[#ffffff] dark:text-white uppercase tracking-normal italic">Mis Impresiones 3D</h2>
  </div>
 
  <div v-if="loading" class="flex justify-center py-20">
@@ -171,7 +169,7 @@ const getStatusLabel = (status) => {
  </div>
  <div class="min-w-0">
  <div class="flex flex-wrap items-center gap-2 sm:gap-4 mb-1 sm:mb-2">
- <h4 class="text-base sm:text-xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter truncate group-hover:text-[#8dd6ff] transition-colors">{{ order.project_name || 'Proyecto 3D' }}</h4>
+ <h3 class="text-base sm:text-xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter truncate group-hover:text-[#8dd6ff] transition-colors">{{ order.project_name || 'Proyecto 3D' }}</h3>
  <span class="text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 bg-[#151a22] dark:bg-[#151a22]/10 text-[#a4aea6] dark:text-[#c3c4c5] rounded-[6px] sm:rounded-[6px] tracking-widest shrink-0">#{{ order.id }}</span>
  </div>
  <div class="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -218,7 +216,7 @@ const getStatusLabel = (status) => {
  </div>
 
  <div class="bg-[#151a22]/60 dark:bg-[#151a22]/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white dark:border-[#21262d] ">
- <h4 class="text-sm font-black text-[#ffffff] dark:text-white uppercase tracking-widest mb-8">Soporte Técnico</h4>
+ <h3 class="text-sm font-black text-[#ffffff] dark:text-white uppercase tracking-widest mb-8">Soporte Técnico</h3>
  <div class="space-y-4">
  <a href="https://wa.me/573118796416" target="_blank" class="flex items-center gap-5 p-5 bg-[#151a22]/50 dark:bg-[#151a22]/5 rounded-[24px] hover:bg-emerald-500/10 transition-all border border-transparent hover:border-emerald-500/20 group">
  <svg class="w-6 h-6 text-emerald-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>

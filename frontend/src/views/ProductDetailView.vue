@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
@@ -60,7 +60,7 @@ const fetchProduct = async () => {
  const data = await api.get('/settings')
  companySettings.value = data
  catalog.value = data.web?.catalog || []
- const paramId = decodeURIComponent(route.params.id)
+ const paramId = decodeURIComponent(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id)
  
  // Buscar por ID numérico o por nombre (slug)
  const found = catalog.value.find(i => String(i.id) === paramId || i.name === paramId)
@@ -106,8 +106,6 @@ onMounted(() => {
  fetchProduct()
 })
 
-onUnmounted(() => {
-})
 
 // Observar cambios en la URL para recargar el producto (Navegación entre relacionados)
 watch(() => route.params.id, () => {
@@ -152,13 +150,13 @@ watch(() => route.params.id, () => {
  <img :src="selectedImage || product.image" :alt="'Detalle de producto 3D: ' + product.name + (product.category ? ' (' + product.category + ')' : '') + ' — N3XT 3D Shop'" class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-[2s]" fetchpriority="high" decoding="async" @error="(e: any) => e.target.style.display='none'" />
  <!-- Cloudinary Optimization Note Tag (Invisible to user) -->
  <div class="absolute top-8 right-8 px-4 py-2 bg-black/40 backdrop-blur-md rounded-[6px] border border-white/10">
- <span class="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Alta definicion</span>
+ <span class="text-micro text-emerald-400">Alta definicion</span>
  </div>
  </div>
  <!-- Miniaturas -->
  <div v-if="product.images && product.images.length > 1" class="grid grid-cols-4 gap-4">
  <div v-for="(img, i) in product.images" :key="i" :class="[selectedImage === img ? 'border-primary opacity-100 ring-2 ring-primary/30' : 'border-[#21262d] dark:border-[#21262d] opacity-50']" class="aspect-square bg-[#151a22] dark:bg-[#151a22]/5 rounded-[24px] border overflow-hidden cursor-pointer hover:opacity-100 hover:border-primary transition-all" @click="selectedImage = img">
- <img :src="img" :alt="'Vista previa ' + (i + 1) + ' de ' + product.name + ' — N3XT 3D Shop'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
+ <img :src="img" :alt="'Vista previa ' + (Number(i) + 1) + ' de ' + product.name + ' — N3XT 3D Shop'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
  </div>
  </div>
  </div>
@@ -170,14 +168,14 @@ watch(() => route.params.id, () => {
  <span class="w-1.5 h-1.5 bg-emerald-400 rounded-[60px] -[0_0_12px_#34d399]"></span>
  <span class="text-[10px] font-black text-emerald-400 dark:text-emerald-300 uppercase tracking-[0.4em] drop--[0_0_8px_rgba(52,211,153,0.5)]">{{ product.category }}</span>
  </div>
- <h1 class="split-title text-5xl md:text-7xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter leading-[0.9] mb-4">
+ <h1 class="split-title text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white uppercase tracking-normal leading-[0.85] mb-6 animate-fade-in">
  {{ product.name }}
  </h1>
  <div class="flex items-center gap-6">
  <div class="flex items-end gap-6 mb-2">
  <div class="relative group/price">
  <p class="text-xs font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-[0.4em] mb-1 ml-1 italic">Precio</p>
- <p class="text-5xl md:text-7xl font-black text-emerald-500 dark:text-emerald-400 tracking-tighter leading-none italic drop--[0_0_15px_rgba(16,185,129,0.3)]">
+ <p class="text-4xl md:text-5xl lg:text-6xl font-black text-emerald-500 dark:text-emerald-400 tracking-tighter leading-none italic drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">
  {{ formatPrice(product.price) }}
  </p>
  </div>
@@ -241,7 +239,7 @@ v-for="spec in [
  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
  </div>
  <div>
- <p class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-widest">Soporte Técnico Especializado</p>
+ <p class="text-micro text-[#c3c4c5]">Soporte Técnico Especializado</p>
  <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">WhatsApp: {{ product.support_phone || companySettings.company?.phone || '+57 3118796416' }}</p>
  </div>
  </div>
@@ -257,7 +255,7 @@ v-for="spec in [
  <div v-if="product && relatedProducts.length > 0" class="mt-40 pt-20 border-t border-[#21262d] dark:border-[#21262d] reveal">
  <div class="flex flex-col md:flex-row justify-between items-end gap-6 mb-16">
  <div>
- <h4 class="text-3xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter italic mb-2">Colecciones Similares</h4>
+ <h2 class="text-4xl font-black text-[#ffffff] dark:text-white uppercase tracking-normal italic mb-2">Colecciones Similares</h2>
  <p class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest italic">Piezas de la misma línea técnica o temática</p>
  </div>
  <router-link to="/catalog" class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.4em] hover:tracking-[0.6em] transition-all flex items-center gap-3">
@@ -276,8 +274,8 @@ v-for="spec in [
  <img :src="rel.image" :alt="'Producto relacionado: ' + rel.name + ' | N3XT 3D Shop'" class="max-w-full max-h-full object-contain" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
  </div>
  <div class="px-4">
- <p class="text-[8px] font-black text-[#8dd6ff] uppercase tracking-widest mb-1">{{ rel.category }}</p>
- <h5 class="text-lg font-black text-[#ffffff] dark:text-white uppercase tracking-tighter italic leading-tight group-hover:text-[#8dd6ff] transition-colors">{{ rel.name }}</h5>
+ <p class="text-micro text-[#8dd6ff] mb-1">{{ rel.category }}</p>
+ <h3 class="text-lg font-black text-[#ffffff] dark:text-white uppercase tracking-tighter italic leading-tight group-hover:text-[#8dd6ff] transition-colors">{{ rel.name }}</h3>
  <p class="text-sm font-bold text-[#c3c4c5] mt-2">{{ rel.price }}</p>
  </div>
  </router-link>

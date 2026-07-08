@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import AppNavbar from '../components/AppNavbar.vue'
 import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
@@ -42,10 +42,7 @@ onMounted(() => {
  fetchSettings()
 })
 
-onUnmounted(() => {
-})
-
-// --- DATA DE CONFIGURACIÓN ---
+// Empty onUnmounted removed// --- DATA DE CONFIGURACIÓN ---
 const steps = [
  {
  id: 'type',
@@ -85,7 +82,7 @@ const steps = [
 ]
 
 const customerName = ref('')
-const selections = ref({
+const selections = ref<Record<string, string>>({
  type: 'figura',
  tech: 'resina',
  finish: 'bruto',
@@ -133,31 +130,31 @@ const sendToWhatsapp = () => {
  <div class="relative inline-block overflow-hidden">
   <!-- Glow background -->
  <div class="absolute -inset-20 bg-gradient-to-r from-emerald-500/5 via-primary/5 to-emerald-500/5 rounded-[60px] blur-[100px] animate-pulse pointer-events-none"></div>
- <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.85] mb-6 animate-fade-in">
+ <h1 class="text-6xl md:text-8xl lg:text-9xl font-black text-slate-900 dark:text-white tracking-normal uppercase leading-[0.85] mb-6 animate-fade-in">
  INICIAR <br class="md:hidden" />
  <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-primary to-emerald-300 dark:from-emerald-400 dark:via-primary dark:to-emerald-300 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] italic">PROYECTO 3D.</span>
  </h1>
  </div>
  <div class="space-y-3 max-w-md">
- <label class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.4em] block ml-1">Identificación del Cliente</label>
- <input v-model="customerName" type="text" placeholder="Escribe tu nombre aqui..." class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border border-slate-200 dark:border-[#21262d] rounded-[24px] px-6 py-4 text-sm font-black text-slate-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all ">
+ <label for="project-customer-name" class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.4em] block ml-1">Identificación del Cliente</label>
+ <input id="project-customer-name" v-model="customerName" type="text" placeholder="Escribe tu nombre aqui..." class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border border-slate-200 dark:border-[#21262d] rounded-[24px] px-6 py-4 text-sm font-black text-slate-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all ">
  </div>
- <p class="text-slate-400 dark:text-[#c3c4c5] font-bold uppercase tracking-[0.4em] text-xs">Asistente de Configuración N3XT</p>
+ <p class="text-subtitle text-slate-400 dark:text-[#c3c4c5]">Asistente de Configuración N3XT</p>
  </div>
 
  <div v-for="step in steps" :key="step.id" class="space-y-6">
  <div class="flex items-center gap-4">
  <span class="w-8 h-px bg-emerald-500/30 dark:bg-emerald-500/50"></span>
- <h3 class="text-xs font-black uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">{{ step.label }}</h3>
+ <p class="text-xs font-black uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">{{ step.label }}</p>
  </div>
  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
  <button 
  v-for="opt in step.options" 
  :key="opt.id"
  :class="selections[step.id] === opt.id 
- ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 -[0_10px_30px_rgba(16,185,129,0.1)] dark:-[0_0_20px_rgba(16,185,129,0.2)]' 
+ ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 shadow-[0_10px_30px_rgba(16,185,129,0.1)] dark:shadow-[0_0_20px_rgba(16,185,129,0.2)]' 
  : 'border-slate-200 dark:border-[#21262d] bg-[#151a22] dark:bg-[#151a22]/5 hover:border-emerald-200 dark:hover:border-white/20'"
- class="group aspect-square p-6 rounded-[2.5rem] border text-center transition-all duration-500 relative overflow-hidden flex flex-col items-center justify-center gap-4"
+ class="group h-full min-h-[140px] p-4 md:p-5 rounded-[2.5rem] border text-center transition-all duration-500 relative overflow-hidden flex flex-col items-center justify-center gap-4"
  @click="selections[step.id] = opt.id"
  >
  <div 
@@ -170,7 +167,7 @@ const sendToWhatsapp = () => {
  <p class="text-[8px] text-slate-400 dark:text-[#a4aea6] font-bold uppercase tracking-widest hidden md:block">{{ opt.desc }}</p>
  </div>
  <div v-if="selections[step.id] === opt.id" class="absolute top-4 right-4">
- <div class="w-1.5 h-1.5 bg-emerald-500 rounded-[60px] animate-pulse -[0_0_10px_rgba(16,185,129,1)]"></div>
+ <div class="w-1.5 h-1.5 bg-emerald-500 rounded-[60px] animate-pulse shadow-[0_0_10px_rgba(16,185,129,1)]"></div>
  </div>
  </button>
  </div>
@@ -179,7 +176,7 @@ const sendToWhatsapp = () => {
 
  <aside class="w-full lg:w-[450px] space-y-8">
  <div class="sticky top-32">
- <div class="p-10 bg-[#151a22] dark:bg-[#151a22]/[0.03] backdrop-blur-3xl rounded-[3rem] border border-slate-200 dark:border-[#21262d] -[0_30px_60px_-15px_rgba(0,0,0,0.05)] dark: space-y-10 relative overflow-hidden">
+ <div class="p-10 bg-[#151a22] dark:bg-[#151a22]/[0.03] backdrop-blur-3xl rounded-[3rem] border border-slate-200 dark:border-[#21262d] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] space-y-10 relative overflow-hidden">
  <div class="absolute -right-20 -top-20 w-40 h-40 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-[60px] blur-3xl"></div>
  <div class="space-y-2 relative z-10 border-b border-slate-100 dark:border-[#21262d] pb-6">
  <p class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.5em]">Resumen del Proyecto</p>
@@ -196,7 +193,7 @@ const sendToWhatsapp = () => {
  <div class="space-y-6 relative z-10 pt-6">
  <button 
  :disabled="!customerName"
- :class="!customerName ? 'opacity-40 cursor-not-allowed bg-slate-500' : 'bg-emerald-500 -[0_20px_50px_-15px_rgba(16,185,129,0.4)] hover:scale-[1.02] active:scale-95'"
+ :class="!customerName ? 'opacity-40 cursor-not-allowed bg-slate-500' : 'bg-emerald-500 shadow-[0_20px_50px_-15px_rgba(16,185,129,0.4)] hover:scale-[1.02] active:scale-95'"
  class="w-full py-8 text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 group"
  @click="sendToWhatsapp"
  >

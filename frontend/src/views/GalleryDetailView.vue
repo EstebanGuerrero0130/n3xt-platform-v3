@@ -26,14 +26,15 @@ const relatedGridRef = ref<any>(null)
 
 // ─── Scroll reveal for related projects ───
 const relatedVisible = ref(false)
-let relatedObserver = null
-let _timerFocus = null
-let _timerLoad = null
+let relatedObserver: IntersectionObserver | null = null
+let _timerFocus: ReturnType<typeof setTimeout> | null = null
+let _timerLoad: ReturnType<typeof setTimeout> | null = null
 
-const normalizeTags = (tags) => Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : [])
-const normalizeImages = (images) => Array.isArray(images) ? images : (typeof images === 'string' ? images.split(',').map(s => s.trim()).filter(Boolean) : [])
+const normalizeTags = (tags: any): string[] => Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [])
+const normalizeImages = (images: any): string[] => Array.isArray(images) ? images : (typeof images === 'string' ? images.split(',').map((s: string) => s.trim()).filter(Boolean) : [])
 const item = ref<any>(null)
-const webSettings = ref({ gallery: [] })
+interface WebSettingsGallery { gallery: any[]; cloudinary_name?: string }
+const webSettings = ref<WebSettingsGallery>({ gallery: [] })
 const lightboxOpen = ref(false)
 const lightboxIdx = ref(0)
 const mainImageFailed = ref(false)
@@ -48,7 +49,7 @@ const allImages = computed(() => {
  return imgs.filter(Boolean)
 })
 
-const openLightbox = (idx) => {
+const openLightbox = (idx: number) => {
  lightboxIdx.value = idx
  lightboxOpen.value = true
  _timerFocus = setTimeout(() => { lightboxRef.value?.focus() }, 100)
@@ -62,7 +63,7 @@ const prevImage = () => {
  if (lightboxIdx.value > 0) lightboxIdx.value--
 }
 
-const formatDate = (d) => {
+const formatDate = (d: string): string => {
  try {
  const dt = new Date(d)
  if (isNaN(dt.getTime())) return d
@@ -72,7 +73,7 @@ const formatDate = (d) => {
  }
 }
 
-const getOptimizedImage = (url) => {
+const getOptimizedImage = (url: string): string => {
  if (!url) return ''
  if (!webSettings.value.cloudinary_name || !url.includes('cloudinary.com')) return url
  return url.replace('/upload/', '/upload/f_auto,q_auto,w_1200/')
@@ -85,7 +86,7 @@ const fetchData = async () => {
  webSettings.value.gallery = data.web.gallery.map((item: any, idx: number) =>
  typeof item === 'string' ? { image: item, title: `Imagen ${idx + 1}` } : item
  )
- const rawSlug = route.params.id
+ const rawSlug = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id
  const decodedSlug = decodeURIComponent(rawSlug)
  item.value = webSettings.value.gallery.find(g =>
  encodeURIComponent(g.title || '') === rawSlug ||
@@ -116,8 +117,8 @@ const setupRelatedReveal = () => {
  relatedObserver = new IntersectionObserver((entries) => {
  entries.forEach(entry => {
  if (entry.isIntersecting) {
- relatedVisible.value = true
- relatedObserver.unobserve(entry.target)
+  relatedVisible.value = true
+  relatedObserver?.unobserve(entry.target)
  }
  })
  }, { threshold: 0.15 })
@@ -130,8 +131,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
- clearTimeout(_timerFocus)
- clearTimeout(_timerLoad)
+ if (_timerFocus) clearTimeout(_timerFocus)
+ if (_timerLoad) clearTimeout(_timerLoad)
  if (relatedObserver) relatedObserver.disconnect()
 })
 </script>
@@ -210,12 +211,12 @@ v-for="(img, idx) in allImages" :key="idx"
 
  <!-- Title -->
  <div>
- <h1 class="split-title text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9]">{{ item.title }}</h1>
+ <h1 class="split-title text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white tracking-normal uppercase leading-[0.85] mb-6 animate-fade-in">{{ item.title }}</h1>
  <p v-if="item.subtitle" class="text-sm font-black text-[#c3c4c5] uppercase tracking-[0.2em] mt-3">{{ item.subtitle }}</p>
  </div>
 
  <!-- Description -->
- <p v-if="item.description" class="text-[#a4aea6] dark:text-[#c3c4c5] text-xs md:text-sm font-bold uppercase leading-relaxed tracking-[0.3em]">
+ <p v-if="item.description" class="text-caption uppercase">
  {{ item.description }}
  </p>
 
@@ -270,7 +271,7 @@ to="/catalog"
 
  <!-- Related projects -->
  <div v-if="webSettings.gallery.length > 1" ref="relatedGridRef" class="mt-32 related-grid">
- <h2 class="split-title text-3xl md:text-5xl font-black tracking-tighter uppercase leading-[0.9] mb-12">Proyectos <span class="text-emerald-500">Relacionados</span></h2>
+ <h2 class="split-title text-4xl md:text-6xl font-black tracking-normal uppercase leading-[0.9] mb-12">Proyectos <span class="text-emerald-500">Relacionados</span></h2>
  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
  <router-link
 v-for="(related, idx) in webSettings.gallery.filter(g => g.title !== item.title).slice(0, 3)" :key="idx"
@@ -283,7 +284,7 @@ v-for="(related, idx) in webSettings.gallery.filter(g => g.title !== item.title)
  class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" decoding="async" />
  </div>
  <div class="p-6 text-center">
- <h3 class="text-sm font-black tracking-tighter uppercase group-hover:text-emerald-500 transition-colors">{{ related.title }}</h3>
+ <h3 class="text-lg md:text-xl font-black tracking-tighter uppercase group-hover:text-emerald-500 transition-colors">{{ related.title }}</h3>
  <p class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-[0.2em] mt-1">{{ related.category }}</p>
  </div>
  </router-link>

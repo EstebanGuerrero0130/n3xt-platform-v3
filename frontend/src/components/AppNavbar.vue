@@ -1,6 +1,41 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 
+/**
+ * Valores válidos para activeTab.
+ * Cada vista debe pasar el valor correspondiente para que el nav link
+ * se muestre como activo (background + border).
+ */
+export type NavbarTab = 'home' | 'gallery' | 'catalog' | 'quote' | 'track' | 'contact' | 'dashboard' | ''
+
+/**
+ * Evita warning de fallthrough attributes en componentes con múltiples
+ * root elements (header + mobile menu transition).
+ */
+defineOptions({ inheritAttrs: false })
+
+export interface NavLink {
+  to: string
+  tab: NavbarTab
+  label: string
+}
+
+const navLinks: NavLink[] = [
+  { to: '/', tab: 'home', label: 'Inicio' },
+  { to: '/galeria', tab: 'gallery', label: 'Galería' },
+  { to: '/catalog', tab: 'catalog', label: 'Catálogo' },
+  { to: '/quote', tab: 'quote', label: 'Cotizador' },
+  { to: '/track', tab: 'track', label: 'Rastrear' },
+  { to: '/project/init', tab: 'contact', label: 'Contáctanos' },
+]
+
+defineProps<{
+  /** Tab activa: resalta el link correspondiente en el navbar */
+  activeTab?: NavbarTab
+  /** Texto secundario mostrado bajo el logo N3XT 3D */
+  subtext?: string
+}>()
+
 const showMobileMenu = ref(false)
 
 watch(showMobileMenu, (isOpen) => {
@@ -14,9 +49,15 @@ watch(showMobileMenu, (isOpen) => {
 const isAdmin = ref(false)
 
 onMounted(async () => {
- const { api } = await import('../services/api')
- const auth = await api.checkAuth()
- isAdmin.value = auth.authenticated && auth.role === 'admin'
+  try {
+    const mod = await import('../services/api')
+    if (mod?.api?.checkAuth) {
+      const auth = await mod.api.checkAuth()
+      isAdmin.value = auth.authenticated && auth.role === 'admin'
+    }
+  } catch {
+    // Auth check no crítico — el navbar muestra "Acceso Taller" por defecto
+  }
 })
 
 onUnmounted(() => {
@@ -29,19 +70,22 @@ onUnmounted(() => {
  <router-link to="/" class="flex items-center gap-3 group">
  <div class="flex flex-col text-left">
  <span class="text-lg md:text-xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter leading-none">N3XT <span class="text-emerald-400">3D</span></span>
- <span class="text-[7px] md:text-[8px] font-black text-[#c3c4c5] dark:text-[#8dd6ff] uppercase tracking-[0.4em] leading-none">{{ subtext }}</span>
+ <span class="text-[7px] md:text-[8px] font-black text-[#c3c4c5] dark:text-[#8dd6ff] uppercase tracking-[0.4em] leading-none">{{ subtext ?? '' }}</span>
  </div>
  </router-link>
 
  <nav role="navigation" aria-label="Navegación principal" class="hidden md:flex gap-4 items-center">
- <router-link to="/" :class="[activeTab === 'home' ? 'text-white bg-[#151a22]/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-[#c3c4c5] hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Inicio</router-link>
- <router-link to="/galeria" :class="[activeTab === 'gallery' ? 'text-white bg-[#151a22]/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-[#c3c4c5] hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Galería</router-link>
- <router-link to="/catalog" :class="[activeTab === 'catalog' ? 'text-white bg-[#151a22]/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-[#c3c4c5] hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Catálogo</router-link>
- <router-link to="/quote" :class="[activeTab === 'quote' ? 'text-white bg-[#151a22]/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-[#c3c4c5] hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Cotizador</router-link>
- <router-link to="/track" :class="[activeTab === 'track' ? 'text-white bg-[#151a22]/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-[#c3c4c5] hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Rastrear</router-link>
- <router-link to="/project/init" :class="[activeTab === 'contact' ? 'text-white bg-[#151a22]/10 border border-white/10 px-4 py-2 rounded-[60px]' : 'text-[#c3c4c5] hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']">Contáctanos</router-link>
- 
-
+ <router-link
+ v-for="link in navLinks"
+ :key="link.tab"
+ :to="link.to"
+ :class="[
+ activeTab === link.tab
+ ? 'text-white bg-[#151a22]/10 border border-white/10 px-4 py-2 rounded-[60px]'
+ : 'text-[#c3c4c5] hover:text-[#8dd6ff] px-3 py-2',
+ 'text-[10px] font-black uppercase tracking-[0.2em] transition-all'
+ ]"
+ >{{ link.label }}</router-link>
  </nav>
 
  <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="hidden md:block btn-primary text-[10px] font-black uppercase tracking-[0.2em]">
@@ -69,12 +113,13 @@ onUnmounted(() => {
  <div v-if="showMobileMenu" class="fixed inset-0 z-[999] bg-[#151a22] dark:bg-[#0a0f14] backdrop-blur-3xl md:hidden flex flex-col items-center justify-start overflow-y-auto gap-8 pt-28 pb-12 px-12">
  <div class="absolute inset-0 technical-grid opacity-10 pointer-events-none"></div>
  
- <router-link to="/" class="text-xl font-black text-[#ffffff] dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Inicio</router-link>
- <router-link to="/galeria" class="text-xl font-black text-[#ffffff] dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Galería</router-link>
- <router-link to="/catalog" class="text-xl font-black text-[#ffffff] dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Catálogo</router-link>
- <router-link to="/quote" class="text-xl font-black text-[#ffffff] dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Cotizador</router-link>
- <router-link to="/track" class="text-xl font-black text-[#ffffff] dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Rastrear</router-link>
- <router-link to="/project/init" class="text-xl font-black text-[#ffffff] dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Contáctanos</router-link>
+ <router-link
+ v-for="link in navLinks"
+ :key="link.tab"
+ :to="link.to"
+ class="text-xl font-black text-[#ffffff] dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]"
+ @click="showMobileMenu = false"
+ >{{ link.label }}</router-link>
  
  <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="mt-8 text-sm font-bold uppercase tracking-[0.2em] btn-primary px-12 py-4" @click="showMobileMenu = false">
  {{ isAdmin ? 'Ir al Taller' : 'Acceso Taller' }}

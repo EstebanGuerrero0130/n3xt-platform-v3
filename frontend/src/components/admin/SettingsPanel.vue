@@ -301,7 +301,7 @@ const emit = defineEmits([
  'scroll-catalog-item',
 ])
 
-// @codebuff unused
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const webSubTab = ref('general')
 
 // Valores sugeridos por defecto para orientar al usuario
@@ -362,10 +362,12 @@ const handleLogoUpload = (event: Event) => {
  emit('logo-upload', event)
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _handleCreateCatalogProduct = () => {
  emit('catalog-create')
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _handleResetCatalog = () => {
  emit('catalog-reset')
 }

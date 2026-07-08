@@ -6,6 +6,7 @@ import { sanitizeSVG } from '../utils/sanitize'
 import AppNavbar from '../components/AppNavbar.vue'
 import BrandTicker from '../components/BrandTicker.vue'
 import WaveDivider from '../components/WaveDivider.vue'
+import AppFooter from '../components/AppFooter.vue'
 import LegalModal from '../components/LegalModal.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
@@ -340,20 +341,20 @@ onMounted(() => {
 
  <!-- Partículas ambientales -->
  <!-- Hero Section -->
- <section class="relative pt-20 pb-32 px-6 overflow-hidden">
+ <section class="relative pt-20 pb-32 px-6">
   <div class="absolute inset-0 technical-grid opacity-20 dark:opacity-10 pointer-events-none"></div>
  <div class="absolute -top-24 -left-24 w-96 h-96 bg-[#08872b]/10 rounded-[60px] blur-[120px] pointer-events-none"></div>
  <div class="absolute top-1/2 -right-24 w-96 h-96 bg-[#08872b]/5 rounded-[60px] blur-[120px] pointer-events-none"></div>
 
- <div class="max-w-7xl mx-auto flex flex-col items-center text-center relative z-10">
+ <div class="mx-auto flex flex-col items-center text-center relative z-10">
  <div class="inline-flex items-center gap-3 px-4 py-2 bg-[#08872b]/10 rounded-[60px] border border-primary/20 mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
  <span class="w-2 h-2 bg-emerald-400 rounded-[60px] animate-pulse -[0_0_10px_#10b981]"></span>
- <span class="text-[10px] font-black text-emerald-400 dark:text-emerald-400 uppercase tracking-[0.4em]">Estudio de manufactura digital</span>
+ <span class="text-label text-emerald-400 dark:text-emerald-400">Estudio de manufactura digital</span>
  </div>
 
- <h1 ref="heroTitleRef" class="text-7xl md:text-9xl lg:text-[11rem] font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.85] mb-6 animate-fade-in">
- N3XT <br class="md:hidden" />
- <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-primary to-emerald-300 dark:from-emerald-400 dark:via-primary dark:to-emerald-300 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] italic">3D</span>
+ <h1 ref="heroTitleRef" class="text-[5rem] md:text-[8rem] lg:text-[11rem] font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.8] mb-6 animate-fade-in flex items-center justify-center gap-2 md:gap-4">
+ <span>N3XT</span>
+ <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-primary to-emerald-300 dark:from-emerald-400 dark:via-primary dark:to-emerald-300 drop-shadow-[0_0_25px_rgba(16,185,129,0.4)] italic">3D</span>
  </h1>
 
  <div class="max-w-5xl mx-auto mb-24 relative group px-6">
@@ -364,12 +365,12 @@ onMounted(() => {
  <!-- Aura de luz sutil -->
  <div class="absolute inset-0 bg-[#08872b]/5 blur-[120px] rounded-[60px] opacity-40 pointer-events-none"></div>
 
- <p class="relative font-black text-sm md:text-3xl uppercase tracking-tighter leading-[1.05] text-center animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
- <span class="text-slate-400 dark:text-[#a4aea6]">Especialistas en </span>
- <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400 dark:from-primary dark:to-emerald-400 drop--[0_0_15px_rgba(16,185,129,0.2)]">fabricación digital</span>.
+ <p class="text-xs md:text-sm lg:text-base font-bold uppercase tracking-[0.3em] leading-relaxed max-w-3xl mx-auto text-center mt-6 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
+ <span class="text-slate-400 dark:text-white/50">Especialistas en </span>
+ <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400 dark:from-primary dark:to-emerald-400">fabricación digital</span>.
  <span class="text-slate-900 dark:text-white"> Miniaturas, figuras y piezas de colección creadas con precisión industrial.</span>
  <br class="hidden md:block" />
- <span class="text-slate-400 dark:text-[#a4aea6]"> Inspirados en universos icónicos y el </span>
+ <span class="text-slate-400 dark:text-white/50"> Inspirados en universos icónicos y el </span>
  <span class="text-emerald-500 dark:text-emerald-400 italic">espíritu de Colombia.</span>
  </p>
  
@@ -382,7 +383,7 @@ onMounted(() => {
 
  <div class="flex flex-col md:flex-row items-center justify-center gap-8 animate-in fade-in zoom-in duration-1000 mt-16">
  <!-- Botón: Iniciar Proyecto (Elite Luxury) -->
- <router-link to="/project/init" class="group relative px-20 py-8 bg-[#151a22] dark:bg-[#08872b] text-white rounded-[24px] font-black text-xs uppercase tracking-[0.5em] overflow-hidden transition-all hover:-translate-y-1 hover:scale-105 active:scale-95 -[0_20px_50px_-15px_rgba(16,185,129,0.4)]"> <span class="relative z-10 flex items-center gap-4 btn-fade-in">
+ <router-link to="/project/init" class="group relative px-20 py-8 bg-[#151a22] dark:bg-[#08872b] text-white rounded-[24px] font-black text-xs uppercase tracking-[0.5em] overflow-hidden transition-all hover:-translate-y-1 hover:scale-105 active:scale-95 shadow-[0_20px_50px_-15px_rgba(16,185,129,0.4)]"> <span class="relative z-10 flex items-center gap-4 btn-fade-in">
  INICIAR PROYECTO 3D
  <span class="relative flex h-2 w-2">
  <span class="animate-ping absolute inline-flex h-full w-full rounded-[60px] bg-[#151a22] opacity-75"></span>
@@ -414,13 +415,11 @@ onMounted(() => {
  <!-- Stats Section (Estilo Industrial Refinado) -->
  <section class="py-28 bg-[#151a22] dark:bg-[#05080b] relative overflow-hidden">
  <div class="absolute inset-0 technical-grid opacity-5"></div>
- <div class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-12 px-6 relative z-10">
- <div v-for="stat in [{val: '+10K', label: 'Piezas Fabricadas'}, {val: '24H', label: 'Prototipado Rapido'}, {val: '8K', label: 'Resolucion Resina'}, {val: '100%', label: 'Acabado Manual'}]" :key="stat.label" class="group relative">
- <p class="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter mb-2 group-hover:text-emerald-500 transition-all duration-500 transform group-hover:scale-110 origin-left italic">{{ stat.val }}</p>
- <div class="flex items-center gap-3">
- <p class="text-[10px] font-black text-slate-400 dark:text-[#a4aea6] uppercase tracking-[0.3em]">{{ stat.label }}</p>
- </div>
- <div class="absolute -bottom-4 left-0 w-12 h-1 bg-emerald-500/20 group-hover:w-full transition-all duration-700"></div>
+ <div class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 px-6 relative z-10">
+ <div v-for="stat in [{val: '+10K', label: 'Piezas Fabricadas'}, {val: '24H', label: 'Prototipado Rapido'}, {val: '8K', label: 'Resolucion Resina'}, {val: '100%', label: 'Acabado Manual'}]" :key="stat.label" class="flex flex-col group cursor-default">
+ <p class="text-6xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tighter mb-2 italic leading-none group-hover:text-emerald-500 transition-colors duration-500">{{ stat.val }}</p>
+ <p class="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-[#a4aea6] uppercase tracking-[0.2em] mb-4 group-hover:text-emerald-400 transition-colors duration-500">{{ stat.label }}</p>
+ <div class="w-8 md:w-12 h-1 bg-emerald-900 group-hover:bg-emerald-400 transition-all duration-500 group-hover:w-full"></div>
  </div>
  </div>
  </section>
@@ -433,15 +432,15 @@ onMounted(() => {
  <div class="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
  <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
  <div class="relative group">
- <div class="aspect-square bg-[#151a22] rounded-[4.5rem] overflow-hidden -[0_50px_100px_-20px_rgba(30,58,52,0.3)] relative border border-white/10">
+ <div class="aspect-square bg-[#151a22] rounded-[4.5rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(30,58,52,0.3)] relative border border-white/10">
  <picture>
  <source srcset="/assets/n3xt_industrial_maker_figures_1778542131405.webp" type="image/webp" />
  <img src="/assets/n3xt_industrial_maker_figures_1778542131405.webp" alt="Figuras coleccionables de anime y videojuegos fabricadas por N3XT 3D" width="1200" height="1200" class="w-full h-full object-cover group-hover:scale-110 transition-all duration-[2s]" loading="eager" fetchpriority="high" />
  </picture>
  <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
  <div class="absolute bottom-12 left-12 text-white">
- <p class="text-[10px] font-black uppercase tracking-[0.4em] mb-3 text-[#8dd6ff]">FABRICA TU PEDIDO</p>
- <h2 class="text-4xl font-black uppercase tracking-tighter italic">N3XT <span class="text-[#8dd6ff]">3D</span></h2>
+ <p class="text-label text-[#8dd6ff] mb-3">FABRICA TU PEDIDO</p>
+ <h2 class="text-5xl md:text-6xl font-black uppercase tracking-normal italic">N3XT <span class="text-[#8dd6ff]">3D</span></h2>
  </div>
  </div>
  <div class="absolute -top-6 -right-6 w-32 h-32 border-t-2 border-r-2 border-primary/40 rounded-tr-[3rem]"></div>
@@ -449,26 +448,26 @@ onMounted(() => {
  </div>
 
  <div class="space-y-10 text-left">
- <div class="inline-block px-5 py-2 bg-emerald-500/10 rounded-[60px] border border-emerald-500/30 -[0_0_15px_rgba(16,185,129,0.1)]">
- <span class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">¿QUÉ HACEMOS?</span>
+ <div class="inline-block px-5 py-2 bg-emerald-500/10 rounded-[60px] border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+ <span class="text-label text-emerald-400">¿QUÉ HACEMOS?</span>
  </div>
- <h2 class="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.9] animate-fade-in">
+ <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none animate-fade-in">
  EL SIGUIENTE NIVEL DE LA<br/>
  <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400 dark:from-emerald-400 dark:to-emerald-200 italic">FABRICACIÓN DIGITAL.</span>
  </h2>
- <p class="text-[#a4aea6] dark:text-[#c3c4c5] text-xs md:text-sm font-bold uppercase leading-relaxed tracking-[0.3em]">
+ <p class="text-slate-500 dark:text-white/50 text-xs md:text-sm font-bold uppercase tracking-[0.3em] leading-relaxed max-w-3xl mx-auto mt-6">
  En N3XT no solo fabricamos piezas; damos vida a universos, personajes y proyectos personalizados con acabados premium y detalle profesional.
  </p>
  <div class="grid grid-cols-1 gap-10 pt-12">
  <!-- Categoría 1: Figuras -->
- <div class="group p-6 bg-[#151a22] dark:bg-[#151a22]/10 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-700 relative overflow-hidden hover:-translate-y-2 hover:">
+ <div class="group p-6 bg-[#151a22] dark:bg-[#151a22]/10 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-700 relative overflow-hidden hover:-translate-y-2">
  <div class="absolute -right-12 -top-12 w-32 h-32 bg-emerald-500/10 rounded-[60px] blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
  <div class="flex items-center gap-6 relative z-10">
- <div class="flex-shrink-0 w-16 h-16 bg-emerald-500/10 rounded-[6px] flex items-center justify-center border border-emerald-500/20 -[0_0_20px_rgba(16,185,129,0.1)] group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500">
+ <div class="flex-shrink-0 w-16 h-16 bg-emerald-500/10 rounded-[6px] flex items-center justify-center border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)] group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500">
  <svg class="w-8 h-8 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
  </div>
  <div class="text-left">
- <h2 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-2 italic">Figuras <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700 dark:from-emerald-400 dark:to-emerald-600">Premium</span></h2>
+ <h3 class="text-2xl md:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-normal mb-2 italic">Figuras <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700 dark:from-emerald-400 dark:to-emerald-600">Premium</span></h3>
  <p class="text-xs md:text-sm text-slate-400 dark:text-[#c3c4c5] font-bold uppercase leading-relaxed tracking-tight mb-4 max-w-md">Piezas artísticas en alta resolución con acabados de museo.</p>
  <div class="flex flex-wrap gap-2">
  <span v-for="tag in ['Resina SLA', 'Aerografia', 'Detalle 8K']" :key="tag" class="text-[9px] font-black px-3 py-1 bg-emerald-500/5 dark:bg-black/40 rounded-[60px] border border-emerald-500/20 uppercase tracking-[0.2em] text-emerald-600 ">{{ tag }}</span>
@@ -478,14 +477,14 @@ onMounted(() => {
  </div>
 
  <!-- Categoría 2: Impresión 3D -->
- <div class="group p-6 bg-[#151a22] dark:bg-[#151a22]/10 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-700 relative overflow-hidden hover:-translate-y-2 hover:">
+ <div class="group p-6 bg-[#151a22] dark:bg-[#151a22]/10 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-700 relative overflow-hidden hover:-translate-y-2">
  <div class="absolute -right-12 -top-12 w-32 h-32 bg-emerald-500/10 rounded-[60px] blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
  <div class="flex items-center gap-6 relative z-10">
- <div class="flex-shrink-0 w-16 h-16 bg-emerald-500/10 rounded-[6px] flex items-center justify-center border border-emerald-500/20 -[0_0_20px_rgba(16,185,129,0.1)] group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500">
+ <div class="flex-shrink-0 w-16 h-16 bg-emerald-500/10 rounded-[6px] flex items-center justify-center border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)] group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500">
  <svg class="w-8 h-8 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
  </div>
  <div class="text-left">
- <h2 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-2 italic">Fabricación <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700 dark:from-emerald-400 dark:to-emerald-600">Multimaterial</span></h2>
+ <h3 class="text-2xl md:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-normal mb-2 italic">Fabricación <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700 dark:from-emerald-400 dark:to-emerald-600">Multimaterial</span></h3>
  <p class="text-xs md:text-sm text-slate-400 dark:text-[#c3c4c5] font-bold uppercase leading-relaxed tracking-tight mb-4 max-w-md">Flota de alta gama para resultados industriales.</p>
  <div class="flex flex-wrap gap-2">
  <span v-for="tag in ['Bambulab', 'Elegoo', 'Creality', 'Anycubic']" :key="tag" class="text-[9px] font-black px-3 py-1 bg-emerald-500/5 dark:bg-black/40 rounded-[60px] border border-emerald-500/20 uppercase tracking-[0.2em] text-emerald-600 ">{{ tag }}</span>
@@ -495,14 +494,14 @@ onMounted(() => {
  </div>
 
  <!-- Categoría 3: Prototipos -->
- <div class="group p-6 bg-[#151a22] dark:bg-[#151a22]/10 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-400/50 transition-all duration-700 relative overflow-hidden hover:-translate-y-2 hover:">
+ <div class="group p-6 bg-[#151a22] dark:bg-[#151a22]/10 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-400/50 transition-all duration-700 relative overflow-hidden hover:-translate-y-2">
  <div class="absolute -right-12 -top-12 w-32 h-32 bg-emerald-400/10 rounded-[60px] blur-3xl group-hover:bg-emerald-400/20 transition-all duration-700"></div>
  <div class="flex items-center gap-6 relative z-10">
- <div class="flex-shrink-0 w-16 h-16 bg-emerald-400/10 rounded-[6px] flex items-center justify-center border border-emerald-400/20 -[0_0_20px_rgba(52,211,153,0.1)] group-hover:bg-emerald-400 group-hover:text-white transition-all duration-500">
+ <div class="flex-shrink-0 w-16 h-16 bg-emerald-400/10 rounded-[6px] flex items-center justify-center border border-emerald-400/20 shadow-[0_0_20px_rgba(52,211,153,0.1)] group-hover:bg-emerald-400 group-hover:text-white transition-all duration-500">
  <svg class="w-8 h-8 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
  </div>
  <div class="text-left">
- <h2 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-2 italic">Prototipos <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-primary">Funcionales</span></h2>
+ <h3 class="text-2xl md:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-normal mb-2 italic">Prototipos <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-primary">Funcionales</span></h3>
  <p class="text-xs md:text-sm text-slate-400 dark:text-[#c3c4c5] font-bold uppercase leading-relaxed tracking-tight mb-4 max-w-md">Ingeniería aplicada con precisión mecánica industrial.</p>
  <div class="flex flex-wrap gap-2">
  <span v-for="tag in ['Ingenieria', 'Nylon / PETG', 'Prueba de Estrés']" :key="tag" class="text-[9px] font-black px-3 py-1 bg-emerald-400/5 dark:bg-black/40 rounded-[60px] border border-emerald-400/20 uppercase tracking-[0.2em] text-emerald-600 ">{{ tag }}</span>
@@ -523,7 +522,7 @@ onMounted(() => {
  <div class="absolute inset-0 technical-grid opacity-10 pointer-events-none"></div>
  
  <div class="max-w-7xl mx-auto mb-32 text-center relative z-10">
- <h2 class="split-title text-5xl md:text-7xl font-black text-slate-400 dark:text-white/30 tracking-tighter uppercase leading-[0.9] mb-8 transition-colors duration-500">
+ <h2 class="split-title text-4xl md:text-5xl lg:text-6xl font-black text-slate-400 dark:text-white/30 tracking-tight uppercase leading-none mb-8 transition-colors duration-500">
  NUESTRO <span class="text-emerald-600 dark:text-emerald-400">PROCESO</span><br/>
  <span class="text-slate-500 dark:text-white/40 transition-all duration-700">DE FABRICACIÓN.</span>
  </h2>
@@ -536,60 +535,60 @@ onMounted(() => {
 
  <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
  <!-- Paso 01 -->
- <div class="group relative p-10 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-500 overflow-hidden hover:">
+ <div class="group relative p-6 md:p-8 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-500 overflow-hidden">
  <div class="absolute -right-4 -top-4 text-8xl font-black text-slate-200 dark:text-white/10 group-hover:text-emerald-500/20 transition-all duration-500 tracking-tighter italic">01</div>
  <div class="mb-8 w-14 h-14 bg-emerald-500/10 rounded-[24px] flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-500 ">
  <svg class="w-7 h-7 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z"/></svg>
  </div>
- <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4 italic">Envíanos tu <span class="text-emerald-500 dark:text-emerald-400">Idea</span></h2>
+ <h3 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2 italic">Envíanos tu <span class="text-emerald-500 dark:text-emerald-400">Idea</span></h3>
  <p class="text-xs text-slate-400 dark:text-[#c3c4c5] leading-relaxed font-bold uppercase tracking-tight">
  Compártenos tu idea, imagen o archivo 3D. Si aún no tienes el diseño listo, <span class="text-slate-900 dark:text-white/60">te ayudamos a desarrollarlo.</span>
  </p>
- <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-[60px] -[0_0_10px_rgba(16,185,129,0.5)]"></div>
+ <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-[60px] shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
  </div>
 
  <!-- Paso 02 -->
- <div class="group relative p-10 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-500 overflow-hidden hover:">
+ <div class="group relative p-6 md:p-8 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-500 overflow-hidden">
  <div class="absolute -right-4 -top-4 text-8xl font-black text-slate-200 dark:text-white/10 group-hover:text-emerald-500/20 transition-all duration-500 tracking-tighter italic">02</div>
  <div class="mb-8 w-14 h-14 bg-emerald-500/10 rounded-[24px] flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-500 ">
  <svg class="w-7 h-7 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
  </div>
- <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4 italic">Asesoría <span class="text-emerald-500 dark:text-emerald-400">Personalizada</span></h2>
+ <h3 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2 italic">Asesoría <span class="text-emerald-500 dark:text-emerald-400">Personalizada</span></h3>
  <p class="text-xs text-slate-400 dark:text-[#c3c4c5] leading-relaxed font-bold uppercase tracking-tight">
  Analizamos tu proyecto y te recomendamos el <span class="text-slate-900 dark:text-white/60">material, tamaño y tipo de fabricación</span> ideal para tu pieza.
  </p>
- <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-[60px] -[0_0_10px_rgba(16,185,129,0.5)]"></div>
+ <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-[60px] shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
  </div>
 
  <!-- Paso 03 -->
- <div class="group relative p-10 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-500 overflow-hidden hover:">
+ <div class="group relative p-6 md:p-8 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-500 overflow-hidden">
  <div class="absolute -right-4 -top-4 text-8xl font-black text-slate-200 dark:text-white/10 group-hover:text-emerald-500/20 transition-all duration-500 tracking-tighter italic">03</div>
  <div class="mb-8 w-14 h-14 bg-emerald-500/10 rounded-[24px] flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-500 ">
  <svg class="w-7 h-7 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
  </div>
- <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4 italic">Recibe tu <span class="text-emerald-500 dark:text-emerald-400">Cotización</span></h2>
+ <h3 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2 italic">Recibe tu <span class="text-emerald-500 dark:text-emerald-400">Cotización</span></h3>
  <p class="text-xs text-slate-400 dark:text-[#c3c4c5] leading-relaxed font-bold uppercase tracking-tight">
  Te enviamos una <span class="text-slate-900 dark:text-white/60">cotización clara</span> según complejidad, materiales, acabados y tiempo de fabricación.
  </p>
- <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-[60px] -[0_0_10px_rgba(16,185,129,0.5)]"></div>
+ <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-[60px] shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
  </div>
 
  <!-- Paso 04 -->
- <div class="group relative p-10 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-500 overflow-hidden hover:">
+ <div class="group relative p-6 md:p-8 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-[#21262d] hover:border-emerald-500/50 transition-all duration-500 overflow-hidden">
  <div class="absolute -right-4 -top-4 text-8xl font-black text-slate-200 dark:text-white/10 group-hover:text-emerald-500/20 transition-all duration-500 tracking-tighter italic">04</div>
  <div class="mb-8 w-14 h-14 bg-emerald-500/10 rounded-[24px] flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-500 ">
  <svg class="w-7 h-7 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/></svg>
  </div>
- <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4 italic">Fabricación y <span class="text-emerald-500 dark:text-emerald-400">Entrega</span></h2>
+ <h3 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2 italic">Fabricación y <span class="text-emerald-500 dark:text-emerald-400">Entrega</span></h3>
  <p class="text-xs text-slate-400 dark:text-[#c3c4c5] leading-relaxed font-bold uppercase tracking-tight">
  Fabricamos tu pieza con equipos profesionales y la entregamos con <span class="text-slate-900 dark:text-white/60">acabados premium y detalle profesional.</span>
  </p>
- <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-[60px] -[0_0_10px_rgba(16,185,129,0.5)]"></div>
+ <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-[60px] shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
  </div>
  </div>
 
  <div class="max-w-7xl mx-auto mt-32 text-center relative z-10">
- <router-link to="/project/init" class="inline-flex items-center gap-6 px-16 py-7 bg-gray-100 dark:bg-white text-gray-900 dark:text-black border border-gray-200 dark:border-white/20 shadow-md hover:shadow-lg rounded-[60px] font-black text-xs uppercase tracking-[0.4em] hover:bg-emerald-500 dark:hover:bg-emerald-500 hover:text-white transition-all duration-500 -[0_20px_50px_-10px_rgba(16,185,129,0.3)] hover:scale-105">
+ <router-link to="/project/init" class="inline-flex items-center gap-6 px-16 py-7 bg-gray-100 dark:bg-white text-gray-900 dark:text-black border border-gray-200 dark:border-white/20 shadow-md hover:shadow-lg rounded-[60px] font-black text-xs uppercase tracking-[0.4em] hover:bg-emerald-500 dark:hover:bg-emerald-500 hover:text-white transition-all duration-500 shadow-[0_20px_50px_-10px_rgba(16,185,129,0.3)] hover:scale-105">
  <span class="btn-fade-in">INICIAR PROYECTO 3D <span class="text-xl">→</span></span>
  </router-link>
  </div>
@@ -616,9 +615,9 @@ onMounted(() => {
  <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center px-6">
  <div class="order-2 lg:order-1 space-y-12">
  <div class="inline-flex items-center gap-4 px-6 py-2 bg-emerald-500/10 rounded-[60px] border border-emerald-500/20">
- <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.4em]">Acabado artesanal</span>
+ <span class="text-label text-emerald-600 dark:text-emerald-400">Acabado artesanal</span>
  </div>
- <h2 class="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.9] fade-title">
+ <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none fade-title">
  EL ARTE DE LA<br/>
  <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400 italic">POST-PRODUCCIÓN.</span>
  </h2>
@@ -632,7 +631,7 @@ v-for="step in [
  {n: 'Lijado fino', code: 'FINISH', icon: '<svg class=\'w-7 h-7\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z\'/></svg>'}, 
  {n: 'Imprimacion', code: 'BASE', icon: '<svg class=\'w-7 h-7\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10\'/></svg>'}, 
  {n: 'Aerografia', code: 'PREM', icon: '<svg class=\'w-7 h-7\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z\'/></svg>'}
- ]" :key="step.n" class="group flex flex-col items-center justify-center text-center gap-4 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl border border-slate-200 dark:border-[#21262d] p-6 rounded-[2rem] hover:border-emerald-500/50 transition-all duration-500 hover: relative overflow-hidden aspect-square">
+ ]" :key="step.n" class="group flex flex-col items-center justify-center text-center gap-4 bg-[#151a22] dark:bg-[#151a22]/5 backdrop-blur-xl border border-slate-200 dark:border-[#21262d] p-6 rounded-[2rem] hover:border-emerald-500/50 transition-all duration-500 relative overflow-hidden min-h-[160px]">
  <div class="w-14 h-14 bg-slate-100 dark:bg-[#151a22] rounded-[24px] flex items-center justify-center group-hover:bg-emerald-500 transition-all duration-500 border border-slate-200 dark:border-[#21262d] ">
  <span :innerHTML="sanitizeSVG(step.icon)" class="text-emerald-500 group-hover:text-white transition-all duration-500 group-hover:scale-110"></span>
  </div>
@@ -644,7 +643,7 @@ v-for="step in [
  <!-- Botón: Ir a Galería debajo de Post-Producción -->
  <div class="flex justify-center mt-16"><router-link
 to="/galeria"
- class="group inline-flex items-center gap-6 px-16 py-7 bg-gray-100 dark:bg-white text-gray-900 dark:text-black border border-gray-200 dark:border-white/20 shadow-md hover:shadow-lg rounded-[60px] font-black text-xs uppercase tracking-[0.4em] hover:bg-emerald-500 dark:hover:bg-emerald-500 hover:text-white transition-all duration-500 -[0_20px_50px_-10px_rgba(16,185,129,0.3)] hover:scale-105">
+ class="group inline-flex items-center gap-6 px-16 py-7 bg-gray-100 dark:bg-white text-gray-900 dark:text-black border border-gray-200 dark:border-white/20 shadow-md hover:shadow-lg rounded-[60px] font-black text-xs uppercase tracking-[0.4em] hover:bg-emerald-500 dark:hover:bg-emerald-500 hover:text-white transition-all duration-500 shadow-[0_20px_50px_-10px_rgba(16,185,129,0.3)] hover:scale-105">
  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
  </svg>
@@ -680,78 +679,75 @@ to="/galeria"
  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#08872b]/10 blur-[150px] rounded-[60px] pointer-events-none"></div>
  
  <div class="max-w-7xl mx-auto mb-32 text-center relative z-10">
- <h2 class="text-5xl md:text-7xl font-black text-slate-400 dark:text-white/30 tracking-tighter uppercase leading-[0.9] mb-8 transition-all duration-500 fade-title">
+ <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-slate-400 dark:text-white/30 tracking-tight uppercase leading-none mb-8 transition-all duration-500 fade-title">
  EL <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">ECOSISTEMA</span><br/>
  <span class="text-slate-500 dark:text-white/40">N3XT 3D.</span>
  </h2>
  <p class="text-xs md:text-sm text-[#c3c4c5] font-bold uppercase tracking-[0.3em]">Manufactura Avanzada • Cultura Maker • Innovación Digital</p>
  </div>
 
- <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
- <!-- Card Ecosistema — Estilo originui adaptado -->
+ <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+ <!-- Card Ecosistema -->
  <div
 v-for="(card, cidx) in webSettings.ecosystem" :key="cidx" 
- class="group bg-[#151a22] dark:bg-[#151a22]/5 rounded-[2.5rem] border border-[#21262d] dark:border-[#21262d] hover:border-emerald-500/40 transition-all duration-500 flex flex-col hover: overflow-hidden">
+ class="group bg-[#0d1117] rounded-[2rem] border border-[#21262d] hover:border-emerald-500/30 transition-all duration-500 flex flex-col overflow-hidden hover:shadow-[0_0_40px_rgba(16,185,129,0.05)]">
  
- <!-- Imagen (clean, aspect-square, rounded-[24px] como la referencia) -->
- <div v-if="card.type === 'image'" class="relative p-4 pb-0">
- <div class="aspect-square w-full rounded-[24px] overflow-hidden bg-[#151a22] relative">
+ <!-- Imagen -->
+ <div v-if="card.type === 'image'" class="relative p-5 pb-0">
+ <div class="aspect-[4/3] w-full rounded-[1.5rem] overflow-hidden bg-[#151a22] relative">
  <img
 :src="getImages(card.i)[0]" 
  :alt="card.t1"
- class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+ class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
  loading="lazy"
  @error="(e: any) => e.target.src = 'https://images.unsplash.com/photo-1638202993928-7267aad84c31?auto=format&fit=crop&q=80&w=800'" />
- <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+ <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
  
  <!-- Indicador carrusel -->
- <div v-if="getImages(card.i).length > 1" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+ <div v-if="getImages(card.i).length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
  <div
 v-for="(_, dotIdx) in getImages(card.i)" :key="dotIdx" 
- :class="['h-1.5 rounded-[60px] transition-all duration-500', activeIndices[cidx] === dotIdx ? 'w-6 bg-emerald-400' : 'w-1.5 bg-[#151a22]/30']"></div>
+ :class="['h-1.5 rounded-[60px] transition-all duration-500', activeIndices[cidx] === dotIdx ? 'w-5 bg-emerald-400' : 'w-1.5 bg-white/30']"></div>
  </div>
  </div>
  </div>
 
- <!-- Icono (clean icon container) -->
- <div v-else-if="card.type === 'icon'" class="p-6 pb-0 flex justify-center">
- <div class="w-16 h-16 bg-emerald-500/10 rounded-[24px] flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:border-emerald-500 transition-all duration-500">
+ <!-- Icono -->
+ <div v-else-if="card.type === 'icon'" class="px-6 pt-8 pb-2">
+ <div class="w-14 h-14 bg-emerald-500/10 rounded-[1rem] flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:border-emerald-500 transition-all duration-500">
+ <!-- eslint-disable-next-line vue/no-v-html -->
  <span class="text-emerald-400 group-hover:text-white transition-colors duration-500" v-html="sanitizeSVG(card.i)"></span>
  </div>
  </div>
 
  <!-- Content -->
- <div class="p-6 flex-1 flex flex-col gap-4">
- <h2 class="text-2xl md:text-3xl font-black text-[#ffffff] dark:text-white uppercase tracking-tighter italic leading-tight">
+ <div class="px-6 pt-5 pb-2 flex-1 flex flex-col gap-3">
+ <h3 class="text-2xl font-black text-white uppercase tracking-normal italic leading-tight">
  {{ card.t1 }}<br/>
  <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-400">{{ card.t2 }}</span>
- </h2>
- <p class="text-[11px] text-[#c3c4c5] font-bold uppercase leading-relaxed tracking-wide">
+ </h3>
+ <p class="text-xs text-[#a4aea6] font-bold uppercase leading-relaxed tracking-[0.08em]">
  {{ card.d }}
  </p>
  </div>
 
- <!-- Stats row (dinámico desde card.stats, con separadores verticales) -->
- <div v-if="card.stats && card.stats.length" class="px-6 pb-4">
- <div class="flex items-center justify-around py-3.5 bg-[#151a22] dark:bg-[#151a22]/[0.03] rounded-[24px] border border-[#21262d] dark:border-[#21262d]">
- <template v-for="(stat, si) in card.stats" :key="si">
- <!-- Separador vertical entre stats -->
- <div v-if="si !== 0" class="w-px h-8 bg-gray-200 dark:bg-[#151a22]/10"></div>
- <div class="flex flex-col items-center gap-1">
- <p class="text-base md:text-lg font-black text-[#ffffff] dark:text-white tracking-tight">{{ stat.val }}</p>
- <span class="text-[8px] md:text-[9px] font-bold text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-[0.15em]">{{ stat.label }}</span>
+ <!-- Stats row -->
+ <div v-if="card.stats && card.stats.length" class="px-6 pb-3">
+ <div class="grid gap-px rounded-[1rem] overflow-hidden border border-[#21262d]" :style="{ gridTemplateColumns: 'repeat(' + card.stats.length + ', 1fr)' }">
+ <div v-for="(stat, si) in card.stats" :key="si" class="flex flex-col items-center gap-0.5 py-3 bg-[#151a22]">
+ <p class="text-lg font-black text-white tracking-tight">{{ stat.val }}</p>
+ <span class="text-[8px] font-bold text-[#a4aea6] uppercase tracking-[0.15em]">{{ stat.label }}</span>
  </div>
- </template>
  </div>
  </div>
 
- <!-- CTA Button (rounded-[60px] como referencia) -->
- <div class="px-6 pb-6">
+ <!-- CTA Button -->
+ <div class="px-6 pb-6 pt-2">
  <router-link
 to="/project/init" 
- class="group/btn flex items-center justify-center gap-3 w-full py-4 bg-[#151a22] dark:bg-[#151a22]/10 hover:bg-emerald-500 text-white rounded-[60px] text-[9px] font-black uppercase tracking-[0.35em] transition-all duration-500 -black/10">
+ class="group/btn flex items-center justify-center gap-3 w-full py-3.5 bg-[#151a22] hover:bg-emerald-500 text-white rounded-[60px] text-[9px] font-black uppercase tracking-[0.35em] transition-all duration-500 border border-[#21262d] hover:border-emerald-500">
  <span>Explorar</span>
- <svg class="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+ <svg class="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
  </router-link>
  </div>
  </div>
@@ -770,9 +766,9 @@ to="/project/init"
  <div>
  <div class="inline-flex items-center gap-3 px-4 py-2 bg-[#08872b]/10 rounded-[60px] border border-primary/20 mb-6">
  <span class="w-2 h-2 bg-[#08872b] rounded-[60px] animate-pulse"></span>
- <span class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.4em]">Portafolio</span>
+ <span class="text-label text-[#8dd6ff]">Portafolio</span>
  </div>
- <h2 class="split-title text-5xl md:text-7xl font-black text-[#ffffff] dark:text-white tracking-tighter uppercase leading-[0.9]">
+ <h2 class="split-title text-4xl md:text-5xl lg:text-6xl font-black text-[#ffffff] dark:text-white tracking-tight uppercase leading-none">
  Trabajos <span class="text-emerald-500">Destacados</span>
  </h2>
  </div>
@@ -808,20 +804,20 @@ to="/project/init"
  <div v-if="!work.image || brokenGalleryImgs[idx]" class="absolute inset-0 flex items-center justify-center">
  <svg class="w-12 h-12 text-gray-300 dark:text-[#a4aea6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
  </div>
- <div class="absolute top-3 left-3 px-3 py-1 bg-emerald-500/90 text-white text-[7px] font-black rounded-[60px] uppercase tracking-[0.25em] ">{{ work.category }}</div>
+ <div class="absolute top-3 left-3 px-3 py-1 bg-emerald-500/90 text-white text-micro rounded-[60px]">{{ work.category }}</div>
  </div>
  </div>
  <!-- Info -->
  <div class="p-6 text-center">
- <h2 class="text-lg font-black text-[#ffffff] dark:text-white uppercase tracking-tighter leading-tight group-hover:text-emerald-500 transition-colors">{{ work.title }}</h2>
+ <h3 class="text-xl font-black text-[#ffffff] dark:text-white uppercase tracking-normal leading-tight group-hover:text-emerald-500 transition-colors">{{ work.title }}</h3>
  <p v-if="work.subtitle" class="text-[8px] font-black text-[#c3c4c5] uppercase tracking-[0.2em] mt-1.5">{{ work.subtitle }}</p>
  <!-- Tags -->
  <div v-if="normalizeTags(work.tags).length > 0" class="flex flex-wrap justify-center gap-1.5 mt-3">
- <span v-for="tag in normalizeTags(work.tags).slice(0, 3)" :key="tag" class="text-[6px] font-black px-2 py-0.5 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[60px] uppercase tracking-[0.15em] text-[#a4aea6]">{{ tag }}</span>
+  <span v-for="tag in normalizeTags(work.tags).slice(0, 3)" :key="tag" class="text-xs font-bold px-3 py-1 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[60px] uppercase tracking-[0.1em] text-[#a4aea6]">{{ tag }}</span>
  </div>
- <div class="mt-4 w-full py-3.5 bg-[#090d0a] dark:bg-[#151a22]/10 text-white rounded-[60px] text-[8px] font-black uppercase tracking-[0.3em] group-hover:bg-emerald-500 transition-all duration-500 ">
- Ver Proyecto
- </div>
+  <div class="mt-4 w-full py-3.5 bg-[#151a22] text-white border border-[#21262d] rounded-[60px] shadow-md hover:shadow-lg text-[10px] md:text-xs font-black uppercase tracking-[0.4em] text-center group-hover:bg-emerald-500 transition-all duration-500">
+  Ver Proyecto
+  </div>
  </div>
  </router-link>
  </div>
@@ -842,9 +838,9 @@ to="/project/init"
  <div class="relative z-10">
  <div class="inline-flex items-center gap-3 px-5 py-2 bg-emerald-500/10 rounded-[60px] border border-emerald-500/30 mb-6 -[0_0_20px_rgba(16,185,129,0.1)]">
  <span class="w-2.5 h-2.5 bg-emerald-400 rounded-[60px] animate-pulse -[0_0_12px_#10b981]"></span>
- <span class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">NOTICIAS LOCALES</span>
+ <span class="text-label text-emerald-400">NOTICIAS LOCALES</span>
  </div>
- <h2 class="text-5xl md:text-7xl font-black text-slate-400 dark:text-white/30 tracking-tighter uppercase leading-[0.9] mb-4 transition-all duration-500 fade-title">
+ <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-slate-400 dark:text-white/30 tracking-tight uppercase leading-none mb-4 transition-all duration-500 fade-title">
  NOVEDADES <br class="md:hidden"/> <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">3D COLOMBIA</span>
  </h2>
  <p class="text-xs md:text-sm text-slate-500 dark:text-[#a4aea6] font-bold uppercase tracking-[0.3em] flex items-center gap-3">
@@ -895,7 +891,7 @@ v-for="(item, idx) in webSettings.news" :key="item.t"
  </div>
  <!-- Content -->
  <div class="p-5 flex-1 flex flex-col gap-3">
- <h2 class="text-base font-black text-[#ffffff] dark:text-white uppercase tracking-tight leading-tight group-hover:text-emerald-500 transition-colors">{{ item.t || 'Nueva Noticia' }}</h2>
+ <h3 class="text-base font-black text-[#ffffff] dark:text-white uppercase tracking-tight leading-tight group-hover:text-emerald-500 transition-colors">{{ item.t || 'Nueva Noticia' }}</h3>
  <p class="text-[10px] text-[#c3c4c5] font-bold leading-relaxed uppercase tracking-tight flex-1">{{ item.st || item.d }}</p>
  <!-- CTA rounded-[60px] como referencia -->
  <a
@@ -921,9 +917,9 @@ v-for="(item, idx) in webSettings.news" :key="item.t"
  <div class="max-w-7xl mx-auto text-center mb-24 relative z-10">
  <div class="inline-flex items-center gap-3 px-5 py-2 bg-emerald-500/10 rounded-[60px] border border-emerald-500/30 mb-8 -[0_0_20px_rgba(16,185,129,0.1)]">
  <span class="w-2.5 h-2.5 bg-emerald-400 rounded-[60px] animate-pulse -[0_0_12px_#10b981]"></span>
- <span class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">REDES SOCIALES</span>
+ <span class="text-label text-emerald-400">REDES SOCIALES</span>
  </div>
- <h2 class="text-5xl md:text-7xl font-black text-[#ffffff] dark:text-white tracking-tighter uppercase leading-[0.9] mb-12 fade-title">NOVEDADES<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">EN TIEMPO REAL.</span></h2>
+ <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-[#ffffff] dark:text-white tracking-tight uppercase leading-none mb-12 fade-title">NOVEDADES<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">EN TIEMPO REAL.</span></h2>
  
  <div class="flex flex-wrap justify-center gap-6 md:gap-8 items-center mb-20">
  <a :href="webSettings.social.tiktok" target="_blank" class="group flex items-center gap-3 bg-[#151a22] dark:bg-[#151a22]/5 px-8 py-4 rounded-[24px] border border-[#21262d] dark:border-[#21262d] hover:border-primary/50 transition-all">
@@ -968,10 +964,10 @@ v-for="(post, idx) in webSettings.posts" :key="post.t"
  <!-- Likes badge -->
  <div class="absolute bottom-3 right-3 bg-black/50 backdrop-blur-md px-3.5 py-1.5 rounded-[60px] border border-white/10 flex items-center gap-2">
  <svg class="w-3 h-3 text-rose-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
- <span class="text-[9px] font-black text-white uppercase">{{ post.l }}</span>
+ <span class="text-xs font-black text-white uppercase">{{ post.l }}</span>
  </div>
  <!-- Tag badge -->
- <div v-if="post.tag" class="absolute top-3 left-3 px-3 py-1.5 bg-emerald-500/90 text-white text-[7px] font-black rounded-[60px] uppercase tracking-[0.25em]">{{ post.tag }}</div>
+ <div v-if="post.tag" class="absolute top-3 left-3 px-3 py-1.5 bg-emerald-500/90 text-white text-micro rounded-[60px]">{{ post.tag }}</div>
  </div>
  </div>
 
@@ -985,24 +981,24 @@ v-for="(post, idx) in webSettings.posts" :key="post.t"
  </div>
  </div>
 
- <h2 class="text-sm font-black text-[#ffffff] dark:text-white uppercase tracking-tight leading-tight group-hover:text-emerald-500 transition-colors">{{ post.t }}</h2>
- <p class="text-[9px] text-[#c3c4c5] font-bold uppercase leading-relaxed flex-1">{{ post.d }}</p>
+ <h3 class="text-lg font-black text-[#ffffff] dark:text-white uppercase tracking-tight leading-tight group-hover:text-emerald-500 transition-colors">{{ post.t }}</h3>
+ <p class="text-xs text-[#c3c4c5] font-bold uppercase leading-relaxed flex-1">{{ post.d }}</p>
 
  <!-- Stats row con separadores verticales (como referencia) -->
  <div class="flex items-center justify-around py-2.5 mt-2 bg-[#151a22] dark:bg-[#151a22]/[0.03] rounded-[6px] border border-[#21262d] dark:border-[#21262d]">
  <div class="flex flex-col items-center gap-0.5">
- <span class="text-[10px] font-black text-[#ffffff] dark:text-white">{{ post.l }}</span>
- <span class="text-[7px] font-bold text-[#c3c4c5] uppercase tracking-wider">Me Gusta</span>
+ <span class="text-xs font-black text-[#ffffff] dark:text-white">{{ post.l }}</span>
+ <span class="text-[9px] font-bold text-[#c3c4c5] uppercase tracking-wider">Me Gusta</span>
  </div>
  <div class="w-px h-6 bg-gray-200 dark:bg-[#151a22]/10"></div>
  <div class="flex flex-col items-center gap-0.5">
- <span class="text-[10px] font-black text-[#ffffff] dark:text-white">{{ post.c || '24' }}</span>
- <span class="text-[7px] font-bold text-[#c3c4c5] uppercase tracking-wider">Comentarios</span>
+ <span class="text-xs font-black text-[#ffffff] dark:text-white">{{ post.c || '24' }}</span>
+ <span class="text-[9px] font-bold text-[#c3c4c5] uppercase tracking-wider">Comentarios</span>
  </div>
  <div class="w-px h-6 bg-gray-200 dark:bg-[#151a22]/10"></div>
  <div class="flex flex-col items-center gap-0.5">
- <span class="text-[10px] font-black text-[#ffffff] dark:text-white">{{ post.s || '156' }}</span>
- <span class="text-[7px] font-bold text-[#c3c4c5] uppercase tracking-wider">Compartidos</span>
+ <span class="text-xs font-black text-[#ffffff] dark:text-white">{{ post.s || '156' }}</span>
+ <span class="text-[9px] font-bold text-[#c3c4c5] uppercase tracking-wider">Compartidos</span>
  </div>
  </div>
 
@@ -1024,159 +1020,7 @@ v-for="(post, idx) in webSettings.posts" :key="post.t"
  </main>
 
  <!-- Footer: Premium Boxed Design -->
- <footer class="px-6 pb-20 relative overflow-hidden">
- <div class="max-w-7xl mx-auto relative">
- <!-- Main Footer Box -->
- <div class="relative bg-gradient-to-br from-[#05080b] via-[#0a1520] to-[#0f1a12] rounded-[4rem] border border-emerald-500/10 -[0_40px_100px_-20px_rgba(16,185,129,0.2)] overflow-hidden">
- <!-- Premium noise/grid overlay -->
- <div class="absolute inset-0 opacity-[0.03]" style="background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 1px); background-size: 24px 24px; pointer-events: none;"></div>
- 
- <!-- Glow accents more dramatic -->
- <div class="absolute -top-48 -right-48 w-[500px] h-[500px] bg-emerald-500/6 rounded-[60px] blur-[180px] pointer-events-none"></div>
- <div class="absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-emerald-500/6 rounded-[60px] blur-[180px] pointer-events-none"></div>
- <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-emerald-500/3 rounded-[60px] blur-[200px] pointer-events-none"></div>
-
- <!-- Top decorative line -->
- <div class="relative h-[2px] w-3/4 mx-auto bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent"></div>
-
- <div class="relative z-10 px-6 pt-12 pb-8 md:px-12 lg:px-20 md:pt-16 md:pb-12">
- <!-- Top Row: Brand + Tagline -->
- <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-14 pb-10 border-b border-emerald-500/10">
- <div class="flex items-center gap-5">
- <div class="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-white font-black italic text-3xl md:text-4xl -emerald-500/20 ring-2 ring-emerald-400/20 ring-offset-2 ring-offset-[#0a0f14]">
- N
- </div>
- <div>
- <h2 class="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">N3XT <span class="text-emerald-400">3D</span></h2>
- <p class="text-[9px] md:text-[10px] font-black text-emerald-500/60 uppercase tracking-[0.4em] md:tracking-[0.5em] mt-2 md:mt-3">Manufactura de Precisión</p>
- </div>
- </div>
- <p class="text-[10px] md:text-[12px] text-[#a4aea6] font-bold uppercase leading-relaxed tracking-wider max-w-md text-left md:text-right">
- El siguiente nivel de la fabricación digital en Colombia. Coleccionables de alto nivel y soluciones industriales.
- </p>
- </div>
-
- <!-- Content Grid -->
- <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-12 lg:gap-16">
- <!-- COL 1: Navegación -->
- <div class="space-y-6 md:space-y-8">
- <div class="flex items-center gap-3">
- <div class="w-6 h-[2px] bg-emerald-500/60 rounded-[60px]"></div>
- <h2 class="text-[9px] md:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] md:tracking-[0.45em]">Navegación</h2>
- </div>
- <ul class="space-y-4 md:space-y-5">
- <li v-for="link in [{n:'Inicio', p:'/'}, {n:'Catálogo', p:'/catalog'}, {n:'Cotizador', p:'/quote'}, {n:'Rastrear', p:'/track'}, {n:'Taller', p:'/admin/login'}]" :key="link.n">
- <router-link :to="link.p" class="group flex items-center gap-4 text-[11px] font-black text-[#c3c4c5] hover:text-emerald-400 uppercase tracking-[0.25em] transition-all duration-300">
- <span class="w-5 h-px bg-gray-700 group-hover:w-10 group-hover:bg-emerald-500 transition-all duration-500"></span>
- <span class="group-hover:tracking-[0.35em] transition-all duration-300">{{ link.n }}</span>
- </router-link>
- </li>
- <li>
- <router-link to="/project/init" class="group flex items-center gap-4 text-[11px] font-black text-emerald-500/70 hover:text-emerald-400 uppercase tracking-[0.25em] transition-all duration-300">
- <span class="w-5 h-px bg-emerald-500/30 group-hover:w-10 group-hover:bg-emerald-500 transition-all duration-500"></span>
- <span class="group-hover:tracking-[0.35em] transition-all duration-300">Contacto</span>
- </router-link>
- </li>
- </ul>
- </div>
-
- <!-- COL 2: Conecta -->
- <div class="space-y-6 md:space-y-8">
- <div class="flex items-center gap-3">
- <div class="w-6 h-[2px] bg-emerald-500/60 rounded-[60px]"></div>
- <h2 class="text-[9px] md:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] md:tracking-[0.45em]">Conecta</h2>
- </div>
- <div class="space-y-3 md:space-y-4">
- <a :href="webSettings.social.tiktok" target="_blank" class="group flex items-center gap-5 p-5 bg-[#151a22]/[0.02] hover:bg-[#151a22]/[0.05] border border-white/[0.05] hover:border-emerald-500/30 rounded-[24px] transition-all duration-500">
- <div class="w-10 h-10 flex items-center justify-center bg-[#151a22]/5 rounded-[6px] group-hover:bg-black group-hover:text-white transition-all duration-500">
- <svg class="w-4 h-4 text-[#c3c4c5] group-hover:text-white" fill="currentColor" viewBox="0 0 384 382"><path d="M137.17 156.98v-15.56c-5.34-.73-10.76-1.18-16.29-1.18C54.23 140.24 0 194.47 0 261.13c0 40.9 20.43 77.09 51.61 98.97-20.12-21.6-32.46-50.53-32.46-82.31 0-65.7 52.69-119.28 118.03-120.81Z"/><path d="M140.02 333c29.74 0 54-23.66 55.1-53.13l.11-263.2h48.08c-1-5.41-1.55-10.97-1.55-16.67h-65.67l-.11 263.2c-1.1 29.47-25.36 53.13-55.1 53.13-9.24 0-17.95-2.31-25.61-6.34C105.3 323.9 121.6 333 140.02 333ZM333.13 106V91.37c-18.34 0-35.43-5.45-49.76-14.8 12.76 14.65 30.09 25.22 49.76 29.43Z"/><path d="M283.38 76.57c-13.98-16.05-22.47-37-22.47-59.91h-17.59c4.63 25.02 19.48 46.49 40.06 59.91ZM120.88 205.92c-30.44 0-55.21 24.77-55.21 55.21 0 21.2 12.03 39.62 29.6 48.86-6.55-9.08-10.45-20.18-10.45-32.2 0-30.44 24.77-55.21 55.21-55.21 5.68 0 11.13.94 16.29 2.55v-67.05c-5.34-.73-10.76-1.18-16.29-1.18-.96 0-1.9.05-2.85.07v51.49c-5.16-1.61-10.61-2.55-16.29-2.55Z"/><path d="M333.13 106v51.04c-34.05 0-65.61-10.89-91.37-29.38v133.47c0 66.66-54.23 120.88-120.88 120.88-25.76 0-49.64-8.12-69.28-21.91 22.08 23.71 53.54 38.57 88.42 38.57 66.66 0 120.88-54.23 120.88-120.88V144.33c25.76 18.49 57.32 29.38 91.37 29.38v-65.68c-6.57 0-12.97-.71-19.14-2.03Z"/></svg>
- </div>
- <div>
- <p class="text-[10px] font-black text-[#c3c4c5] group-hover:text-white uppercase tracking-widest transition-colors duration-300">TikTok</p>
- <p class="text-[7px] font-bold text-[#a4aea6] uppercase tracking-[0.25em]">@N3XT3D</p>
- </div>
- </a>
- <a :href="'https://wa.me/' + (companySettings.phone || '573118796416').replace(/\+/g, '').replace(/\s/g, '')" target="_blank" class="group flex items-center gap-5 p-5 bg-[#151a22]/[0.02] hover:bg-[#151a22]/[0.05] border border-white/[0.05] hover:border-emerald-500/30 rounded-[24px] transition-all duration-500">
- <div class="w-10 h-10 flex items-center justify-center bg-[#151a22]/5 rounded-[6px] group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500">
- <svg class="w-4 h-4 text-[#c3c4c5] group-hover:text-white" fill="currentColor" viewBox="0 0 362 362"><path d="M307.546 52.566C273.709 18.684 228.706.017 180.756 0 81.951 0 1.538 80.404 1.504 179.235c-.017 31.594 8.242 62.432 23.928 89.609L0 361.736l95.024-24.925c26.179 14.285 55.659 21.805 85.655 21.814h.077c98.788 0 179.21-80.413 179.244-179.244.017-47.898-18.608-92.926-52.454-126.807v-.008Zm-126.79 275.788h-.06c-26.73-.008-52.952-7.194-75.831-20.765l-5.44-3.231-56.391 14.791 15.05-54.981-3.542-5.638c-14.912-23.721-22.793-51.139-22.776-79.286.035-82.14 66.867-148.973 149.051-148.973 39.793.017 77.198 15.53 105.328 43.695 28.131 28.157 43.61 65.596 43.593 105.398-.035 82.149-66.867 148.982-148.982 148.982v.008Zm81.719-111.577c-4.478-2.243-26.497-13.073-30.606-14.568-4.108-1.496-7.09-2.243-10.073 2.243-2.982 4.487-11.568 14.577-14.181 17.559-2.613 2.991-5.226 3.361-9.704 1.117-4.477-2.243-18.908-6.97-36.02-22.226-13.313-11.878-22.304-26.54-24.916-31.027-2.613-4.486-.275-6.91 1.959-9.136 2.011-2.011 4.478-5.234 6.721-7.847 2.244-2.613 2.983-4.486 4.478-7.469 1.496-2.991.748-5.603-.369-7.847-1.118-2.243-10.073-24.289-13.812-33.253-3.636-8.732-7.331-7.546-10.073-7.692-2.613-.13-5.595-.155-8.586-.155-2.991 0-7.839 1.118-11.947 5.604-4.108 4.486-15.677 15.324-15.677 37.361s16.047 43.344 18.29 46.335c2.243 2.991 31.585 48.225 76.51 67.632 10.684 4.615 19.029 7.374 25.535 9.437 10.727 3.412 20.49 2.931 28.208 1.779 8.604-1.289 26.498-10.838 30.228-21.298 3.73-10.46 3.73-19.433 2.613-21.298-1.117-1.865-4.108-2.991-8.586-5.234l.008-.017Z"/></svg>
- </div>
- <div>
- <p class="text-[10px] font-black text-[#c3c4c5] group-hover:text-white uppercase tracking-widest transition-colors duration-300">WhatsApp</p>
- <p class="text-[7px] font-bold text-[#a4aea6] uppercase tracking-[0.25em]">Directo</p>
- </div>
- </a>
- </div>
- </div>
-
- <!-- COL 3: Soporte -->
- <div class="space-y-6 md:space-y-8">
- <div class="flex items-center gap-3">
- <div class="w-6 h-[2px] bg-emerald-500/60 rounded-[60px]"></div>
- <h2 class="text-[9px] md:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] md:tracking-[0.45em]">Soporte</h2>
- </div>
- <div class="bg-[#151a22]/[0.02] border border-white/[0.05] rounded-[2.5rem] p-6 space-y-5">
- <div class="flex items-center gap-5">
- <div class="w-10 h-10 bg-emerald-500/10 rounded-[6px] flex items-center justify-center">
- <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
- </div>
- <div>
- <p class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">Email</p>
- <p class="text-[9px] font-bold text-[#a4aea6] uppercase tracking-[0.15em]">{{ companySettings.email || 'servicion3xt@gmail.com' }}</p>
- </div>
- </div>
- <div class="flex items-center gap-5">
- <div class="w-10 h-10 bg-[#151a22]/5 rounded-[6px] flex items-center justify-center">
- <svg class="w-4 h-4 text-[#c3c4c5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
- </div>
- <div>
- <p class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-[0.3em]">Teléfono</p>
- <p class="text-[9px] font-bold text-[#a4aea6] uppercase tracking-[0.15em]">{{ companySettings.phone || '+57 311 879 6416' }}</p>
- </div>
- </div>
- </div>
- </div>
-
- <!-- COL 4: Estado -->
- <div class="space-y-6 md:space-y-8">
- <div class="flex items-center gap-3">
- <div class="w-6 h-[2px] bg-emerald-500/60 rounded-[60px]"></div>
- <h2 class="text-[9px] md:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] md:tracking-[0.45em]">Estado</h2>
- </div>
- <div class="bg-emerald-500/[0.02] border border-emerald-500/10 rounded-[2.5rem] p-6 space-y-6">
- <div class="flex items-center justify-between">
- <div>
- <p class="text-[8px] font-black text-[#a4aea6] uppercase tracking-[0.3em] mb-3">Taller</p>
- <p class="text-[13px] font-black text-emerald-400 uppercase tracking-[0.25em]">{{ webSettings.workshop_status }}</p>
- </div>
- <span class="relative flex h-4 w-4">
- <span class="animate-ping absolute inline-flex h-full w-full rounded-[60px] bg-emerald-400 opacity-75"></span>
- <span class="relative inline-flex rounded-[60px] h-4 w-4 bg-emerald-500"></span>
- </span>
- </div>
- <div class="pt-6 border-t border-emerald-500/10">
- <router-link to="/project/init" class="group flex items-center justify-between w-full py-2">
- <span class="text-[10px] font-black text-[#c3c4c5] group-hover:text-emerald-400 uppercase tracking-[0.35em] transition-all duration-300">Iniciar Proyecto</span>
- <svg class="w-5 h-5 text-emerald-500 group-hover:translate-x-1.5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
- </router-link>
- </div>
- </div>
- </div>
- </div>
- </div>
-
- <!-- Bottom Bar -->
- <div class="relative border-t border-emerald-500/10 px-6 md:px-12 lg:px-20 py-6 flex flex-col md:flex-row justify-between items-center gap-5">
- <p class="text-[8px] md:text-[9px] font-black text-[#a4aea6] uppercase tracking-[0.4em] md:tracking-[0.45em]">&copy; 2026 N3XT 3D. Fabricación Avanzada.</p>
- <div class="flex gap-8">
- <button class="text-[8px] md:text-[9px] font-black text-[#a4aea6] hover:text-emerald-400 uppercase tracking-[0.3em] md:tracking-[0.35em] transition-all duration-300 hover:tracking-[0.4em] md:hover:tracking-[0.45em]" @click="openLegal('privacy')">Privacidad</button>
- <button class="text-[8px] md:text-[9px] font-black text-[#a4aea6] hover:text-emerald-400 uppercase tracking-[0.3em] md:tracking-[0.35em] transition-all duration-300 hover:tracking-[0.4em] md:hover:tracking-[0.45em]" @click="openLegal('terms')">Términos</button>
- </div>
- </div>
- </div>
- </div>
- </footer>
-
- <LegalModal ref="legalModalRef" />
+  <AppFooter />
  </div>
 </template>
 

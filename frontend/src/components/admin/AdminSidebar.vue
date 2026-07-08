@@ -55,8 +55,7 @@ const logout = () => {
  <div class="relative w-12 md:w-16 h-12 md:h-16 bg-gradient-to-br from-primary to-emerald-500 rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center -primary/30 mb-2 md:mb-4 transition-transform group-hover/brand:scale-110 group-hover/brand:rotate-6 duration-500">
  <span class="text-white font-black text-2xl md:text-3xl italic">N</span>
  </div>
- <h1 class="relative text-xl md:text-2xl font-black tracking-tighter uppercase leading-none text-[#ffffff] dark:text-white group-hover/brand:text-[#8dd6ff] transition-colors">N3XT<span class="text-[#c3c4c5] ml-1">3D</span></h1>
- <span class="relative text-[7px] md:text-[8px] font-black text-[#8dd6ff]/60 uppercase tracking-[0.4em] mt-1 md:mt-2">Industrial OS v3.2</span>
+ <h1 class="relative text-lg md:text-xl font-black tracking-tighter uppercase leading-none text-[#ffffff] dark:text-white group-hover/brand:text-[#8dd6ff] transition-colors">N3XT</h1>
  </div>
 
  <!-- Navigation Links -->

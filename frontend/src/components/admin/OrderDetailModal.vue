@@ -53,13 +53,13 @@
  </div>
  <div v-if="order.status === 'shipped'" class="space-y-3">
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Transportadora</label>
- <input v-model="localCarrier" type="text" placeholder="EJ: SERVIENTREGA" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm outline-none">
+ <label for="detail-carrier" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Transportadora</label>
+ <input id="detail-carrier" v-model="localCarrier" type="text" placeholder="EJ: SERVIENTREGA" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm outline-none">
  </div>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Número de Guía</label>
+ <label for="detail-guide" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Número de Guía</label>
  <div class="flex flex-col sm:flex-row gap-2">
- <input v-model="localGuide" type="text" placeholder="EJ: 982347123" class="flex-1 bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-white text-sm outline-none">
+ <input id="detail-guide" v-model="localGuide" type="text" placeholder="EJ: 982347123" class="flex-1 bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-white text-sm outline-none">
  <button class="w-full sm:w-auto px-4 py-2.5 md:py-3 bg-emerald-600 hover:bg-emerald-500 rounded-[6px] text-white font-bold text-sm transition-colors" @click="saveTracking">Guardar</button>
  </div>
  </div>

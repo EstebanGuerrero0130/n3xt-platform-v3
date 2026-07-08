@@ -163,7 +163,7 @@ const register = async () => {
  <div class="w-full max-w-xl animate-in fade-in zoom-in duration-1000 relative z-10">
  
  <!-- Main Container -->
- <div class="bg-[#151a22]/90 dark:bg-[#090d0a]/90 backdrop-blur-3xl border border-white dark:border-[#21262d] p-8 md:p-16 rounded-[4.5rem] -[0_60px_120px_-30px_rgba(0,0,0,0.08)] relative overflow-hidden">
+ <div class="bg-[#151a22]/90 dark:bg-[#090d0a]/90 backdrop-blur-3xl border border-white dark:border-[#21262d] p-8 md:p-16 rounded-[4.5rem] -[0_60px_120px_-30px_rgba(0,0,0,0.08)] relative">
  
  <!-- Header Unificado -->
  
@@ -179,9 +179,9 @@ const register = async () => {
  <svg v-if="selectedRole === 'admin'" class="w-8 h-8 text-[#8dd6ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
  <svg v-else class="w-8 h-8 text-[#8dd6ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
  </div>
- <h2 class="split-title text-3xl font-black text-[#ffffff] dark:text-white tracking-tighter uppercase italic">
+ <h1 class="split-title text-6xl md:text-8xl lg:text-9xl font-black text-slate-900 dark:text-white tracking-normal uppercase italic leading-[0.85] mb-6 animate-fade-in">
  Acceso <span class="text-[#8dd6ff]">N3XT</span>
- </h2>
+ </h1>
  
  <!-- Role Selector Tabs -->
  <div class="flex bg-[#151a22] dark:bg-[#151a22]/5 p-1.5 rounded-[1.5rem] max-w-[320px] mx-auto mt-8 border border-[#21262d] dark:border-[#21262d]">

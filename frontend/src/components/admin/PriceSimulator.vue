@@ -51,7 +51,7 @@
  <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Material Base</label>
  <select v-model="form.material_id" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
  <option value="">Seleccionar...</option>
- <option v-for="m in materials" :key="m.id" :value="m.id">{{ m.name }} (${{ m.cost_per_kg }}/kg)</option>
+ <option v-for="m in baseMaterials" :key="m.id" :value="m.id">{{ m.name }} (${{ m.cost_per_kg }}/kg)</option>
  </select>
  </div>
  <div>
@@ -209,7 +209,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { reactive, computed, watch } from 'vue'
 import { calcProductionCost, calcFinalPrice } from '../../services/costCalculator'
 
 const props = withDefaults(defineProps<{
@@ -240,9 +240,24 @@ const form = reactive({
  extra_items: [] as Array<{ id: string; name: string; cost: number; unit: string; qty: number }>, comments: '',
 })
 
+const baseMaterials = computed(() =>
+ props.materials.filter(m => m.type === 'material')
+)
+
 const extraMaterials = computed(() =>
  props.materials.filter(m => m.type !== 'material')
 )
+
+
+watch(() => props.visible, (newVal) => {
+ if (newVal) {
+ form.profit_pct = props.settings?.oper?.ganancia ?? 20;
+ form.transporte_pct = props.settings?.oper?.transporte ?? 5;
+ form.marketing_pct = props.settings?.oper?.marketing ?? 10;
+ form.fallos_pct = props.settings?.oper?.fallos ?? 5;
+ form.iva_pct = props.settings?.margin?.iva ?? 19;
+ }
+})
 
 const result = computed(() => {
  const mat = props.materials.find(m => m.id === form.material_id)
@@ -302,7 +317,7 @@ const emitFormData = (action: 'download-pdf' | 'create-order') => {
  const [hours, minutes] = form.time_str.split(':').map(Number)
  const totalHours = (hours || 0) + ((minutes || 0) / 60)
  const extrasCost = form.extra_items.reduce((acc, item) => acc + item.cost * item.qty, 0)
- const mat = props.materials.find(m => m.id === form.material_id)
+
  
  const payload = {
  job_name: form.job_name,

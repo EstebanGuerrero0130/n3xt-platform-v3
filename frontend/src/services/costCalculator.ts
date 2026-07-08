@@ -22,7 +22,7 @@ interface ProductionResult {
 interface PricingInput {
   productionCost?: number
   oper?: { transporte?: number; marketing?: number; fallos?: number; ganancia?: number }
-  margin?: { iva?: number }
+  margin?: { iva?: number; min_price?: number }
   overrides?: { transportePct?: number; marketingPct?: number; fallosPct?: number; gananciaPct?: number; ivaPct?: number; discountPct?: number }
 }
 
@@ -104,7 +104,15 @@ export function calcFinalPrice(params: PricingInput = {}): PricingResult {
   }
 
   const iva = subtotal * ivaRate
-  const total = subtotal + iva
+  let total = subtotal + iva
+
+  // --- PRECIO MÍNIMO (#5) ---
+  // Si el admin configura un precio mínimo en settings.margin.min_price,
+  // se aplica como piso para evitar cotizaciones por debajo del costo real de arranque.
+  const minPrice = params.margin?.min_price ?? 0
+  if (minPrice > 0 && total < minPrice) {
+    total = minPrice
+  }
 
   return {
     logistics: Math.round(logistics),
@@ -125,6 +133,34 @@ export function calcFinalPrice(params: PricingInput = {}): PricingResult {
 export function calcExtraCost(costPerKg: number, unit: string, qty: number): number {
   const isWeightOrVolume = ['g', 'ml', 'kg', 'l'].includes((unit || '').toLowerCase())
   return isWeightOrVolume ? costPerKg * (qty / 1000) : costPerKg * qty
+}
+
+/**
+ * Calcula el descuento automático por volumen (escala de cantidad). (#6)
+ *
+ * Tiers configurables:
+ *  1–4   uds  →  0%  de descuento
+ *  5–9   uds  →  5%  de descuento
+ *  10–24  uds  → 10%  de descuento
+ *  25+    uds  → 15%  de descuento (negociable en taller)
+ *
+ * @param qty  Cantidad de unidades del pedido
+ * @param tiers  Opcional: array de { minQty, discountPct } para sobreescribir los defaults
+ * @returns  Porcentaje de descuento aplicable (0–15)
+ */
+export function calcVolumeDiscount(
+  qty: number,
+  tiers?: Array<{ minQty: number; discountPct: number }>
+): number {
+  const defaultTiers = [
+    { minQty: 25, discountPct: 15 },
+    { minQty: 10, discountPct: 10 },
+    { minQty: 5,  discountPct: 5  },
+    { minQty: 1,  discountPct: 0  },
+  ]
+  const activeTiers = (tiers ?? defaultTiers).sort((a, b) => b.minQty - a.minQty)
+  const matched = activeTiers.find(t => qty >= t.minQty)
+  return matched ? matched.discountPct : 0
 }
 
 interface OrderBreakdown {
@@ -165,7 +201,7 @@ export function calcOrderDetailBreakdown(order: Record<string, any>, settings: R
 
   const totalPrice = Number(order.total_price) || 0
   const operatingMargin = totalPrice - rTotalCost
-  const profitMarginPct = rTotalCost > 0 ? ((operatingMargin) / totalPrice) * 100 : 0
+  const profitMarginPct = totalPrice > 0 ? (operatingMargin / totalPrice) * 100 : (rTotalCost > 0 ? -100 : 0)
 
   return {
     material: rMaterial,

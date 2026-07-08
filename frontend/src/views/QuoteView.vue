@@ -3,7 +3,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import StlViewer from '../components/StlViewer.vue'
 import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
-import { calcProductionCost, calcFinalPrice, calcExtraCost } from '../services/costCalculator'
+import { calcProductionCost, calcFinalPrice, calcExtraCost, calcVolumeDiscount } from '../services/costCalculator'
 import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
@@ -137,6 +137,8 @@ const runCuraEngineAnalysis = async () => {
  formData.append('total_area', String(model.totalArea || 0))
  formData.append('volume_mm3', String(model.volume || 0))
  formData.append('support_area', String(model.supportArea || 0))
+ formData.append('technology', selectedTechnology.value)           // OrcaEngine v2: FDM vs SLA path
+ formData.append('height_mm', String(model.dimensions?.z || 0))   // OrcaEngine v2: SLA layer count
  if (mat) {
  formData.append('density', String(mat.density))
  formData.append('material_id', String(mat.id))
@@ -460,9 +462,15 @@ const calculatePrice = () => {
  
  const subtotal = pricePerUnit.subtotal * qty.value
  
- // Apply coupon discount separately (it's on total)
- const discountAmount = activeCoupon.value ? (subtotal * activeCoupon.value.discount) : 0
- const finalSubtotal = Math.round(subtotal - discountAmount)
+ // --- DESCUENTO POR VOLUMEN (#6) ---
+ // Se aplica automáticamente si qty >= 5. El cupón puede combinarse sumando ambos descuentos.
+ const volumeDiscountPct = calcVolumeDiscount(qty.value)
+ const volumeDiscountAmount = volumeDiscountPct > 0 ? subtotal * (volumeDiscountPct / 100) : 0
+
+ // Apply coupon discount on top of volume discount
+ const couponDiscountAmount = activeCoupon.value ? (subtotal * activeCoupon.value.discount) : 0
+ const totalDiscountAmount = Math.round(volumeDiscountAmount + couponDiscountAmount)
+ const finalSubtotal = Math.max(Math.round(subtotal - totalDiscountAmount), 0)
  const ivaRate = (cfg.margin.iva || 19) / 100
  const iva = Math.round(finalSubtotal * ivaRate)
  const total = finalSubtotal + iva
@@ -482,7 +490,7 @@ const calculatePrice = () => {
  laborCost: prod.labor,
  utilityCost,
  marginCost,
- discount: Math.round(discountAmount),
+ discount: totalDiscountAmount,
  subtotal: finalSubtotal,
  iva,
  total,
@@ -527,7 +535,7 @@ onUnmounted(() => {
  <!-- Glow background -->
  <div class="absolute -inset-20 bg-gradient-to-r from-primary/5 via-emerald-500/5 to-primary/5 rounded-[60px] blur-[100px] animate-pulse pointer-events-none"></div>
  <div class="flex items-center justify-center gap-4 relative">
- <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.85] mb-6 animate-fade-in">
+ <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none mb-6 animate-fade-in">
  COTIZA. <br class="md:hidden" />
  <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-primary to-emerald-300 dark:from-emerald-400 dark:via-primary dark:to-emerald-300 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] italic">PRODUCE.</span>
  </h1>
@@ -575,10 +583,10 @@ onUnmounted(() => {
  <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-4 gap-6 mb-16 reveal">
  <div v-for="mat in materialGuide" :key="mat.name" class="bg-[#151a22] dark:bg-[#151a22]/5 p-8 rounded-[2.5rem] border border-[#21262d] dark:border-[#21262d] hover:border-primary/30 transition-all group">
  <div class="w-10 h-10 bg-[#08872b]/10 rounded-[24px] flex items-center justify-center mb-4 group-hover:bg-[#08872b]/20 transition-all" :innerHTML="sanitizeSVG(mat.icon)"></div>
- <h4 class="text-xs font-black text-[#ffffff] dark:text-white uppercase tracking-widest mb-3">{{ mat.name }}</h4>
+ <h2 class="text-[#ffffff] dark:text-white uppercase mb-3">{{ mat.name }}</h2>
  <p class="text-[9px] text-[#a4aea6] dark:text-[#c3c4c5] font-bold leading-relaxed uppercase mb-4">{{ mat.desc }}</p>
  <div class="pt-4 border-t border-[#21262d] dark:border-[#21262d]">
- <p class="text-[8px] font-black text-[#8dd6ff] uppercase tracking-widest">Ideal para:</p>
+ <p class="text-micro text-[#8dd6ff]">Ideal para:</p>
  <p class="text-[9px] font-bold text-[#f0f6fc] dark:text-white uppercase mt-1">{{ mat.bestFor }}</p>
  </div>
  </div>

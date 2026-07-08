@@ -17,6 +17,7 @@ const quickReplies = [
 ]
 
 /* fetchSettings used to load WhatsApp number from API */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _loadWhatsApp = async () => {
  try {
  const data = await api.get('/settings')

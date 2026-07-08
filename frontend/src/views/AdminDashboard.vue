@@ -348,7 +348,7 @@ const fetchInventory = async () => {
  try {
  const res = await api.get('/materials', true)
  inventoryData.value = Array.isArray(res) ? res : (res?.data || [])
- } catch (_err) {
+ } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
  inventoryData.value = []
  }
 }
@@ -357,7 +357,7 @@ const fetchPrinters = async () => {
  try {
  const res = await api.get('/admin/printers', true)
  printers.value = Array.isArray(res) ? res : (res?.data || [])
- } catch (_err) {
+ } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
  printers.value = []
  }
 }
@@ -753,6 +753,7 @@ const handleAssignment = (order) => {
  modalState.printerStatus = true
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const confirmAssignment = async (printerId) => {
  try {
  const orderId = selectedOrderForPrinter.value.id;
@@ -1617,10 +1618,9 @@ const handlePurgeAll = () => {
  <div v-if="activeTab === 'kanban'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
  <div class="flex flex-col lg:flex-row items-center justify-between gap-4 md:gap-8 mb-6 md:mb-12 bg-[#151a22]/40 dark:bg-[#090d0a]/40 backdrop-blur-md p-4 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/60 dark:border-[#21262d] -gray-200/20 dark:-none relative overflow-hidden group">
  <div class="absolute -right-20 -top-20 w-64 h-64 bg-[#08872b]/5 rounded-[60px] blur-3xl group-hover:bg-[#08872b]/10 transition-all duration-1000"></div>
- <div class="relative z-10 text-center md:text-left">
- <h2 class="text-2xl md:text-5xl font-black text-[#ffffff] dark:text-white tracking-tighter uppercase italic leading-none">
- Panel de <span class="text-[#8dd6ff]">Control</span>
- </h2>
+ <div class="relative z-10 text-center md:text-left"><h1 class="text-3xl md:text-5xl lg:text-6xl font-black text-[#ffffff] dark:text-white tracking-tighter uppercase leading-[0.85] mb-6 animate-fade-in">
+                    Panel de <span class="text-[#8dd6ff]">Control</span>
+                    </h1>
  <p class="text-[9px] md:text-xs text-[#c3c4c5] font-bold uppercase tracking-[0.3em] md:tracking-[0.4em] mt-2 md:mt-4 flex items-center justify-center md:justify-start gap-2 md:gap-3">
  <span class="w-2 h-2 md:w-2.5 md:h-2.5 rounded-[60px] bg-emerald-500 -[0_0_8px_#10b981]"></span>
  Workshop Status: Operational

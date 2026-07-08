@@ -65,29 +65,34 @@ const hasSlicingOrSLA = computed(() =>
  <!-- SECCION 1: Material y Tecnología -->
  <div class="bg-white dark:bg-[#151a22]/30 border border-gray-200 dark:border-[#21262d] rounded-[24px] p-6 space-y-6 shadow-sm">
  <div class="border-b border-gray-200 dark:border-[#21262d] pb-3 mb-2">
- <h3 class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.2em]">Material y Tecnología</h3>
+ <h5 class="text-[#8dd6ff] uppercase tracking-[0.2em]">Material y Tecnología</h5>
  </div>
 
  <!-- TECNOLOGIA -->
  <div>
- <label class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Tecnologia</label>
- <div class="flex bg-[#151a22] dark:bg-[#151a22]/5 p-1.5 rounded-[24px]">
+ <label id="sidebar-tech-label" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Tecnologia</label>
+ <div class="flex bg-[#151a22] dark:bg-[#151a22]/5 p-1.5 rounded-[24px]" role="radiogroup" aria-labelledby="sidebar-tech-label">
  <button
  v-for="t in ['FDM','SLA']" :key="t"
  :class="selectedTechnology === t ? 'bg-[#151a22] dark:bg-[#08872b] text-[#ffffff] dark:text-white ' : 'text-[#c3c4c5] hover:text-[#a4aea6]'"
  class="flex-1 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all"
+ role="radio"
+ :aria-checked="selectedTechnology === t"
  @click="$emit('update:selectedTechnology', t)">{{ t }}</button>
  </div>
  </div>
 
  <!-- MATERIAL -->
  <div>
- <label class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Material</label>
- <div class="grid grid-cols-2 gap-3">
+ <label id="sidebar-material-label" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Material</label>
+ <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-labelledby="sidebar-material-label">
  <button
  v-for="mat in filteredMaterials" :key="mat.id"
  :class="[selectedMaterial === mat.id ? 'bg-[#08872b]/15 border-primary/40 ring-2 ring-primary/20 scale-[1.02]' : 'bg-[#151a22] dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] hover:border-primary/30 hover:bg-[#08872b]/5']"
  class="relative text-left p-5 rounded-[24px] border-2 transition-all duration-300 group"
+ role="radio"
+ :aria-checked="selectedMaterial === mat.id"
+ :aria-label="mat.name"
  @click="$emit('update:selectedMaterial', mat.id)"
  >
  <div v-if="selectedMaterial === mat.id" class="absolute -top-2 -right-2 w-6 h-6 bg-[#08872b] rounded-[60px] flex items-center justify-center shadow-lg">
@@ -107,18 +112,18 @@ const hasSlicingOrSLA = computed(() =>
  <!-- SECCION 2: Configuración de Impresión -->
  <div class="bg-white dark:bg-[#151a22]/30 border border-gray-200 dark:border-[#21262d] rounded-[24px] p-6 space-y-6 shadow-sm">
  <div class="border-b border-gray-200 dark:border-[#21262d] pb-3 mb-2">
- <h3 class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.2em]">Configuración de Impresión</h3>
+ <h5 class="text-[#8dd6ff] uppercase tracking-[0.2em]">Configuración de Impresión</h5>
  </div>
 
  <!-- PARAMETROS FDM -->
  <div v-if="selectedTechnology === 'FDM'" class="grid grid-cols-2 gap-4">
  <div>
- <label class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-2 block">Relleno %</label>
- <input type="number" :value="models[activeModelIdx]?.infill || 15" min="5" max="100" step="5" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border-none rounded-[24px] px-6 py-4 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" @input="$emit('update:models', models.map((m: any, i: number) => i === activeModelIdx ? { ...m, infill: Number(($event.target as HTMLInputElement).value) } : m))">
+ <label for="sidebar-infill" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-2 block">Relleno %</label>
+ <input id="sidebar-infill" type="number" :value="models[activeModelIdx]?.infill || 15" min="5" max="100" step="5" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border-none rounded-[24px] px-6 py-4 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" @input="$emit('update:models', models.map((m: any, i: number) => i === activeModelIdx ? { ...m, infill: Number(($event.target as HTMLInputElement).value) } : m))">
  </div>
  <div>
- <label class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-2 block">Capa (mm)</label>
- <select :value="models[activeModelIdx]?.layerHeight || 0.2" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border-transparent rounded-[24px] px-6 py-4 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer transition-all" @change="$emit('update:models', models.map((m: any, i: number) => i === activeModelIdx ? { ...m, layerHeight: Number(($event.target as HTMLSelectElement).value) } : m))">
+ <label for="sidebar-layer-height" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-2 block">Capa (mm)</label>
+ <select id="sidebar-layer-height" :value="models[activeModelIdx]?.layerHeight || 0.2" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border-transparent rounded-[24px] px-6 py-4 text-sm font-black text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer transition-all" @change="$emit('update:models', models.map((m: any, i: number) => i === activeModelIdx ? { ...m, layerHeight: Number(($event.target as HTMLSelectElement).value) } : m))">
  <option class="text-slate-900 bg-white dark:bg-[#151a22] dark:text-white" :value="0.12">0.12 Ultra</option>
  <option class="text-slate-900 bg-white dark:bg-[#151a22] dark:text-white" :value="0.16">0.16 Alta</option>
  <option class="text-slate-900 bg-white dark:bg-[#151a22] dark:text-white" :value="0.2">0.20 Estandar</option>
@@ -129,23 +134,23 @@ const hasSlicingOrSLA = computed(() =>
 
  <!-- CANTIDAD -->
  <div>
- <label class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Cantidad</label>
+ <label for="sidebar-qty" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Cantidad</label>
  <div class="flex items-center bg-[#151a22] dark:bg-[#151a22]/5 rounded-[24px] overflow-hidden">
- <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" aria-label="Botón interactivo" @click="localQty = Math.max(1, localQty - 1)">-</button>
- <input v-model.number="localQty" type="number" min="1" class="flex-1 bg-transparent text-center text-lg font-black text-[#ffffff] dark:text-white outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
- <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" aria-label="Botón interactivo" @click="localQty++">+</button>
+ <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" aria-label="Disminuir cantidad" @click="localQty = Math.max(1, localQty - 1)">-</button>
+ <input id="sidebar-qty" v-model.number="localQty" type="number" min="1" class="flex-1 bg-transparent text-center text-lg font-black text-[#ffffff] dark:text-white outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+ <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" aria-label="Aumentar cantidad" @click="localQty++">+</button>
  </div>
  </div>
  </div> <!-- SECCION 3: Opciones Adicionales -->
  <div class="bg-white dark:bg-[#151a22]/30 border border-gray-200 dark:border-[#21262d] rounded-[24px] p-6 space-y-6 shadow-sm">
  <div class="border-b border-gray-200 dark:border-[#21262d] pb-3 mb-2">
- <h3 class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-[0.2em]">Opciones Adicionales</h3>
+ <h5 class="text-[#8dd6ff] uppercase tracking-[0.2em]">Opciones Adicionales</h5>
  </div>
 
  <!-- EXTRAS -->
  <div v-if="utilities.length > 0">
- <label class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Extras / Consumibles</label>
- <div class="space-y-2">
+ <label id="sidebar-extras-label" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Extras / Consumibles</label>
+ <div class="space-y-2" aria-labelledby="sidebar-extras-label">
  <button
  v-for="u in utilities" :key="u.id" :class="selectedExtras.find(e => e.id === u.id) ? 'bg-[#08872b]/10 border-primary/30 text-[#8dd6ff]' : 'bg-[#151a22] dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] border-transparent text-[#a4aea6] hover:border-primary/20'"
  class="w-full flex items-center justify-between px-5 py-3.5 rounded-[24px] border-2 text-[10px] font-black uppercase tracking-widest transition-all"
@@ -158,10 +163,10 @@ const hasSlicingOrSLA = computed(() =>
 
  <!-- CUPON -->
  <div>
- <label class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Cupon de Descuento</label>
+ <label for="sidebar-coupon" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Cupon de Descuento</label>
  <div class="flex gap-2">
- <input v-model="localCoupon" type="text" placeholder="Codigo..." class="flex-1 bg-[#151a22] dark:bg-[#151a22]/5 border-transparent rounded-[24px] px-6 py-4 text-[11px] font-black text-[#ffffff] dark:text-white uppercase outline-none focus:ring-2 focus:ring-primary/20 transition-all">
- <button class="px-6 py-4 bg-[#151a22] dark:bg-[#151a22]/50 text-white rounded-[24px] text-[9px] font-black uppercase tracking-widest hover:bg-[#08872b] transition-all" @click="$emit('applyCoupon')">Aplicar</button>
+ <input id="sidebar-coupon" v-model="localCoupon" type="text" placeholder="Codigo..." class="flex-1 bg-[#151a22] dark:bg-[#151a22]/5 border-transparent rounded-[24px] px-6 py-4 text-[11px] font-black text-[#ffffff] dark:text-white uppercase outline-none focus:ring-2 focus:ring-primary/20 transition-all" aria-label="Código de cupón">
+ <button class="px-6 py-4 bg-[#151a22] dark:bg-[#151a22]/50 text-white rounded-[24px] text-[9px] font-black uppercase tracking-widest hover:bg-[#08872b] transition-all" aria-label="Aplicar cupón" @click="$emit('applyCoupon')">Aplicar</button>
  </div>
  <p v-if="activeCoupon" class="text-[9px] font-black text-[#8dd6ff] uppercase tracking-widest mt-2 ml-2">{{ activeCoupon.label }} (-{{ (activeCoupon.discount * 100) }}%)</p>
  </div>
@@ -185,11 +190,11 @@ const hasSlicingOrSLA = computed(() =>
  <span class="bg-[#08872b] text-white text-[8px] font-black px-4 py-1.5 rounded-[60px] uppercase tracking-widest">Listo</span>
  </div>
 
- <h3
-class="text-6xl lg:text-7xl font-black tracking-tighter italic text-white relative z-10 mb-8 price-count"
+ <h2
+ class="tracking-tighter italic text-white relative z-10 mb-8 price-count"
  :class="{ 'bump': previousTotal !== breakdown.total && previousTotal > 0 }">
  ${{ Math.round(breakdown.total).toLocaleString('es-CO') }}
- </h3>
+ </h2>
 
  <div class="space-y-3 relative z-10">
  <div class="flex justify-between items-center bg-[#151a22]/5 px-4 py-3 rounded-[6px]">
@@ -230,7 +235,7 @@ class="text-6xl lg:text-7xl font-black tracking-tighter italic text-white relati
 
  <!-- CTA -->
  <button
-class="w-full bg-[#08872b] hover:bg-emerald-600 text-white font-black py-7 rounded-[2.5rem] -primary/20 uppercase tracking-[0.3em] text-[11px] transition-all active:scale-[0.98]"
+class="w-full bg-[#08872b] hover:bg-emerald-600 text-white font-black py-7 rounded-[2.5rem] shadow-[0_0_15px_rgba(8,135,43,0.2)] uppercase tracking-[0.3em] text-[11px] transition-all active:scale-[0.98]"
  @click="$emit('requestQuote')">
  Solicitar Cotizacion
  </button>

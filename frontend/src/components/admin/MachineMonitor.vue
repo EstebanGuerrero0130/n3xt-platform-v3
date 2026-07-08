@@ -9,7 +9,7 @@ const props = defineProps({
 defineEmits(['sync', 'add-printer', 'update-printer-status', 'maintenance-complete', 'edit-printer', 'delete-printer'])
 
 const getStatusLabel = (status: any) => {
- const labels = {
+ const labels: Record<string, string> = {
  'idle': 'Libre / Lista',
  'printing': 'OCUPADA',
  'maintenance': 'Mantenimiento',
@@ -19,7 +19,7 @@ const getStatusLabel = (status: any) => {
 }
 
 const getStatusColor = (status: any) => {
- const colors = {
+ const colors: Record<string, string> = {
  'idle': 'bg-emerald-500',
  'printing': 'bg-amber-500',
  'maintenance': 'bg-rose-500',
@@ -132,31 +132,31 @@ v-for="(printer, index) in printers" :key="printer.id"
  >
  <!-- Maintenance Alert Pulse -->
  <div v-if="isMaintenanceNear(printer)" class="absolute top-0 left-0 w-full h-1.5 bg-rose-500 animate-pulse z-10"></div>
- 
- <!-- Header Section --> <div class="flex items-start justify-between mb-8 md:mb-10 w-full">
- <div class="flex gap-6">
- <div :class="['w-20 h-20 md:w-28 md:h-28 rounded-[2.5rem] md:rounded-[3.5rem] flex items-center justify-center relative overflow-hidden', printer.technology === 'FDM' ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 -emerald-500/20' : 'bg-gradient-to-br from-indigo-500 to-indigo-700 -indigo-500/20']">
- <svg v-if="printer.technology === 'FDM'" class="w-10 h-10 md:w-16 md:h-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
- <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
- </svg>
- <svg v-else class="w-10 h-10 md:w-16 md:h-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
- <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.618.309a6 6 0 01-3.86.517l-2.387-.477a2 2 0 00-1.022.547l-1.16 1.16a2 2 0 00.442 3.102l1.644.822a6 6 0 005.366 0l1.644-.822a2 2 0 00.442-3.102l-1.16-1.16zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
- </svg>
- </div>
- <div>
- <h3 class="text-xl md:text-3xl font-black text-[#ffffff] dark:text-white tracking-tighter leading-none mb-1">{{ printer.name }}</h3>
- <p class="text-[10px] md:text-[11px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3">{{ printer.model }}</p>
- <div v-if="isMaintenanceNear(printer)" class="inline-flex items-center gap-2 px-3 py-1.5 bg-rose-500 text-white rounded-[6px] text-[8px] md:text-[10px] font-black uppercase tracking-widest animate-pulse -rose-500/20">
- Revision Urgente
- </div>
- </div>
- </div>
- <div class="flex flex-col items-end shrink-0">
- <span :class="['px-6 py-3 rounded-[24px] text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all duration-500', getStatusColor(printer.status), printer.status === 'printing' ? 'animate-pulse' : '']">
- {{ getStatusLabel(printer.status) }}
- </span>
- </div>
- </div>
+  <div class="flex items-start justify-between mb-8 md:mb-10 w-full gap-2">
+  <div class="flex gap-4 items-center flex-1 min-w-0">
+  <div :class="['w-16 h-16 md:w-20 md:h-20 shrink-0 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center relative overflow-hidden', printer.technology === 'FDM' ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-indigo-500 to-indigo-700']">
+  <svg v-if="printer.technology === 'FDM'" class="w-8 h-8 md:w-10 md:h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+  </svg>
+  <svg v-else class="w-8 h-8 md:w-10 md:h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.618.309a6 6 0 01-3.86.517l-2.387-.477a2 2 0 00-1.022.547l-1.16 1.16a2 2 0 00.442 3.102l1.644.822a6 6 0 005.366 0l1.644-.822a2 2 0 00.442-3.102l-1.16-1.16zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+  </svg>
+  </div>
+  <div class="flex-1 min-w-0">
+  <h3 class="text-xl md:text-3xl font-black text-[#ffffff] dark:text-white tracking-tighter leading-none mb-1 truncate">{{ printer.name }}</h3>
+  <p class="text-[10px] md:text-[11px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 truncate">{{ printer.model }}</p>
+  <div v-if="isMaintenanceNear(printer)" class="inline-flex items-center gap-2 px-3 py-1.5 bg-rose-500 text-white rounded-[6px] text-[8px] md:text-[10px] font-black uppercase tracking-widest animate-pulse -rose-500/20">
+  <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+  Revision Urgente
+  </div>
+  </div>
+  </div>
+  <div class="flex flex-col items-end shrink-0 mt-2">
+  <span :class="['px-3 py-1.5 md:px-4 md:py-2 rounded-[24px] text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white transition-all duration-500 whitespace-nowrap', getStatusColor(printer.status), printer.status === 'printing' ? 'animate-pulse' : '']">
+  {{ getStatusLabel(printer.status) }}
+  </span>
+  </div>
+  </div>
 
  <!-- Middle Section: Glassmorphism Info --> <div class="flex-1 space-y-4 md:space-y-6 mb-4 md:mb-10 min-h-0">
  <div class="bg-[#151a22]/80 dark:bg-[#151a22]/60 backdrop-blur-sm p-4 md:p-8 rounded-[20px] md:rounded-[24px] border border-[#21262d]/50 dark:border-[#21262d] space-y-4 md:space-y-6">

@@ -19,25 +19,25 @@
  <div class="space-y-4">
  <h3 class="text-sm font-black text-gray-300 uppercase tracking-wider">Datos del Cliente</h3>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Cliente Existente</label>
- <select class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all" @change="selectCustomer">
+ <label for="manual-client" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Cliente Existente</label>
+ <select id="manual-client" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all" @change="selectCustomer">
  <option value="">Seleccionar...</option>
  <option v-for="c in contacts" :key="c.id" :value="c.id">{{ c.name }}</option>
  </select>
  </div>
  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Nombre</label>
- <input v-model="form.customer_name" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm font-semibold outline-none">
+ <label for="manual-name" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Nombre</label>
+ <input id="manual-name" v-model="form.customer_name" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm font-semibold outline-none">
  </div>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">WhatsApp</label>
- <input v-model="form.customer_phone" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm font-semibold outline-none">
+ <label for="manual-phone" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">WhatsApp</label>
+ <input id="manual-phone" v-model="form.customer_phone" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm font-semibold outline-none">
  </div>
  </div>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Documento ID</label>
- <input v-model="form.customer_id_document" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm font-semibold outline-none">
+ <label for="manual-document" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Documento ID</label>
+ <input id="manual-document" v-model="form.customer_id_document" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm font-semibold outline-none">
  </div>
  </div>
 
@@ -46,15 +46,15 @@
  <h3 class="text-sm font-black text-gray-300 uppercase tracking-wider">Datos del Trabajo</h3>
  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Tecnología</label>
- <select v-model="form.technology" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white font-semibold text-sm outline-none">
+ <label for="manual-tech" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Tecnología</label>
+ <select id="manual-tech" v-model="form.technology" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white font-semibold text-sm outline-none">
  <option value="FDM">FDM</option>
  <option value="SLA">SLA</option>
  </select>
  </div>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Material</label>
- <select v-model="form.material_id" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white font-semibold text-sm outline-none">
+ <label for="manual-material" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Material</label>
+ <select id="manual-material" v-model="form.material_id" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white font-semibold text-sm outline-none">
  <option value="">Seleccionar...</option>
  <option v-for="m in filteredMaterials" :key="m.id" :value="m.id">{{ m.name }}</option>
  </select>
@@ -62,28 +62,28 @@
  </div>
  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Peso (g)</label>
- <input v-model.number="form.weight_g" type="number" min="0" step="0.1" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-white text-sm font-semibold outline-none">
+ <label for="manual-weight" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Peso (g)</label>
+ <input id="manual-weight" v-model.number="form.weight_g" type="number" min="0" step="0.1" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-white text-sm font-semibold outline-none">
  </div>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Cantidad</label>
- <input v-model.number="form.qty" type="number" min="1" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-white text-sm font-semibold outline-none">
+ <label for="manual-qty" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Cantidad</label>
+ <input id="manual-qty" v-model.number="form.qty" type="number" min="1" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-white text-sm font-semibold outline-none">
  </div>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Horas</label>
- <input v-model.number="form.duration_h" type="number" min="0" step="0.5" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-white text-sm font-semibold outline-none">
+ <label for="manual-hours" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Horas</label>
+ <input id="manual-hours" v-model.number="form.duration_h" type="number" min="0" step="0.5" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-white text-sm font-semibold outline-none">
  </div>
  </div>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Precio Final</label>
+ <label for="manual-price" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Precio Final</label>
  <div class="relative">
  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#c3c4c5] font-bold">$</span>
- <input v-model.number="form.total_price" type="number" min="0" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] pl-8 pr-4 py-3 text-white font-bold text-lg outline-none">
+ <input id="manual-price" v-model.number="form.total_price" type="number" min="0" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] pl-8 pr-4 py-3 text-white font-bold text-lg outline-none">
  </div>
  </div>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Comentarios</label>
- <textarea v-model="form.comments" rows="2" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm outline-none resize-none"></textarea>
+ <label for="manual-comments" class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Comentarios</label>
+ <textarea id="manual-comments" v-model="form.comments" rows="2" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white text-sm outline-none resize-none"></textarea>
  </div>
  </div>
  </div>
