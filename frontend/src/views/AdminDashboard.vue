@@ -714,18 +714,27 @@ const updateMaterial = async () => {
 }
 
 const addMaterial = async () => {
- if (submitting.value) return
- submitting.value = true
- try {
- await api.post('/materials', newMaterial, true)
- modalState.newMaterial = false
- await fetchInventory()
- showNotify('Material creado correctamente', 'success')
- } catch (err) {
- showNotify('Error al crear material: ' + err.message, 'error')
- } finally {
- submitting.value = false
- }
+  if (submitting.value) return
+  if (!newMaterial.id || !String(newMaterial.id).trim()) {
+    showNotify('El Codigo del Material es obligatorio.', 'warning')
+    return
+  }
+  if (!newMaterial.name || !String(newMaterial.name).trim()) {
+    showNotify('El Nombre Comercial es obligatorio.', 'warning')
+    return
+  }
+  submitting.value = true
+  try {
+    await api.post('/materials', { ...newMaterial }, true)
+    modalState.newMaterial = false
+    await fetchInventory()
+    showNotify('Material creado correctamente', 'success')
+    Object.assign(newMaterial, { id: '', code: '', name: '', category: 'FDM', type: 'material', unit: 'g', cost_per_kg: 0, density: 1.24, color: '#000000', initial_stock: 1000, low_stock_threshold: 200, package_price: null, package_qty: null, package_units: 1 })
+  } catch (err) {
+    showNotify('Error al crear material: ' + (err?.message || 'Error del servidor'), 'error')
+  } finally {
+    submitting.value = false
+  }
 }
 
 const savePrinterEdit = async () => {
@@ -1830,8 +1839,9 @@ const handlePurgeAll = () => {
  <!-- Modal: Nuevo Material (extraido a NewMaterialModal.vue) -->
  <NewMaterialModal
  v-model="modalState.newMaterial"
- v-model:newMaterial="newMaterial"
+ :new-material="newMaterial"
  :submitting="submitting"
+ @update:new-material="Object.assign(newMaterial, $event)"
  @add-material="addMaterial"
  />
 
