@@ -1830,9 +1830,8 @@ const handlePurgeAll = () => {
  <!-- Modal: Nuevo Material (extraido a NewMaterialModal.vue) -->
  <NewMaterialModal
  v-model="modalState.newMaterial"
- :new-material="newMaterial"
+ v-model:newMaterial="newMaterial"
  :submitting="submitting"
- @update:new-material="Object.assign(newMaterial, $event)"
  @add-material="addMaterial"
  />
 
