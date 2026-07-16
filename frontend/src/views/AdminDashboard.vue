@@ -253,6 +253,14 @@ const modalState = reactive({
  shipping_details: false
 })
 
+// Revertir Kanban si se cancela la asignación
+watch(() => modalState.printerStatus, (newVal) => {
+  if (!newVal) {
+    orders.value = [...orders.value]
+  }
+})
+
+
 const editingPrinter = ref({ id: '', name: '', model: '', technology: 'FDM', status: 'idle', maintenance_interval_h: 200, next_maintenance: '', total_hours_run: 0, maintenance_notes: '' })
 // Note: editingPrinter aliased as editingPrinterData from usePrinters composable
 
@@ -650,6 +658,7 @@ const handleDownloadSimulationPDF = (formData) => {
  material_id: materialId,
  estimated_weight_g: formData?.weight_g || simulator.weight_g,
  estimated_duration_h: formData?.total_hours || simulatedResult.value.total_hours,
+ qty: formData?.total_pieces || simulatedResult.value.total_pieces || 1,
  total_price: formData?.total_price != null ? formData.total_price : (simulatedResult.value.total || 0),
  extras_cost: formData?.extras_cost != null ? formData.extras_cost : (simulatedResult.value.extras || 0),
  extra_items: formData?.extra_items ? JSON.parse(JSON.stringify(formData.extra_items)) : JSON.parse(JSON.stringify(simulator.extra_items))
@@ -1862,7 +1871,7 @@ const handlePurgeAll = () => {
  v-model="modalState.printerStatus"
  :order="selectedOrderForPrinter"
  :printers="printers"
- @assign="confirmPrinterAssignment"
+ @assign="confirmAssignment"
  />
 
  <!-- Modal: Detalle de Orden (OrderDetailModal.vue) -->

@@ -339,6 +339,7 @@ const emitFormData = (action: 'download-pdf' | 'create-order') => {
  total_hours: totalHours,
  total_price: result.value.total,
  pieces_per_batch: form.pieces_per_batch,
+ total_pieces: result.value.total_pieces,
  profit_pct: form.profit_pct,
  discount_pct: form.discount_pct,
  extra_items: form.extra_items,

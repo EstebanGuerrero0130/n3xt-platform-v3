@@ -18,7 +18,7 @@ usePageMeta({
 useRevealAnim({ delay: 200 })
 
 interface Customer {
-  name?: string; email?: string; phone?: string; company?: string
+  name?: string; email?: string; phone?: string; company?: string; customer_id_document?: string
   address_full?: string; city_dept_country?: string; zip_code?: string; location_reference?: string
 }
 interface Order {
@@ -34,7 +34,7 @@ const profileSaved = ref(false)
 const router = useRouter()
 
 const shippingForm = reactive({
-  phone: '', company: '', address_full: '', city_dept_country: '', zip_code: '', location_reference: ''
+  phone: '', company: '', customer_id_document: '', address_full: '', city_dept_country: '', zip_code: '', location_reference: ''
 })
 
 const fetchProfile = async () => {
@@ -43,6 +43,7 @@ const fetchProfile = async () => {
     customer.value = data
     shippingForm.phone = data.phone || ''
     shippingForm.company = data.company || ''
+    shippingForm.customer_id_document = data.customer_id_document || ''
     shippingForm.address_full = data.address_full || ''
     shippingForm.city_dept_country = data.city_dept_country || ''
     shippingForm.zip_code = data.zip_code || ''
@@ -232,6 +233,10 @@ const getStatusLabel = (status: string): string => {
               <div>
                 <label class="block text-[9px] font-black text-[#a4aea6] uppercase tracking-widest mb-1">Empresa (Opcional)</label>
                 <input v-model="shippingForm.company" placeholder="N3XT Industries SAS" class="w-full bg-[#21262d] border border-[#2d3542] rounded-[12px] px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-[#08872b] outline-none transition-all placeholder:text-[#4a5568]">
+              </div>
+              <div>
+                <label class="block text-[9px] font-black text-[#a4aea6] uppercase tracking-widest mb-1">CC o NIT</label>
+                <input v-model="shippingForm.customer_id_document" placeholder="Documento de Identidad" class="w-full bg-[#21262d] border border-[#2d3542] rounded-[12px] px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-[#08872b] outline-none transition-all placeholder:text-[#4a5568]">
               </div>
               <div>
                 <label class="block text-[9px] font-black text-[#a4aea6] uppercase tracking-widest mb-1">Dirección de Entrega</label>
