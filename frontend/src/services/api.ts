@@ -143,10 +143,18 @@ export const api = {
     await ensureCsrf()
     const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('PATCH', body))
     const data = await this.handleResponse(res, endpoint)
-    // PATCH muta datos → limpiar cache
     invalidateDataCache()
     return data
   },
+
+  async put(endpoint: string, body?: any): Promise<any> {
+    await ensureCsrf()
+    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('PUT', body))
+    const data = await this.handleResponse(res, endpoint)
+    invalidateDataCache()
+    return data
+  },
+
 
   async delete(endpoint: string): Promise<any> {
     await ensureCsrf()

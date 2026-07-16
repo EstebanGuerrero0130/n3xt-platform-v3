@@ -11,6 +11,8 @@ use App\Traits\ApiResponse;
 use App\Models\Setting;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateStatusRequest;
+use App\Models\RecurrentCustomer;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -148,6 +150,25 @@ class OrderController extends Controller
                 'extras_cost'       => $extrasCost,
                 'cost_snapshot'     => $costSnapshot
             ]));
+
+            // Auto-crear cuenta de cliente si se proporcionó email y no existe
+            if (!empty($validated['customer_email'])) {
+                $exists = RecurrentCustomer::where('email', $validated['customer_email'])->exists();
+                if (!$exists) {
+                    RecurrentCustomer::create([
+                        'name'                  => $validated['customer_name'] ?? 'Cliente N3XT',
+                        'email'                 => $validated['customer_email'],
+                        'password'              => Hash::make($validated['customer_email']),
+                        'phone'                 => $validated['customer_phone'] ?? null,
+                        'company'               => $validated['customer_company'] ?? null,
+                        'customer_id_document'  => $validated['customer_id_document'] ?? null,
+                        'address_full'          => $validated['shipping_address'] ?? null,
+                        'city_dept_country'     => $validated['shipping_city'] ?? null,
+                        'zip_code'              => $validated['shipping_zip'] ?? null,
+                        'location_reference'    => $validated['shipping_reference'] ?? null,
+                    ]);
+                }
+            }
 
             return $this->success(['order_id' => $order->id], 'Orden creada con éxito.', 201);
         });
@@ -328,11 +349,35 @@ class OrderController extends Controller
             'carrier'        => 'nullable|string|max:255'
         ]);
 
+        // Caso 1: El panel del cliente autentica con su email y pide TODAS sus órdenes
+        if ($request->filled('email') && !$request->filled('order_id') && !$request->filled('tracking_guide')) {
+            $orders = Order::where('customer_email', $request->email)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(fn($o) => [
+                    'id'              => $o->id,
+                    'project_name'    => $o->job_name ?? $o->original_filename,
+                    'status'          => $o->status,
+                    'customer_name'   => $o->customer_name,
+                    'technology'      => $o->technology,
+                    'material_name'   => $o->material_name ?? $o->material_id,
+                    'estimated_weight_g' => $o->estimated_weight_g,
+                    'total_price'     => $o->total_price,
+                    'created_at'      => $o->created_at,
+                    'tracking_guide'  => $o->tracking_guide,
+                    'tracking_carrier'=> $o->tracking_carrier,
+                    'is_paid'         => $o->is_paid,
+                ]);
+            return $this->success($orders);
+        }
+
         $query = Order::query();
 
+        // Caso 2: Rastreo con ID + email (página pública de track)
         if ($request->filled('order_id') && $request->filled('email')) {
             $query->where('id', $request->order_id)
                   ->where('customer_email', $request->email);
+        // Caso 3: Rastreo por guía de envío
         } elseif ($request->filled('tracking_guide')) {
             $query->where('tracking_guide', $request->tracking_guide);
             if ($request->filled('carrier')) {
@@ -349,15 +394,18 @@ class OrderController extends Controller
         }
 
         return $this->success([
-            'id'             => $order->id,
-            'status'         => $order->status,
-            'customer_name'  => $order->customer_name,
-            'technology'     => $order->technology,
-            'material'       => $order->material_name ?? $order->material_id,
-            'created_at'     => $order->created_at,
-            'tracking_guide' => $order->tracking_guide,
+            'id'               => $order->id,
+            'project_name'     => $order->job_name ?? $order->original_filename,
+            'status'           => $order->status,
+            'customer_name'    => $order->customer_name,
+            'technology'       => $order->technology,
+            'material_name'    => $order->material_name ?? $order->material_id,
+            'estimated_weight_g' => $order->estimated_weight_g,
+            'total_price'      => $order->total_price,
+            'created_at'       => $order->created_at,
+            'tracking_guide'   => $order->tracking_guide,
             'tracking_carrier' => $order->tracking_carrier,
-            'is_paid'        => $order->is_paid
+            'is_paid'          => $order->is_paid
         ]);
     }
 

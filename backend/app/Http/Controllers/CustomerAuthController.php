@@ -62,6 +62,26 @@ class CustomerAuthController extends Controller
         return response()->json($request->user());
     }
 
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'phone'              => 'nullable|string|max:50',
+            'company'            => 'nullable|string|max:255',
+            'address_full'       => 'nullable|string|max:255',
+            'city_dept_country'  => 'nullable|string|max:255',
+            'zip_code'           => 'nullable|string|max:20',
+            'location_reference' => 'nullable|string|max:255',
+        ]);
+
+        $customer = $request->user();
+        $customer->update($request->only([
+            'phone', 'company', 'address_full',
+            'city_dept_country', 'zip_code', 'location_reference',
+        ]));
+
+        return response()->json($customer);
+    }
+
     public function logout(Request $request)
     {
         Auth::guard('customer')->logout();

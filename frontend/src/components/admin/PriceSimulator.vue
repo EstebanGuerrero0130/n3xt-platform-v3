@@ -234,7 +234,7 @@ const form = reactive({
  job_name: '', customer_id: '', customer_name: '', customer_company: '',
  customer_id_document: '', customer_email: '', customer_phone: '',
  shipping_address: '', shipping_city: '', shipping_zip: '', shipping_reference: '',
- material_id: '', weight_g: 0, time_str: '0:00', pieces_per_batch: 1,
+ material_id: '', weight_g: 0, time_str: '0:00', pieces_per_batch: 1, beds_multiplier: 1,
  profit_pct: props.settings?.oper?.ganancia ?? 20,
  discount_pct: 0,
  transporte_pct: props.settings?.oper?.transporte ?? 5,
@@ -269,17 +269,24 @@ const result = computed(() => {
  material: 0, luz: 0, labor: 0, depr: 0, mant: 0, etiquetas: 0, extras: 0,
  production: 0, logistics: 0, marketing: 0, failures: 0, profit: 0,
  subtotal: 0, iva: 0, total: 0, unit_price: 0, discount: 0,
- profit_margin_pct: 0, total_hours: 0,
+ profit_margin_pct: 0, total_hours: 0, total_pieces: 0,
  isSafetyAlert: false, pcts: { material: 0, luz: 0, labor: 0, depr: 0, mant: 0, etiquetas: 0, extras: 0 }
  }
 
- const qty = Math.max(1, form.pieces_per_batch || 1)
+ const beds = Math.max(1, form.beds_multiplier || 1)
+ const piezasPorCama = Math.max(1, form.pieces_per_batch || 1)
+ const totalPiezas = beds * piezasPorCama
+
+ // Escalar peso y tiempo por número de camas
+ const scaledWeightG = form.weight_g * beds
  const [hours, minutes] = form.time_str.split(':').map(Number)
- const totalHours = (hours || 0) + (minutes || 0) / 60
+ const horasPorCama = (hours || 0) + (minutes || 0) / 60
+ const totalHours = horasPorCama * beds
+
  const extrasCost = form.extra_items.reduce((acc, item) => acc + item.cost * item.qty, 0)
 
  const prod = calcProductionCost({
- weightG: form.weight_g, totalHours, costPerKg: mat.cost_per_kg,
+ weightG: scaledWeightG, totalHours, costPerKg: mat.cost_per_kg,
  infra: props.settings.infra, prep: props.settings.prep, extrasCost,
  })
 
@@ -298,8 +305,9 @@ const result = computed(() => {
  failures: Math.round(price.failures), profit: Math.round(price.profit),
  discount: Math.round(price.discount), subtotal: Math.round(price.subtotal),
  iva: Math.round(price.iva), total: Math.round(price.total),
- unit_price: Math.round(price.total / qty),
- total_hours: totalHours, profit_margin_pct: price.profitMarginPct,
+ unit_price: Math.round(price.total / totalPiezas),
+ total_hours: totalHours, total_pieces: totalPiezas,
+ profit_margin_pct: price.profitMarginPct,
  isSafetyAlert: form.discount_pct === 100, pcts: prod.pcts,
  }
 })

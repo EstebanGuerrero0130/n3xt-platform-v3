@@ -41,6 +41,7 @@ Route::get('/materials', [MaterialController::class, 'index']);
 Route::post('/maker-access/register', [CustomerAuthController::class, 'register']);
 Route::post('/maker-access/login', [CustomerAuthController::class, 'login']);
 Route::middleware('auth:customer')->get('/customer/profile', [CustomerAuthController::class, 'profile']);
+Route::middleware('auth:customer')->put('/customer/profile', [CustomerAuthController::class, 'updateProfile']);
 Route::middleware('auth:customer')->post('/customer/logout', [CustomerAuthController::class, 'logout']);
 
 // Endpoint unificado de verificación de sesión (admin o cliente)
