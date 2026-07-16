@@ -32,11 +32,13 @@ const filteredInventory = computed(() => {
  }
 
  if (activeMainTab.value === 'Materiales') {
- filtered = filtered.filter((m: any) => m.type === 'material' && m.category !== 'UTIL')
+ filtered = filtered.filter((m: any) => m.type === 'material' && m.category !== 'UTIL' && m.category !== 'SERVICIO')
  if (activeFilter.value === 'Filamentos') filtered = filtered.filter((m: any) => m.category === 'FDM')
  if (activeFilter.value === 'Resinas') filtered = filtered.filter((m: any) => m.category === 'SLA')
  } else if (activeMainTab.value === 'Productos') {
  filtered = filtered.filter((m: any) => m.type === 'product' || m.category === 'PROD')
+ } else if (activeMainTab.value === 'Postprocesado') {
+ filtered = filtered.filter((m: any) => m.type === 'utility' || m.type === 'service' || m.category === 'UTIL' || m.category === 'SERVICIO')
  } else {
  filtered = []
  }
@@ -46,7 +48,7 @@ const filteredInventory = computed(() => {
 
 const filaments = computed(() => filteredInventory.value.filter((m: any) => m.category === 'FDM'))
 const resins = computed(() => filteredInventory.value.filter((m: any) => m.category === 'SLA'))
-const utilities = computed(() => filteredInventory.value.filter((m: any) => m.type === 'utility' || m.type === 'service' || m.category === 'UTIL'))
+const utilities = computed(() => filteredInventory.value.filter((m: any) => m.type === 'utility' || m.type === 'service' || m.category === 'UTIL' || m.category === 'SERVICIO'))
 const products = computed(() => filteredInventory.value.filter((m: any) => m.type === 'product' || m.category === 'PROD'))
 
 const getProgressColor = (type: any) => {
