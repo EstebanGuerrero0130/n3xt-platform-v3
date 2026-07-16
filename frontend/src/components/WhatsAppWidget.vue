@@ -107,9 +107,28 @@ const handleSend = async () => {
   messages.value.push({ id: Date.now(), from: 'user', text, time: now() })
   userMessage.value = ''
   await scrollToBottom()
-  await addBotTyping('Recibido ✓ Te vamos a conectar con nuestro equipo en WhatsApp para darte la mejor asesoría técnica. 💬')
-  await new Promise(r => setTimeout(r, 500))
-  sendToWhatsApp(text)
+  
+  const textLower = text.toLowerCase()
+  let botReply = 'Recibido ✓ Te vamos a conectar con nuestro equipo en WhatsApp para darte la mejor asesoría técnica. 💬'
+  let shouldRedirect = true
+  
+  if (textLower.includes('precio') || textLower.includes('costo') || textLower.includes('cotizar')) {
+    botReply = 'Para cotizaciones exactas te recomendamos usar nuestra plataforma web o cotizador automático, pero no te preocupes, en breve un asesor revisará tu caso en WhatsApp. 🚀'
+  } else if (textLower.includes('tiempo') || textLower.includes('demora') || textLower.includes('cuando')) {
+    botReply = 'Los tiempos de entrega varían según la complejidad, ¡pero un asesor técnico ya está revisando tu caso para darte una fecha exacta! ⏱️'
+  } else if (textLower.includes('material') || textLower.includes('resina') || textLower.includes('pla') || textLower.includes('filamento')) {
+    botReply = '¡Excelente pregunta técnica! Tenemos un catálogo amplio (PLA, PETG, Resina). Un experto te recomendará el mejor en un momento por WhatsApp. 🔬'
+  } else if (textLower.includes('hola') || textLower.includes('buenos dias') || textLower.includes('buenas tardes')) {
+    botReply = '¡Hola! Cuéntanos los detalles de tu proyecto o envíanos tu archivo 3D. Estamos listos para fabricarlo. 👋'
+    shouldRedirect = false
+  }
+
+  await addBotTyping(botReply)
+  
+  if (shouldRedirect) {
+    await new Promise(r => setTimeout(r, 1500))
+    sendToWhatsApp(text)
+  }
 }
 
 const sendToWhatsApp = (msg: string) => {

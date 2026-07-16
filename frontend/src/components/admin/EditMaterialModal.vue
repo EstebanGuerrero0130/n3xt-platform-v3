@@ -53,7 +53,7 @@ watch(form, (val) => {
  <label class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest">Costo Unitario ($)</label>
  <input v-model.number="form.cost_per_kg" type="number" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[24px] px-6 py-4 text-sm font-bold text-[#ffffff] dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
  </div>
- <div class="space-y-2 col-span-2 sm:col-span-1">
+ <div v-if="form.category !== 'SERVICIO' && form.type !== 'service'" class="space-y-2 col-span-2 sm:col-span-1">
  <label class="text-[10px] font-black text-rose-400 uppercase tracking-widest">Umbral Alerta ({{ form.unit }})</label>
  <input v-model.number="form.low_stock_threshold" type="number" class="w-full bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-[24px] px-6 py-4 text-sm font-bold text-[#ffffff] dark:text-white focus:ring-2 focus:ring-rose-500 outline-none transition-all">
  </div>

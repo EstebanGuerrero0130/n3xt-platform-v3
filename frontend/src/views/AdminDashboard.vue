@@ -21,6 +21,7 @@ import ShippingModal from '../components/admin/ShippingModal.vue'
 import OrderDetailModal from '../components/admin/OrderDetailModal.vue'
 import WebManager from '../components/admin/WebManager.vue'
 import SettingsPanel from '../components/admin/SettingsPanel.vue'
+import AssignPrinterModal from '../components/admin/AssignPrinterModal.vue'
 /**
  * ADMIN DASHBOARD — N3XT 3D Industrial OS
  *
@@ -754,27 +755,25 @@ const handleAssignment = (order) => {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const confirmAssignment = async (printerId) => {
- try {
- const orderId = selectedOrderForPrinter.value.id;
- 
- // 1. Actualizar Pedido
- await api.patch(`/admin/orders/${orderId}/status`, { 
- status: 'printing',
- printer_id: printerId
- }, true)
+const confirmAssignment = async ({ orderId, printerId, status }) => {
+  try {
+    // 1. Actualizar Pedido
+    await api.patch(`/admin/orders/${orderId}/status`, { 
+      status: status || 'printing',
+      printer_id: printerId
+    }, true)
 
- // 2. Actualizar Impresora a OCUPADA
- await api.patch(`/admin/printers/${printerId}`, { 
- status: 'printing'
- }, true)
+    // 2. Actualizar Impresora a OCUPADA
+    await api.patch(`/admin/printers/${printerId}`, { 
+      status: 'printing'
+    }, true)
 
- modalState.printerStatus = false
- await syncAll(true) 
- showNotify('Produccion Iniciada: Pedido asignado a maquina', 'success')
- } catch (err) {
- showNotify('Fallo en asignacion: ' + err.message, 'error')
- }
+    modalState.printerStatus = false
+    await syncAll(true) 
+    showNotify('Produccion Iniciada: Pedido asignado a maquina', 'success')
+  } catch (err) {
+    showNotify('Fallo en asignacion: ' + err.message, 'error')
+  }
 }
 
 
@@ -1856,6 +1855,14 @@ const handlePurgeAll = () => {
  @update:tracking-guide="trackingGuide = $event"
  @update:tracking-carrier="trackingCarrier = $event"
  @confirm-shipping="confirmShipping"
+ />
+
+ <!-- Modal: Asignar Impresora -->
+ <AssignPrinterModal
+ v-model="modalState.printerStatus"
+ :order="selectedOrderForPrinter"
+ :printers="printers"
+ @assign="confirmPrinterAssignment"
  />
 
  <!-- Modal: Detalle de Orden (OrderDetailModal.vue) -->

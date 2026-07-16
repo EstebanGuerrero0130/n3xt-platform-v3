@@ -77,7 +77,7 @@ watch(form, (val) => {
  </div>
 
  <!-- Asistente de Paquete (Opcional) -->
- <div class="col-span-1 sm:col-span-2 p-5 md:p-6 bg-[#08872b]/5 rounded-[2rem] border border-primary/10 space-y-4">
+ <div v-if="form.category !== 'SERVICIO' && form.type !== 'service'" class="col-span-1 sm:col-span-2 p-5 md:p-6 bg-[#08872b]/5 rounded-[2rem] border border-primary/10 space-y-4">
  <div class="flex justify-between items-start">
  <div>
  <p class="text-[9px] font-black text-[#8dd6ff] uppercase tracking-[0.2em]">Asistente de Costo Pro</p>
@@ -117,7 +117,7 @@ watch(form, (val) => {
 
  <!-- Costo por Unidad -->
  <div class="space-y-2">
- <label class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest">Costo por Kilo/Litro/Unid.</label>
+ <label class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest">{{ form.category === 'SERVICIO' || form.type === 'service' ? 'Costo Base del Servicio' : 'Costo por Kilo/Litro/Unid.' }}</label>
  <div class="relative">
  <span class="absolute left-5 top-1/2 -translate-y-1/2 text-[#c3c4c5] font-bold">$</span>
  <input v-model.number="form.cost_per_kg" type="number" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border-none rounded-[24px] p-5 pl-10 font-black text-sm text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
@@ -125,7 +125,7 @@ watch(form, (val) => {
  </div>
 
  <!-- Unidad de Medida -->
- <div class="space-y-2">
+ <div v-if="form.category !== 'SERVICIO' && form.type !== 'service'" class="space-y-2">
  <label class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest">Unidad de Medida</label>
  <select v-model="form.unit" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border-none rounded-[24px] p-5 font-bold text-sm text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
  <option value="g">Gramos (g)</option>
@@ -135,7 +135,7 @@ watch(form, (val) => {
  </div>
 
  <!-- Stock Inicial -->
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div v-if="form.category !== 'SERVICIO' && form.type !== 'service'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
  <div class="space-y-2">
  <label class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest">Stock de Apertura</label>
  <input v-model.number="form.initial_stock" type="number" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border-none rounded-[24px] p-5 font-black text-sm text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">

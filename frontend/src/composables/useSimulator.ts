@@ -22,6 +22,7 @@ interface SimulatorState {
   shipping_reference: string
   discount_pct: number
   pieces_per_batch: number
+  beds_multiplier: number
   transporte_pct: number
   marketing_pct: number
   fallos_pct: number
@@ -36,7 +37,7 @@ const defaultSimulator: SimulatorState = {
   material_id: '', weight_g: 0, time_str: '0:00', profit_pct: 20,
   customer_email: '', customer_phone: '',
   shipping_address: '', shipping_city: '', shipping_zip: '', shipping_reference: '',
-  discount_pct: 0, pieces_per_batch: 1, transporte_pct: 0, marketing_pct: 0, fallos_pct: 0, etiquetas: 400,
+  discount_pct: 0, pieces_per_batch: 1, beds_multiplier: 1, transporte_pct: 0, marketing_pct: 0, fallos_pct: 0, etiquetas: 400,
   extra_items: [],
   comments: ''
 }
@@ -59,11 +60,15 @@ export function useSimulator({ inventoryData, settings, showNotify: _showNotify 
       pcts: { material: 0, infra: 0, extras: 0, profit: 0 }
     }
 
-    const qty = Math.max(1, simulator.pieces_per_batch || 1)
-    const matCost = (simulator.weight_g / 1000) * mat.cost_per_kg
+    const beds = Math.max(1, simulator.beds_multiplier || 1)
+    const qty = Math.max(1, simulator.pieces_per_batch || 1) * beds
+    
+    // Scale by beds
+    const totalWeight = simulator.weight_g * beds
+    const matCost = (totalWeight / 1000) * mat.cost_per_kg
 
     const [hours, minutes] = simulator.time_str.split(':').map(Number)
-    const totalHours = (hours || 0) + ((minutes || 0) / 60)
+    const totalHours = ((hours || 0) + ((minutes || 0) / 60)) * beds
 
     const luz = totalHours * (settings.value.infra.load_factor || 0.4) * (settings.value.infra.luz_hr || 0)
     const labor = (totalHours * ((settings.value.prep?.prep_time_pct || 10) / 100)) * (settings.value.prep?.mano_obra_hr || 0)

@@ -64,13 +64,17 @@
  </div>
  </div>
 
- <div class="grid grid-cols-2 gap-3 md:gap-4">
+ <div class="grid grid-cols-3 gap-3 md:gap-4">
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Piezas por Lote</label>
+ <label class="block text-[10px] md:text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Camas (Lotes)</label>
+ <input v-model.number="form.beds_multiplier" type="number" min="1" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all" title="Multiplica todo por la cantidad de camas">
+ </div>
+ <div>
+ <label class="block text-[10px] md:text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">Pzs x Cama</label>
  <input v-model.number="form.pieces_per_batch" type="number" min="1" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
  </div>
  <div>
- <label class="block text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">% Descuento</label>
+ <label class="block text-[10px] md:text-xs font-bold text-[#c3c4c5] uppercase tracking-wider mb-2">% Desc</label>
  <input v-model.number="form.discount_pct" type="number" min="0" max="100" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
  </div>
  </div>
@@ -130,8 +134,8 @@
  <p class="text-lg font-black text-white mt-0.5">${{ (result.production / (result.total_hours || 1)).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
  </div>
  <div class="bg-[#151a22]/80 rounded-[6px] p-3 border border-gray-700/30">
- <p class="text-[9px] font-bold text-[#a4aea6] uppercase tracking-wider">Piezas por Lote</p>
- <p class="text-lg font-black text-white mt-0.5">{{ form.pieces_per_batch || 1 }}</p>
+ <p class="text-[9px] font-bold text-[#a4aea6] uppercase tracking-wider">Piezas Totales</p>
+ <p class="text-lg font-black text-white mt-0.5">{{ (form.pieces_per_batch || 1) * (form.beds_multiplier || 1) }}</p>
  </div>
  </div>
 
