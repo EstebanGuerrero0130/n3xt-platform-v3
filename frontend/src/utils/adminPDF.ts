@@ -302,22 +302,25 @@ export function quotePDFHTML(order: OrderData, material: any, settings: Settings
 <table class="table">
   <thead><tr>
     <th>Descripción Industrial</th>
-    <th style="width: 150px;">Proceso</th>
-    <th style="width: 200px;">Material</th>
-    <th style="text-align: right; width: 180px;">Inversión</th>
+    <th style="width: 120px;">Proceso</th>
+    <th style="width: 180px;">Material</th>
+    <th style="width: 120px; text-align: center;">Cantidad</th>
+    <th style="text-align: right; width: 160px;">Inversión</th>
   </tr></thead>
   <tbody>
     <tr>
-      <td style="font-weight: 800; color: #0f172a;">${order.job_name || 'Fabricación Digital Bajo Demanda'}<br><span style="font-size: 13px; color: #64748b; font-weight: 500;">Producción 3D Especializada - Prototipado / Final${order.qty ? ` (x ${order.qty} uds)` : ''}</span></td>
+      <td style="font-weight: 800; color: #0f172a;">${order.job_name || 'Fabricación Digital Bajo Demanda'}<br><span style="font-size: 13px; color: #64748b; font-weight: 500;">Producción 3D Especializada - Prototipado / Final</span></td>
       <td>${order.technology}</td>
       <td>${material ? material.name : (order.material_name || order.material_id)}</td>
+      <td style="text-align: center; font-weight: 700;">${order.qty || 1} uds</td>
       <td style="text-align: right; font-weight: 900; color: #0f172a;">$${Number(Number(order.total_price || 0) - Number(order.extras_cost || 0)).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
     </tr>
     ${(order.extra_items || []).map(extra => `
     <tr>
       <td>${extra.name} (Adicional / Empaque)</td>
       <td>N/A</td>
-      <td>${extra.qty} x Und</td>
+      <td>-</td>
+      <td style="text-align: center; font-weight: 600;">${extra.qty || 1} uds</td>
       <td style="text-align: right; font-weight: 900; color: #0f172a;">$${Number((extra.cost || 0) * (extra.qty || 1)).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
     </tr>`).join('')}
   </tbody>
