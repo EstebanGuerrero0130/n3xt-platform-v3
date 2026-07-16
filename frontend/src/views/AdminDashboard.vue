@@ -713,23 +713,22 @@ const updateMaterial = async () => {
  }
 }
 
-const addMaterial = async () => {
+const addMaterial = async (materialData) => {
   if (submitting.value) return
-  if (!newMaterial.id || !String(newMaterial.id).trim()) {
-    showNotify('El Codigo del Material es obligatorio.', 'warning')
+  if (!materialData?.id || !String(materialData.id).trim()) {
+    showNotify('El Código del Material es obligatorio.', 'warning')
     return
   }
-  if (!newMaterial.name || !String(newMaterial.name).trim()) {
+  if (!materialData?.name || !String(materialData.name).trim()) {
     showNotify('El Nombre Comercial es obligatorio.', 'warning')
     return
   }
   submitting.value = true
   try {
-    await api.post('/materials', { ...newMaterial }, true)
+    await api.post('/materials', { ...materialData }, true)
     modalState.newMaterial = false
     await fetchInventory()
-    showNotify('Material creado correctamente', 'success')
-    Object.assign(newMaterial, { id: '', code: '', name: '', category: 'FDM', type: 'material', unit: 'g', cost_per_kg: 0, density: 1.24, color: '#000000', initial_stock: 1000, low_stock_threshold: 200, package_price: null, package_qty: null, package_units: 1 })
+    showNotify('Material creado correctamente ✓', 'success')
   } catch (err) {
     showNotify('Error al crear material: ' + (err?.message || 'Error del servidor'), 'error')
   } finally {
