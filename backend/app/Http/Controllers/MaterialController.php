@@ -33,7 +33,7 @@ class MaterialController extends Controller
                     'name' => $validated['name'],
                     'category' => $validated['category'],
                     'type' => $validated['type'],
-                    'unit' => $validated['unit'],
+                    'unit' => $validated['unit'] ?? 'unid',
                     'cost_per_kg' => $validated['cost_per_kg'],
                     'color' => $validated['color'] ?? '#cccccc',
                     'density' => $validated['density'] ?? ($validated['category'] === 'FDM' ? 1.24 : 1.10),
@@ -42,7 +42,7 @@ class MaterialController extends Controller
 
                 Inventory::create([
                     'material_id' => $material->id,
-                    'stock_available' => $validated['initial_stock'],
+                    'stock_available' => $validated['initial_stock'] ?? 0,
                     'low_stock_threshold' => $validated['low_stock_threshold'] ?? 500
                 ]);
 

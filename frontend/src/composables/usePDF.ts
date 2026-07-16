@@ -112,11 +112,12 @@ body { font-family: 'Outfit', sans-serif; padding: 0; color: #0f172a; line-heigh
     ${order.customer_id_document ? `ID: ${order.customer_id_document} | ` : ''}${order.customer_phone ? `${order.customer_phone} | ` : ''}${order.customer_email || ''}
   </div>
 </div>
-<table class="table"><thead><tr><th>Descripci\u00f3n Industrial</th><th style="width:150px;">Proceso</th><th style="width:200px;">Material</th><th style="text-align:right;width:180px;">Inversi\u00f3n</th></tr></thead>
+<table class="table"><thead><tr><th>Descripci\u00f3n Industrial</th><th style="width:120px;">Proceso</th><th style="width:180px;">Material</th><th style="width:120px;text-align:center;">Cantidad</th><th style="text-align:right;width:160px;">Inversi\u00f3n</th></tr></thead>
 <tbody><tr><td style="font-weight:800;">${order.job_name || 'Fabricaci\u00f3n Digital Bajo Demanda'}<br><span style="font-size:13px;color:#64748b;font-weight:500;">Producci\u00f3n 3D Especializada</span></td>
 <td>${order.technology}</td><td>${mat ? mat.name : (order.material_name || order.material_id)}</td>
+<td style="text-align:center;font-weight:700;">${order.qty || 1} uds</td>
 <td style="text-align:right;font-weight:900;">$${Number(order.total_price - (order.extras_cost || 0)).toLocaleString(undefined, {maximumFractionDigits: 0})}</td></tr>
-${(order.extra_items || []).map((extra: any) => `<tr><td>${extra.name} (Adicional)</td><td>N/A</td><td>${extra.qty} x Und</td><td style="text-align:right;font-weight:900;">$${Number(extra.cost * extra.qty).toLocaleString(undefined, {maximumFractionDigits: 0})}</td></tr>`).join('')}
+${(order.extra_items || []).map((extra: any) => `<tr><td>${extra.name} (Adicional)</td><td>N/A</td><td>-</td><td style="text-align:center;font-weight:600;">${extra.qty || 1} uds</td><td style="text-align:right;font-weight:900;">$${Number(extra.cost * extra.qty).toLocaleString(undefined, {maximumFractionDigits: 0})}</td></tr>`).join('')}
 </tbody></table>
 <div class="rec-container"><div class="rec-box"><div class="rec-title">Recomendaciones</div>
 <ul style="margin:0;padding-left:20px;font-size:11px;color:#166534;font-weight:600;line-height:1.6;">
@@ -133,7 +134,7 @@ ${(order.extra_items || []).map((extra: any) => `<tr><td>${extra.name} (Adiciona
 <div class="footer"><p style="margin-bottom:5px;font-weight:800;">N3XT 3D Administrative System</p>
 <p>\u00a9 2026 ${cName} - Tecnolog\u00eda Digital Avanzada</p>
 <p>Email: ${cEmail} \u2022 ${cAddr}</p>
-<p style="font-size:8px;opacity:0.5;margin-top:10px;">Generado el ${new Date().toLocaleString(undefined, {maximumFractionDigits: 0})}</p></div>
+<p style="font-size:8px;opacity:0.5;margin-top:10px;">Generado el ${new Date().toLocaleString()}</p></div>
 </body></html>`
 
     const iframe = getIframe()

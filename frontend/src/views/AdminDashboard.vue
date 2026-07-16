@@ -1832,6 +1832,7 @@ const handlePurgeAll = () => {
  v-model="modalState.newMaterial"
  :new-material="newMaterial"
  :submitting="submitting"
+ @update:new-material="Object.assign(newMaterial, $event)"
  @add-material="addMaterial"
  />
 

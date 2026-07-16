@@ -18,11 +18,11 @@ class StoreMaterialRequest extends FormRequest
             'name' => 'required|string|max:255',
             'category' => 'required|string',
             'type' => 'required|in:material,utility,service',
-            'unit' => 'required|string',
+            'unit' => 'nullable|string',
             'cost_per_kg' => 'required|numeric|min:0',
             'density' => 'nullable|numeric|min:0.01',
             'color' => 'nullable|string|max:20',
-            'initial_stock' => 'required|numeric|min:0',
+            'initial_stock' => 'nullable|numeric|min:0',
             'low_stock_threshold' => 'nullable|numeric|min:0',
         ];
     }
