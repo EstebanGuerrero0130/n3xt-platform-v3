@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AuthController;
 
@@ -39,8 +40,23 @@ Route::get('/materials', [MaterialController::class, 'index']);
 // Rutas de autenticación Maker (Clientes) - Legacy
 Route::post('/maker-access/register', [CustomerAuthController::class, 'register']);
 Route::post('/maker-access/login', [CustomerAuthController::class, 'login']);
-Route::middleware('auth:sanctum')->get('/customer/profile', [CustomerAuthController::class, 'profile']);
-Route::middleware('auth:sanctum')->post('/customer/logout', [CustomerAuthController::class, 'logout']);
+Route::middleware('auth:customer')->get('/customer/profile', [CustomerAuthController::class, 'profile']);
+Route::middleware('auth:customer')->post('/customer/logout', [CustomerAuthController::class, 'logout']);
+
+// Endpoint unificado de verificación de sesión (admin o cliente)
+Route::get('/auth/status', function (Request $request) {
+    // Check admin guard first
+    if (Auth::guard('web')->check()) {
+        $user = Auth::guard('web')->user();
+        return response()->json(['authenticated' => true, 'role' => 'admin', 'user' => ['name' => $user->name, 'email' => $user->email]]);
+    }
+    // Check customer guard
+    if (Auth::guard('customer')->check()) {
+        $customer = Auth::guard('customer')->user();
+        return response()->json(['authenticated' => true, 'role' => 'customer', 'user' => ['name' => $customer->name, 'email' => $customer->email]]);
+    }
+    return response()->json(['authenticated' => false, 'role' => null, 'user' => null]);
+});
 
 // Rutas protegidas para Administrador
 Route::middleware('auth:sanctum')->group(function () {

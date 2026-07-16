@@ -39,7 +39,7 @@ const fetchOrders = async () => {
  try {
  // En un sistema real, filtraríamos por email en el backend
  // Por ahora usamos el endpoint de tracking o uno nuevo
- const data = await api.get(`/orders/track?email=${customer.value.email}`)
+ const data = await api.get(`/orders/track?email=${customer.value?.email ?? ''}`)
  orders.value = Array.isArray(data) ? data : [data]
  } catch (err) {
  logger.error('Error fetching orders:', err)
@@ -184,8 +184,8 @@ const getStatusLabel = (status: string): string => {
  <div class="text-left sm:text-right">
  <p class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-1 sm:mb-2">Estado</p>
  <div class="flex items-center gap-2 sm:gap-3 sm:justify-end">
- <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-[60px] animate-pulse -[0_0_8px_currentColor]" :class="getStatusColor(order.status)"></span>
- <span class="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em]" :class="order.status === 'printing' ? 'text-[#8dd6ff]' : 'text-[#ffffff] dark:text-white'">{{ getStatusLabel(order.status) }}</span>
+ <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-[60px] animate-pulse -[0_0_8px_currentColor]" :class="getStatusColor(order.status ?? '')"></span>
+ <span class="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em]" :class="order.status === 'printing' ? 'text-[#8dd6ff]' : 'text-[#ffffff] dark:text-white'">{{ getStatusLabel(order.status ?? '') }}</span>
  </div>
  </div>
  <div class="flex flex-col items-end gap-1">

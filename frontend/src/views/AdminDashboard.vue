@@ -259,10 +259,10 @@ const editingPrinter = ref({ id: '', name: '', model: '', technology: 'FDM', sta
 // Selections
 const selectedOrderForPrinter = ref(null)
 const selectedOrderDetails = ref(null)
-const editingMaterial = ref({ id: '', name: '', cost_per_kg: 0, density: 1.24, color: '#cccccc', location: '' })
+const editingMaterial = ref({ id: '', code: '', name: '', cost_per_kg: 0, density: 1.24, color: '#cccccc', location: '' })
 
 // Forms
-const newMaterial = reactive({ id: '', name: '', category: 'FDM', type: 'material', unit: 'g', cost_per_kg: 0, density: 1.24, color: '#000000', initial_stock: 1000, 
+const newMaterial = reactive({ id: '', code: '', name: '', category: 'FDM', type: 'material', unit: 'g', cost_per_kg: 0, density: 1.24, color: '#000000', initial_stock: 1000, 
  low_stock_threshold: 200,
  package_price: null, package_qty: null, package_units: 1 
 })
@@ -794,8 +794,10 @@ const saveSettings = (silent = false, updatedData = null) => {
  logger.warn('Advertencia SEO:', seoErr)
  }
  
- // Use data from SettingsPanel if provided, otherwise from local state
- const payload = updatedData || JSON.parse(JSON.stringify(settings.value))
+  // Use data from SettingsPanel if provided (merge with current state to preserve discounts, logo, etc.)
+  const payload = updatedData
+    ? { ...JSON.parse(JSON.stringify(settings.value)), ...updatedData }
+    : JSON.parse(JSON.stringify(settings.value))
  
  const response = await api.post('/admin/settings', { settings: payload }, true)
  
@@ -1957,7 +1959,7 @@ const handlePurgeAll = () => {
 input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; }
 input[type=range]:focus { outline: none; }
 input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: #f1f5f9; border-radius: 4px; }
-input[type=range]::-webkit-slider-thumb { height: 20px; width: 20px; border-radius: 50%; background: #1e3a34; cursor: pointer; -webkit-appearance: none; appearance: none; margin-top: -6px; box-: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid white; transition: all 0.2s; }
+input[type=range]::-webkit-slider-thumb { height: 20px; width: 20px; border-radius: 50%; background: #1e3a34; cursor: pointer; -webkit-appearance: none; appearance: none; margin-top: -6px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid white; transition: all 0.2s; }
 input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
 
 

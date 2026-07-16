@@ -16,10 +16,10 @@ const emit = defineEmits<{
  (e: "delete-printer", id: number | string): void
 }>()
 
-const form = reactive({ ...(props.editingPrinter || {}) })
+const form = reactive({  nozzle_mm: 0.4, wall_count: 2, max_flow_mm3_hr: 15500, ...(props.editingPrinter || {}) })
 
 watch(() => props.editingPrinter, (val) => {
- if (val) Object.assign(form, val)
+ if (val) Object.assign(form, { nozzle_mm: 0.4, wall_count: 2, max_flow_mm3_hr: 15500, ...val })
 }, { deep: true })
 
 watch(form, (val) => {
@@ -52,7 +52,8 @@ import { flowPresets } from '../../utils/printerConstants'
  </div>
  <div class="space-y-2">
  <label class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest">Horas de Uso</label>
- <input v-model.number="form.total_hours_run" type="number" min="0" class="w-full bg-[#0a0f14] border border-[#21262d] rounded-[24px] p-4 font-bold text-sm text-white outline-none focus:ring-2 focus:ring-primary/30 transition-all">
+ <input v-model.number="form.total_hours_run" type="number" min="0" step="0.01" class="w-full bg-[#0a0f14] border border-[#21262d] rounded-[24px] p-4 font-bold text-sm text-white outline-none focus:ring-2 focus:ring-primary/30 transition-all">
+ <p class="text-[9px] text-[#a4aea6] mt-1 pl-4">{{ Number(form.total_hours_run || 0).toFixed(2) }} h acumuladas</p>
  </div>
  <div class="space-y-2">
  <label class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest">Potencia (Watts)</label>

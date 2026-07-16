@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive, watch, type PropType } from 'vue'
-import draggable from 'vuedraggable'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import draggableRaw from 'vuedraggable'
+const draggable = draggableRaw as any
+
 import OrderCard from './OrderCard.vue'
 
 const props = defineProps({
@@ -165,7 +168,7 @@ v-for="(col, idx) in columns" :key="col.id"
 
  <!-- Column Content (Draggable Area) -->
  <draggable 
- :list="groupedOrders[col.id]" 
+ v-model="groupedOrders[col.id]" 
  group="orders"
  item-key="id"
  class="flex-1 bg-[#151a22]/30 dark:bg-[#151a22]/5 backdrop-blur-sm rounded-[20px] md:rounded-[24px] p-3 md:p-5 space-y-4 md:space-y-6 border-2 border-dashed border-[#21262d]/50 dark:border-[#21262d] min-h-[400px] md:min-h-[600px] hover:bg-[#151a22]/50 dark:hover:bg-[#151a22]/10 hover:border-primary/20"

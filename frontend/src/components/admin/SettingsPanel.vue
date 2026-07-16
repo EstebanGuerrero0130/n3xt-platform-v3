@@ -404,7 +404,7 @@ input[type=range].range-slider::-webkit-slider-thumb {
  -webkit-appearance: none;
  appearance: none;
  margin-top: -6px;
- box-: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 0 12px rgba(5, 150, 105, 0.4);
+ box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 0 12px rgba(5, 150, 105, 0.4);
  border: 2px solid white;
  transition: all 0.2s;
 }
@@ -424,7 +424,7 @@ input[type=range].range-slider::-moz-range-thumb {
  border-radius: 50%;
  background: #059669;
  cursor: pointer;
- box-: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 0 12px rgba(5, 150, 105, 0.4);
+ box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 0 12px rgba(5, 150, 105, 0.4);
  border: 2px solid white;
 }
 

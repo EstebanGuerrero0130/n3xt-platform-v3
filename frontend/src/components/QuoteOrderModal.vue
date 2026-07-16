@@ -2,14 +2,17 @@
 import { ref, watch } from 'vue'
 import { useCaptcha } from '../composables/useCaptcha'
 
+interface Material { id: string | number; name?: string; [key: string]: unknown }
+interface Model { id: string | number; name?: string; hasModel?: boolean; weight?: number; duration?: number; dimensions?: { x: number; y: number; z: number }; [key: string]: unknown }
+
 const props = defineProps({
  show: { type: Boolean, default: false },
- models: { type: Array, default: () => [] },
- materials: { type: Array, default: () => [] },
+ models: { type: Array as () => Model[], default: () => [] },
+ materials: { type: Array as () => Material[], default: () => [] },
  selectedTechnology: { type: String, default: 'FDM' },
  selectedMaterial: { type: String, default: '' },
  qty: { type: Number, default: 1 },
- breakdown: { type: Object, default: () => ({ total: 0, discount: 0 }) },
+ breakdown: { type: Object as () => { total: number; discount: number }, default: () => ({ total: 0, discount: 0 }) },
  activeCoupon: { type: Object, default: null },
  previousTotal: { type: Number, default: 0 },
  isSubmitting: { type: Boolean, default: false },
@@ -42,8 +45,8 @@ watch(() => props.show, (v) => {
  }
 })
 
-const getMaterialName = (id) => {
- const mat = props.materials.find(m => m.id === id)
+const getMaterialName = (id: string | number) => {
+ const mat = props.materials.find((m: Material) => m.id === id)
  return mat ? mat.name : id
 }
 
@@ -209,7 +212,7 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
  <div class="mt-4 pt-4 border-t border-primary/10">
  <div v-for="m in models" :key="m.id" class="flex justify-between items-center py-1.5">
  <span class="text-[8px] font-black text-[#a4aea6]">{{ m.name }} <span v-if="m.hasModel" class="text-emerald-500">✓</span></span>
- <span class="text-[9px] font-black dark:text-white">{{ m.hasModel ? m.dimensions.x.toFixed(0)+'x'+m.dimensions.y.toFixed(0)+'x'+m.dimensions.z.toFixed(0)+'mm' : 'Sin archivo' }}</span>
+ <span class="text-[9px] font-black dark:text-white">{{ m.hasModel ? (m.dimensions?.x?.toFixed(0)+'x'+m.dimensions?.y?.toFixed(0)+'x'+m.dimensions?.z?.toFixed(0)+'mm') : 'Sin archivo' }}</span>
  </div>
  </div>
  </div>

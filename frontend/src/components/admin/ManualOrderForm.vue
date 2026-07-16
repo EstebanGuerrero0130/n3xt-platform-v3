@@ -50,6 +50,7 @@
  <select id="manual-tech" v-model="form.technology" class="w-full bg-[#283041] border border-gray-700 rounded-[6px] px-4 py-3 text-white font-semibold text-sm outline-none">
  <option value="FDM">FDM</option>
  <option value="SLA">SLA</option>
+ <option value="SERVICIO">Servicio (Pintura/Post-pro)</option>
  </select>
  </div>
  <div>
@@ -104,10 +105,13 @@ import { ref, reactive, computed } from 'vue'
 import { api } from '../../services/api'
 import logger from '../../utils/logger'
 
+interface Material { id: string | number; name?: string; category?: string; cost_per_kg?: number; [key: string]: unknown }
+interface Contact { id: string | number; name?: string; company?: string; customer_id_document?: string; email?: string; phone?: string; address_full?: string; location?: string; city_dept_country?: string; zip_code?: string; location_reference?: string; notes?: string; [key: string]: unknown }
+
 const props = defineProps({
  visible: Boolean,
- materials: { type: Array, default: () => [] },
- contacts: { type: Array, default: () => [] },
+ materials: { type: Array as () => Material[], default: () => [] },
+ contacts: { type: Array as () => Contact[], default: () => [] },
  settings: { type: Object, default: () => ({ infra: {}, prep: {}, margin: {} }) },
 })
 
@@ -130,7 +134,7 @@ const filteredMaterials = computed(() =>
 const selectCustomer = (e: any) => {
  const c = props.contacts.find(c => String(c.id) === String(e.target.value))
  if (c) {
- form.customer_id = c.id; form.customer_name = c.name
+ form.customer_id = String(c.id); form.customer_name = c.name || ''
  form.customer_company = c.company || ''; form.customer_id_document = c.customer_id_document || ''
  form.customer_email = c.email || ''; form.customer_phone = c.phone || ''
  form.shipping_address = c.address_full || c.location || ''
@@ -151,7 +155,7 @@ const submit = async () => {
  settings: JSON.parse(JSON.stringify(props.settings)),
  material_cost_per_kg: props.materials.find(m => m.id === form.material_id)?.cost_per_kg || 0,
  }
- }, true)
+ })
  emit('created')
  reset()
  } catch (err) {

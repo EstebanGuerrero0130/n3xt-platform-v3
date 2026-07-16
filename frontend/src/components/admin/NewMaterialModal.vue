@@ -40,14 +40,14 @@ watch(form, (val) => {
  </div>
  
  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-10">
- <!-- ID Automático (ReadOnly) -->
- <div class="space-y-2">
- <label class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-widest flex items-center gap-2">
- <span class="w-1.5 h-1.5 rounded-[60px] bg-[#08872b] animate-pulse"></span>
- ID Técnico (Auto)
- </label>
- <input v-model="form.id" type="text" readonly class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border-none rounded-[24px] p-5 font-black text-sm text-[#a4aea6] outline-none opacity-80 cursor-not-allowed">
- </div>
+  <!-- Código del Material -->
+  <div class="space-y-2">
+  <label class="text-[10px] font-black text-[#8dd6ff] uppercase tracking-widest flex items-center gap-2">
+  <span class="w-1.5 h-1.5 rounded-[60px] bg-[#08872b] animate-pulse"></span>
+  Código del Material *
+  </label>
+  <input v-model="form.code" type="text" placeholder="Ej: MAT-PLA-001" required class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border border-primary/20 rounded-[24px] p-5 font-black text-sm text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all">
+  </div>
 
  <!-- Nombre Comercial -->
  <div class="space-y-2">
@@ -62,6 +62,7 @@ watch(form, (val) => {
  <option value="FDM">Filamento (FDM)</option>
  <option value="SLA">Resina (SLA)</option>
  <option value="UTIL">Otros / Adicionales</option>
+ <option value="SERVICIO">Servicios (Pintura/Post-pro)</option>
  </select>
  </div>
 
@@ -71,7 +72,7 @@ watch(form, (val) => {
  <select v-model="form.type" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border-none rounded-[24px] p-5 font-bold text-sm text-[#ffffff] dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
  <option value="material">Materiales (Filamento/Resina)</option>
  <option value="utility">Insumos (Argollas/Cajas/Bolsas)</option>
- <option value="service">Servicios (Mano de Obra/Lavado)</option>
+ <option value="service">Servicios (Mano de Obra/Pintura)</option>
  </select>
  </div>
 

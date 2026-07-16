@@ -100,15 +100,13 @@ export const api = {
    */
   async checkAuth() {
     try {
-      const res = await fetch(`${API_BASE_URL}/user`, {
+      const res = await fetch(`${API_BASE_URL}/auth/status`, {
         credentials: 'include',
         headers: { 'Accept': 'application/json' },
       })
       if (!res.ok) return { authenticated: false, user: null, role: null }
-      const user = await res.json()
-      // Determine role: check explicit role field, email pattern, or name presence
-      const role = user?.role || (user?.email?.includes('admin') ? 'admin' : 'customer') || null
-      return { authenticated: true, user, role }
+      const data = await res.json()
+      return { authenticated: data.authenticated, user: data.user, role: data.role }
     } catch {
       return { authenticated: false, user: null, role: null }
     }
