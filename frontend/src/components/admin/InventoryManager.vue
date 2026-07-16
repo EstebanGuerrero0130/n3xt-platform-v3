@@ -411,7 +411,7 @@ const getProgressColor = (type: any) => {
  <div v-for="mat in utilities" :key="mat.id" class="group bg-[#151a22] dark:bg-[#151a22] p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border border-[#21262d] dark:border-[#21262d] -gray-200/20 dark:-none relative overflow-hidden transition-all duration-700 hover: hover:-orange-500/10 hover:-translate-y-2">
  
  <div class="flex justify-between items-start mb-8 relative z-10">
- <div class="w-16 h-16 rounded-[1.5rem] bg-orange-50 dark:bg-orange-500/10 border-8 border-gray-50 dark:border-gray-800 flex items-center justify-center text-orange-500 font-black text-xs transform group-hover:rotate-12 transition-transform duration-700 italic">UTL</div>
+ <div class="w-16 h-16 rounded-[1.5rem] bg-orange-50 dark:bg-orange-500/10 border-8 border-gray-50 dark:border-gray-800 flex items-center justify-center text-orange-500 font-black text-xs transform group-hover:rotate-12 transition-transform duration-700 italic">{{ (mat.category === 'SERVICIO' || mat.type === 'service') ? 'SRV' : 'UTL' }}</div>
  
  <div class="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-0 md:translate-y-4 group-hover:translate-y-0">
  <button class="w-10 h-10 bg-blue-50 text-blue-500 rounded-[6px] hover:bg-blue-500 hover:text-white transition-all -blue-500/10 flex items-center justify-center" @click="$emit('edit-item', mat)">
@@ -426,7 +426,7 @@ const getProgressColor = (type: any) => {
  <div class="space-y-2 mb-8 relative z-10">
  <h3 class="text-xl font-black text-[#ffffff] dark:text-white tracking-tighter truncate leading-tight" :title="mat.name">{{ mat.name }}</h3>
  <div class="flex flex-wrap gap-2">
- <span class="text-[8px] font-black bg-orange-900 dark:bg-[#08872b] text-white px-3 py-1 rounded-[60px] uppercase tracking-widest -orange-900/20">Insumo</span>
+ <span class="text-[8px] font-black bg-orange-900 dark:bg-[#08872b] text-white px-3 py-1 rounded-[60px] uppercase tracking-widest -orange-900/20">{{ (mat.category === 'SERVICIO' || mat.type === 'service') ? 'Servicio' : 'Insumo' }}</span>
  <span class="text-[8px] font-black bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 px-3 py-1 rounded-[60px] uppercase tracking-widest border border-orange-100 dark:border-[#21262d]">{{ mat.unit }}</span>
  </div>
  </div>
@@ -437,7 +437,7 @@ const getProgressColor = (type: any) => {
  <p class="text-[8px] font-black text-orange-400 uppercase tracking-widest mb-1">Costo Unitario</p>
  <p class="text-xl font-black text-orange-900 dark:text-white tracking-tighter">${{ Number(mat.cost_per_kg).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
  </div>
- <div class="text-right">
+ <div v-if="mat.category !== 'SERVICIO' && mat.type !== 'service'" class="text-right">
  <p class="text-[8px] font-black text-orange-400 uppercase tracking-widest mb-1">Disponibilidad</p>
  <p :class="['text-xl font-black tracking-tighter', (mat.inventory?.stock_available < (mat.inventory?.low_stock_threshold || 10)) ? 'text-rose-500 animate-pulse' : 'text-orange-700 dark:text-orange-400']">
  {{ Math.round(mat.inventory?.stock_available || 0) }}<span class="text-[10px] font-bold ml-0.5">{{ mat.unit }}</span>
@@ -445,14 +445,14 @@ const getProgressColor = (type: any) => {
  </div>
  </div>
  
- <div class="h-3 bg-[#151a22] dark:bg-[#283041] border border-orange-100 dark:border-[#21262d] rounded-[60px] overflow-hidden p-0.5 ">
+ <div v-if="mat.category !== 'SERVICIO' && mat.type !== 'service'" class="h-3 bg-[#151a22] dark:bg-[#283041] border border-orange-100 dark:border-[#21262d] rounded-[60px] overflow-hidden p-0.5 ">
  <div class="h-full rounded-[60px] bg-gradient-to-r transition-all duration-1000 -[0_0_15px_rgba(249,115,22,0.3)]" :class="getProgressColor('UTIL')" :style="{ width: Math.min(((mat.inventory?.stock_available || 0) / 100) * 100, 100) + '%' }"></div>
  </div>
  </div>
 
  <div class="pt-4 border-t border-orange-50 dark:border-[#21262d] mt-auto">
  <button class="btn-primary w-full py-3 !bg-orange-900 hover:!bg-orange-600" @click="$emit('edit-item', mat)">
- <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Gestionar Insumo
+ <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> {{ (mat.category === 'SERVICIO' || mat.type === 'service') ? 'Gestionar Servicio' : 'Gestionar Insumo' }}
  </button>
  </div>
  </div>
