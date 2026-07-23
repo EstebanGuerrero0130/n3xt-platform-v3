@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { Analytics } from '@vercel/analytics/vue'
 import WhatsAppWidget from './components/WhatsAppWidget.vue'
 
 const route = useRoute()
@@ -21,6 +22,7 @@ onMounted(() => {
 <template>
  <router-view />
  <WhatsAppWidget v-if="showWhatsApp" />
+ <Analytics />
 </template>
 
 <style>
