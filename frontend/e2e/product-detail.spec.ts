@@ -26,7 +26,7 @@ test.describe('Product Detail Page (/catalog/:id)', () => {
     const itemLink = page.locator('a[href^="/catalog/"]').first()
     const exists = await itemLink.count()
     if (exists === 0) {
-      test.skip('No catalog items available')
+      test.skip(true, 'No catalog items available')
       return
     }
 
@@ -55,7 +55,7 @@ test.describe('Product Detail Page (/catalog/:id)', () => {
     const itemLink = page.locator('a[href^="/catalog/"]').first()
     const exists = await itemLink.count()
     if (exists === 0) {
-      test.skip('No catalog items available')
+      test.skip(true, 'No catalog items available')
       return
     }
 
@@ -79,7 +79,7 @@ test.describe('Product Detail Page (/catalog/:id)', () => {
     const itemLink = page.locator('a[href^="/catalog/"]').first()
     const exists = await itemLink.count()
     if (exists === 0) {
-      test.skip('No catalog items available')
+      test.skip(true, 'No catalog items available')
       return
     }
 
@@ -108,7 +108,7 @@ test.describe('Product Detail Page (/catalog/:id)', () => {
     const itemLink = page.locator('a[href^="/catalog/"]').first()
     const exists = await itemLink.count()
     if (exists === 0) {
-      test.skip('No catalog items available')
+      test.skip(true, 'No catalog items available')
       return
     }
 

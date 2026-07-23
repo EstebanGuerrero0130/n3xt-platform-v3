@@ -96,7 +96,8 @@ const groupedCatalog = computed(() => {
  if (!item) return
  const cat = item.category || 'General'
  if (!groups[cat]) groups[cat] = []
- groups[cat].push({ ...item, originalIndex: index })
+ item.originalIndex = index
+ groups[cat].push(item)
  })
  return groups
 })

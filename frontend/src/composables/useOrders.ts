@@ -12,15 +12,15 @@ interface UseOrdersOptions {
 }
 
 export function useOrders({ showNotify, askConfirm }: UseOrdersOptions) {
-  const orders = ref([])
-  const selectedOrderForPrinter = ref(null)
-  const selectedOrderDetails = ref(null)
-  const orderToShip = ref(null)
+  const orders = ref<any[]>([])
+  const selectedOrderForPrinter = ref<any>(null)
+  const selectedOrderDetails = ref<any>(null)
+  const orderToShip = ref<any>(null)
   const trackingGuide = ref('')
   const trackingCarrier = ref('')
-  const orderToPrint = ref(null)
+  const orderToPrint = ref<any>(null)
   const showAddExtraForm = ref(false)
-  const newExtra = ref({ material_id: '', qty: 1 })
+  const newExtra = ref<any>({ material_id: '', qty: 1 })
 
   const fetchOrders = async () => {
     try {

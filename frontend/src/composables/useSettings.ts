@@ -30,11 +30,12 @@ export function useSettings({ showNotify }: UseSettingsOptions = {}) {
       pdf_catalog_desc: '',
       cloudinary_name: ''
     },
-    discounts: []
+    discounts: [] as any[],
+    company_logo: ''
   })
 
-  const inventoryData = ref([])
-  const printers = ref([])
+  const inventoryData = ref<any[]>([])
+  const printers = ref<any[]>([])
   const savingSettings = ref(false)
 
   const fetchInventory = async () => {

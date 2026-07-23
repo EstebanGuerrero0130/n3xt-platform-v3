@@ -1,3 +1,5 @@
+import { reactive } from 'vue'
+
 interface Notification {
   show: boolean
   message: string
@@ -90,7 +92,7 @@ export function useUI() {
   }
 
   const closeAllModals = () => {
-    Object.keys(modalState).forEach(k => modalState[k] = false)
+    Object.keys(modalState).forEach(k => modalState[k as keyof ModalState] = false)
   }
 
   return {

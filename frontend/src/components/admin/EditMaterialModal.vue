@@ -40,7 +40,7 @@ watch(form, (val) => {
  <div class="grid grid-cols-2 gap-6">
  <div class="space-y-2">
  <label class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest">Código del Material</label>
- <input v-model="form.code" type="text" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[24px] px-6 py-4 text-sm font-bold text-[#ffffff] dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
+ <input v-model="form.id" type="text" class="w-full bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[24px] px-6 py-4 text-sm font-bold text-[#ffffff] dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
  </div>
  <div class="space-y-2">
  <label class="text-[10px] font-black text-[#c3c4c5] uppercase tracking-widest">Nombre del Material/Ítem</label>
