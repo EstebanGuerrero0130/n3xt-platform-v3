@@ -118,64 +118,70 @@ const qty = ref(1)
 // --- CURAENGINE INTEGRATION (MANUAL SINCRO) ---
 const isSlicing = ref(false)
 
- const runCuraEngineAnalysis = async () => {
+const runCuraEngineAnalysis = async () => {
   const idx = activeModelIdx.value
   const model = models.value[idx]
-  if (!model || !model.file) {
-  notify("Sube un modelo 3D primero", "error")
-  return
+
+  // Recuperar archivo desde window si no está en el modelo (modelos grandes)
+  if (model && !model.file) {
+    const globalFile = (window as any).currentUploadedFile
+    if (globalFile) model.file = globalFile
   }
-  
-  isSlicing.value = true
-  
-  try {
-  // Si el archivo es mayor a 15MB, usamos la estimación local directamente para evitar 413
-  if (model.file.size > 15 * 1024 * 1024) {
-    models.value[idx].hasSlicing = false
-    calculatePrice()
+
+  if (!model || !model.hasModel) {
+    notify('Sube un modelo 3D primero', 'error')
     return
   }
 
-  const mat = materials.value.find(m => m.id === selectedMaterial.value)
-  const formData = new FormData()
-  formData.append('file', model.file)
-  formData.append('infill', String(model.infill || 15))
-  formData.append('layer_height', String(model.layerHeight || 0.2))
-  formData.append('total_area', String(model.totalArea || 0))
-  formData.append('volume_mm3', String(model.volume || 0))
-  formData.append('support_area', String(model.supportArea || 0))
-  formData.append('technology', selectedTechnology.value)
-  formData.append('height_mm', String(model.dimensions?.z || 0))
-  if (mat) {
-  formData.append('density', String(mat.density))
-  formData.append('material_id', String(mat.id))
-  }
-  
-  const res = await api.post('/process-stl', formData)
-  const factors = res.data || res.factors || res;
-  
-  if (factors && (factors.shell_weight_g >= 0)) {
-  models.value[idx].curaFactors = factors
-  models.value[idx].hasSlicing = true
-  models.value[idx].weight = (Number(factors.shell_weight_g) || 0) 
-  + (Number(factors.internal_weight_g) || 0) 
-  + (Number(factors.support_weight_g) || 0) 
-  + (Number(factors.purge_weight_g) || 3.0)
-  models.value[idx].duration = (Number(factors.prep_time_h) || 0) 
-  + (Number(factors.print_time_h) || 0)
-  calculatePrice()
-  } else {
-  // Silent fallback
-  models.value[idx].hasSlicing = false
-  calculatePrice()
-  }
-  } catch (err: any) {
-   // Silently fall back to local estimation
-   models.value[activeModelIdx.value].hasSlicing = false
-   calculatePrice()
+  isSlicing.value = true
+
+  try {
+    // Archivos > 15 MB: usar estimación volumétrica local (evita error 413)
+    if (!model.file || model.file.size > 15 * 1024 * 1024) {
+      model.hasSlicing = false
+      calculatePrice()
+      return
+    }
+
+    const mat = materials.value.find(m => m.id === selectedMaterial.value)
+    const formData = new FormData()
+    formData.append('file', model.file)
+    formData.append('infill', String(model.infill || 15))
+    formData.append('layer_height', String(model.layerHeight || 0.2))
+    formData.append('total_area', String(model.totalArea || 0))
+    formData.append('volume_mm3', String(model.volume || 0))
+    formData.append('support_area', String(model.supportArea || 0))
+    formData.append('technology', selectedTechnology.value)
+    formData.append('height_mm', String(model.dimensions?.z || 0))
+    if (mat) {
+      formData.append('density', String(mat.density))
+      formData.append('material_id', String(mat.id))
+    }
+
+    const res = await api.post('/process-stl', formData)
+    const factors = res.data || res.factors || res
+
+    if (factors && factors.shell_weight_g >= 0) {
+      model.curaFactors = factors
+      model.hasSlicing = true
+      model.weight =
+        (Number(factors.shell_weight_g) || 0) +
+        (Number(factors.internal_weight_g) || 0) +
+        (Number(factors.support_weight_g) || 0) +
+        (Number(factors.purge_weight_g) || 3.0)
+      model.duration =
+        (Number(factors.prep_time_h) || 0) +
+        (Number(factors.print_time_h) || 0)
+    } else {
+      model.hasSlicing = false
+    }
+    calculatePrice()
+  } catch {
+    models.value[idx].hasSlicing = false
+    calculatePrice()
   } finally {
-  isSlicing.value = false
- }
+    isSlicing.value = false
+  }
 }
 
 const removeModel = (idx: number) => {
@@ -452,20 +458,18 @@ const calculatePrice = () => {
  }
  
   // User-selected extras: treat cost_per_kg as FLAT price per unit
-  // These are services (painting, finishing) — NOT sold by weight
   selectedExtras.value.forEach(item => {
-  const extra = utilities.value.find(u => u.id === item.id)
-  if (extra) {
-    const weightUnits = ['g', 'ml', 'kg', 'l']
+    const extra = utilities.value.find((u: any) => u.id === item.id)
+    if (!extra) return
     const unit = (extra.unit || '').toLowerCase().trim()
+    const weightUnits = ['g', 'ml', 'kg', 'l']
     if (weightUnits.includes(unit)) {
-      // Actual consumable by weight (e.g. resins, powders)
+      // Consumible por peso (ej: alcohol para SLA)
       utilityCost += Number(extra.cost_per_kg) * (item.qty / 1000)
     } else {
-      // Flat-price service (painting, finishing, curing, etc.)
+      // Servicio de precio fijo (pintura, acabado premium, etc.)
       utilityCost += Number(extra.cost_per_kg) * item.qty
     }
-  }
   })
 
  
@@ -489,11 +493,10 @@ const calculatePrice = () => {
  margin: cfg.margin,
  })
  
- const subtotalBeforeExtras = pricePerUnit.subtotal * qty.value
- const subtotal = subtotalBeforeExtras + utilityCost
+ // Subtotal = Producción con margen + Extras (tarifas fijas, no llevan margen)
+ const subtotal = (pricePerUnit.subtotal * qty.value) + utilityCost
  
  // --- DESCUENTO POR VOLUMEN (#6) ---
- // Se aplica automáticamente si qty >= 5. El cupón puede combinarse sumando ambos descuentos.
  const volumeDiscountPct = calcVolumeDiscount(qty.value)
  const volumeDiscountAmount = volumeDiscountPct > 0 ? subtotal * (volumeDiscountPct / 100) : 0
 

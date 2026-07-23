@@ -164,7 +164,7 @@ watch(() => route.params.id, () => {
           <span class="w-1.5 h-1.5 bg-emerald-400 rounded-[60px] animate-pulse"></span>
           <span class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">{{ product.category }}</span>
         </div>
-        <h1 class="split-title text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white uppercase tracking-normal leading-[0.85] mb-6 animate-fade-in">
+        <h1 class="split-title text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white uppercase tracking-normal leading-[1.0] mb-6 animate-fade-in">
           {{ product.name }}
         </h1>
         <div class="relative group/price">

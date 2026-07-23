@@ -244,7 +244,7 @@ onUnmounted(() => {
 
  <!-- Title -->
  <div>
- <h1 class="split-title text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white tracking-normal uppercase leading-[0.85] mb-6 animate-fade-in">{{ item.title }}</h1>
+ <h1 class="split-title text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-normal uppercase leading-[1.0] mb-6 animate-fade-in">{{ item.title }}</h1>
  <p v-if="item.subtitle" class="text-sm font-black text-[#c3c4c5] uppercase tracking-[0.2em] mt-3">{{ item.subtitle }}</p>
  </div>
 

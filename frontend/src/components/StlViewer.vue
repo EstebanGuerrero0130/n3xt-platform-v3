@@ -463,9 +463,6 @@ const processGeometry = async (geometry: any, file: any) => {
   scene.add(group)
   currentGroup = group
 
-  boxHelper = new THREE.BoxHelper(group, 0x08872b)
-  scene.add(boxHelper)
-
   transformControls.attach(group)
 
   geometry.boundingBox.getSize(size)
