@@ -228,13 +228,13 @@ onUnmounted(() => {
  ]"
  :style="{ '--reveal-delay': Math.min(idx * 80, 500) + 'ms' }"
  >
- <!-- Image Container con aspect-ratio fijo -->
- <div class="relative overflow-hidden aspect-square bg-[#151a22] dark:bg-[#283041] shrink-0">
+ <!-- Image Container con aspect-ratio fijo (fondo claro estilo Catálogo) -->
+ <div class="relative overflow-hidden aspect-square bg-white dark:bg-[#f0f0f0] shrink-0 flex items-center justify-center p-4">
  <!-- Imagen Secundaria (crossfade al hover) -->
  <img
  v-if="item.images && item.images.length > 0"
  :src="item.images[0]"
- class="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10"
+ class="absolute inset-0 w-full h-full object-contain p-4 opacity-0 group-hover:opacity-100 transition-all duration-700 z-10 scale-100 group-hover:scale-105"
  loading="lazy"
  :alt="item.title"
  />
@@ -243,14 +243,14 @@ onUnmounted(() => {
  v-if="item.image && !brokenImages[idx]"
  :src="item.image"
  :alt="'Trabajo de impresión 3D: ' + item.title"
- class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 z-0"
+ class="absolute inset-0 w-full h-full object-contain p-4 transition-all duration-700 z-0"
  loading="lazy"
  decoding="async"
  @error="brokenImages[idx] = true"
  />
  <!-- Fallback sin imagen -->
- <div v-else-if="!item.image || brokenImages[idx]" class="absolute inset-0 flex items-center justify-center bg-[#151a22] dark:bg-[#283041]">
- <svg class="w-16 h-16 text-gray-300 dark:text-[#a4aea6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+ <div v-else-if="!item.image || brokenImages[idx]" class="absolute inset-0 flex items-center justify-center bg-white dark:bg-[#f0f0f0]">
+ <svg class="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
  </svg>
  </div>

@@ -290,70 +290,69 @@ function ensureVectors() {
   _faceNormal = new THREE.Vector3()
 }
 
-// UNIFIED SINGLE-PASS GEOMETRY ANALYSIS (300x Speedup)
-const analyzeGeometry = (geometry: any) => {
-  if (!geometry.isBufferGeometry) return
-  if (!geometry.attributes.normal) {
-    geometry.computeVertexNormals()
-  }
-  ensureVectors()
+// ASYNC GEOMETRY ANALYSIS — Does NOT block the main thread
+// Shows model immediately, then computes stats in background
+const analyzeGeometryAsync = (geometry: any): Promise<void> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      try {
+        if (!geometry.isBufferGeometry) { resolve(); return }
+        if (!geometry.attributes.normal) {
+          geometry.computeVertexNormals()
+        }
+        ensureVectors()
 
-  const position = geometry.attributes.position
-  const normal = geometry.attributes.normal
-  const count = position.count
-  const colors = new Float32Array(count * 3)
+        const position = geometry.attributes.position
+        const normal = geometry.attributes.normal
+        const count = position.count
+        const colors = new Float32Array(count * 3)
 
-  let volSum = 0
-  let totArea = 0
-  let suppArea = 0
+        let volSum = 0
+        let totArea = 0
+        let suppArea = 0
 
-  for (let i = 0; i < count; i += 3) {
-    _vA.fromBufferAttribute(position, i)
-    _vB.fromBufferAttribute(position, i + 1)
-    _vC.fromBufferAttribute(position, i + 2)
+        for (let i = 0; i < count; i += 3) {
+          _vA.fromBufferAttribute(position, i)
+          _vB.fromBufferAttribute(position, i + 1)
+          _vC.fromBufferAttribute(position, i + 2)
 
-    // 1. Volume
-    _cross.crossVectors(_vB, _vC)
-    volSum += _vA.dot(_cross) / 6.0
+          _cross.crossVectors(_vB, _vC)
+          volSum += _vA.dot(_cross) / 6.0
 
-    // 2. Triangle Area
-    _edge1.subVectors(_vB, _vA)
-    _edge2.subVectors(_vC, _vA)
-    const triArea = _cross.crossVectors(_edge1, _edge2).length() / 2.0
-    totArea += triArea
+          _edge1.subVectors(_vB, _vA)
+          _edge2.subVectors(_vC, _vA)
+          const triArea = _cross.crossVectors(_edge1, _edge2).length() / 2.0
+          totArea += triArea
 
-    // 3. Overhang check & Support area
-    _faceNormal.fromBufferAttribute(normal, i)
-    const isOverhang = _faceNormal.y < -0.5
-    if (isOverhang) {
-      suppArea += triArea
-    }
+          _faceNormal.fromBufferAttribute(normal, i)
+          const isOverhang = _faceNormal.y < -0.5
+          if (isOverhang) suppArea += triArea
 
-    // 4. Vertex Colors
-    for (let j = 0; j < 3; j++) {
-      const idx = (i + j) * 3
-      if (isOverhang) {
-        colors[idx] = 1.0     // R
-        colors[idx + 1] = 0.2 // G
-        colors[idx + 2] = 0.2 // B
-      } else {
-        colors[idx] = 0.12    // R
-        colors[idx + 1] = 0.23// G
-        colors[idx + 2] = 0.20// B
+          for (let j = 0; j < 3; j++) {
+            const idx = (i + j) * 3
+            if (isOverhang) {
+              colors[idx] = 1.0; colors[idx + 1] = 0.2; colors[idx + 2] = 0.2
+            } else {
+              colors[idx] = 0.12; colors[idx + 1] = 0.23; colors[idx + 2] = 0.20
+            }
+          }
+        }
+
+        let vol = Math.abs(volSum)
+        if (vol > 0 && vol < 5) vol = vol * 1000000000
+
+        baseVolume = vol
+        baseTotalArea = totArea
+        baseSupportArea = suppArea
+
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+        needsUpdate = true
+        resolve()
+      } catch (e) {
+        resolve() // Never reject — model is already visible
       }
-    }
-  }
-
-  let vol = Math.abs(volSum)
-  if (vol > 0 && vol < 5) {
-    vol = vol * 1000000000
-  }
-
-  baseVolume = vol
-  baseTotalArea = totArea
-  baseSupportArea = suppArea
-
-  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    }, 0) // yield to browser, then run
+  })
 }
 
 const handleResize = () => {
@@ -383,86 +382,88 @@ const handleFileSelect = (e: any) => {
  }
 }
 
-const processGeometry = (geometry: any, file: any) => {
- geometry.computeBoundingBox()
- 
- // Scale Normalization Pre-Processing
- const size = new THREE.Vector3();
- geometry.boundingBox.getSize(size);
- const maxDim = Math.max(size.x, size.y, size.z);
- 
- // Si la dimensión máxima es < 1, es muy probable que esté en metros
- if (maxDim > 0 && maxDim < 1) {
- geometry.scale(1000, 1000, 1000);
- geometry.computeBoundingBox();
- }
- 
- geometry.center() 
- analyzeGeometry(geometry)
- 
- const material = new THREE.MeshStandardMaterial({ 
- vertexColors: true,
- roughness: 0.3,
- metalness: 0.2,
- flatShading: false
- })
- 
- const mesh = new THREE.Mesh(geometry, material)
- mesh.castShadow = true
- mesh.receiveShadow = true
+const processGeometry = async (geometry: any, file: any) => {
+  geometry.computeBoundingBox()
+  
+  const size = new THREE.Vector3();
+  geometry.boundingBox.getSize(size);
+  const maxDim = Math.max(size.x, size.y, size.z);
+  
+  if (maxDim > 0 && maxDim < 1) {
+    geometry.scale(1000, 1000, 1000);
+    geometry.computeBoundingBox();
+  }
+  
+  geometry.center()
 
- // Create a group to handle transforms cleanly
- const group = new THREE.Group()
- group.add(mesh)
- 
- // Place on bed (Y = 0 + half height)
- geometry.computeBoundingBox()
- const height = geometry.boundingBox.max.y - geometry.boundingBox.min.y
- group.position.y = height / 2
+  // Simple uniform material — model appears INSTANTLY
+  const material = new THREE.MeshStandardMaterial({ 
+    color: 0x1e4d2b,
+    roughness: 0.4,
+    metalness: 0.15,
+    flatShading: false
+  })
+  
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
 
- scene.add(group)
- currentGroup = group
+  const group = new THREE.Group()
+  group.add(mesh)
+  
+  geometry.computeBoundingBox()
+  const height = geometry.boundingBox.max.y - geometry.boundingBox.min.y
+  group.position.y = height / 2
 
- // Add BoxHelper
- boxHelper = new THREE.BoxHelper(group, 0xff0000)
- scene.add(boxHelper)
+  scene.add(group)
+  currentGroup = group
 
- // Attach transform controls
- transformControls.attach(group)
+  boxHelper = new THREE.BoxHelper(group, 0x08872b)
+  scene.add(boxHelper)
 
- // Adjust camera
- // Ajustar cámara para que el modelo no ocupe todo el visor (evitar zoom manual)
- geometry.boundingBox.getSize(size)
- const cameraMaxDim = Math.max(size.x, size.y, size.z, 50)
- 
- // Posicionamos la cámara más lejos (multiplicador 3.5 vs 1.5) para dar "aire"
- const dist = cameraMaxDim * 3.5
- camera.position.set(dist, dist, dist)
- camera.lookAt(0, height / 2, 0)
- 
- if (orbitControls) {
- orbitControls.target.set(0, height / 2, 0)
- // Limitamos el zoom para que no sea infinito
- orbitControls.minDistance = 10
- orbitControls.maxDistance = dist * 3
- orbitControls.update()
- }
+  transformControls.attach(group)
 
- hasModel.value = true
- isLoading.value = false
- if (loadingTimeout) clearTimeout(loadingTimeout)
- emit('loading', false)
- 
- // Auto-Orientación Inicial (Aplanar por defecto si es muy alto)
- const box = new THREE.Box3().setFromObject(group);
- box.getSize(size);
- if (size.y > size.x && size.y > size.z) {
- autoOrient();
- } else {
- emitTransformation() // Emit initial stats
- }
- 
- emit('file-ready', file)
+  geometry.boundingBox.getSize(size)
+  const cameraMaxDim = Math.max(size.x, size.y, size.z, 50)
+  const dist = cameraMaxDim * 3.5
+  camera.position.set(dist, dist, dist)
+  camera.lookAt(0, height / 2, 0)
+  
+  if (orbitControls) {
+    orbitControls.target.set(0, height / 2, 0)
+    orbitControls.minDistance = 10
+    orbitControls.maxDistance = dist * 3
+    orbitControls.update()
+  }
+
+  // ✅ Model is visible — clear loading state NOW
+  hasModel.value = true
+  isLoading.value = false
+  if (loadingTimeout) clearTimeout(loadingTimeout)
+  emit('loading', false)
+  emit('file-ready', file)
+  needsUpdate = true
+
+  // Auto-orient if tall
+  const box = new THREE.Box3().setFromObject(group);
+  box.getSize(size);
+  if (size.y > size.x && size.y > size.z) {
+    autoOrient();
+  } else {
+    emitTransformation()
+  }
+
+  // 🔬 Analyze geometry AFTER model is shown (non-blocking)
+  await analyzeGeometryAsync(geometry)
+  
+  // Update material to show overhang colors after analysis
+  material.vertexColors = true
+  material.color.set(0xffffff) // reset to white so vertex colors show
+  material.needsUpdate = true
+  needsUpdate = true
+  
+  // Re-emit with computed stats
+  emitTransformation()
 }
 
 const loadFile = async (file: any) => {
