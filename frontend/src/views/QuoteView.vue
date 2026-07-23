@@ -386,19 +386,30 @@ const calculatePrice = () => {
  let mDuration = 0
  
  if (selectedTechnology.value === 'FDM') {
- if (model.hasSlicing && model.curaFactors) {
- const cf = model.curaFactors
- mWeight = (Number(cf.shell_weight_g) || 0) 
- + (Number(cf.internal_weight_g) || 0) 
- + (Number(cf.support_weight_g) || 0) 
- + (Number((cf as any).purge_weight_g) || 3.0)
- mDuration = (Number(cf.prep_time_h) || 0) 
- + (Number(cf.print_time_h) || 0)
- // Store in model for display
- model.weight = mWeight
- model.duration = mDuration
- }
- } else {
+      if (model.hasSlicing && model.curaFactors) {
+        const cf = model.curaFactors
+        mWeight = (Number(cf.shell_weight_g) || 0) 
+        + (Number(cf.internal_weight_g) || 0) 
+        + (Number(cf.support_weight_g) || 0) 
+        + (Number((cf as any).purge_weight_g) || 3.0)
+        mDuration = (Number(cf.prep_time_h) || 0) 
+        + (Number(cf.print_time_h) || 0)
+        model.weight = mWeight
+        model.duration = mDuration
+      } else if (model.volume > 0) {
+        // BUG 1 FIX: estimación fallback para FDM sin slicing
+        // Densidad promedio del filamento ~1.24 g/cm³, infill promedio ~30%
+        const density = Number(mat?.density) || 1.24
+        const infillFactor = (model.infill || 15) / 100
+        const shellFactor = 0.25 // ~25% del volumen es paredes y techo/suelo
+        const volCm3 = model.volume / 1000
+        mWeight = volCm3 * density * (shellFactor + infillFactor * (1 - shellFactor)) * 1.1
+        const maxDimMm = Math.max(model.dimensions?.x || 0, model.dimensions?.y || 0, model.dimensions?.z || 0) || 50
+        mDuration = Math.max(0.25, (maxDimMm / (model.layerHeight || 0.2)) * 0.000167) // ~6 seg/capa a 0.2mm
+        model.weight = mWeight
+        model.duration = mDuration
+      }
+    } else {
  // SLA: volume viene en mm³, convertir a cm³
  const volCm3 = (model.volume || 0) / 1000 
  const density = Number(mat.density) || 1.1
@@ -508,7 +519,8 @@ const handleModelLoaded = (data: any) => {
  models.value[idx].supportArea = data.supportArea || 0
  models.value[idx].hasModel = true
  }
- if (selectedTechnology.value !== 'FDM') calculatePrice()
+ // BUG 2 FIX: siempre recalcular al cargar modelo (FDM usa fallback si no tiene slicing)
+ calculatePrice()
 }
 
 const handleError = (msg: any) => {

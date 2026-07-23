@@ -110,8 +110,8 @@ const initThree = async () => {
  scene = new THREE.Scene()
  
  // Camera
- const width = container.value.clientWidth
- const height = container.value.clientHeight
+ const width = container.value.clientWidth || 600
+ const height = container.value.clientHeight || 450
  camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000)
  camera.position.set(200, 200, 200)
 
@@ -497,19 +497,19 @@ const loadFile = async (file: any) => {
 
   isLoading.value = true
   emit('loading', true)
-  
-  if (loadingTimeout) clearTimeout(loadingTimeout)
-  loadingTimeout = setTimeout(() => {
-    if (isLoading.value) {
-      isLoading.value = false
-      emit('loading', false)
-      emit('error', 'El procesamiento tardó demasiado. Intenta con un archivo más ligero o verifica tu conexión.')
-    }
-  }, 60000)
 
   const reader = new FileReader()
   reader.onload = async (event: any) => {
-    if (loadingTimeout) clearTimeout(loadingTimeout) // Limpiar timeout de inmediato ya que la carga local terminó y empieza el parseo pesado
+    // BUG 5 FIX: el timeout se inicia AQUÍ (después de leer el archivo),
+    // no antes — el parse/render pesado empieza ahora, no al leer
+    if (loadingTimeout) clearTimeout(loadingTimeout)
+    loadingTimeout = setTimeout(() => {
+      if (isLoading.value) {
+        isLoading.value = false
+        emit('loading', false)
+        emit('error', 'El procesamiento tardó demasiado. Intenta con un archivo más ligero.')
+      }
+    }, 90000) // 90 segundos para modelos complejos
     
     const contents = event.target?.result
     if (!contents) {
