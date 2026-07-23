@@ -145,14 +145,14 @@ watch(() => route.params.id, () => {
   <div v-else-if="product" class="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24 items-start">
     <!-- Columna Galería -->
     <div class="space-y-5 animate-in fade-in slide-in-from-left-4 duration-1000 lg:sticky lg:top-24">
-      <div class="relative aspect-square bg-white dark:bg-[#f0f0f0] rounded-[3rem] overflow-hidden border border-[#21262d] dark:border-[#21262d] shadow-2xl group flex items-center justify-center p-8">
+      <div class="relative aspect-square bg-[#151a22] rounded-[3rem] overflow-hidden border border-[#21262d] dark:border-[#21262d] shadow-2xl group flex items-center justify-center">
         <transition name="img-fade" mode="out-in">
-          <img :key="selectedImage" :src="selectedImage || product.image" :alt="product.name" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" />
+          <img :key="selectedImage" :src="selectedImage || product.image" :alt="product.name" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
         </transition>
       </div>
       <div v-if="product.images && product.images.length > 1" class="flex gap-3 flex-wrap">
-        <div v-for="(img, i) in product.images" :key="i" class="w-20 h-20 bg-white dark:bg-[#f0f0f0] rounded-[24px] border-2 cursor-pointer transition-all p-2 flex items-center justify-center" :class="[selectedImage === img ? 'ring-2 ring-emerald-500 border-emerald-400 opacity-100' : 'border-[#21262d] opacity-60']" @mouseenter="selectedImage = img" @click="selectedImage = img">
-          <img :src="img" class="w-full h-full object-contain" />
+        <div v-for="(img, i) in product.images" :key="i" class="w-20 h-20 bg-[#151a22] rounded-[24px] border-2 cursor-pointer transition-all flex items-center justify-center overflow-hidden" :class="[selectedImage === img ? 'ring-2 ring-emerald-500 border-emerald-400 opacity-100 scale-105' : 'border-[#21262d] opacity-60 hover:opacity-100']" @mouseenter="selectedImage = img" @click="selectedImage = img">
+          <img :src="img" class="w-full h-full object-cover" />
         </div>
       </div>
     </div>
