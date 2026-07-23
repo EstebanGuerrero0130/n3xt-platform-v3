@@ -143,7 +143,10 @@ const initThree = async () => {
  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)) // Limitar para rendimiento en modelos densos
  renderer.shadowMap.enabled = true
  renderer.shadowMap.type = THREE.PCFShadowMap
- container.value.appendChild(renderer.domElement)
+  container.value.appendChild(renderer.domElement)
+  // El canvas WebGL debe llenar el contenedor absoluto
+  renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%!important;height:100%!important;display:block;'
+
 
  // Inicializar vectores reutilizables ahora que THREE está cargado
  ensureVectors()
@@ -618,19 +621,17 @@ const loadFile = async (file: any) => {
  </div>
  </div>
 
- <!-- 3D Canvas -->
- <div 
- class="flex-1 w-full relative transition-all duration-500"
+ <!-- 3D Canvas (absoluto, detrás del overlay) -->
+ <div ref="container" class="absolute inset-0 outline-none z-0"></div>
+
+
+ <!-- Upload Overlay (z-10 para aparecer SOBRE el canvas) -->
+ <div
+ v-if="!hasModel || isDragging"
+ class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-transparent backdrop-blur-[2px] transition-all"
  @dragover.prevent="isDragging = true"
  @dragleave.prevent="isDragging = false"
  @drop="handleDrop"
- >
- <div ref="container" class="w-full h-full outline-none" style="min-height: 300px;"></div>
-
- <!-- Upload Overlay -->
- <div 
- v-if="!hasModel || isDragging"
- class="absolute inset-0 flex flex-col items-center justify-center bg-transparent backdrop-blur-[2px] transition-all"
  >
  <div
 class="text-center p-12 rounded-[40px] border-2 border-dashed transition-all duration-500" 
@@ -680,8 +681,7 @@ class="w-32 h-32 mx-auto mb-8 bg-[#151a22] rounded-[32px] flex items-center just
  Explorar Archivo 3D
  <input type="file" accept=".stl,.obj,.3mf" class="hidden" @change="handleFileSelect" />
  </label>
- </div>
- </div>
- </div>
+  </div>
+  </div>
  </div>
 </template>
