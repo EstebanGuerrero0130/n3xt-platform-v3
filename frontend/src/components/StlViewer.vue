@@ -443,6 +443,10 @@ const processGeometry = async (geometry: any, file: any) => {
   transformControls.attach(group)
 
   geometry.boundingBox.getSize(size)
+  // Immediate fallback volume so price calculates instantly before async geometry loop finishes
+  baseVolume = size.x * size.y * size.z * 0.4
+  baseTotalArea = 2 * (size.x * size.y + size.y * size.z + size.z * size.x)
+  baseSupportArea = size.x * size.z * 0.2
   const cameraMaxDim = Math.max(size.x, size.y, size.z, 50)
   const dist = cameraMaxDim * 3.5
   camera.position.set(dist, dist, dist)
