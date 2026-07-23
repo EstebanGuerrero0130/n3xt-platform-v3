@@ -37,7 +37,7 @@ const isDragging = ref(false)
 const isLoading = ref(false)
 const hasModel = ref(false)
 const transformMode = ref('translate')
-const captchaUnlocked = ref(false)
+const captchaUnlocked = ref(true)
 const { challenge, answer, verify, isLocked } = useCaptcha()
 
 const verifyCaptcha = () => {
@@ -466,12 +466,13 @@ const processGeometry = (geometry: any, file: any) => {
 }
 
 const loadFile = async (file: any) => {
+  if (!file) return
   await initThree()
   if (container.value && !resizeObserver) {
     resizeObserver = new ResizeObserver(handleResize)
     resizeObserver.observe(container.value)
   }
- const name = file.name.toLowerCase()
+ const name = file.name ? file.name.toLowerCase() : ''
  const isStl = name.endsWith('.stl')
  const isObj = name.endsWith('.obj')
  const is3mf = name.endsWith('.3mf')
