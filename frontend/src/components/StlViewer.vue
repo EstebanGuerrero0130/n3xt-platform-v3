@@ -310,10 +310,11 @@ function ensureVectors() {
   _faceNormal = new THREE.Vector3()
 }
 
-// ASYNC GEOMETRY ANALYSIS — Does NOT block the main thread
-// Shows model immediately, then computes stats in background
+// ASYNC GEOMETRY ANALYSIS — Chunked to never block the main thread
+// Yields to the browser every CHUNK_SIZE triangles so the UI stays responsive
 const analyzeGeometryAsync = (geometry: any): Promise<void> => {
   return new Promise((resolve) => {
+    // Give browser one frame to paint the model before starting heavy work
     setTimeout(() => {
       try {
         if (!geometry.isBufferGeometry) { resolve(); return }
@@ -331,56 +332,70 @@ const analyzeGeometryAsync = (geometry: any): Promise<void> => {
         let totArea = 0
         let suppArea = 0
 
-        // Optimización industrial: si el modelo supera 150,000 triángulos, usar muestreo adaptativo por zancadas
+        // Adaptive stride: cap at 200k effective triangles for huge meshes
         const numTriangles = count / 3
-        const stride = numTriangles > 150000 ? Math.ceil(numTriangles / 150000) : 1
+        const stride = numTriangles > 200000 ? Math.ceil(numTriangles / 200000) : 1
         const step = stride * 3
 
-        for (let i = 0; i < count; i += step) {
-          _vA.fromBufferAttribute(position, i)
-          _vB.fromBufferAttribute(position, i + 1)
-          _vC.fromBufferAttribute(position, i + 2)
+        // Process in chunks of 30k triangles, yielding between each chunk
+        const CHUNK_TRIS = 30000
+        const chunkStep = CHUNK_TRIS * stride * 3
+        let i = 0
 
-          _cross.crossVectors(_vB, _vC)
-          volSum += (_vA.dot(_cross) / 6.0) * stride
+        const processChunk = () => {
+          try {
+            const end = Math.min(i + chunkStep, count)
+            for (; i < end; i += step) {
+              _vA.fromBufferAttribute(position, i)
+              _vB.fromBufferAttribute(position, Math.min(i + 1, count - 1))
+              _vC.fromBufferAttribute(position, Math.min(i + 2, count - 1))
 
-          _edge1.subVectors(_vB, _vA)
-          _edge2.subVectors(_vC, _vA)
-          const triArea = (_cross.crossVectors(_edge1, _edge2).length() / 2.0) * stride
-          totArea += triArea
+              _cross.crossVectors(_vB, _vC)
+              volSum += (_vA.dot(_cross) / 6.0) * stride
 
-          _faceNormal.fromBufferAttribute(normal, i)
-          const isOverhang = _faceNormal.y < -0.5
-          if (isOverhang) suppArea += triArea
+              _edge1.subVectors(_vB, _vA)
+              _edge2.subVectors(_vC, _vA)
+              const triArea = (_cross.crossVectors(_edge1, _edge2).length() / 2.0) * stride
+              totArea += triArea
 
-          // Asignar colores a los vértices analizados
-          for (let s = 0; s < step && (i + s) * 3 < colors.length; s += 3) {
-            for (let j = 0; j < 3; j++) {
-              const idx = (i + s + j) * 3
-              if (idx < colors.length) {
-                if (isOverhang) {
-                  colors[idx] = 1.0; colors[idx + 1] = 0.2; colors[idx + 2] = 0.2
-                } else {
-                  colors[idx] = 0.12; colors[idx + 1] = 0.23; colors[idx + 2] = 0.20
+              _faceNormal.fromBufferAttribute(normal, Math.min(i, count - 1))
+              const isOverhang = _faceNormal.y < -0.5
+              if (isOverhang) suppArea += triArea
+
+              for (let s = 0; s < step && (i + s) < count; s += 3) {
+                for (let j = 0; j < 3; j++) {
+                  const idx = (i + s + j) * 3
+                  if (idx + 2 < colors.length) {
+                    if (isOverhang) {
+                      colors[idx] = 1.0; colors[idx + 1] = 0.2; colors[idx + 2] = 0.2
+                    } else {
+                      colors[idx] = 0.12; colors[idx + 1] = 0.23; colors[idx + 2] = 0.20
+                    }
+                  }
                 }
               }
             }
+
+            if (i < count) {
+              setTimeout(processChunk, 0) // yield to browser, then continue
+            } else {
+              baseVolume = Math.abs(volSum)
+              baseTotalArea = totArea
+              baseSupportArea = suppArea
+              geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+              needsUpdate = true
+              resolve()
+            }
+          } catch (e) {
+            resolve()
           }
         }
 
-        let vol = Math.abs(volSum)
-
-        baseVolume = vol
-        baseTotalArea = totArea
-        baseSupportArea = suppArea
-
-        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-        needsUpdate = true
-        resolve()
+        processChunk()
       } catch (e) {
-        resolve() // Never reject — model is already visible
+        resolve()
       }
-    }, 0) // yield to browser, then run
+    }, 16) // yield one frame before starting
   })
 }
 
@@ -566,35 +581,39 @@ const loadFile = async (file: any) => {
       currentGroup = null
     }
 
-    try {
-      if (isStl) {
-        const loader = new STLLoader()
-        const geometry = loader.parse(contents)
-        await processGeometry(geometry, file)
-      } else if (isObj) {
-        const loader = new OBJLoader()
-        const object = loader.parse(contents)
-        const geometries: any[] = []
-        object.traverse((child: any) => {
-          if (child.isMesh) {
-            const geom = child.geometry.clone()
-            geom.applyMatrix4(child.matrixWorld)
-            geometries.push(geom)
+    // Defer the heavy synchronous parse by 50ms so the browser can
+    // paint the loading spinner BEFORE the thread blocks on large files
+    setTimeout(async () => {
+      try {
+        if (isStl) {
+          const loader = new STLLoader()
+          const geometry = loader.parse(contents)
+          await processGeometry(geometry, file)
+        } else if (isObj) {
+          const loader = new OBJLoader()
+          const object = loader.parse(contents)
+          const geometries: any[] = []
+          object.traverse((child: any) => {
+            if (child.isMesh) {
+              const geom = child.geometry.clone()
+              geom.applyMatrix4(child.matrixWorld)
+              geometries.push(geom)
+            }
+          })
+          if (geometries.length > 0) {
+            await processGeometry(geometries[0], file)
+          } else {
+            throw new Error("No se encontraron mallas en el archivo OBJ")
           }
-        })
-        if (geometries.length > 0) {
-          await processGeometry(geometries[0], file)
-        } else {
-          throw new Error("No se encontraron mallas en el archivo OBJ")
         }
+      } catch (err: any) {
+        logger.error(err)
+        isLoading.value = false
+        if (loadingTimeout) clearTimeout(loadingTimeout)
+        emit('loading', false)
+        emit('error', 'Error al procesar el archivo 3D: ' + (err.message || 'Formato corrupto'))
       }
-    } catch (err: any) {
-      logger.error(err)
-      isLoading.value = false
-      if (loadingTimeout) clearTimeout(loadingTimeout)
-      emit('loading', false)
-      emit('error', 'Error al procesar el archivo 3D: ' + (err.message || 'Formato corrupto'))
-    }
+    }, 50)
   }
   
   if (isStl) {

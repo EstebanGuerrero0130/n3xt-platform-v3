@@ -451,12 +451,23 @@ const calculatePrice = () => {
  }
  }
  
- selectedExtras.value.forEach(item => {
- const extra = utilities.value.find(u => u.id === item.id)
- if (extra) {
- utilityCost += calcExtraCost(Number(extra.cost_per_kg) || 0, extra.unit || 'servicio', item.qty)
- }
- })
+  // User-selected extras: treat cost_per_kg as FLAT price per unit
+  // These are services (painting, finishing) — NOT sold by weight
+  selectedExtras.value.forEach(item => {
+  const extra = utilities.value.find(u => u.id === item.id)
+  if (extra) {
+    const weightUnits = ['g', 'ml', 'kg', 'l']
+    const unit = (extra.unit || '').toLowerCase().trim()
+    if (weightUnits.includes(unit)) {
+      // Actual consumable by weight (e.g. resins, powders)
+      utilityCost += Number(extra.cost_per_kg) * (item.qty / 1000)
+    } else {
+      // Flat-price service (painting, finishing, curing, etc.)
+      utilityCost += Number(extra.cost_per_kg) * item.qty
+    }
+  }
+  })
+
  
  // Use shared services for calculations
  const prod = calcProductionCost({
@@ -465,7 +476,7 @@ const calculatePrice = () => {
  costPerKg: Number(mat.cost_per_kg) || 0,
  infra: cfg.infra,
  prep: cfg.prep,
- extrasCost: utilityCost,
+ extrasCost: 0,
  })
  
  const totalBaseCost = prod.total
@@ -478,7 +489,8 @@ const calculatePrice = () => {
  margin: cfg.margin,
  })
  
- const subtotal = pricePerUnit.subtotal * qty.value
+ const subtotalBeforeExtras = pricePerUnit.subtotal * qty.value
+ const subtotal = subtotalBeforeExtras + utilityCost
  
  // --- DESCUENTO POR VOLUMEN (#6) ---
  // Se aplica automáticamente si qty >= 5. El cupón puede combinarse sumando ambos descuentos.
