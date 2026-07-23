@@ -272,15 +272,25 @@ let _vC: any = null
 let _edge1: any = null
 let _edge2: any = null
 let _cross: any = null
+let _p1: any = null
+let _p2: any = null
+let _p3: any = null
+let _crossResult: any = null
+let _faceNormal: any = null
 
 function ensureVectors() {
- if (_vA) return
- _vA = new THREE.Vector3()
- _vB = new THREE.Vector3()
- _vC = new THREE.Vector3()
- _edge1 = new THREE.Vector3()
- _edge2 = new THREE.Vector3()
- _cross = new THREE.Vector3()
+  if (_vA) return
+  _vA = new THREE.Vector3()
+  _vB = new THREE.Vector3()
+  _vC = new THREE.Vector3()
+  _edge1 = new THREE.Vector3()
+  _edge2 = new THREE.Vector3()
+  _cross = new THREE.Vector3()
+  _p1 = new THREE.Vector3()
+  _p2 = new THREE.Vector3()
+  _p3 = new THREE.Vector3()
+  _crossResult = new THREE.Vector3()
+  _faceNormal = new THREE.Vector3()
 }
 
 const calculateTotalArea = (geometry: any) => {
@@ -309,57 +319,57 @@ const handleResize = () => {
 }
 
 const calculateVolume = (geometry: any) => {
- if (!geometry.isBufferGeometry) return 0
- const position = geometry.attributes.position
- const faces = position.count / 3
- let sum = 0
- // Reutilizar vectores para modelos con millones de triángulos
- const p1 = new THREE.Vector3()
- const p2 = new THREE.Vector3()
- const p3 = new THREE.Vector3()
- const crossResult = new THREE.Vector3()
- for (let i = 0; i < faces; i++) {
- p1.fromBufferAttribute(position, i * 3 + 0)
- p2.fromBufferAttribute(position, i * 3 + 1)
- p3.fromBufferAttribute(position, i * 3 + 2)
- crossResult.crossVectors(p2, p3)
- sum += p1.dot(crossResult) / 6.0
- }
- 
- let vol = Math.abs(sum);
- 
- // N3XT SCALE INTELLIGENCE: Detectar si el archivo está en Metros o Pulgadas
- if (vol > 0 && vol < 5) {
- // N3XT: Escala en Metros detectada. Normalizando a mm.
- vol = vol * 1000000000;
- }
- 
- return vol;
+  if (!geometry.isBufferGeometry) return 0
+  ensureVectors()
+  const position = geometry.attributes.position
+  const faces = position.count / 3
+  let sum = 0
+  for (let i = 0; i < faces; i++) {
+    _p1.fromBufferAttribute(position, i * 3 + 0)
+    _p2.fromBufferAttribute(position, i * 3 + 1)
+    _p3.fromBufferAttribute(position, i * 3 + 2)
+    _crossResult.crossVectors(_p2, _p3)
+    sum += _p1.dot(_crossResult) / 6.0
+  }
+  
+  let vol = Math.abs(sum);
+  
+  // N3XT SCALE INTELLIGENCE: Detectar si el archivo está en Metros o Pulgadas
+  if (vol > 0 && vol < 5) {
+    // N3XT: Escala en Metros detectada. Normalizando a mm.
+    vol = vol * 1000000000;
+  }
+  
+  return vol;
 }
 
 const calculateSupportArea = (geometry: any) => {
- if (!geometry.attributes.position || !geometry.attributes.normal) return 0
- 
- const position = geometry.attributes.position
- const normal = geometry.attributes.normal
- let supportArea = 0
- const faceNormal = new THREE.Vector3()
- 
- for (let i = 0; i < position.count; i += 3) {
- faceNormal.fromBufferAttribute(normal, i)
- 
- // Threshold: Y < -0.5 (approx 120 degrees from up = overhang)
- if (faceNormal.y < -0.5) {
- _vA.fromBufferAttribute(position, i)
- _vB.fromBufferAttribute(position, i + 1)
- _vC.fromBufferAttribute(position, i + 2)
- _edge1.subVectors(_vB, _vA)
- _edge2.subVectors(_vC, _vA)
- supportArea += _cross.crossVectors(_edge1, _edge2).length() / 2
- }
- }
- return supportArea
+  if (!geometry.attributes.position) return 0
+  if (!geometry.attributes.normal) {
+    geometry.computeVertexNormals()
+  }
+  ensureVectors()
+  
+  const position = geometry.attributes.position
+  const normal = geometry.attributes.normal
+  let supportArea = 0
+  
+  for (let i = 0; i < position.count; i += 3) {
+    _faceNormal.fromBufferAttribute(normal, i)
+    
+    // Threshold: Y < -0.5 (approx 120 degrees from up = overhang)
+    if (_faceNormal.y < -0.5) {
+      _vA.fromBufferAttribute(position, i)
+      _vB.fromBufferAttribute(position, i + 1)
+      _vC.fromBufferAttribute(position, i + 2)
+      _edge1.subVectors(_vB, _vA)
+      _edge2.subVectors(_vC, _vA)
+      supportArea += _cross.crossVectors(_edge1, _edge2).length() / 2
+    }
+  }
+  return supportArea
 }
+
 const handleDrop = (e: any) => {
  e.preventDefault()
  isDragging.value = false
@@ -402,31 +412,34 @@ const processGeometry = (geometry: any, file: any) => {
  flatShading: false
  })
  
- // Analizar voladizos y pintar de rojo (Vertex Colors)
- const position = geometry.attributes.position
- const normal = geometry.attributes.normal
- const colors = new Float32Array(position.count * 3)
- 
- const faceNormal = new THREE.Vector3()
- for (let i = 0; i < position.count; i += 3) {
- faceNormal.fromBufferAttribute(normal, i)
- 
- // Si es un voladizo crítico, pintar de rojo suave
- const isOverhang = faceNormal.y < -0.5
- for (let j = 0; j < 3; j++) {
- const idx = (i + j) * 3
- if (isOverhang) {
- colors[idx] = 1.0 // R
- colors[idx + 1] = 0.2 // G
- colors[idx + 2] = 0.2 // B
- } else {
- colors[idx] = 0.12 // R (Verde Pino Base)
- colors[idx + 1] = 0.23 // G
- colors[idx + 2] = 0.20 // B
- }
- }
- }
- geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+  // Analizar voladizos y pintar de rojo (Vertex Colors)
+  const position = geometry.attributes.position
+  if (!geometry.attributes.normal) {
+    geometry.computeVertexNormals()
+  }
+  const normal = geometry.attributes.normal
+  const colors = new Float32Array(position.count * 3)
+  ensureVectors()
+  
+  for (let i = 0; i < position.count; i += 3) {
+    _faceNormal.fromBufferAttribute(normal, i)
+    
+    // Si es un voladizo crítico, pintar de rojo suave
+    const isOverhang = _faceNormal.y < -0.5
+    for (let j = 0; j < 3; j++) {
+      const idx = (i + j) * 3
+      if (isOverhang) {
+        colors[idx] = 1.0 // R
+        colors[idx + 1] = 0.2 // G
+        colors[idx + 2] = 0.2 // B
+      } else {
+        colors[idx] = 0.12 // R (Verde Pino Base)
+        colors[idx + 1] = 0.23 // G
+        colors[idx + 2] = 0.20 // B
+      }
+    }
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
  
  const mesh = new THREE.Mesh(geometry, material)
  mesh.castShadow = true
@@ -514,7 +527,7 @@ const loadFile = async (file: any) => {
  emit('loading', false)
  emit('error', 'El procesamiento tardó demasiado. Intenta con un archivo más ligero o verifica tu conexión.')
  }
- }, 15000) // 15 segundos máximo
+ }, 60000) // 60 segundos máximo
 
  const reader = new FileReader()
  reader.onload = (event: any) => {
