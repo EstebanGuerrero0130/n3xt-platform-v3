@@ -121,29 +121,63 @@ watch(() => route.params.id, () => {
  <AppNavbar active-tab="catalog" subtext="Detalle de producto" />
 
  <main class="max-w-7xl mx-auto px-6 py-12 md:py-20">
- <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-2 gap-24 py-12 md:py-20 animate-in fade-in duration-500">
- <!-- Skeleton Galeria -->
- <div class="space-y-6 relative overflow-hidden rounded-[3rem]">
- <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent skeleton-scan z-10"></div>
- <div class="aspect-square bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[3.5rem]"></div>
- <div class="grid grid-cols-4 gap-4">
- <div v-for="i in 4" :key="i" class="aspect-square bg-[#151a22] dark:bg-[#151a22]/5 rounded-[24px] border border-[#21262d] dark:border-[#21262d]"></div>
- </div>
- </div>
- <!-- Skeleton Info -->
- <div class="relative group/price">
- <p class="text-xs font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-[0.4em] mb-1 ml-1 italic">Precio</p>
- <p class="text-4xl md:text-5xl lg:text-6xl font-black text-emerald-500 dark:text-emerald-400 tracking-tighter leading-none italic drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">
- {{ formatPrice(product.price) }}
- </p>
- </div>
- <div v-if="isDiscounted" class="flex flex-col mb-1 animate-bounce">
- <p class="text-lg font-black text-[#c3c4c5] line-through opacity-40 leading-none mb-1 italic">{{ formatPrice(product.original_price) }}</p>
- <span class="text-[9px] font-black px-3 py-1 bg-rose-600 text-white rounded-[6px] uppercase tracking-widest -rose-600/20">Ahorro Activo</span>
- </div>
- </div>
- </div>
- </div>
+  <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-2 gap-24 py-12 md:py-20 animate-in fade-in duration-500">
+    <!-- Skeleton Galeria -->
+    <div class="space-y-6 relative overflow-hidden rounded-[3rem]">
+      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent skeleton-scan z-10"></div>
+      <div class="aspect-square bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] rounded-[3.5rem]"></div>
+      <div class="grid grid-cols-4 gap-4">
+        <div v-for="i in 4" :key="i" class="aspect-square bg-[#151a22] dark:bg-[#151a22]/5 rounded-[24px] border border-[#21262d] dark:border-[#21262d]"></div>
+      </div>
+    </div>
+    <!-- Skeleton Info -->
+    <div class="space-y-10 relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent skeleton-scan z-10"></div>
+      <div class="w-32 h-8 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[60px]"></div>
+      <div class="w-full h-24 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[2rem]"></div>
+      <div class="w-2/3 h-12 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[6px]"></div>
+      <div class="grid grid-cols-2 gap-8">
+        <div v-for="i in 4" :key="i" class="h-24 bg-[#151a22] dark:bg-[#151a22]/5 rounded-[1.5rem]"></div>
+      </div>
+    </div>
+  </div>
+
+  <div v-else-if="product" class="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24 items-start">
+    <!-- Columna Galería -->
+    <div class="space-y-5 animate-in fade-in slide-in-from-left-4 duration-1000 lg:sticky lg:top-24">
+      <div class="relative aspect-square bg-white dark:bg-[#f0f0f0] rounded-[3rem] overflow-hidden border border-[#21262d] dark:border-[#21262d] shadow-2xl group flex items-center justify-center p-8">
+        <transition name="img-fade" mode="out-in">
+          <img :key="selectedImage" :src="selectedImage || product.image" :alt="product.name" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" />
+        </transition>
+      </div>
+      <div v-if="product.images && product.images.length > 1" class="flex gap-3 flex-wrap">
+        <div v-for="(img, i) in product.images" :key="i" class="w-20 h-20 bg-white dark:bg-[#f0f0f0] rounded-[24px] border-2 cursor-pointer transition-all p-2 flex items-center justify-center" :class="[selectedImage === img ? 'ring-2 ring-emerald-500 border-emerald-400 opacity-100' : 'border-[#21262d] opacity-60']" @mouseenter="selectedImage = img" @click="selectedImage = img">
+          <img :src="img" class="w-full h-full object-contain" />
+        </div>
+      </div>
+    </div>
+    
+    <!-- Columna Información -->
+    <div class="space-y-10 text-left animate-in fade-in slide-in-from-right-4 duration-1000">
+      <div>
+        <div class="inline-flex items-center gap-3 px-5 py-2 bg-emerald-500/20 rounded-[60px] border border-emerald-500/40 mb-8">
+          <span class="w-1.5 h-1.5 bg-emerald-400 rounded-[60px] animate-pulse"></span>
+          <span class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">{{ product.category }}</span>
+        </div>
+        <h1 class="split-title text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white uppercase tracking-normal leading-[0.85] mb-6 animate-fade-in">
+          {{ product.name }}
+        </h1>
+        <div class="relative group/price">
+          <p class="text-xs font-black text-[#c3c4c5] uppercase tracking-[0.4em] mb-1 ml-1 italic">Precio</p>
+          <p class="text-4xl md:text-5xl lg:text-6xl font-black text-emerald-500 tracking-tighter leading-none italic">
+            {{ formatPrice(product.price) }}
+          </p>
+        </div>
+        <div v-if="isDiscounted" class="flex flex-col mb-1 animate-bounce">
+          <p class="text-lg font-black text-[#c3c4c5] line-through opacity-40 leading-none mb-1 italic">{{ formatPrice(product.original_price) }}</p>
+          <span class="text-[9px] font-black px-3 py-1 bg-rose-600 text-white rounded-[6px] uppercase tracking-widest inline-block w-max">Ahorro Activo</span>
+        </div>
+      </div>
 
  <p class="text-[#a4aea6] dark:text-[#c3c4c5] text-sm md:text-base font-bold leading-relaxed">
  {{ product.description }}
@@ -239,7 +273,6 @@ v-for="spec in [
  </router-link>
  </div>
  </div>
- </template>
 
  <!-- Fallback Error -->
  <div v-else class="py-40 text-center space-y-8">

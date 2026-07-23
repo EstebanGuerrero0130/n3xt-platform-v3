@@ -367,6 +367,10 @@ const handleResize = () => {
 const handleDrop = (e: any) => {
  e.preventDefault()
  isDragging.value = false
+ if (!captchaUnlocked.value) {
+   emit('error', 'Seguridad N3XT: Por favor completa el captcha matemático primero.')
+   return
+ }
  const file = e.dataTransfer.files[0]
  if (file) {
  (window as any).currentUploadedFile = file
@@ -505,10 +509,11 @@ const loadFile = async (file: any) => {
 
   const reader = new FileReader()
   reader.onload = async (event: any) => {
+    if (loadingTimeout) clearTimeout(loadingTimeout) // Limpiar timeout de inmediato ya que la carga local terminó y empieza el parseo pesado
+    
     const contents = event.target?.result
     if (!contents) {
       isLoading.value = false
-      if (loadingTimeout) clearTimeout(loadingTimeout)
       emit('loading', false)
       emit('error', 'No se pudo leer el archivo.')
       return
