@@ -110,8 +110,9 @@ onBeforeUnmount(() => {
 })
 
 const initThree = async () => {
- await loadThree()
- if (!container.value) return
+  if (renderer) return
+  await loadThree()
+  if (!container.value) return
 
  // Scene
  scene = new THREE.Scene()

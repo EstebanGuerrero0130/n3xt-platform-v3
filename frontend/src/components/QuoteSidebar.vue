@@ -50,7 +50,7 @@ const formatTime = (h: number) => {
 }
 
 const hasSlicingOrSLA = computed(() => 
- props.models.some((m: any) => m.hasSlicing) || props.selectedTechnology === 'SLA'
+ props.models.some((m: any) => m.hasModel)
 )
 </script>
 
