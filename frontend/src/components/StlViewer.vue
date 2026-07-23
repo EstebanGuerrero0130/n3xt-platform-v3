@@ -37,7 +37,7 @@ const isDragging = ref(false)
 const isLoading = ref(false)
 const hasModel = ref(false)
 const transformMode = ref('translate')
-const captchaUnlocked = ref(true)
+const captchaUnlocked = ref(false)
 const { challenge, answer, verify, isLocked } = useCaptcha()
 
 const verifyCaptcha = () => {
@@ -383,6 +383,10 @@ const handleFileSelect = (e: any) => {
 }
 
 const processGeometry = async (geometry: any, file: any) => {
+  if (!geometry) return
+  if (geometry.index) {
+    geometry = geometry.toNonIndexed()
+  }
   geometry.computeBoundingBox()
   
   const size = new THREE.Vector3();
@@ -398,9 +402,9 @@ const processGeometry = async (geometry: any, file: any) => {
 
   // Simple uniform material — model appears INSTANTLY
   const material = new THREE.MeshStandardMaterial({ 
-    color: 0x1e4d2b,
-    roughness: 0.4,
-    metalness: 0.15,
+    color: 0x08872b,
+    roughness: 0.3,
+    metalness: 0.2,
     flatShading: false
   })
   
@@ -454,16 +458,13 @@ const processGeometry = async (geometry: any, file: any) => {
   }
 
   // 🔬 Analyze geometry AFTER model is shown (non-blocking)
-  await analyzeGeometryAsync(geometry)
-  
-  // Update material to show overhang colors after analysis
-  material.vertexColors = true
-  material.color.set(0xffffff) // reset to white so vertex colors show
-  material.needsUpdate = true
-  needsUpdate = true
-  
-  // Re-emit with computed stats
-  emitTransformation()
+  analyzeGeometryAsync(geometry).then(() => {
+    material.vertexColors = true
+    material.color.set(0xffffff)
+    material.needsUpdate = true
+    needsUpdate = true
+    emitTransformation()
+  }).catch(() => {})
 }
 
 const loadFile = async (file: any) => {
@@ -473,101 +474,98 @@ const loadFile = async (file: any) => {
     resizeObserver = new ResizeObserver(handleResize)
     resizeObserver.observe(container.value)
   }
- const name = file.name ? file.name.toLowerCase() : ''
- const isStl = name.endsWith('.stl')
- const isObj = name.endsWith('.obj')
- const is3mf = name.endsWith('.3mf')
- 
- if (!isStl && !isObj && !is3mf) {
- emit('error', 'Seguridad N3XT: Formato no autorizado. Solo aceptamos .STL, .OBJ o .3MF')
- return
- }
+  handleResize()
 
- if (file.size > 150 * 1024 * 1024) {
- emit('error', 'El archivo excede los 150MB. Intenta reducir la resolución del mesh.')
- return
- }
+  const name = file.name ? file.name.toLowerCase() : ''
+  const isStl = name.endsWith('.stl')
+  const isObj = name.endsWith('.obj')
+  const is3mf = name.endsWith('.3mf')
+  
+  if (!isStl && !isObj && !is3mf) {
+    emit('error', 'Seguridad N3XT: Formato no autorizado. Solo aceptamos .STL, .OBJ o .3MF')
+    return
+  }
 
- isLoading.value = true
- emit('loading', true)
- 
- // N3XT Safety: Timeout para evitar estado de carga infinito
- if (loadingTimeout) clearTimeout(loadingTimeout)
- loadingTimeout = setTimeout(() => {
- if (isLoading.value) {
- isLoading.value = false
- emit('loading', false)
- emit('error', 'El procesamiento tardó demasiado. Intenta con un archivo más ligero o verifica tu conexión.')
- }
- }, 60000) // 60 segundos máximo
+  if (file.size > 150 * 1024 * 1024) {
+    emit('error', 'El archivo excede los 150MB. Intenta reducir la resolución del mesh.')
+    return
+  }
 
- const reader = new FileReader()
- reader.onload = (event: any) => {
- const contents = event.target?.result
- 
- // Clear old model
- if (currentGroup) {
- transformControls.detach()
- scene.remove(currentGroup)
- if (boxHelper) scene.remove(boxHelper)
- 
- currentGroup.children.forEach((child: any) => {
- if (child.isMesh) {
- child.geometry.dispose()
- child.material.dispose()
- }
- })
- }
+  isLoading.value = true
+  emit('loading', true)
+  
+  if (loadingTimeout) clearTimeout(loadingTimeout)
+  loadingTimeout = setTimeout(() => {
+    if (isLoading.value) {
+      isLoading.value = false
+      emit('loading', false)
+      emit('error', 'El procesamiento tardó demasiado. Intenta con un archivo más ligero o verifica tu conexión.')
+    }
+  }, 60000)
 
- try {
- if (isStl) {
- const loader = new STLLoader()
- const geometry = loader.parse(contents)
- processGeometry(geometry, file)
- } else if (isObj) {
- // OBJ loading requires text contents
- const textReader = new FileReader()
- textReader.onload = (textEvent: any) => {
- const loader = new OBJLoader()
- const object = loader.parse(textEvent.target?.result)
- 
- // Merge all geometries into one for simpler volume calc
- const geometries: any[] = []
- object.traverse((child: any) => {
- if (child.isMesh) {
- const geom = child.geometry.clone()
- geom.applyMatrix4(child.matrixWorld)
- geometries.push(geom)
- }
- })
- 
- if (geometries.length > 0) {
- // mergeBufferGeometries is in BufferGeometryUtils, but to keep it simple,
- // we will just take the first geometry or calculate sum of volumes.
- // For robust OBJ support, using the first mesh geometry:
- const mainGeometry = geometries[0] 
- processGeometry(mainGeometry, file)
- } else {
- throw new Error("No meshes found in OBJ")
- }
- }
- textReader.readAsText(file)
- }
- } catch (err) {
- logger.error(err)
- isLoading.value = false
- if (loadingTimeout) clearTimeout(loadingTimeout)
- emit('loading', false)
- emit('error', 'Error al procesar el archivo 3D. Verifica que el formato sea correcto.')
- }
- }
- 
- if (isStl) {
- reader.readAsArrayBuffer(file)
- } else {
- // Just trigger the logic, the second reader reads text
- reader.readAsArrayBuffer(file) 
- }
+  const reader = new FileReader()
+  reader.onload = async (event: any) => {
+    const contents = event.target?.result
+    if (!contents) {
+      isLoading.value = false
+      if (loadingTimeout) clearTimeout(loadingTimeout)
+      emit('loading', false)
+      emit('error', 'No se pudo leer el archivo.')
+      return
+    }
+    
+    // Clear old model
+    if (currentGroup) {
+      transformControls.detach()
+      scene.remove(currentGroup)
+      if (boxHelper) scene.remove(boxHelper)
+      currentGroup.children.forEach((child: any) => {
+        if (child.isMesh) {
+          child.geometry?.dispose()
+          child.material?.dispose()
+        }
+      })
+      currentGroup = null
+    }
+
+    try {
+      if (isStl) {
+        const loader = new STLLoader()
+        const geometry = loader.parse(contents)
+        await processGeometry(geometry, file)
+      } else if (isObj) {
+        const loader = new OBJLoader()
+        const object = loader.parse(contents)
+        const geometries: any[] = []
+        object.traverse((child: any) => {
+          if (child.isMesh) {
+            const geom = child.geometry.clone()
+            geom.applyMatrix4(child.matrixWorld)
+            geometries.push(geom)
+          }
+        })
+        if (geometries.length > 0) {
+          await processGeometry(geometries[0], file)
+        } else {
+          throw new Error("No se encontraron mallas en el archivo OBJ")
+        }
+      }
+    } catch (err: any) {
+      logger.error(err)
+      isLoading.value = false
+      if (loadingTimeout) clearTimeout(loadingTimeout)
+      emit('loading', false)
+      emit('error', 'Error al procesar el archivo 3D: ' + (err.message || 'Formato corrupto'))
+    }
+  }
+  
+  if (isStl) {
+    reader.readAsArrayBuffer(file)
+  } else if (isObj) {
+    reader.readAsText(file)
+  } else {
+    reader.readAsArrayBuffer(file)
+  }
 }
 </script>
 
