@@ -68,9 +68,14 @@ onMounted(async () => {
   // SIEMPRE inicializar Three.js al montar para que el canvas 3D esté listo
   await initThree()
   if (container.value && !resizeObserver) {
-    resizeObserver = new ResizeObserver(handleResize)
+    resizeObserver = new ResizeObserver(() => {
+      handleResize()
+    })
     resizeObserver.observe(container.value)
   }
+  // Dar tiempo al DOM para calcular dimensiones y ajustar renderer
+  setTimeout(() => { handleResize() }, 50)
+  setTimeout(() => { handleResize() }, 300)
   // Si viene con archivo (ej. desde prop), cargarlo directo
   if (props.file) {
     captchaUnlocked.value = true

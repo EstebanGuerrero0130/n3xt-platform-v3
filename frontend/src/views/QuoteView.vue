@@ -163,11 +163,27 @@ const runCuraEngineAnalysis = async () => {
  throw new Error("El motor devolvió datos incompletos.")
  }
  } catch (err: any) {
- logger.error("CuraEngine Error:", err)
- const statusInfo = err.message && err.message.includes('(') ? ` [${err.message.split('(')[1].split(')')[0]}]` : '';
- notify(`Error de Motor${statusInfo}: ${err.message ? err.message.split(' (')[0] : 'Fallo de conexión'}`, "error")
+  logger.error("CuraEngine Error:", err)
+  const status = err.message?.match(/\((\d+)\)/)?.[1] || ''
+  
+  // 413 = archivo demasiado grande para el servidor — usar datos del visor como fallback
+  if (status === '413' || status === '422' || status === '500') {
+    const model = models.value[activeModelIdx.value]
+    notify(
+      status === '413'
+        ? 'El servidor no acepta archivos grandes. Usando análisis del visor 3D ✔ï¸ '
+        : `Servidor no disponible. Usando datos locales del modelo ✔ï¸ `,
+      'success'
+    )
+    // El modelo ya tiene volumen/área del visor Three.js — calcular precio con esos datos
+    models.value[activeModelIdx.value].hasSlicing = false
+    calculatePrice()
+  } else {
+    const statusInfo = status ? ` [${status}]` : '';
+    notify(`Error de Motor${statusInfo}: ${err.message ? err.message.split(' (')[0] : 'Fallo de conexión'}`, "error")
+  }
  } finally {
- isSlicing.value = false
+  isSlicing.value = false
  }
 }
 
