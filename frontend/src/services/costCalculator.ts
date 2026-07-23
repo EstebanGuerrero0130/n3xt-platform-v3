@@ -131,14 +131,14 @@ export function calcFinalPrice(params: PricingInput = {}): PricingResult {
  * Calcula el costo de un extra/consumible basado en la unidad del material.
  */
 export function calcExtraCost(costPerKg: number, unit: string, qty: number, unitPrice?: number): number {
-  const u = (unit || '').toLowerCase()
-  // Unidades de servicio usan precio unitario directo (no por kg)
-  if (u === 'servicio' || u === 'unidad' || u === 'und') {
+  const u = (unit || '').toLowerCase().trim()
+  // Unidades de servicio/unidad usan precio unitario directo (no por kg)
+  if (['servicio', 'unidad', 'und', 'u', 'ud', 'pieza', 'pza'].includes(u)) {
     return (unitPrice ?? costPerKg) * qty
   }
   // Unidades de peso/volumen: costPerKg * qty(g o ml) / 1000
   const isWeightOrVolume = ['g', 'ml', 'kg', 'l'].includes(u)
-  return isWeightOrVolume ? costPerKg * (qty / 1000) : costPerKg * qty
+  return isWeightOrVolume ? costPerKg * (qty / 1000) : (unitPrice ?? costPerKg) * qty
 }
 
 /**

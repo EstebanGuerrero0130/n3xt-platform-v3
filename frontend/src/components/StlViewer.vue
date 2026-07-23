@@ -359,7 +359,6 @@ const analyzeGeometryAsync = (geometry: any): Promise<void> => {
         }
 
         let vol = Math.abs(volSum)
-        if (vol > 0 && vol < 5) vol = vol * 1000000000
 
         baseVolume = vol
         baseTotalArea = totArea

@@ -141,25 +141,49 @@ const hasSlicingOrSLA = computed(() =>
  <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" aria-label="Aumentar cantidad" @click="localQty++">+</button>
  </div>
  </div>
- </div> <!-- SECCION 3: Opciones Adicionales -->
+ </div> 
+ 
+ <!-- SECCION 3: Opciones Adicionales -->
  <div class="bg-white dark:bg-[#151a22]/30 border border-gray-200 dark:border-[#21262d] rounded-[24px] p-6 space-y-6 shadow-sm">
  <div class="border-b border-gray-200 dark:border-[#21262d] pb-3 mb-2">
  <h5 class="text-[#8dd6ff] uppercase tracking-[0.2em]">Opciones Adicionales</h5>
  </div>
 
- <!-- EXTRAS -->
- <div v-if="utilities.length > 0">
- <label id="sidebar-extras-label" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Extras / Consumibles</label>
- <div class="space-y-2" aria-labelledby="sidebar-extras-label">
- <button
- v-for="u in utilities" :key="u.id" :class="selectedExtras.find(e => e.id === u.id) ? 'bg-[#08872b]/10 border-primary/30 text-[#8dd6ff]' : 'bg-[#151a22] dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] border-transparent text-[#a4aea6] hover:border-primary/20'"
- class="w-full flex items-center justify-between px-5 py-3.5 rounded-[24px] border-2 text-[10px] font-black uppercase tracking-widest transition-all"
- @click="$emit('toggleExtra', u.id)">
- <span>{{ u.name }}</span>
- <span class="text-[9px]">${{ u.cost_per_kg }}/u</span>
- </button>
- </div>
- </div>
+  <!-- EXTRAS / ACABADOS Y SERVICIOS -->
+  <div v-if="utilities.length > 0">
+    <div class="flex items-center justify-between mb-3">
+      <label id="sidebar-extras-label" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest block">Acabados y Servicios Adicionales</label>
+      <span v-if="selectedExtras.length > 0" class="text-[8px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest border border-emerald-500/20">
+        {{ selectedExtras.length }} Seleccionado{{ selectedExtras.length > 1 ? 's' : '' }}
+      </span>
+    </div>
+    <div class="space-y-2.5" aria-labelledby="sidebar-extras-label">
+      <button
+        v-for="u in utilities" :key="u.id"
+        :class="[
+          selectedExtras.some(e => e.id === u.id)
+            ? 'bg-[#08872b]/15 border-[#08872b] text-emerald-400 shadow-md shadow-[#08872b]/10 scale-[1.01]'
+            : 'bg-[#151a22] dark:bg-[#151a22]/50 border-[#21262d] text-[#a4aea6] hover:border-emerald-500/40 hover:text-white',
+          'w-full flex items-center justify-between px-5 py-4 rounded-[20px] border-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 group/btn'
+        ]"
+        @click="$emit('toggleExtra', u.id)">
+        <div class="flex items-center gap-3">
+          <div :class="[
+            selectedExtras.some(e => e.id === u.id) ? 'bg-[#08872b] text-white' : 'border border-gray-600 group-hover/btn:border-emerald-400',
+            'w-5 h-5 rounded-full flex items-center justify-center transition-colors shrink-0'
+          ]">
+            <svg v-if="selectedExtras.some(e => e.id === u.id)" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span class="text-left font-bold tracking-normal">{{ u.name }}</span>
+        </div>
+        <span class="text-[10px] font-black text-emerald-400 shrink-0 ml-2">
+          +${{ Number(u.cost_per_kg || u.price_per_unit || 0).toLocaleString('es-CO') }}
+        </span>
+      </button>
+    </div>
+  </div>
 
  <!-- CUPON -->
  <div>
@@ -205,19 +229,23 @@ const hasSlicingOrSLA = computed(() =>
  <span class="text-[9px] font-black text-white/40 uppercase tracking-widest">Tiempo estimado</span>
  <span class="text-sm font-black text-white">{{ formatTime(breakdown.duration) }}</span>
  </div>
+ <div v-if="breakdown.utilityCost > 0" class="flex justify-between items-center bg-[#151a22]/5 px-4 py-3 rounded-[6px]">
+ <span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Servicios Adicionales</span>
+ <span class="text-xs font-black text-emerald-400">+${{ Math.round(breakdown.utilityCost).toLocaleString('es-CO') }}</span>
+ </div>
 
  <div v-if="breakdown.discount > 0" class="flex justify-between items-center px-4 py-2">
  <span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Descuento</span>
- <span class="text-xs font-black text-emerald-400">-${{ Math.round(breakdown.discount).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
+ <span class="text-xs font-black text-emerald-400">-${{ Math.round(breakdown.discount).toLocaleString('es-CO') }}</span>
  </div>
  <div class="border-t border-white/10 pt-3 mt-2">
  <div class="flex justify-between items-center px-4 py-2">
  <span class="text-[9px] font-black text-white/50 uppercase tracking-widest">Subtotal</span>
- <span class="text-sm font-black text-white">${{ Math.round(breakdown.subtotal).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
+ <span class="text-sm font-black text-white">${{ Math.round(breakdown.subtotal).toLocaleString('es-CO') }}</span>
  </div>
  <div class="flex justify-between items-center px-4 py-2">
  <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">IVA (19%)</span>
- <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.iva).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
+ <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.iva).toLocaleString('es-CO') }}</span>
  </div>
  </div>
  </div>

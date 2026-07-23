@@ -367,13 +367,13 @@ const toggleExtra = (id: any) => {
  calculatePrice()
 }
 
-watch([selectedTechnology, selectedMaterial, qty, models], () => {
- const mat = materials.value.find(m => m.id === selectedMaterial.value)
- if (mat && mat.category !== selectedTechnology.value) {
- const firstAvailable = materials.value.find(m => m.category === selectedTechnology.value)
- if (firstAvailable) selectedMaterial.value = firstAvailable.id
- }
- calculatePrice()
+watch([selectedTechnology, selectedMaterial, qty, models, selectedExtras], () => {
+  const mat = materials.value.find(m => m.id === selectedMaterial.value)
+  if (mat && mat.category !== selectedTechnology.value) {
+  const firstAvailable = materials.value.find(m => m.category === selectedTechnology.value)
+  if (firstAvailable) selectedMaterial.value = firstAvailable.id
+  }
+  calculatePrice()
 }, { deep: true })
 
 const calculatePrice = () => {
