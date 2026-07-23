@@ -65,13 +65,15 @@ let resizeObserver: any = null
 let loadingTimeout: any = null
 
 onMounted(async () => {
+  // SIEMPRE inicializar Three.js al montar para que el canvas 3D esté listo
+  await initThree()
+  if (container.value && !resizeObserver) {
+    resizeObserver = new ResizeObserver(handleResize)
+    resizeObserver.observe(container.value)
+  }
+  // Si viene con archivo (ej. desde prop), cargarlo directo
   if (props.file) {
     captchaUnlocked.value = true
-    await initThree()
-    if (container.value && !resizeObserver) {
-      resizeObserver = new ResizeObserver(handleResize)
-      resizeObserver.observe(container.value)
-    }
     loadFile(props.file)
   }
 })
@@ -110,10 +112,19 @@ const initThree = async () => {
  scene = new THREE.Scene()
  
  // Camera
- const width = container.value.clientWidth || 600
- const height = container.value.clientHeight || 450
- camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000)
- camera.position.set(200, 200, 200)
+  // BUG 3 FIX: si el contenedor tiene altura 0 (aún no renderizado en DOM), usar fallback
+  let width = container.value.clientWidth
+  let height = container.value.clientHeight
+  // Forzar dimensiones mínimas si el contenedor aún no tiene layout
+  if (!width || !height) {
+    const rect = container.value.getBoundingClientRect()
+    width = rect.width || container.value.parentElement?.clientWidth || 600
+    height = rect.height || container.value.parentElement?.clientHeight || 450
+  }
+  if (width < 100) width = 600
+  if (height < 100) height = 450
+  camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000)
+  camera.position.set(200, 200, 200)
 
  // Renderer (Optimizado para modelos pesados)
  try {
@@ -379,11 +390,11 @@ const handleDrop = (e: any) => {
 }
 
 const handleFileSelect = (e: any) => {
- const file = e.target.files[0]
- if (file) {
- (window as any).currentUploadedFile = file
- loadFile(file)
- }
+  const file = e.target?.files?.[0]
+  if (file) {
+    (window as any).currentUploadedFile = file
+    loadFile(file)
+  }
 }
 
 const processGeometry = async (geometry: any, file: any) => {
@@ -610,7 +621,7 @@ const loadFile = async (file: any) => {
  @dragleave.prevent="isDragging = false"
  @drop="handleDrop"
  >
- <div ref="container" class="w-full h-full outline-none"></div>
+ <div ref="container" class="w-full h-full outline-none" style="min-height: 300px;"></div>
 
  <!-- Upload Overlay -->
  <div 

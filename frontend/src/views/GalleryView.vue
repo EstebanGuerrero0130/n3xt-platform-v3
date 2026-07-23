@@ -228,13 +228,13 @@ onUnmounted(() => {
  ]"
  :style="{ '--reveal-delay': Math.min(idx * 80, 500) + 'ms' }"
  >
- <!-- Image Container con aspect-ratio fijo (fondo claro estilo Catálogo) -->
- <div class="relative overflow-hidden aspect-square bg-white dark:bg-[#f0f0f0] shrink-0 flex items-center justify-center p-4">
+ <!-- Image Container -->
+ <div class="relative overflow-hidden aspect-square bg-[#151a22] shrink-0">
  <!-- Imagen Secundaria (crossfade al hover) -->
  <img
  v-if="item.images && item.images.length > 0"
  :src="item.images[0]"
- class="absolute inset-0 w-full h-full object-contain p-4 opacity-0 group-hover:opacity-100 transition-all duration-700 z-10 scale-100 group-hover:scale-105"
+ class="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-all duration-700 z-10 scale-100 group-hover:scale-105"
  loading="lazy"
  :alt="item.title"
  />
@@ -243,7 +243,7 @@ onUnmounted(() => {
  v-if="item.image && !brokenImages[idx]"
  :src="item.image"
  :alt="'Trabajo de impresión 3D: ' + item.title"
- class="absolute inset-0 w-full h-full object-contain p-4 transition-all duration-700 z-0"
+ class="absolute inset-0 w-full h-full object-cover transition-all duration-700 z-0 group-hover:opacity-0"
  loading="lazy"
  decoding="async"
  @error="brokenImages[idx] = true"
