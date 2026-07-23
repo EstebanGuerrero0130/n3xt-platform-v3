@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@unhead/vue": "^1.11.20",
+    "@vercel/speed-insights": "^2.0.0",
     "@vue/tsconfig": "^0.9.1",
     "echarts": "^6.1.0",
     "gsap": "^3.15.0",
