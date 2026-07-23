@@ -144,22 +144,52 @@ watch(() => route.params.id, () => {
 
  <template v-else-if="product">
  <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24 items-start">
- <!-- Columna Galería -->
- <div class="space-y-6 animate-in fade-in slide-in-from-left-4 duration-1000 lg:sticky lg:top-24">
- <div class="aspect-square bg-[#151a22] dark:bg-[#151a22] rounded-[3rem] overflow-hidden border border-[#21262d] dark:border-[#21262d] relative group p-10 flex items-center justify-center">
- <img :src="selectedImage || product.image" :alt="'Detalle de producto 3D: ' + product.name + (product.category ? ' (' + product.category + ')' : '') + ' — N3XT 3D Shop'" class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-[2s]" fetchpriority="high" decoding="async" @error="(e: any) => e.target.style.display='none'" />
- <!-- Cloudinary Optimization Note Tag (Invisible to user) -->
- <div class="absolute top-8 right-8 px-4 py-2 bg-black/40 backdrop-blur-md rounded-[6px] border border-white/10">
- <span class="text-micro text-emerald-400">Alta definicion</span>
- </div>
- </div>
- <!-- Miniaturas -->
- <div v-if="product.images && product.images.length > 1" class="grid grid-cols-4 gap-4">
- <div v-for="(img, i) in product.images" :key="i" :class="[selectedImage === img ? 'border-primary opacity-100 ring-2 ring-primary/30' : 'border-[#21262d] dark:border-[#21262d] opacity-50']" class="aspect-square bg-[#151a22] dark:bg-[#151a22]/5 rounded-[24px] border overflow-hidden cursor-pointer hover:opacity-100 hover:border-primary transition-all" @click="selectedImage = img">
- <img :src="img" :alt="'Vista previa ' + (Number(i) + 1) + ' de ' + product.name + ' — N3XT 3D Shop'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
- </div>
- </div>
- </div>
+      <!-- Columna Galería -->
+      <div class="space-y-5 animate-in fade-in slide-in-from-left-4 duration-1000 lg:sticky lg:top-24">
+        <!-- Visor Principal (Estilo Galería - fondo claro premium) -->
+        <div class="relative aspect-square bg-white dark:bg-[#f0f0f0] rounded-[3rem] overflow-hidden border border-gray-200 dark:border-gray-300 shadow-xl group flex items-center justify-center p-8">
+          <transition name="img-fade" mode="out-in">
+            <img
+              :key="selectedImage"
+              :src="selectedImage || product.image"
+              :alt="'Detalle de producto 3D: ' + product.name + ' — N3XT 3D Shop'"
+              class="max-w-full max-h-full object-contain transition-transform duration-700 group-hover:scale-105"
+              fetchpriority="high"
+              decoding="async"
+              @error="(e: any) => e.target.style.display='none'"
+            />
+          </transition>
+          <!-- Badge Alta Definición -->
+          <div class="absolute top-5 right-5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-[6px] border border-white/10">
+            <span class="text-[8px] font-black text-emerald-400 uppercase tracking-[0.2em]">Alta Definición</span>
+          </div>
+        </div>
+
+        <!-- Miniaturas (estilo imagen 1: pequeñas, redondeadas, hover cambia imagen) -->
+        <div v-if="product.images && product.images.length > 1" class="flex gap-3 flex-wrap">
+          <div
+            v-for="(img, i) in product.images"
+            :key="i"
+            :class="[
+              selectedImage === img
+                ? 'ring-2 ring-emerald-500 border-emerald-400 opacity-100 shadow-lg shadow-emerald-500/20'
+                : 'border-gray-200 dark:border-gray-300 opacity-70 hover:opacity-100 hover:border-emerald-400'
+            ]"
+            class="w-20 h-20 bg-white dark:bg-[#f0f0f0] rounded-[18px] border-2 overflow-hidden cursor-pointer transition-all duration-300 flex items-center justify-center p-1.5"
+            @mouseenter="selectedImage = img"
+            @click="selectedImage = img"
+          >
+            <img
+              :src="img"
+              :alt="'Vista ' + (Number(i) + 1) + ' de ' + product.name"
+              class="w-full h-full object-contain"
+              loading="lazy"
+              decoding="async"
+              @error="(e: any) => e.target.style.display='none'"
+            />
+          </div>
+        </div>
+      </div>
 
  <!-- Columna Información -->
  <div class="space-y-10 text-left animate-in fade-in slide-in-from-right-4 duration-1000">
@@ -306,7 +336,21 @@ v-for="spec in [
  transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .reveal.revealed {
- opacity: 1;
- transform: translateY(0);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Image Fade Transition (thumbnail hover) --- */
+.img-fade-enter-active,
+.img-fade-leave-active {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.img-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.img-fade-leave-to {
+  opacity: 0;
+  transform: scale(1.03);
 }
 </style>
