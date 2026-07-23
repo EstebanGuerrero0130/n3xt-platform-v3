@@ -34,7 +34,7 @@ class OrderController extends Controller
     public function processStl(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|max:51200',
+            'file' => 'required|file|max:153600',
             'infill' => 'nullable|integer',
             'layer_height' => 'nullable|numeric',
         ]);

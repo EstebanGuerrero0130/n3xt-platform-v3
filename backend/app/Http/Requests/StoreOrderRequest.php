@@ -44,7 +44,7 @@ class StoreOrderRequest extends FormRequest
             'dimensions_mm'             => 'nullable|string',
             'scale_factor'              => 'nullable|numeric',
             'estimated_duration_h'      => 'nullable|numeric',
-            'file'                      => $isAdmin ? 'nullable|file|max:51200' : 'required|file|max:51200',
+            'file'                      => $isAdmin ? 'nullable|file|max:153600' : 'required|file|max:153600',
         ];
     }
 
@@ -57,7 +57,7 @@ class StoreOrderRequest extends FormRequest
             'total_price.required' => 'El precio total es obligatorio.',
             'material_id.required' => 'Debes seleccionar un material.',
             'file.required' => 'Debes adjuntar un archivo STL, OBJ o 3MF.',
-            'file.max' => 'El archivo no debe superar los 50MB.',
+            'file.max' => 'El archivo no debe superar los 150MB.',
         ];
     }
 }
