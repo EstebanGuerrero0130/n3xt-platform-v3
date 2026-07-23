@@ -118,71 +118,62 @@ const qty = ref(1)
 // --- CURAENGINE INTEGRATION (MANUAL SINCRO) ---
 const isSlicing = ref(false)
 
-const runCuraEngineAnalysis = async () => {
- const idx = activeModelIdx.value
- const model = models.value[idx]
- if (!model || !model.file) {
- notify("Sube un modelo 3D primero", "error")
- return
- }
- 
- isSlicing.value = true
- 
- try {
- const mat = materials.value.find(m => m.id === selectedMaterial.value)
- const formData = new FormData()
- formData.append('file', model.file)
- formData.append('infill', String(model.infill || 15))
- formData.append('layer_height', String(model.layerHeight || 0.2))
- formData.append('total_area', String(model.totalArea || 0))
- formData.append('volume_mm3', String(model.volume || 0))
- formData.append('support_area', String(model.supportArea || 0))
- formData.append('technology', selectedTechnology.value)           // OrcaEngine v2: FDM vs SLA path
- formData.append('height_mm', String(model.dimensions?.z || 0))   // OrcaEngine v2: SLA layer count
- if (mat) {
- formData.append('density', String(mat.density))
- formData.append('material_id', String(mat.id))
- }
- 
- const res = await api.post('/process-stl', formData)
- const factors = res.data || res.factors || res;
- 
- if (factors && (factors.shell_weight_g >= 0)) {
- models.value[idx].curaFactors = factors
- models.value[idx].hasSlicing = true
- // Store weight and duration from slicing
- models.value[idx].weight = (Number(factors.shell_weight_g) || 0) 
- + (Number(factors.internal_weight_g) || 0) 
- + (Number(factors.support_weight_g) || 0) 
- + (Number(factors.purge_weight_g) || 3.0)
- models.value[idx].duration = (Number(factors.prep_time_h) || 0) 
- + (Number(factors.print_time_h) || 0)
- notify("Sincronización Industrial Exitosa", "success")
- calculatePrice()
- } else {
- throw new Error("El motor devolvió datos incompletos.")
- }
- } catch (err: any) {
-  logger.error("CuraEngine Error:", err)
-  const status = err.message?.match(/\((\d+)\)/)?.[1] || ''
-  
-  // 413 = archivo demasiado grande para el servidor — usar datos del visor como fallback
-  if (status === '413' || status === '422' || status === '500') {
-    const model = models.value[activeModelIdx.value]
-    notify(
-      status === '413'
-        ? 'El servidor no acepta archivos grandes. Usando análisis del visor 3D ✔ï¸ '
-        : `Servidor no disponible. Usando datos locales del modelo ✔ï¸ `,
-      'success'
-    )
-    // El modelo ya tiene volumen/área del visor Three.js — calcular precio con esos datos
-    models.value[activeModelIdx.value].hasSlicing = false
-    calculatePrice()
-  } else {
-    const statusInfo = status ? ` [${status}]` : '';
-    notify(`Error de Motor${statusInfo}: ${err.message ? err.message.split(' (')[0] : 'Fallo de conexión'}`, "error")
+ const runCuraEngineAnalysis = async () => {
+  const idx = activeModelIdx.value
+  const model = models.value[idx]
+  if (!model || !model.file) {
+  notify("Sube un modelo 3D primero", "error")
+  return
   }
- } finally {
+  
+  isSlicing.value = true
+  
+  try {
+  // Si el archivo es mayor a 15MB, usamos la estimación local directamente para evitar 413
+  if (model.file.size > 15 * 1024 * 1024) {
+    models.value[idx].hasSlicing = false
+    calculatePrice()
+    return
+  }
+
+  const mat = materials.value.find(m => m.id === selectedMaterial.value)
+  const formData = new FormData()
+  formData.append('file', model.file)
+  formData.append('infill', String(model.infill || 15))
+  formData.append('layer_height', String(model.layerHeight || 0.2))
+  formData.append('total_area', String(model.totalArea || 0))
+  formData.append('volume_mm3', String(model.volume || 0))
+  formData.append('support_area', String(model.supportArea || 0))
+  formData.append('technology', selectedTechnology.value)
+  formData.append('height_mm', String(model.dimensions?.z || 0))
+  if (mat) {
+  formData.append('density', String(mat.density))
+  formData.append('material_id', String(mat.id))
+  }
+  
+  const res = await api.post('/process-stl', formData)
+  const factors = res.data || res.factors || res;
+  
+  if (factors && (factors.shell_weight_g >= 0)) {
+  models.value[idx].curaFactors = factors
+  models.value[idx].hasSlicing = true
+  models.value[idx].weight = (Number(factors.shell_weight_g) || 0) 
+  + (Number(factors.internal_weight_g) || 0) 
+  + (Number(factors.support_weight_g) || 0) 
+  + (Number(factors.purge_weight_g) || 3.0)
+  models.value[idx].duration = (Number(factors.prep_time_h) || 0) 
+  + (Number(factors.print_time_h) || 0)
+  calculatePrice()
+  } else {
+  // Silent fallback
+  models.value[idx].hasSlicing = false
+  calculatePrice()
+  }
+  } catch (err: any) {
+   // Silently fall back to local estimation
+   models.value[activeModelIdx.value].hasSlicing = false
+   calculatePrice()
+  } finally {
   isSlicing.value = false
  }
 }
@@ -463,7 +454,7 @@ const calculatePrice = () => {
  selectedExtras.value.forEach(item => {
  const extra = utilities.value.find(u => u.id === item.id)
  if (extra) {
- utilityCost += calcExtraCost(Number(extra.cost_per_kg) || 0, extra.unit || 'g', item.qty)
+ utilityCost += calcExtraCost(Number(extra.cost_per_kg) || 0, extra.unit || 'servicio', item.qty)
  }
  })
  

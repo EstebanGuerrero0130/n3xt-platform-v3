@@ -331,29 +331,39 @@ const analyzeGeometryAsync = (geometry: any): Promise<void> => {
         let totArea = 0
         let suppArea = 0
 
-        for (let i = 0; i < count; i += 3) {
+        // Optimización industrial: si el modelo supera 150,000 triángulos, usar muestreo adaptativo por zancadas
+        const numTriangles = count / 3
+        const stride = numTriangles > 150000 ? Math.ceil(numTriangles / 150000) : 1
+        const step = stride * 3
+
+        for (let i = 0; i < count; i += step) {
           _vA.fromBufferAttribute(position, i)
           _vB.fromBufferAttribute(position, i + 1)
           _vC.fromBufferAttribute(position, i + 2)
 
           _cross.crossVectors(_vB, _vC)
-          volSum += _vA.dot(_cross) / 6.0
+          volSum += (_vA.dot(_cross) / 6.0) * stride
 
           _edge1.subVectors(_vB, _vA)
           _edge2.subVectors(_vC, _vA)
-          const triArea = _cross.crossVectors(_edge1, _edge2).length() / 2.0
+          const triArea = (_cross.crossVectors(_edge1, _edge2).length() / 2.0) * stride
           totArea += triArea
 
           _faceNormal.fromBufferAttribute(normal, i)
           const isOverhang = _faceNormal.y < -0.5
           if (isOverhang) suppArea += triArea
 
-          for (let j = 0; j < 3; j++) {
-            const idx = (i + j) * 3
-            if (isOverhang) {
-              colors[idx] = 1.0; colors[idx + 1] = 0.2; colors[idx + 2] = 0.2
-            } else {
-              colors[idx] = 0.12; colors[idx + 1] = 0.23; colors[idx + 2] = 0.20
+          // Asignar colores a los vértices analizados
+          for (let s = 0; s < step && (i + s) * 3 < colors.length; s += 3) {
+            for (let j = 0; j < 3; j++) {
+              const idx = (i + s + j) * 3
+              if (idx < colors.length) {
+                if (isOverhang) {
+                  colors[idx] = 1.0; colors[idx + 1] = 0.2; colors[idx + 2] = 0.2
+                } else {
+                  colors[idx] = 0.12; colors[idx + 1] = 0.23; colors[idx + 2] = 0.20
+                }
+              }
             }
           }
         }
