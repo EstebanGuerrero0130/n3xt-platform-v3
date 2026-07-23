@@ -33,6 +33,7 @@ let _timerLoad: ReturnType<typeof setTimeout> | null = null
 const normalizeTags = (tags: any): string[] => Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [])
 const normalizeImages = (images: any): string[] => Array.isArray(images) ? images : (typeof images === 'string' ? images.split(',').map((s: string) => s.trim()).filter(Boolean) : [])
 const item = ref<any>(null)
+const selectedImage = ref('')
 interface WebSettingsGallery { gallery: any[]; cloudinary_name?: string }
 const webSettings = ref<WebSettingsGallery>({ gallery: [] })
 const lightboxOpen = ref(false)
@@ -93,6 +94,9 @@ const fetchData = async () => {
  g.title === rawSlug ||
  g.title === decodedSlug
  ) || null
+ if (item.value) {
+ selectedImage.value = item.value.image
+ }
  } else {
  item.value = null
  }
@@ -166,39 +170,68 @@ onUnmounted(() => {
  </button>
 
  <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
- <!-- Left: Image Gallery -->
- <div class="space-y-4">
- <div
-class="aspect-square rounded-[3rem] overflow-hidden bg-[#151a22] dark:bg-[#151a22]/5 border border-[#21262d] dark:border-[#21262d] relative group cursor-pointer"
- @click="openLightbox(0)">
- <img
-v-if="!mainImageFailed" :src="getOptimizedImage(item.image)" :alt="'Proyecto de impresión 3D: ' + item.title + (item.category ? ' (' + item.category + ')' : '') + ' — N3XT 3D Galería'"
- class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
- fetchpriority="high"
- decoding="async"
- @error="mainImageFailed = true" />
- <div v-if="!item.image || mainImageFailed" class="absolute inset-0 flex items-center justify-center">
- <svg class="w-24 h-24 text-gray-300 dark:text-[#a4aea6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
- </div>
- <!-- Zoom hint -->
- <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
- <div class="w-16 h-16 bg-[#151a22]/90 rounded-[24px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100 ">
- <svg class="w-8 h-8 text-[#ffffff]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
- </div>
- </div>
- </div>
+        <!-- Left: Image Gallery (Estilo Catálogo) -->
+        <div class="space-y-5 lg:sticky lg:top-24">
+          <!-- Visor Principal (Estilo Catálogo - fondo claro premium) -->
+          <div
+            class="relative aspect-square bg-white dark:bg-[#f0f0f0] rounded-[3rem] overflow-hidden border border-gray-200 dark:border-gray-300 shadow-xl group flex items-center justify-center p-8 cursor-pointer"
+            @click="openLightbox(allImages.indexOf(selectedImage || item.image))"
+          >
+            <transition name="img-fade" mode="out-in">
+              <img
+                :key="selectedImage || item.image"
+                v-if="!mainImageFailed"
+                :src="getOptimizedImage(selectedImage || item.image)"
+                :alt="'Proyecto de impresión 3D: ' + item.title + (item.category ? ' (' + item.category + ')' : '') + ' — N3XT 3D Galería'"
+                class="max-w-full max-h-full object-contain transition-transform duration-700 group-hover:scale-105"
+                fetchpriority="high"
+                decoding="async"
+                @error="mainImageFailed = true"
+              />
+            </transition>
 
- <!-- Thumbnail strip -->
- <div v-if="allImages.length > 1" class="flex gap-3 overflow-x-auto pb-2">
- <button
-v-for="(img, idx) in allImages" :key="idx"
- class="w-20 h-20 rounded-[24px] overflow-hidden flex-shrink-0 border-2 transition-all"
- :class="idx === lightboxIdx && lightboxOpen ? 'border-emerald-500 scale-105' : 'border-transparent hover:border-gray-300 dark:hover:border-white/20'"
- @click="openLightbox(idx)">
- <img :src="getOptimizedImage(img)" :alt="'Vista previa del proyecto: ' + item.title + ' | N3XT 3D'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
- </button>
- </div>
- </div>
+            <div v-if="!item.image || mainImageFailed" class="absolute inset-0 flex items-center justify-center">
+              <svg class="w-24 h-24 text-gray-300 dark:text-[#a4aea6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
+
+            <!-- Badge Alta Definición -->
+            <div class="absolute top-5 right-5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-[6px] border border-white/10 z-10">
+              <span class="text-[8px] font-black text-emerald-400 uppercase tracking-[0.2em]">Alta Definición</span>
+            </div>
+
+            <!-- Zoom hint icon -->
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center pointer-events-none">
+              <div class="w-14 h-14 bg-black/70 backdrop-blur-md rounded-[20px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100 shadow-xl">
+                <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Miniaturas (estilo Catálogo: pequeñas, redondeadas, hover cambia imagen) -->
+          <div v-if="allImages.length > 1" class="flex gap-3 flex-wrap">
+            <div
+              v-for="(img, idx) in allImages"
+              :key="idx"
+              :class="[
+                (selectedImage || item.image) === img
+                  ? 'ring-2 ring-emerald-500 border-emerald-400 opacity-100 shadow-lg shadow-emerald-500/20'
+                  : 'border-gray-200 dark:border-gray-300 opacity-70 hover:opacity-100 hover:border-emerald-400'
+              ]"
+              class="w-20 h-20 bg-white dark:bg-[#f0f0f0] rounded-[18px] border-2 overflow-hidden cursor-pointer transition-all duration-300 flex items-center justify-center p-1.5"
+              @mouseenter="selectedImage = img"
+              @click="selectedImage = img"
+            >
+              <img
+                :src="getOptimizedImage(img)"
+                :alt="'Vista previa ' + (idx + 1) + ' del proyecto: ' + item.title"
+                class="w-full h-full object-contain"
+                loading="lazy"
+                decoding="async"
+                @error="(e: any) => e.target.style.display='none'"
+              />
+            </div>
+          </div>
+        </div>
 
  <!-- Right: Info -->
  <div class="space-y-8">
@@ -369,15 +402,29 @@ v-for="(img, idx) in allImages" :key="idx"
 
 /* Scroll reveal for related projects */
 .related-hidden {
- opacity: 0;
- transform: translateY(30px);
- transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
- transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+  transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .related-revealed {
- opacity: 1;
- transform: translateY(0);
- transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--rel-delay, 0ms),
- transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--rel-delay, 0ms);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--rel-delay, 0ms),
+  transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--rel-delay, 0ms);
+}
+
+/* --- Image Fade Transition (thumbnail hover) --- */
+.img-fade-enter-active,
+.img-fade-leave-active {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.img-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.img-fade-leave-to {
+  opacity: 0;
+  transform: scale(1.03);
 }
 </style>
