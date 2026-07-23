@@ -324,9 +324,10 @@ const analyzeGeometryAsync = (geometry: any): Promise<void> => {
         ensureVectors()
 
         const position = geometry.attributes.position
+        const index = geometry.index
         const normal = geometry.attributes.normal
-        const count = position.count
-        const colors = new Float32Array(count * 3)
+        const count = index ? index.count : position.count
+        const colors = new Float32Array(position.count * 3)
 
         let volSum = 0
         let totArea = 0
@@ -337,6 +338,8 @@ const analyzeGeometryAsync = (geometry: any): Promise<void> => {
         const stride = numTriangles > 200000 ? Math.ceil(numTriangles / 200000) : 1
         const step = stride * 3
 
+        const getVertIdx = (k: number) => index ? index.getX(k) : k
+
         // Process in chunks of 30k triangles, yielding between each chunk
         const CHUNK_TRIS = 30000
         const chunkStep = CHUNK_TRIS * stride * 3
@@ -346,9 +349,13 @@ const analyzeGeometryAsync = (geometry: any): Promise<void> => {
           try {
             const end = Math.min(i + chunkStep, count)
             for (; i < end; i += step) {
-              _vA.fromBufferAttribute(position, i)
-              _vB.fromBufferAttribute(position, Math.min(i + 1, count - 1))
-              _vC.fromBufferAttribute(position, Math.min(i + 2, count - 1))
+              const idxA = getVertIdx(i)
+              const idxB = getVertIdx(Math.min(i + 1, count - 1))
+              const idxC = getVertIdx(Math.min(i + 2, count - 1))
+
+              _vA.fromBufferAttribute(position, idxA)
+              _vB.fromBufferAttribute(position, idxB)
+              _vC.fromBufferAttribute(position, idxC)
 
               _cross.crossVectors(_vB, _vC)
               volSum += (_vA.dot(_cross) / 6.0) * stride
@@ -358,21 +365,10 @@ const analyzeGeometryAsync = (geometry: any): Promise<void> => {
               const triArea = (_cross.crossVectors(_edge1, _edge2).length() / 2.0) * stride
               totArea += triArea
 
-              _faceNormal.fromBufferAttribute(normal, Math.min(i, count - 1))
-              const isOverhang = _faceNormal.y < -0.5
-              if (isOverhang) suppArea += triArea
-
-              for (let s = 0; s < step && (i + s) < count; s += 3) {
-                for (let j = 0; j < 3; j++) {
-                  const idx = (i + s + j) * 3
-                  if (idx + 2 < colors.length) {
-                    if (isOverhang) {
-                      colors[idx] = 1.0; colors[idx + 1] = 0.2; colors[idx + 2] = 0.2
-                    } else {
-                      colors[idx] = 0.12; colors[idx + 1] = 0.23; colors[idx + 2] = 0.20
-                    }
-                  }
-                }
+              if (normal) {
+                _faceNormal.fromBufferAttribute(normal, idxA)
+                const isOverhang = _faceNormal.y < -0.5
+                if (isOverhang) suppArea += triArea
               }
             }
 
@@ -432,9 +428,6 @@ const handleFileSelect = (e: any) => {
 
 const processGeometry = async (geometry: any, file: any) => {
   if (!geometry) return
-  if (geometry.index) {
-    geometry = geometry.toNonIndexed()
-  }
   geometry.computeBoundingBox()
   
   const size = new THREE.Vector3();
@@ -557,7 +550,7 @@ const loadFile = async (file: any) => {
         emit('loading', false)
         emit('error', 'El procesamiento tardó demasiado. Intenta con un archivo más ligero.')
       }
-    }, 90000) // 90 segundos para modelos complejos
+    }, 180000) // 180 segundos para modelos complejos
     
     const contents = event.target?.result
     if (!contents) {
