@@ -15,6 +15,7 @@ const GalleryDetailView = () => import('../views/GalleryDetailView.vue')
 const CustomerDashboard = () => import('../views/CustomerDashboard.vue')
 const PrivacyView = () => import('../views/PrivacyView.vue')
 const TermsView = () => import('../views/TermsView.vue')
+const CompleteProfileView = () => import('../views/CompleteProfileView.vue')
 
 const router = createRouter({
   history: createWebHistory(),
@@ -63,6 +64,11 @@ const router = createRouter({
       path: '/admin/login',
       name: 'admin-login',
       component: LoginView
+    },
+    {
+      path: '/auth/callback',
+      name: 'auth-callback',
+      component: CompleteProfileView
     },
     {
       path: '/admin',

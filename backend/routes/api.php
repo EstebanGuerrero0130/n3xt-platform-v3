@@ -21,6 +21,7 @@ Route::any('/login', function() {
 Route::any('/ping', function() { return response()->json(['status' => 'online', 'timestamp' => now()]); });
 Route::middleware('throttle:10,1')->post('/auth-master-industrial-access', [UnifiedAuthController::class, 'login']);
 Route::middleware('throttle:5,1')->post('/auth/unified-register', [UnifiedAuthController::class, 'register']);
+Route::middleware('throttle:10,1')->post('/auth/complete-profile', [UnifiedAuthController::class, 'completeProfile']);
 
 // Ruta de Diagnóstico para el Lanzador N3XT
 Route::get('/health-check', function() { return response()->json(['status' => 'online', 'version' => '3.5.0']); });
@@ -40,9 +41,9 @@ Route::get('/materials', [MaterialController::class, 'index']);
 // Rutas de autenticación Maker (Clientes) - Legacy
 Route::post('/maker-access/register', [CustomerAuthController::class, 'register']);
 Route::post('/maker-access/login', [CustomerAuthController::class, 'login']);
-Route::middleware('auth:customer')->get('/customer/profile', [CustomerAuthController::class, 'profile']);
-Route::middleware('auth:customer')->put('/customer/profile', [CustomerAuthController::class, 'updateProfile']);
-Route::middleware('auth:customer')->post('/customer/logout', [CustomerAuthController::class, 'logout']);
+Route::middleware('supabase')->get('/customer/profile', [CustomerAuthController::class, 'profile']);
+Route::middleware('supabase')->put('/customer/profile', [CustomerAuthController::class, 'updateProfile']);
+Route::middleware('supabase')->post('/customer/logout', [CustomerAuthController::class, 'logout']);
 
 // Endpoint unificado de verificación de sesión (admin o cliente)
 Route::get('/auth/status', function (Request $request) {
@@ -59,7 +60,7 @@ Route::get('/auth/status', function (Request $request) {
     return response()->json(['authenticated' => false, 'role' => null, 'user' => null]);
 });
 
-// Rutas protegidas para Administrador
+// Rutas protegidas para Administrador (usa sesión Laravel/Sanctum, NO Supabase JWT)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return response()->json($request->user());
@@ -80,6 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/orders/{id}/toggle-paid', [OrderController::class, 'togglePaid']);
     Route::delete('/admin/orders/{id}', [OrderController::class, 'destroy']);
     Route::get('/admin/orders/{id}/download', [OrderController::class, 'download']);
+    Route::get('/admin/orders/{id}/pdf', [OrderController::class, 'downloadPdf']);
     Route::post('/admin/purge-all', [OrderController::class, 'purgeAll']);
     Route::post('/admin/orders/{id}/extras', [OrderController::class, 'addExtra']);
 

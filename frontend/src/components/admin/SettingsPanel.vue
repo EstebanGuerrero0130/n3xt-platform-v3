@@ -27,8 +27,8 @@
  
  <div class="space-y-10">
  <div class="flex flex-col items-center justify-center p-12 bg-[#283041]/80 backdrop-blur-sm rounded-[3rem] border-2 border-dashed border-gray-700 group/upload hover:bg-gray-700 hover:border-primary/50 transition-all duration-700 relative ">
- <div v-if="logoUrl && logoUrl !== '/logo.png'" class="relative group/img">
- <img :src="logoUrl" alt="Logo de la empresa N3XT 3D" class="h-32 w-auto object-contain mb-8 drop--[0_20px_50px_rgba(0,0,0,0.15)] group-hover/upload:scale-110 transition-transform duration-700" @error="(e: any) => { if (e.target) (e.target as HTMLImageElement).style.display = 'none' }">
+ <div v-if="logoUrl && logoUrl !== '/logo.png' && !logoError" class="relative group/img">
+ <img :src="logoUrl" alt="Logo de la empresa N3XT 3D" class="h-32 w-auto object-contain mb-8 drop--[0_20px_50px_rgba(0,0,0,0.15)] group-hover/upload:scale-110 transition-transform duration-700" @error="logoError = true">
  <div class="absolute inset-0 bg-[#08872b]/20 rounded-[60px] blur-3xl opacity-0 group-hover/img:opacity-30 transition-opacity pointer-events-none"></div>
  </div>
  <div v-else class="w-32 h-32 bg-gradient-to-br from-primary/80 via-emerald-600 to-teal-800 rounded-[2.5rem] mb-8 flex items-center justify-center relative overflow-hidden group -primary/20">
@@ -286,7 +286,6 @@ const props = defineProps({
  savingSettings: { type: Boolean, default: false },
  uploadingLogo: { type: Boolean, default: false },
  logoUrl: { type: String, default: '/logo.png' },
- logoError: { type: Boolean, default: false },
  isLocalhost: { type: Boolean, default: false },
  showNotify: { type: Function, default: null },
  askConfirm: { type: Function, default: null },
@@ -300,6 +299,9 @@ const emit = defineEmits([
  'catalog-reset',
  'scroll-catalog-item',
 ])
+
+const logoError = ref(false)
+watch(() => props.logoUrl, () => { logoError.value = false })
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const webSubTab = ref('general')

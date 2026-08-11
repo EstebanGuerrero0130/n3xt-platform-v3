@@ -45,6 +45,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'supabase' => \App\Http\Middleware\SupabaseAuthMiddleware::class,
+        ]);
         // Agregar middleware de sesión a rutas API para Sanctum SPA
         // (StartSession, EncryptCookies, AddQueuedCookiesToResponse)
         $middleware->api(prepend: [

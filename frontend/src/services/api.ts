@@ -1,9 +1,10 @@
 import logger from '../utils/logger'
+import { supabase } from './supabase'
 
 const hostname = window.location.hostname || '127.0.0.1'
 const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
-const API_BASE_URL = import.meta.env.VITE_API_URL || (isLocal ? `http://${hostname}:8000/api` : '/api')
-const STORAGE_BASE_URL = import.meta.env.VITE_STORAGE_URL || (isLocal ? `http://${hostname}:8000/storage` : '/storage')
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isLocal ? '/api' : '/api')
+const STORAGE_BASE_URL = import.meta.env.VITE_STORAGE_URL || (isLocal ? '/storage' : '/storage')
 const BASE_URL = API_BASE_URL.replace('/api', '')
 
 /**
@@ -37,7 +38,7 @@ interface RequestOptions {
 }
 
 /** Build base fetch options for Sanctum SPA */
-const baseOptions = (method: string, body?: any, isFormData?: boolean): RequestOptions => {
+const baseOptions = async (method: string, body?: any, isFormData?: boolean): Promise<RequestOptions> => {
   const opts: RequestOptions = {
     method,
     credentials: 'include', // Send cookies (session + XSRF)
@@ -46,6 +47,12 @@ const baseOptions = (method: string, body?: any, isFormData?: boolean): RequestO
       'X-N3XT-SECURE-NONCE': btoa(`${Date.now()}_${Math.random()}`),
     },
   }
+
+  const { data } = await supabase.auth.getSession()
+  if (data?.session?.access_token) {
+    opts.headers['Authorization'] = `Bearer ${data.session.access_token}`
+  }
+
   if (isFormData) {
     opts.body = body as BodyInit
   } else if (body !== undefined) {
@@ -117,7 +124,8 @@ export const api = {
     const cached = getCached(endpoint)
     if (cached !== null) return cached
 
-    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('GET'))
+    const options = await baseOptions('GET')
+    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, options)
     const data = await this.handleResponse(res, endpoint)
     
     // Solo cachear si la respuesta fue exitosa
@@ -132,7 +140,8 @@ export const api = {
     const isFormData: boolean = body instanceof FormData
     // Mutating requests need CSRF protection
     await ensureCsrf()
-    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('POST', body, isFormData))
+    const options = await baseOptions('POST', body, isFormData)
+    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, options)
     const data = await this.handleResponse(res, endpoint)
     // POST muta datos → limpiar cache
     invalidateDataCache()
@@ -141,7 +150,8 @@ export const api = {
 
   async patch(endpoint: string, body?: any): Promise<any> {
     await ensureCsrf()
-    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('PATCH', body))
+    const options = await baseOptions('PATCH', body)
+    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, options)
     const data = await this.handleResponse(res, endpoint)
     invalidateDataCache()
     return data
@@ -149,7 +159,8 @@ export const api = {
 
   async put(endpoint: string, body?: any): Promise<any> {
     await ensureCsrf()
-    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('PUT', body))
+    const options = await baseOptions('PUT', body)
+    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, options)
     const data = await this.handleResponse(res, endpoint)
     invalidateDataCache()
     return data
@@ -158,7 +169,8 @@ export const api = {
 
   async delete(endpoint: string): Promise<any> {
     await ensureCsrf()
-    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('DELETE'))
+    const options = await baseOptions('DELETE')
+    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, options)
     const data = await this.handleResponse(res, endpoint)
     // DELETE muta datos → limpiar cache
     invalidateDataCache()

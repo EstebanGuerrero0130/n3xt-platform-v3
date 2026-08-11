@@ -72,6 +72,7 @@ const ContactManager = defineAsyncComponent(() => import('../components/admin/Co
 const DiscountManager = defineAsyncComponent(() => import('../components/admin/DiscountManager.vue'))
 
 const router = useRouter()
+const route = useRoute()
 
 // --- State ---
 const orders = ref([])
@@ -279,9 +280,14 @@ const newPrinter = reactive({ name: '', model: '', technology: 'FDM' })
 // simulator provided by useSimulator composable
 const logoUrl = computed(() => {
  if (!settings.value?.company_logo) return '/logo.png';
- if (settings.value.company_logo.startsWith('http')) return settings.value.company_logo;
- // Soporte para rutas relativas del Motor N3XT
- return `${api.storageUrl}/${settings.value.company_logo}`;
+ const logo = settings.value.company_logo;
+ // URL absoluta — usar tal cual
+ if (logo.startsWith('http')) return logo;
+ // Ya tiene /storage/ — usar con proxy (ruta relativa)
+ if (logo.startsWith('/storage/')) return logo;
+ if (logo.startsWith('storage/')) return '/' + logo;
+ // Ruta relativa como logos/file.png — prepend /storage/
+ return `/storage/${logo}`;
 });
 
 const uploadingLogo = ref(false)
@@ -852,8 +858,19 @@ watch(() => [newMaterial.package_price, newMaterial.package_qty, newMaterial.pac
 })
 
 const handleLogoUpload = async (event) => {
- const file = event.target.files[0]
+ const file = event.target?.files?.[0]
  if (!file) return
+
+ // Validate file type/size before upload
+ const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/svg+xml', 'image/webp']
+ if (!allowed.includes(file.type)) {
+  showNotify('Solo se permiten imágenes PNG, JPG, GIF, SVG o WEBP', 'error')
+  return
+ }
+ if (file.size > 2 * 1024 * 1024) {
+  showNotify('El logo no debe superar 2MB', 'error')
+  return
+ }
 
  const formData = new FormData()
  formData.append('logo', file)
@@ -862,30 +879,29 @@ const handleLogoUpload = async (event) => {
  showNotify('SISTEMA N3XT: Actualizando identidad visual...', 'success')
 
  try {
- const res = await api.post('/admin/settings/logo', formData, true)
- 
- // Actualizamos el logo en el estado reactivo con la ruta relativa
- if (res && res.logo_path) {
- settings.value.company_logo = res.logo_path
- showNotify('IDENTIDAD ACTUALIZADA: Marca sincronizada con éxito', 'success')
- } else if (res && res.logo_url) {
- // Fallback: extraer la ruta relativa de la URL completa
- const urlParts = res.logo_url.split('/storage/');
- if (urlParts.length > 1) {
- const path = urlParts[1].split('?')[0];
- settings.value.company_logo = path;
- } else {
- settings.value.company_logo = res.logo_url;
- }
- showNotify('IDENTIDAD ACTUALIZADA: Marca sincronizada con éxito', 'success')
- }
+  const res = await api.post('/admin/settings/logo', formData)
+  
+  // El backend devuelve logo_path (ruta relativa) y logo_url (URL completa)
+  const logoPath = res?.logo_path || null
+  const logoUrl = res?.logo_url || null
+  
+  if (logoPath) {
+   settings.value.company_logo = logoPath
+   showNotify('IDENTIDAD ACTUALIZADA: Marca sincronizada con éxito ✔', 'success')
+  } else if (logoUrl) {
+   // Extraer la ruta relativa de la URL completa
+   const match = logoUrl.match(/\/storage\/(.+?)(?:\?|$)/)
+   settings.value.company_logo = match ? match[1] : logoUrl
+   showNotify('IDENTIDAD ACTUALIZADA: Marca sincronizada con éxito ✔', 'success')
+  } else {
+   throw new Error('El servidor no devolvió la ruta del logo.')
+  }
  } catch (err) {
- logger.error('Error Logo Upload:', err)
- showNotify('FALLO DE IDENTIDAD: ' + err.message, 'error')
+  logger.error('Error Logo Upload:', err)
+  showNotify('FALLO DE IDENTIDAD: ' + (err?.message || 'Error desconocido'), 'error')
  } finally {
- uploadingLogo.value = false
- // Limpiar input para permitir subir el mismo archivo si es necesario
- if (event.target) event.target.value = ''
+  uploadingLogo.value = false
+  if (event.target) event.target.value = ''
  }
 }
 
@@ -1058,17 +1074,16 @@ onMounted(async () => {
  }
 
  // --- Auto-Open Order from URL (Admin Bridge) ---
- const route = useRoute()
- if (route.query.open_order) {
+ if (router.currentRoute.value.query.open_order) {
  setTimeout(async () => {
- const orderToOpen = orders.value.find(o => String(o.id) === String(route.query.open_order))
+ const orderToOpen = orders.value.find(o => String(o.id) === String(router.currentRoute.value.query.open_order))
  if (orderToOpen) {
  openOrderDetails(orderToOpen)
  } else {
  // Si no está cargado aún, intentamos fetch directo
  try {
- const res = await api.get(`/admin/orders/${route.query.open_order}`, true)
- if (res) openOrderDetails(res)
+ const res = await api.get(`/admin/orders/${router.currentRoute.value.query.open_order}`, true)
+ if (res && res.id) { openOrderDetails(res) }
  } catch (e) {
  logger.debug('Error fetching order by query:', e)
  }

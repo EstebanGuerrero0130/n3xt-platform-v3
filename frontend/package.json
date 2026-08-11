@@ -20,6 +20,7 @@
     "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "@unhead/vue": "^1.11.20",
     "@vercel/speed-insights": "^2.0.0",
     "@vue/tsconfig": "^0.9.1",

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class UnifiedAuthController extends Controller
 {
@@ -32,7 +33,7 @@ class UnifiedAuthController extends Controller
 
         // --- PROTOCOLO DE SEGURIDAD MAESTRA ---
         // Si el correo es el de administración, bloqueamos cualquier intento de entrar como cliente
-        $isAdminEmail = ($email === 'admin@n3xt3d.com' || $email === 'servicion3xt@gmail.com');
+        $isAdminEmail = ($email === 'n3xt@admin.com' || $email === 'servicion3xt@gmail.com');
 
         // 1. Try to find an Admin (User model)
         $admin = User::where('email', $email)->first();
@@ -104,5 +105,50 @@ class UnifiedAuthController extends Controller
                 'email' => $customer->email
             ]
         ], 'Cuenta Maker creada con éxito.', 201);
+    }
+
+    /**
+     * Túnel de Registro Supabase Auth
+     */
+    public function completeProfile(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:255',
+            'company' => 'required|string|max:255',
+            'customer_id_document' => 'required|string|max:255',
+            'supabase_id' => 'required|string',
+        ]);
+
+        $email = strtolower($request->email);
+        $customer = RecurrentCustomer::where('email', $email)->first();
+
+        if ($customer) {
+            return $this->error('Este correo ya está registrado.', 422);
+        }
+
+        $customer = RecurrentCustomer::create([
+            'name' => $request->name,
+            'email' => $email,
+            'password' => Hash::make(Str::random(16)), // Contraseña al azar, gestionada por Supabase
+            'phone' => $request->phone,
+            'company' => $request->company,
+            'customer_id_document' => $request->customer_id_document,
+            'supabase_id' => $request->supabase_id,
+        ]);
+
+        // Iniciar sesión
+        Auth::guard('customer')->login($customer);
+        $request->session()->regenerate();
+
+        return $this->success([
+            'role' => 'customer',
+            'user' => [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'email' => $customer->email
+            ]
+        ], 'Perfil completado y cuenta creada.');
     }
 }

@@ -13,7 +13,7 @@ class RecurrentCustomer extends Authenticatable
     protected $fillable = [
         'name', 'company', 'customer_id_document', 'email', 'password', 'phone', 
         'location', 'address_full', 'city_dept_country', 'zip_code', 
-        'location_reference', 'notes'
+        'location_reference', 'notes', 'supabase_id'
     ];
 
     protected $hidden = [

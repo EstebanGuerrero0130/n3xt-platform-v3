@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\OrderNotificationMail;
 
 class OrderController extends Controller
 {
@@ -170,6 +173,19 @@ class OrderController extends Controller
                 }
             }
 
+            // Enviar notificación por correo con PDF adjunto
+            if (!empty($order->customer_email)) {
+                try {
+                    $pdf = Pdf::loadView('pdf.invoice', [
+                        'order' => $order,
+                        'settings' => $settings
+                    ]);
+                    Mail::to($order->customer_email)->send(new OrderNotificationMail($order, $pdf->output()));
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Error enviando email de cotización: ' . $e->getMessage());
+                }
+            }
+
             return $this->success(['order_id' => $order->id], 'Orden creada con éxito.', 201);
         });
     }
@@ -309,7 +325,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Download order 3D model
+     * Download Order Model File (.STL/.OBJ)
      */
     public function download($id)
     {
@@ -320,6 +336,22 @@ class OrderController extends Controller
         }
 
         return response()->download(Storage::disk('local')->path($order->file_path), $order->original_filename);
+    }
+
+    /**
+     * Download PDF Invoice/Quote
+     */
+    public function downloadPdf($id)
+    {
+        $order = Order::findOrFail($id);
+        $settings = Setting::all()->pluck('value', 'key');
+        
+        $pdf = Pdf::loadView('pdf.invoice', [
+            'order' => $order,
+            'settings' => $settings
+        ]);
+
+        return $pdf->download('Cotizacion_N3XT_' . $order->id . '.pdf');
     }
 
     public function destroy($id)

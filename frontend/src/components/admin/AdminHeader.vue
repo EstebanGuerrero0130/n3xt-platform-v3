@@ -22,8 +22,11 @@ const logoError = ref(false)
 
 const logoUrl = computed(() => {
  if (!props.settings?.company_logo) return '/logo.png'
- if (props.settings.company_logo.startsWith('http')) return props.settings.company_logo
- return `${api.storageUrl}/${props.settings.company_logo}`
+ const logo = props.settings.company_logo
+ if (logo.startsWith('http')) return logo
+ if (logo.startsWith('/storage/')) return logo
+ if (logo.startsWith('storage/')) return '/' + logo
+ return `/storage/${logo}`
 })
 
 // Reset error state when logo URL changes (e.g. after upload)
