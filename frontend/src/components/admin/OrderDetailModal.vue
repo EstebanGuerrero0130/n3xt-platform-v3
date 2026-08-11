@@ -30,7 +30,18 @@
  <p class="text-xl font-black text-white">{{ order.customer_name }}</p>
  <p v-if="order.customer_id_document" class="text-sm text-[#a4aea6] mt-1">ID: {{ order.customer_id_document }}</p>
  <p v-if="order.customer_phone" class="text-sm text-[#c3c4c5] mt-2">{{ order.customer_phone }}</p>
- <p v-if="order.customer_email" class="text-sm text-[#c3c4c5]">{{ order.customer_email }}</p>
+ <div v-if="order.customer_email" class="mt-2 flex flex-col gap-2 items-start">
+ <p class="text-sm text-[#c3c4c5]">{{ order.customer_email }}</p>
+ <button 
+ class="px-3 py-1.5 bg-[#8dd6ff]/10 hover:bg-[#8dd6ff]/20 text-[#8dd6ff] rounded-[6px] text-xs font-bold transition-colors flex items-center gap-2"
+ @click="sendPdfEmail"
+ :disabled="isSendingEmail"
+ >
+ <svg v-if="!isSendingEmail" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+ <svg v-else class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+ {{ isSendingEmail ? 'Enviando...' : 'Enviar PDF por Correo' }}
+ </button>
+ </div>
  </div>
 
  <!-- Technical Specs -->
@@ -70,13 +81,15 @@
  <div class="bg-[#283041]/50 rounded-[6px] md:rounded-[24px] p-3 md:p-5 border border-gray-700/50">
  <h3 class="text-xs font-black text-[#c3c4c5] uppercase tracking-wider mb-3 md:mb-4">Línea de Producción</h3>
  <div class="flex items-center gap-1">
- <div v-for="(step, idx) in statusSteps" :key="step.id" class="flex-1 flex flex-col items-center">
+ <template v-for="(step, idx) in statusSteps" :key="step.id">
+ <div class="flex-1 flex flex-col items-center">
  <div :class="['w-8 h-8 rounded-[60px] flex items-center justify-center text-xs font-black transition-all', getStatusIndex(order.status) >= idx ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-[#a4aea6]']">
  {{ getStatusIndex(order.status) >= idx ? '✓' : idx + 1 }}
  </div>
  <p :class="['text-[10px] font-bold mt-1 text-center', getStatusIndex(order.status) >= idx ? 'text-emerald-400' : 'text-[#a4aea6]']">{{ step.label }}</p>
  </div>
  <div v-if="idx < statusSteps.length - 1" :key="'line-' + idx" :class="['h-0.5 flex-1', getStatusIndex(order.status) > idx ? 'bg-emerald-600' : 'bg-gray-700']"></div>
+ </template>
  </div>
  </div>
  </div>
@@ -143,15 +156,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, type PropType } from 'vue'
 import { api } from '../../services/api'
 import { calcOrderDetailBreakdown } from '../../services/costCalculator'
 import logger from '../../utils/logger'
 
 const props = defineProps({
- order: { type: Object, default: null },
- materials: { type: Array, default: () => [] },
- settings: { type: Object, default: () => ({ infra: {}, prep: {}, margin: {} }) },
+ order: { type: Object as PropType<any>, default: null },
+ materials: { type: Array as PropType<any[]>, default: () => [] },
+ settings: { type: Object as PropType<any>, default: () => ({ infra: {}, prep: {}, margin: {} }) },
 })
 
 const emit = defineEmits(['close', 'updated', 'update-order'])
@@ -162,6 +175,7 @@ const newExtra = ref({ material_id: '', qty: 1 })
 // Local state for tracking fields to avoid prop mutation
 const localCarrier = ref(props.order?.tracking_carrier || '')
 const localGuide = ref(props.order?.tracking_guide || '')
+const isSendingEmail = ref(false)
 
 // Sync local state when prop changes
 watch(() => props.order?.tracking_carrier, (val) => { localCarrier.value = val || '' })
@@ -177,7 +191,7 @@ const statusSteps = [
 
 const getStatusIndex = (status: any) => {
  const mapping = { pending: 0, printing: 1, 'post-processing': 2, completed: 3, shipped: 4 }
- return mapping[status] ?? -1
+ return mapping[status as keyof typeof mapping] ?? -1
 }
 
 const statusLabel = computed(() => {
@@ -221,7 +235,7 @@ const breakdown = computed(() => {
 const addExtra = async () => {
  if (!newExtra.value.material_id || newExtra.value.qty <= 0) return
  try {
- await api.post(`/admin/orders/${props.order.id}/extras`, newExtra.value, true)
+ await api.post(`/admin/orders/${props.order.id}/extras`, newExtra.value)
  emit('updated')
  showAddForm.value = false
  newExtra.value = { material_id: '', qty: 1 }
@@ -235,10 +249,23 @@ const saveTracking = async () => {
  await api.patch(`/admin/orders/${props.order.id}/status`, {
  tracking_guide: localGuide.value,
  tracking_carrier: localCarrier.value
- }, true)
+ })
  emit('updated')
  } catch (err) {
  logger.error('Error saving tracking:', err)
+ }
+}
+
+const sendPdfEmail = async () => {
+ if (!props.order?.id) return
+ isSendingEmail.value = true
+ try {
+ const res = await api.post(`/admin/orders/${props.order.id}/email`, {})
+ // Notificación de éxito ya manejada si usaste showNotify o la devuelve el api.post
+ } catch (err) {
+ logger.error('Error enviando PDF', err)
+ } finally {
+ isSendingEmail.value = false
  }
 }
 </script>

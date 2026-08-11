@@ -354,6 +354,32 @@ class OrderController extends Controller
         return $pdf->download('Cotizacion_N3XT_' . $order->id . '.pdf');
     }
 
+    public function sendEmail($id)
+    {
+        $order = Order::findOrFail($id);
+
+        if (!$order->customer_email) {
+            return $this->error('La orden no tiene correo de cliente asignado.', 400);
+        }
+
+        try {
+            $settings = Setting::all()->pluck('value', 'key');
+            
+            // Generar PDF en memoria
+            $pdf = Pdf::loadView('pdf.invoice', [
+                'order' => $order,
+                'settings' => $settings
+            ]);
+
+            // Enviar correo con adjunto
+            Mail::to($order->customer_email)->send(new OrderNotificationMail($order, $pdf->output()));
+
+            return $this->success(null, 'PDF enviado al correo: ' . $order->customer_email);
+        } catch (\Exception $e) {
+            return $this->error('Error enviando correo: ' . $e->getMessage(), 500);
+        }
+    }
+
     public function destroy($id)
     {
         try {

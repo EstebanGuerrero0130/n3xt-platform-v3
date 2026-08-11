@@ -82,6 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/admin/orders/{id}', [OrderController::class, 'destroy']);
     Route::get('/admin/orders/{id}/download', [OrderController::class, 'download']);
     Route::get('/admin/orders/{id}/pdf', [OrderController::class, 'downloadPdf']);
+    Route::post('/admin/orders/{id}/email', [OrderController::class, 'sendEmail']);
     Route::post('/admin/purge-all', [OrderController::class, 'purgeAll']);
     Route::post('/admin/orders/{id}/extras', [OrderController::class, 'addExtra']);
 
