@@ -42,7 +42,11 @@ const lastAttemptTime = ref(0)
 const selectedRole = ref(window.location.pathname.includes('admin') ? 'admin' : 'customer')
 
 const loginWithGoogle = () => {
-  error.value = "Ingresar con Google requiere configurar las credenciales OAuth en Google Cloud Console. Esta integración segura se completará en la siguiente fase de desarrollo."
+  // Supabase OAuth → redirige a Google y vuelve a /customer/dashboard
+  const supabaseUrl = 'https://ilxdermdcymzaajokhvl.supabase.co'
+  const redirectTo = `${window.location.origin}/customer/dashboard`
+  const googleOAuthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`
+  window.location.href = googleOAuthUrl
 }
 
 onMounted(async () => {

@@ -198,14 +198,14 @@ const hasSlicingOrSLA = computed(() =>
  </div>
  </div>
 
- <!-- BOTON CALCULAR (FDM) -->
- <button
- v-if="selectedTechnology === 'FDM'" :disabled="isSlicing || !models[activeModelIdx]?.hasModel" :class="!models[activeModelIdx]?.hasModel ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[0.98] active:scale-95 shadow-xl'"
- class="w-full py-5 bg-slate-900 dark:bg-white text-white dark:bg-white text-slate-900 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
- @click="$emit('calculate')">
- <span v-if="isSlicing" class="w-5 h-5 border-3 border-white/30 border-t-white rounded-[60px] animate-spin"></span>
- <span>{{ isSlicing ? 'Procesando...' : 'Calcular Cotizacion' }}</span>
- </button>
+  <!-- BOTON CALCULAR (FDM) -->
+  <button
+  v-if="selectedTechnology === 'FDM'" :disabled="isSlicing || !models[activeModelIdx]?.hasModel" :class="!models[activeModelIdx]?.hasModel ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[0.98] active:scale-95 shadow-xl'"
+  class="w-full py-5 bg-[#1e293b] text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 border border-white/10"
+  @click="$emit('calculate')">
+  <span v-if="isSlicing" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+  <span>{{ isSlicing ? 'Procesando...' : 'Calcular Cotizacion' }}</span>
+  </button>
 
  <!-- RESULTADO -->
  <div v-if="hasSlicingOrSLA" class="bg-gradient-to-br from-[#151a22] to-[#151a22]/50 dark:from-[#151a22]/30 dark:to-transparent border border-emerald-500/20 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-lg shadow-emerald-500/5">
@@ -273,12 +273,12 @@ const hasSlicingOrSLA = computed(() =>
  </div>
  </div>
 
- <!-- CTA -->
- <button
-class="w-full bg-[#08872b] hover:bg-emerald-600 text-white font-black py-7 rounded-[2.5rem] shadow-[0_0_15px_rgba(8,135,43,0.2)] uppercase tracking-[0.3em] text-[11px] transition-all active:scale-[0.98]"
- @click="$emit('requestQuote')">
- Solicitar Cotizacion
- </button>
+  <!-- CTA -->
+  <button
+  class="w-full bg-[#08872b] hover:bg-emerald-500 text-white font-black py-7 rounded-[2.5rem] shadow-[0_0_20px_rgba(8,135,43,0.3)] uppercase tracking-[0.3em] text-[11px] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+  @click="$emit('requestQuote')">
+  🚀 Solicitar Cotizacion
+  </button>
  </div>
 </template>
 
