@@ -41,6 +41,10 @@ const honeypot = ref('')
 const lastAttemptTime = ref(0)
 const selectedRole = ref(window.location.pathname.includes('admin') ? 'admin' : 'customer')
 
+const loginWithGoogle = () => {
+  error.value = "Ingresar con Google requiere configurar las credenciales OAuth en Google Cloud Console. Esta integración segura se completará en la siguiente fase de desarrollo."
+}
+
 onMounted(async () => {
  // Redirigir si ya hay sesión activa
  const authStatus = await api.checkAuth()
@@ -233,6 +237,24 @@ const register = async () => {
  </div>
  <button type="submit" :disabled="loading" class="split-btn w-full bg-[#151a22] dark:bg-[#151a22] text-white dark:text-[#ffffff] font-black py-6 rounded-[24px] hover:bg-[#08872b] dark:hover:bg-[#08872b] dark:hover:text-white transition-all active:scale-95 text-[10px] uppercase tracking-[0.2em] mt-4">
  {{ loading ? 'AUTENTICANDO...' : 'INICIAR SESIÓN' }}
+ </button>
+
+ <!-- Separador O -->
+ <div v-if="selectedRole === 'customer'" class="flex items-center justify-center gap-4 my-6 opacity-30">
+   <div class="h-[1px] flex-1 bg-gray-500"></div>
+   <span class="text-[8px] font-black tracking-widest text-[#c3c4c5]">O BIEN</span>
+   <div class="h-[1px] flex-1 bg-gray-500"></div>
+ </div>
+
+ <!-- Botón Google -->
+ <button v-if="selectedRole === 'customer'" type="button" @click="loginWithGoogle" class="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-slate-900 font-bold py-5 rounded-[24px] transition-all border border-gray-300 text-xs uppercase tracking-wider">
+   <svg class="w-4 h-4" viewBox="0 0 24 24">
+     <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.64 15.02 1 12 1 7.37 1 3.4 3.65 1.5 7.54l3.87 3C6.27 7.74 8.87 5.04 12 5.04z"/>
+     <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.28 1.48-1.12 2.73-2.38 3.58l3.7 2.87c2.16-1.99 3.41-4.92 3.41-8.6z"/>
+     <path fill="#FBBC05" d="M5.37 14.54c-.24-.72-.37-1.49-.37-2.29s.14-1.57.37-2.29L1.5 7.54C.54 9.48 0 11.67 0 14s.54 4.52 1.5 6.46l3.87-2.92z"/>
+     <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.7-2.87c-1.03.69-2.35 1.1-3.96 1.1-3.13 0-5.73-2.7-6.68-5.5l-3.87 3C3.4 20.35 7.37 23 12 23z"/>
+   </svg>
+   Ingresar con Google
  </button>
 
  <p class="text-center text-[10px] font-black text-[#c3c4c5] uppercase tracking-[0.2em] mt-6">

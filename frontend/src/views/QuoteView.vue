@@ -469,15 +469,8 @@ const calculatePrice = () => {
     const extra = utilities.value.find((u: any) => String(u.id) === String(item.id))
     if (!extra) return
     const costPerUnit = Number(extra.cost_per_kg) || 0
-    const unit = (extra.unit || '').toLowerCase().trim()
-    const weightUnits = ['g', 'ml', 'kg', 'l']
-    if (weightUnits.includes(unit)) {
-      // Consumible por peso: costo_por_kg * cantidad_en_gramos_o_ml / 1000
-      utilityCost += costPerUnit * (item.qty / 1000)
-    } else {
-      // Servicio o unidad: precio plano directo (NO dividir por 1000)
-      utilityCost += costPerUnit * item.qty
-    }
+    // Siempre tratar como tarifa plana multiplicada por cantidad, coincidiendo con la visualización del sidebar
+    utilityCost += costPerUnit * item.qty
   })
 
   // --- COSTO DE PRODUCCIÓN BASE ---
