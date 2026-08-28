@@ -112,9 +112,9 @@ export function useSimulator({ inventoryData, settings, showNotify: _showNotify 
   const addSimulatorExtra = (event: any) => {
     const matId = event.target.value
     if (!matId) return
-    const item = inventoryData.value.find((m: any) => m.id === matId)
+    const item = inventoryData.value.find((m: any) => String(m.id) === String(matId))
     if (item) {
-      const existing = simulator.extra_items.find(i => i.id === item.id)
+      const existing = simulator.extra_items.find(i => String(i.id) === String(item.id))
       if (existing) {
         existing.qty++
       } else {

@@ -42,15 +42,17 @@ const filteredMaterials = computed(() =>
 )
 
 const formatTime = (h: number) => {
- if (!h || h < 0) return '0m';
- const hours = Math.floor(h);
- const minutes = Math.round((h - hours) * 60);
- if (hours === 0) return `${minutes}m`;
- return `${hours}h ${minutes}m`;
+  if (!h || h <= 0) return '0m';
+  const totalMinutes = Math.round(h * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 }
 
 const hasSlicingOrSLA = computed(() => 
- props.models.some((m: any) => m.hasSlicing) || props.selectedTechnology === 'SLA'
+ props.models.some((m: any) => m.hasModel)
 )
 </script>
 
@@ -102,7 +104,7 @@ const hasSlicingOrSLA = computed(() =>
  <svg class="w-4 h-4 text-[#8dd6ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.628.209a2 2 0 01-1.564 0l-.628-.209a6 6 0 00-3.86-.517L3.081 14.88a2 2 0 00-1.022.547l-.21.21a2 2 0 00.707 3.414l9.9 1.98a2 2 0 00.707 0l9.9-1.98a2 2 0 00.707-3.414l-.21-.21z"/></svg>
  </div>
  <p class="text-[10px] font-black text-[#ffffff] dark:text-white uppercase tracking-wider">{{ mat.name }}</p>
- <p class="text-[8px] font-bold text-[#c3c4c5] mt-1">${{ mat.cost_per_kg }}/kg</p>
+ <p class="text-[8px] font-bold text-[#c3c4c5] mt-1">${{ Number(mat.cost_per_kg).toLocaleString('es-CO') }}/kg</p>
  <p v-if="mat.density" class="text-[7px] text-[#c3c4c5]/60 mt-0.5">{{ mat.density }}g/cm³</p>
  </button>
  </div>
@@ -141,25 +143,49 @@ const hasSlicingOrSLA = computed(() =>
  <button class="px-6 py-4 text-[#c3c4c5] hover:text-[#8dd6ff] font-black text-lg transition-colors" aria-label="Aumentar cantidad" @click="localQty++">+</button>
  </div>
  </div>
- </div> <!-- SECCION 3: Opciones Adicionales -->
+ </div> 
+ 
+ <!-- SECCION 3: Opciones Adicionales -->
  <div class="bg-white dark:bg-[#151a22]/30 border border-gray-200 dark:border-[#21262d] rounded-[24px] p-6 space-y-6 shadow-sm">
  <div class="border-b border-gray-200 dark:border-[#21262d] pb-3 mb-2">
  <h5 class="text-[#8dd6ff] uppercase tracking-[0.2em]">Opciones Adicionales</h5>
  </div>
 
- <!-- EXTRAS -->
- <div v-if="utilities.length > 0">
- <label id="sidebar-extras-label" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest mb-3 block">Extras / Consumibles</label>
- <div class="space-y-2" aria-labelledby="sidebar-extras-label">
- <button
- v-for="u in utilities" :key="u.id" :class="selectedExtras.find(e => e.id === u.id) ? 'bg-[#08872b]/10 border-primary/30 text-[#8dd6ff]' : 'bg-[#151a22] dark:bg-[#151a22]/50 border border-[#21262d] dark:border-[#21262d] border-transparent text-[#a4aea6] hover:border-primary/20'"
- class="w-full flex items-center justify-between px-5 py-3.5 rounded-[24px] border-2 text-[10px] font-black uppercase tracking-widest transition-all"
- @click="$emit('toggleExtra', u.id)">
- <span>{{ u.name }}</span>
- <span class="text-[9px]">${{ u.cost_per_kg }}/u</span>
- </button>
- </div>
- </div>
+  <!-- EXTRAS / ACABADOS Y SERVICIOS -->
+  <div v-if="utilities.length > 0">
+    <div class="flex items-center justify-between mb-3">
+      <label id="sidebar-extras-label" class="text-[9px] font-black text-[#c3c4c5] dark:text-[#a4aea6] uppercase tracking-widest block">Acabados y Servicios Adicionales</label>
+      <span v-if="selectedExtras.length > 0" class="text-[8px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest border border-emerald-500/20">
+        {{ selectedExtras.length }} Seleccionado{{ selectedExtras.length > 1 ? 's' : '' }}
+      </span>
+    </div>
+    <div class="space-y-2.5" aria-labelledby="sidebar-extras-label">
+      <button
+        v-for="u in utilities" :key="u.id"
+        :class="[
+          selectedExtras.some(e => String(e.id) === String(u.id))
+            ? 'bg-[#08872b]/15 border-[#08872b] text-emerald-400 shadow-md shadow-[#08872b]/10 scale-[1.01]'
+            : 'bg-[#151a22] dark:bg-[#151a22]/50 border-[#21262d] text-[#a4aea6] hover:border-emerald-500/40 hover:text-white',
+          'w-full flex items-center justify-between px-5 py-4 rounded-[20px] border-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 group/btn'
+        ]"
+        @click="$emit('toggleExtra', u.id)">
+        <div class="flex items-center gap-3">
+          <div :class="[
+            selectedExtras.some(e => String(e.id) === String(u.id)) ? 'bg-[#08872b] text-white' : 'border border-gray-600 group-hover/btn:border-emerald-400',
+            'w-5 h-5 rounded-full flex items-center justify-center transition-colors shrink-0'
+          ]">
+            <svg v-if="selectedExtras.some(e => String(e.id) === String(u.id))" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span class="text-left font-bold tracking-normal">{{ u.name }}</span>
+        </div>
+        <span class="text-[10px] font-black text-emerald-400 shrink-0 ml-2">
+          +${{ Number(u.cost_per_kg || u.price_per_unit || 0).toLocaleString('es-CO') }}
+        </span>
+      </button>
+    </div>
+  </div>
 
  <!-- CUPON -->
  <div>
@@ -175,7 +201,7 @@ const hasSlicingOrSLA = computed(() =>
  <!-- BOTON CALCULAR (FDM) -->
  <button
  v-if="selectedTechnology === 'FDM'" :disabled="isSlicing || !models[activeModelIdx]?.hasModel" :class="!models[activeModelIdx]?.hasModel ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[0.98] active:scale-95 shadow-xl'"
- class="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
+ class="w-full py-5 bg-slate-900 dark:bg-white text-white dark:bg-white text-slate-900 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
  @click="$emit('calculate')">
  <span v-if="isSlicing" class="w-5 h-5 border-3 border-white/30 border-t-white rounded-[60px] animate-spin"></span>
  <span>{{ isSlicing ? 'Procesando...' : 'Calcular Cotizacion' }}</span>
@@ -186,7 +212,7 @@ const hasSlicingOrSLA = computed(() =>
  <div class="absolute -top-10 -right-10 w-48 h-48 bg-[#08872b]/20 rounded-[60px] blur-[80px]"></div>
  
  <div class="flex justify-between items-center mb-6 relative z-10">
- <p class="text-[9px] font-black text-[#8dd6ff] uppercase tracking-[0.5em]">Total Estimado</p>
+ <p class="text-[9px] font-black text-[#8dd6ff] uppercase tracking-[0.5em] tracking-[0.5em]">Total Estimado</p>
  <span class="bg-[#08872b] text-white text-[8px] font-black px-4 py-1.5 rounded-[60px] uppercase tracking-widest">Listo</span>
  </div>
 
@@ -205,19 +231,33 @@ const hasSlicingOrSLA = computed(() =>
  <span class="text-[9px] font-black text-white/40 uppercase tracking-widest">Tiempo estimado</span>
  <span class="text-sm font-black text-white">{{ formatTime(breakdown.duration) }}</span>
  </div>
+ <div v-if="breakdown.utilityCost > 0" class="flex justify-between items-center bg-[#151a22]/5 px-4 py-3 rounded-[6px]">
+ <span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Servicios Adicionales</span>
+ <span class="text-xs font-black text-emerald-400">+${{ Math.round(breakdown.utilityCost).toLocaleString('es-CO') }}</span>
+ </div>
+
+ <!-- Desglose de extras seleccionados -->
+ <div v-for="extra in selectedExtras" :key="extra.id" class="flex justify-between items-center px-4 py-1">
+   <span class="text-[8px] text-emerald-300/70 uppercase tracking-wider truncate max-w-[60%]">
+     {{ utilities.find((u: any) => String(u.id) === String(extra.id))?.name || 'Extra' }}
+   </span>
+   <span class="text-[9px] font-bold text-emerald-300/70">
+     +${{ Math.round(Number(utilities.find((u: any) => String(u.id) === String(extra.id))?.cost_per_kg || 0) * (extra.qty || 1)).toLocaleString('es-CO') }}
+   </span>
+ </div>
 
  <div v-if="breakdown.discount > 0" class="flex justify-between items-center px-4 py-2">
  <span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Descuento</span>
- <span class="text-xs font-black text-emerald-400">-${{ Math.round(breakdown.discount).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
+ <span class="text-xs font-black text-emerald-400">-${{ Math.round(breakdown.discount).toLocaleString('es-CO') }}</span>
  </div>
  <div class="border-t border-white/10 pt-3 mt-2">
  <div class="flex justify-between items-center px-4 py-2">
  <span class="text-[9px] font-black text-white/50 uppercase tracking-widest">Subtotal</span>
- <span class="text-sm font-black text-white">${{ Math.round(breakdown.subtotal).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
+ <span class="text-sm font-black text-white">${{ Math.round(breakdown.subtotal).toLocaleString('es-CO') }}</span>
  </div>
  <div class="flex justify-between items-center px-4 py-2">
  <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">IVA (19%)</span>
- <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.iva).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
+ <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.iva).toLocaleString('es-CO') }}</span>
  </div>
  </div>
  </div>

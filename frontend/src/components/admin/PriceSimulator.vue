@@ -93,7 +93,7 @@
  <span class="text-white font-bold w-8 text-center">{{ item.qty }}</span>
  <button class="w-8 h-8 rounded-[6px] bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors" aria-label="Botón interactivo" @click="item.qty++">+</button>
  </div>
- <span class="text-emerald-400 font-bold w-24 text-right">${{ (item.cost * item.qty).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span>
+ <span class="text-emerald-400 font-bold w-24 text-right">${{ (item.cost * item.qty).toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span>
  <button class="p-1 hover:bg-red-900/50 rounded-[6px] transition-colors" @click="removeExtra(idx)">
  <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
  </button>
@@ -112,7 +112,7 @@
  <div class="flex justify-between items-start mb-4">
  <div>
  <p class="text-xs font-bold text-[#a4aea6] uppercase tracking-wider">Total Proyectado</p>
- <p class="text-3xl font-black text-emerald-400 mt-1">${{ result.total.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
+ <p class="text-3xl font-black text-emerald-400 mt-1">${{ result.total.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</p>
  </div>
  <div class="flex gap-2">
  <button class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-[6px] text-xs font-bold text-white transition-colors" @click="emitFormData('download-pdf')">PDF</button>
@@ -123,7 +123,7 @@
  <div class="grid grid-cols-2 gap-2 mb-4">
  <div class="bg-[#151a22]/80 rounded-[6px] p-3 border border-gray-700/30">
  <p class="text-[9px] font-bold text-[#a4aea6] uppercase tracking-wider">Precio Unitario</p>
- <p class="text-lg font-black text-white mt-0.5">${{ result.unit_price.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
+ <p class="text-lg font-black text-white mt-0.5">${{ result.unit_price.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</p>
  </div>
  <div class="bg-[#151a22]/80 rounded-[6px] p-3 border border-gray-700/30">
  <p class="text-[9px] font-bold text-[#a4aea6] uppercase tracking-wider">Margen de Ganancia</p>
@@ -131,7 +131,7 @@
  </div>
  <div class="bg-[#151a22]/80 rounded-[6px] p-3 border border-gray-700/30">
  <p class="text-[9px] font-bold text-[#a4aea6] uppercase tracking-wider">Costo / Hora</p>
- <p class="text-lg font-black text-white mt-0.5">${{ (result.production / (result.total_hours || 1)).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
+ <p class="text-lg font-black text-white mt-0.5">${{ (result.production / (result.total_hours || 1)).toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</p>
  </div>
  <div class="bg-[#151a22]/80 rounded-[6px] p-3 border border-gray-700/30">
  <p class="text-[9px] font-bold text-[#a4aea6] uppercase tracking-wider">Piezas Totales</p>
@@ -152,25 +152,25 @@
 
  <!-- Breakdown -->
  <div class="space-y-2 text-sm">
- <div class="flex justify-between text-[#c3c4c5]"><span>Material</span><span class="text-white font-bold">${{ result.material.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Energía <span class="text-[9px] text-[#a4aea6]">(carga: {{ ((settings.infra?.load_factor ?? 0.4) * 100).toFixed(0) }}%)</span></span><span class="text-white font-bold">${{ result.luz.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Mano de Obra <span class="text-[9px] text-[#a4aea6]">(prep: {{ settings.prep?.prep_time_pct ?? 10 }}%)</span></span><span class="text-white font-bold">${{ result.labor.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Depreciación</span><span class="text-white font-bold">${{ result.depr.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Mantenimiento</span><span class="text-white font-bold">${{ result.mant.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Etiquetas</span><span class="text-white font-bold">${{ result.etiquetas.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>Extras</span><span class="text-white font-bold">${{ result.extras.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Material</span><span class="text-white font-bold">${{ result.material.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Energía <span class="text-[9px] text-[#a4aea6]">(carga: {{ ((settings.infra?.load_factor ?? 0.4) * 100).toFixed(0) }}%)</span></span><span class="text-white font-bold">${{ result.luz.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Mano de Obra <span class="text-[9px] text-[#a4aea6]">(prep: {{ settings.prep?.prep_time_pct ?? 10 }}%)</span></span><span class="text-white font-bold">${{ result.labor.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Depreciación</span><span class="text-white font-bold">${{ result.depr.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Mantenimiento</span><span class="text-white font-bold">${{ result.mant.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Etiquetas</span><span class="text-white font-bold">${{ result.etiquetas.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>Extras</span><span class="text-white font-bold">${{ result.extras.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
  <div class="border-t border-gray-700/50 pt-2 mt-2">
  <div class="flex justify-between text-[#c3c4c5]"><span class="font-bold text-[#a4aea6] uppercase text-[10px] tracking-wider">Costos Operativos</span></div>
- <div class="flex justify-between text-[#c3c4c5] mt-1"><span class="pl-3">Logística ({{ form.transporte_pct }}%)</span><span class="text-white font-bold">${{ result.logistics.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span class="pl-3">Marketing ({{ form.marketing_pct }}%)</span><span class="text-white font-bold">${{ result.marketing.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span class="pl-3">Fallos ({{ form.fallos_pct }}%)</span><span class="text-white font-bold">${{ result.failures.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-emerald-400/80"><span class="pl-3">Ganancia ({{ form.profit_pct }}%)</span><span class="text-emerald-400 font-bold">${{ result.profit.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5] mt-1"><span class="pl-3">Logística ({{ form.transporte_pct }}%)</span><span class="text-white font-bold">${{ result.logistics.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span class="pl-3">Marketing ({{ form.marketing_pct }}%)</span><span class="text-white font-bold">${{ result.marketing.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span class="pl-3">Fallos ({{ form.fallos_pct }}%)</span><span class="text-white font-bold">${{ result.failures.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-emerald-400/80"><span class="pl-3">Ganancia ({{ form.profit_pct }}%)</span><span class="text-emerald-400 font-bold">${{ result.profit.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
  </div>
- <div v-if="result.discount > 0" class="flex justify-between text-red-400"><span>Descuento (-{{ form.discount_pct }}%)</span><span class="text-red-400 font-bold">-${{ result.discount.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div v-if="result.discount > 0" class="flex justify-between text-red-400"><span>Descuento (-{{ form.discount_pct }}%)</span><span class="text-red-400 font-bold">-${{ result.discount.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
  <div class="border-t border-gray-700 pt-2 mt-2">
- <div class="flex justify-between text-gray-300"><span class="font-semibold">Subtotal</span><span class="text-white font-bold">${{ result.subtotal.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-[#c3c4c5]"><span>IVA ({{ form.iva_pct }}%)</span><span class="text-white font-bold">${{ result.iva.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
- <div class="flex justify-between text-emerald-400 text-base font-bold mt-2 pt-2 border-t border-gray-700/50"><span>TOTAL PROYECTADO</span><span>${{ result.total.toLocaleString(undefined, {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-gray-300"><span class="font-semibold">Subtotal</span><span class="text-white font-bold">${{ result.subtotal.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-[#c3c4c5]"><span>IVA ({{ form.iva_pct }}%)</span><span class="text-white font-bold">${{ result.iva.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
+ <div class="flex justify-between text-emerald-400 text-base font-bold mt-2 pt-2 border-t border-gray-700/50"><span>TOTAL PROYECTADO</span><span>${{ result.total.toLocaleString('es-CO', {maximumFractionDigits: 0}) }}</span></div>
  </div>
  </div>
  </div>
@@ -365,9 +365,9 @@ const emitFormData = (action: 'download-pdf' | 'create-order') => {
 const addExtra = (e: any) => {
  const matId = e.target.value
  if (!matId) return
- const item = props.materials.find(m => m.id === matId)
+ const item = props.materials.find(m => String(m.id) === String(matId))
  if (item) {
- const existing = form.extra_items.find(i => i.id === item.id)
+ const existing = form.extra_items.find(i => String(i.id) === String(item.id))
  if (existing) existing.qty++
  else form.extra_items.push({ id: item.id, name: item.name, cost: item.cost_per_kg, unit: item.unit, qty: 1 })
  }

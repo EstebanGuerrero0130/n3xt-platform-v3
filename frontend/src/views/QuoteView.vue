@@ -119,56 +119,69 @@ const qty = ref(1)
 const isSlicing = ref(false)
 
 const runCuraEngineAnalysis = async () => {
- const idx = activeModelIdx.value
- const model = models.value[idx]
- if (!model || !model.file) {
- notify("Sube un modelo 3D primero", "error")
- return
- }
- 
- isSlicing.value = true
- 
- try {
- const mat = materials.value.find(m => m.id === selectedMaterial.value)
- const formData = new FormData()
- formData.append('file', model.file)
- formData.append('infill', String(model.infill || 15))
- formData.append('layer_height', String(model.layerHeight || 0.2))
- formData.append('total_area', String(model.totalArea || 0))
- formData.append('volume_mm3', String(model.volume || 0))
- formData.append('support_area', String(model.supportArea || 0))
- formData.append('technology', selectedTechnology.value)           // OrcaEngine v2: FDM vs SLA path
- formData.append('height_mm', String(model.dimensions?.z || 0))   // OrcaEngine v2: SLA layer count
- if (mat) {
- formData.append('density', String(mat.density))
- formData.append('material_id', String(mat.id))
- }
- 
- const res = await api.post('/process-stl', formData)
- const factors = res.data || res.factors || res;
- 
- if (factors && (factors.shell_weight_g >= 0)) {
- models.value[idx].curaFactors = factors
- models.value[idx].hasSlicing = true
- // Store weight and duration from slicing
- models.value[idx].weight = (Number(factors.shell_weight_g) || 0) 
- + (Number(factors.internal_weight_g) || 0) 
- + (Number(factors.support_weight_g) || 0) 
- + (Number(factors.purge_weight_g) || 3.0)
- models.value[idx].duration = (Number(factors.prep_time_h) || 0) 
- + (Number(factors.print_time_h) || 0)
- notify("Sincronización Industrial Exitosa", "success")
- calculatePrice()
- } else {
- throw new Error("El motor devolvió datos incompletos.")
- }
- } catch (err: any) {
- logger.error("CuraEngine Error:", err)
- const statusInfo = err.message && err.message.includes('(') ? ` [${err.message.split('(')[1].split(')')[0]}]` : '';
- notify(`Error de Motor${statusInfo}: ${err.message ? err.message.split(' (')[0] : 'Fallo de conexión'}`, "error")
- } finally {
- isSlicing.value = false
- }
+  const idx = activeModelIdx.value
+  const model = models.value[idx]
+
+  // Recuperar archivo desde window si no está en el modelo (modelos grandes)
+  if (model && !model.file) {
+    const globalFile = (window as any).currentUploadedFile
+    if (globalFile) model.file = globalFile
+  }
+
+  if (!model || !model.hasModel) {
+    notify('Sube un modelo 3D primero', 'error')
+    return
+  }
+
+  isSlicing.value = true
+
+  try {
+    // Archivos > 15 MB: usar estimación volumétrica local (evita error 413)
+    if (!model.file || model.file.size > 15 * 1024 * 1024) {
+      model.hasSlicing = false
+      calculatePrice()
+      return
+    }
+
+    const mat = materials.value.find(m => m.id === selectedMaterial.value)
+    const formData = new FormData()
+    formData.append('file', model.file)
+    formData.append('infill', String(model.infill || 15))
+    formData.append('layer_height', String(model.layerHeight || 0.2))
+    formData.append('total_area', String(model.totalArea || 0))
+    formData.append('volume_mm3', String(model.volume || 0))
+    formData.append('support_area', String(model.supportArea || 0))
+    formData.append('technology', selectedTechnology.value)
+    formData.append('height_mm', String(model.dimensions?.z || 0))
+    if (mat) {
+      formData.append('density', String(mat.density))
+      formData.append('material_id', String(mat.id))
+    }
+
+    const res = await api.post('/process-stl', formData)
+    const factors = res.data || res.factors || res
+
+    if (factors && factors.shell_weight_g >= 0) {
+      model.curaFactors = factors
+      model.hasSlicing = true
+      model.weight =
+        (Number(factors.shell_weight_g) || 0) +
+        (Number(factors.internal_weight_g) || 0) +
+        (Number(factors.support_weight_g) || 0) +
+        (Number(factors.purge_weight_g) || 3.0)
+      model.duration =
+        (Number(factors.prep_time_h) || 0) +
+        (Number(factors.print_time_h) || 0)
+    } else {
+      model.hasSlicing = false
+    }
+    calculatePrice()
+  } catch {
+    models.value[idx].hasSlicing = false
+    calculatePrice()
+  } finally {
+    isSlicing.value = false
+  }
 }
 
 const removeModel = (idx: number) => {
@@ -220,7 +233,7 @@ const isDesktop = ref(window.innerWidth >= 1024)
 const modalStep = ref(1)
 
 // Multi-modelo support
-const models = ref([{ id: 0, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo 1', curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }])
+const models = ref<any[]>([{ id: 0, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo 1', curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }])
 const activeModelIdx = ref(0)
 const honeypot = ref('')
 const lastSubmitTime = ref(0)
@@ -345,19 +358,19 @@ const submitOrder = async () => {
 }
 
 const toggleExtra = (id: any) => {
- const idx = selectedExtras.value.findIndex(e => e.id === id)
- if (idx > -1) selectedExtras.value.splice(idx, 1)
- else selectedExtras.value.push({ id, qty: 1 })
- calculatePrice()
+  const idx = selectedExtras.value.findIndex(e => String(e.id) === String(id))
+  if (idx > -1) selectedExtras.value.splice(idx, 1)
+  else selectedExtras.value.push({ id, qty: 1 })
+  calculatePrice()
 }
 
-watch([selectedTechnology, selectedMaterial, qty, models], () => {
- const mat = materials.value.find(m => m.id === selectedMaterial.value)
- if (mat && mat.category !== selectedTechnology.value) {
- const firstAvailable = materials.value.find(m => m.category === selectedTechnology.value)
- if (firstAvailable) selectedMaterial.value = firstAvailable.id
- }
- calculatePrice()
+watch([selectedTechnology, selectedMaterial, qty, models, selectedExtras], () => {
+  const mat = materials.value.find(m => m.id === selectedMaterial.value)
+  if (mat && mat.category !== selectedTechnology.value) {
+  const firstAvailable = materials.value.find(m => m.category === selectedTechnology.value)
+  if (firstAvailable) selectedMaterial.value = firstAvailable.id
+  }
+  calculatePrice()
 }, { deep: true })
 
 const calculatePrice = () => {
@@ -386,69 +399,97 @@ const calculatePrice = () => {
  let mDuration = 0
  
  if (selectedTechnology.value === 'FDM') {
- if (model.hasSlicing && model.curaFactors) {
- const cf = model.curaFactors
- mWeight = (Number(cf.shell_weight_g) || 0) 
- + (Number(cf.internal_weight_g) || 0) 
- + (Number(cf.support_weight_g) || 0) 
- + (Number((cf as any).purge_weight_g) || 3.0)
- mDuration = (Number(cf.prep_time_h) || 0) 
- + (Number(cf.print_time_h) || 0)
- // Store in model for display
- model.weight = mWeight
- model.duration = mDuration
- }
- } else {
- // SLA: volume viene en mm³, convertir a cm³
- const volCm3 = (model.volume || 0) / 1000 
- const density = Number(mat.density) || 1.1
- mWeight = volCm3 * density * 1.1 
- const heightMm = model.dimensions?.z || model.dimensions?.y || 0
- mDuration = Math.max(0.5, heightMm / 25)
- model.weight = mWeight
- model.duration = mDuration
- }
- 
- totalWeight += mWeight
- totalDuration += mDuration
- }
- 
- // Apply quantity to totals
- totalWeight *= qty.value
- totalDuration *= qty.value
- 
- // Costo de material
- let utilityCost = 0
- autoExtras.value = []
- if (selectedTechnology.value === 'SLA') {
- const alcohol = utilities.value.find(u => u.id === 'Alco_ML_05')
- if (alcohol) {
- utilityCost += calcExtraCost(Number(alcohol.cost_per_kg) || 0, alcohol.unit || 'ml', 50 * qty.value)
- autoExtras.value.push({ id: alcohol.id, qty: 50 * qty.value, name: alcohol.name })
- }
- const curado = utilities.value.find(u => u.id === 'Cicl_Serv_06')
- if (curado) {
- utilityCost += calcExtraCost(Number(curado.cost_per_kg) || 0, curado.unit || 'servicio', qty.value)
- autoExtras.value.push({ id: curado.id, qty: qty.value, name: curado.name })
- }
- }
- 
- selectedExtras.value.forEach(item => {
- const extra = utilities.value.find(u => u.id === item.id)
- if (extra) {
- utilityCost += calcExtraCost(Number(extra.cost_per_kg) || 0, extra.unit || 'g', item.qty)
- }
- })
- 
- // Use shared services for calculations
- const prod = calcProductionCost({
- weightG: totalWeight,
- totalHours: totalDuration,
- costPerKg: Number(mat.cost_per_kg) || 0,
- infra: cfg.infra,
- prep: cfg.prep,
- extrasCost: utilityCost,
- })
+      if (model.hasSlicing && model.curaFactors) {
+        const cf = model.curaFactors
+        mWeight = (Number(cf.shell_weight_g) || 0) 
+        + (Number(cf.internal_weight_g) || 0) 
+        + (Number(cf.support_weight_g) || 0) 
+        + (Number((cf as any).purge_weight_g) || 3.0)
+        mDuration = (Number(cf.prep_time_h) || 0) 
+        + (Number(cf.print_time_h) || 0)
+        model.weight = mWeight
+        model.duration = mDuration
+      } else if (model.volume > 0) {
+        // Estimación FDM sin slicing (fallback volumétrico)
+        const density = Number(mat?.density) || 1.24
+        const infillFactor = (model.infill || 15) / 100
+        const shellFactor = 0.25
+        const volCm3 = model.volume / 1000
+        mWeight = volCm3 * density * (shellFactor + infillFactor * (1 - shellFactor)) * 1.1
+
+        // Perfil calibrado con el Slicer de referencia:
+        // Preparación/Lapse: 6m16s + 24m50s ≈ 31 min (0.52 horas)
+        // Velocidad de impresión: ~3.15 minutos por gramo (0.0525 horas por gramo)
+        const prepTimeH = 0.52
+        const printSpeedFactor = 3.15 / 60 // 0.0525 h/g
+        mDuration = Math.max(0.5, prepTimeH + mWeight * printSpeedFactor)
+        model.weight = mWeight
+        model.duration = mDuration
+      }
+    } else {
+  // SLA: volume viene en mm³, convertir a cm³
+  const volCm3 = (model.volume || 0) / 1000 
+  const density = Number(mat.density) || 1.1
+  mWeight = volCm3 * density * 1.1 
+  // SLA: tiempo basado en altura (capas UV) — ~25mm/h de exposure rate
+  const heightMm = model.dimensions?.z || model.dimensions?.y || 0
+  mDuration = Math.max(0.5, heightMm / 25)
+  model.weight = mWeight
+  model.duration = mDuration
+  }
+  
+  totalWeight += mWeight
+  totalDuration += mDuration
+  }
+  
+  // Apply quantity to totals
+  totalWeight *= qty.value
+  totalDuration *= qty.value
+  
+  // --- EXTRAS / UTILIDADES ---
+  let utilityCost = 0
+  autoExtras.value = []
+
+  // Auto-extras SLA (alcohol isopropílico + curado UV)
+  if (selectedTechnology.value === 'SLA') {
+  const alcohol = utilities.value.find((u: any) => String(u.id) === 'Alco_ML_05')
+  if (alcohol) {
+  utilityCost += calcExtraCost(Number(alcohol.cost_per_kg) || 0, alcohol.unit || 'ml', 50 * qty.value)
+  autoExtras.value.push({ id: alcohol.id, qty: 50 * qty.value, name: alcohol.name })
+  }
+  const curado = utilities.value.find((u: any) => String(u.id) === 'Cicl_Serv_06')
+  if (curado) {
+  utilityCost += calcExtraCost(Number(curado.cost_per_kg) || 0, curado.unit || 'servicio', qty.value)
+  autoExtras.value.push({ id: curado.id, qty: qty.value, name: curado.name })
+  }
+  }
+  
+  // Extras seleccionados por el usuario (acabados, servicios, etc.)
+  selectedExtras.value.forEach((item: any) => {
+    const extra = utilities.value.find((u: any) => String(u.id) === String(item.id))
+    if (!extra) return
+    const costPerUnit = Number(extra.cost_per_kg) || 0
+    const unit = (extra.unit || '').toLowerCase().trim()
+    const weightUnits = ['g', 'ml', 'kg', 'l']
+    if (weightUnits.includes(unit)) {
+      // Consumible por peso: costo_por_kg * cantidad_en_gramos_o_ml / 1000
+      utilityCost += costPerUnit * (item.qty / 1000)
+    } else {
+      // Servicio o unidad: precio plano directo (NO dividir por 1000)
+      utilityCost += costPerUnit * item.qty
+    }
+  })
+
+  // --- COSTO DE PRODUCCIÓN BASE ---
+  // weight y duration ya están escalados por qty
+  const prod = calcProductionCost({
+  weightG: totalWeight,
+  totalHours: totalDuration,
+  costPerKg: Number(mat.cost_per_kg) || 0,
+  infra: cfg.infra,
+  prep: cfg.prep,
+  extrasCost: 0, // extras se suman aparte, sin margen de ganancia
+  })
  
  const totalBaseCost = prod.total
  const baseUnitCost = qty.value > 0 ? totalBaseCost / qty.value : 0
@@ -460,10 +501,10 @@ const calculatePrice = () => {
  margin: cfg.margin,
  })
  
- const subtotal = pricePerUnit.subtotal * qty.value
+ // Subtotal = Producción con margen + Extras (tarifas fijas, no llevan margen)
+ const subtotal = (pricePerUnit.subtotal * qty.value) + utilityCost
  
  // --- DESCUENTO POR VOLUMEN (#6) ---
- // Se aplica automáticamente si qty >= 5. El cupón puede combinarse sumando ambos descuentos.
  const volumeDiscountPct = calcVolumeDiscount(qty.value)
  const volumeDiscountAmount = volumeDiscountPct > 0 ? subtotal * (volumeDiscountPct / 100) : 0
 
@@ -508,7 +549,8 @@ const handleModelLoaded = (data: any) => {
  models.value[idx].supportArea = data.supportArea || 0
  models.value[idx].hasModel = true
  }
- if (selectedTechnology.value !== 'FDM') calculatePrice()
+ // BUG 2 FIX: siempre recalcular al cargar modelo (FDM usa fallback si no tiene slicing)
+ calculatePrice()
 }
 
 const handleError = (msg: any) => {
