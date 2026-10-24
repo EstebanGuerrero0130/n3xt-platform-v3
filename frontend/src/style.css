@@ -1,15 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;700;900&family=Mona+Sans:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;700;900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary: var(--color-primary);
-  --color-primary-dark: var(--color-primary-dark);
-  --color-primary-light: var(--color-primary-light);
-  --color-secondary: var(--color-secondary);
-  --color-dark: var(--color-dark);
-  
+  --color-primary: #08872b;
+  --color-primary-dark: #066b22;
+  --color-primary-light: #10a33a;
+  --color-secondary: #f0f6fc;
+  --color-dark: #0d1117;
+
   --color-deep-space: #0d1117;
   --color-midnight-ink: #000000;
   --color-code-canvas: #151a22;
@@ -29,12 +29,6 @@
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.2);
 
-  --color-primary: #08872b;
-  --color-primary-dark: #066b22;
-  --color-primary-light: #10a33a;
-  --color-secondary: #f0f6fc;
-  --color-dark: #0d1117;
-
   --ease-elastic: cubic-bezier(0.68, -0.6, 0.32, 1.6);
   --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
   --ease-in-out-soft: cubic-bezier(0.4, 0, 0.2, 1);
@@ -52,12 +46,6 @@
   --border-main: #21262d; /* Subtle Gray */
   --glass-bg: rgba(13, 17, 23, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
-
-  --color-primary: #08872b;
-  --color-primary-dark: #066b22;
-  --color-primary-light: #10a33a;
-  --color-secondary: #f0f6fc;
-  --color-dark: #0d1117;
 
   color-scheme: dark;
 }
@@ -338,7 +326,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: transparent;
   border-radius: 60px; /* 60px border radius */
   padding: 8px 16px; /* 8px vertical, 16px horizontal */
-  font-family: 'Mona Sans', 'Inter', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -357,7 +345,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: transparent;
   padding: 8px; /* 8px padding */
   border: none;
-  font-family: 'Mona Sans', 'Inter', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 500;
   display: flex;
   align-items: center;

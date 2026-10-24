@@ -388,15 +388,15 @@ class OrderController extends Controller
 
     private function verifyTurnstile(Request $request)
     {
+        $secret = config('services.turnstile.secret');
+
+        // Sin secret: solo se permite fuera de producción (dev local); en producción falla
+        if (!$secret) {
+            return !app()->isProduction();
+        }
+
         $token = $request->input('cf_turnstile_response');
         if (!$token) return false;
-
-        $secret = config('services.turnstile.secret');
-        
-        // Si no hay secret configurado en producción, la validación falla
-        if (!$secret) {
-            return false;
-        }
 
         $response = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
             'secret'   => $secret,
@@ -404,7 +404,7 @@ class OrderController extends Controller
             'remoteip' => $request->ip()
         ]);
 
-        return $response->json('success');
+        return $response->json('success') === true;
     }
 
     private function deductInventory(Order $order)

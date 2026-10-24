@@ -177,6 +177,8 @@ export function useParticles(options: {
 
   // Cleanup on unmount
   onMounted(() => {
+    // Respetar preferencia de movimiento reducido: sin partículas animadas
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     createParticles()
     observeVisibility()
   })

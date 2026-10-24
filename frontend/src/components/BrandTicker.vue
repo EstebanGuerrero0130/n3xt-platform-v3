@@ -24,30 +24,27 @@ const brands = [
   }
 ]
 
-const tickerItems = computed(() => {
-  const items = []
+const props = withDefaults(defineProps<{ visible?: boolean }>(), { visible: true })
+
+interface TickerItem { id: string; name: string; url: string }
+
+const tickerItems = computed<TickerItem[]>(() => {
+  const items: TickerItem[] = []
   for (let i = 0; i < 4; i++) {
     brands.forEach((brand, idx) => {
       items.push({
         id: `${i}-${idx}`,
         name: brand.name,
-        url: brand.url,
-        bgColor: '#ffffff'
+        url: brand.url
       })
     })
   }
   return items
 })
 
-const darkBg = '#05080b'
-
-const gradientLeft = computed(() => {
-  return `linear-gradient(to right, ${darkBg} 0%, transparent 100%)`
-})
-
-const gradientRight = computed(() => {
-  return `linear-gradient(to left, ${darkBg} 0%, transparent 100%)`
-})
+const hideImg = (e: Event) => {
+  (e.target as HTMLImageElement).style.display = 'none'
+}
 </script>
 
 <template>
@@ -68,22 +65,21 @@ const gradientRight = computed(() => {
 
     <div class="relative">
       <!-- Gradient Edges Overlay -->
+      <!-- Bordes con el mismo fondo de la sección (claro/oscuro) -->
       <div
-        class="absolute inset-y-0 left-0 w-16 md:w-32 z-10 pointer-events-none"
-        :style="{ background: gradientLeft }"
+        class="absolute inset-y-0 left-0 w-16 md:w-32 z-10 pointer-events-none bg-gradient-to-r from-gray-50 dark:from-[#05080b] to-transparent"
       ></div>
       <div
-        class="absolute inset-y-0 right-0 w-16 md:w-32 z-10 pointer-events-none"
-        :style="{ background: gradientRight }"
+        class="absolute inset-y-0 right-0 w-16 md:w-32 z-10 pointer-events-none bg-gradient-to-l from-gray-50 dark:from-[#05080b] to-transparent"
       ></div>
 
       <!-- Ticker Track -->
       <div class="relative w-full overflow-hidden ticker-wrap">
-        <div class="ticker-track flex">
+        <div class="ticker-track flex" :class="{ 'is-paused': !props.visible }">
           <div
             v-for="item in tickerItems"
             :key="item.id"
-            class="ticker-item flex items-center justify-center shrink-0 px-4 md:px-6"
+            class="ticker-item flex items-center justify-center shrink-0 px-4 md:px-6 text-slate-500 dark:text-white"
             style="margin-right: 24px; height: 48px; width: auto;"
           >
             <div class="relative h-full inline-block" style="width: auto;">
@@ -92,12 +88,12 @@ const gradientRight = computed(() => {
               :alt="item.name"
               class="h-full w-auto opacity-0 pointer-events-none"
               loading="lazy"
-              @error="(e) => e.target.style.display='none'"
+              @error="hideImg"
             />
               <div
                 class="absolute inset-0 w-full h-full"
                 :style="{
-                  backgroundColor: item.bgColor,
+                  backgroundColor: 'currentColor',
                   WebkitMaskImage: `url('${item.url}')`,
                   maskImage: `url('${item.url}')`,
                   WebkitMaskSize: 'contain',
@@ -131,6 +127,16 @@ const gradientRight = computed(() => {
   width: max-content;
   animation: scroll 60s linear infinite;
   will-change: transform;
+}
+
+.ticker-track.is-paused {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
 }
 
 @media (hover: hover) {

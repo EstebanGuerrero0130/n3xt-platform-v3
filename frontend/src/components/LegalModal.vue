@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 
 const legalModal = ref({
     show: false,
@@ -7,7 +7,7 @@ const legalModal = ref({
     content: ''
 })
 
-const openLegal = (type) => {
+const openLegal = (type: string) => {
     legalModal.value.show = true
     if (type === 'privacy') {
         legalModal.value.title = 'Política de Privacidad'
@@ -18,26 +18,39 @@ const openLegal = (type) => {
     }
 }
 
-const setContent = (title, content) => {
+const setContent = (title: string, content: string) => {
     legalModal.value.title = title
     legalModal.value.content = content
     legalModal.value.show = true
 }
+
+const close = () => { legalModal.value.show = false }
+
+const onKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') close()
+}
+
+watch(() => legalModal.value.show, (open) => {
+    if (open) window.addEventListener('keydown', onKeydown)
+    else window.removeEventListener('keydown', onKeydown)
+})
+
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 defineExpose({ openLegal, setContent })
 </script>
 
 <template>
     <transition name="fade">
-        <div v-if="legalModal.show" class="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12">
-            <div class="absolute inset-0 bg-black/90 backdrop-blur-xl" @click="legalModal.show = false"></div>
+        <div v-if="legalModal.show" class="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12" role="dialog" aria-modal="true" aria-labelledby="legal-modal-title">
+            <div class="absolute inset-0 bg-black/90 backdrop-blur-xl" @click="close"></div>
             <div class="relative w-full max-w-4xl bg-[#0a0f14] border border-white/10 rounded-[3rem] p-10 md:p-16 shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
                 <div class="absolute top-0 right-0 p-8">
-                    <button class="w-12 h-12 rounded-2xl bg-white/5 text-white flex items-center justify-center hover:bg-primary transition-colors text-2xl" @click="legalModal.show = false">✕</button>
+                    <button class="w-12 h-12 rounded-2xl bg-white/5 text-white flex items-center justify-center hover:bg-primary transition-colors text-2xl" aria-label="Cerrar" @click="close">✕</button>
                 </div>
                 
                 <div class="mb-12">
-                    <h2 class="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter italic border-l-8 border-primary pl-8">{{ legalModal.title }}</h2>
+                    <h2 id="legal-modal-title" class="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter italic border-l-8 border-primary pl-8">{{ legalModal.title }}</h2>
                     <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-4 ml-10">Documentación Legal Oficial N3XT 3D</p>
                 </div>
 
@@ -46,7 +59,7 @@ defineExpose({ openLegal, setContent })
                 </div>
 
                 <div class="mt-12 pt-8 border-t border-white/5 flex justify-end">
-                    <button class="px-10 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all" @click="legalModal.show = false">Entendido</button>
+                    <button class="px-10 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all" @click="close">Entendido</button>
                 </div>
             </div>
         </div>

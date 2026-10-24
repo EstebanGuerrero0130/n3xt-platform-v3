@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { sanitizeSVG } from '../utils/sanitize'
+import { parsePrice, formatCOP } from '../utils/format'
 import { api } from '../services/api'
 import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
@@ -21,97 +22,126 @@ usePageMeta({
   type: 'product',
 })
 
-useRevealAnim({ delay: 200 })
+const { observe: observeReveal } = useRevealAnim({ delay: 200 })
+
+interface CatalogProduct {
+  id?: string | number
+  name: string
+  image?: string
+  images?: string[]
+  category?: string
+  subcategory?: string
+  description?: string
+  price?: string | number
+  original_price?: string | number
+  support_phone?: string
+}
+
+const MAX_QUANTITY = 99
 
 const route = useRoute()
 const quantity = ref(1)
-const product = ref<any>(null)
+const product = ref<CatalogProduct | null>(null)
 const selectedImage = ref('')
+const mainImageFailed = ref(false)
 const loading = ref(true)
-const companySettings = ref({ company: { phone: '' } })
+const loadError = ref(false)
+const companySettings = ref<{ company?: { phone?: string } }>({ company: { phone: '' } })
 const customerForm = ref({ name: '' })
 
-const catalog = ref<any[]>([])
+// Identificador estable: muchos productos del catálogo no tienen id
+const productKey = (p: CatalogProduct) => String(p.id ?? p.name)
+
+const catalog = ref<CatalogProduct[]>([])
 const relatedProducts = computed(() => {
-  if (!product.value || !catalog.value.length) return []
-  
+  const current = product.value
+  if (!current || !catalog.value.length) return []
+  const currentKey = productKey(current)
+
   // 1. Intentar por subcategoría (si existe)
-  let related = catalog.value.filter(i => 
-    i.id !== product.value.id && 
-    i.subcategory === product.value.subcategory && 
+  let related = catalog.value.filter(i =>
+    productKey(i) !== currentKey &&
+    i.subcategory === current.subcategory &&
     i.subcategory
   )
-  
+
   // 2. Si no hay suficientes, intentar por categoría
   if (related.length < 3) {
-    const byCategory = catalog.value.filter(i => 
-      i.id !== product.value.id && 
-      i.category === product.value.category &&
-      !related.find(r => r.id === i.id)
+    const byCategory = catalog.value.filter(i =>
+      productKey(i) !== currentKey &&
+      i.category === current.category &&
+      !related.find(r => productKey(r) === productKey(i))
     )
     related = [...related, ...byCategory]
   }
-  
+
   return related.slice(0, 3)
 })
 
+// Si falla la imagen principal, se muestra un placeholder; se reintenta al cambiar de miniatura
+watch(selectedImage, () => { mainImageFailed.value = false })
+
 const fetchProduct = async () => {
+  loading.value = true
+  loadError.value = false
   try {
     const data = await api.get('/settings')
-    companySettings.value = data
-    catalog.value = data.web?.catalog || []
-    const paramId = decodeURIComponent(route.params.id)
-    
+    companySettings.value = data || {}
+    catalog.value = data?.web?.catalog || []
+    // vue-router ya entrega el parámetro decodificado
+    const rawParam = route.params.id
+    const paramId = Array.isArray(rawParam) ? rawParam.join('/') : (rawParam || '')
+
     // Buscar por ID numérico o por nombre (slug)
     const found = catalog.value.find(i => String(i.id) === paramId || i.name === paramId)
-    
+
     if (found) {
       product.value = found
-      selectedImage.value = found.images && found.images.length > 0 ? found.images[0] : found.image
+      quantity.value = 1
+      selectedImage.value = found.images && found.images.length > 0 ? found.images[0] : (found.image || '')
+      mainImageFailed.value = false
       usePageMeta({ title: `${found.name} | N3XT 3D Shop`, description: found.description || 'Explora nuestros productos 3D de alta precision.', image: found.image || '/assets/n3xt_og_product.png', type: 'product' })
+    } else {
+      product.value = null
     }
   } catch (err) {
     logger.error('Error fetching product:', err)
+    product.value = null
+    loadError.value = true
   } finally {
     loading.value = false
     nextTick(() => {
       applySplitTitle()
       applySplitBtn()
+      // La sección .reveal aparece tras la carga asíncrona: volver a observarla
+      observeReveal()
     })
   }
 }
 
 const checkoutWhatsApp = () => {
+  if (!product.value) return
   // Prioridad: Soporte específico del producto -> Soporte Global de la empresa
   const phone = (product.value.support_phone || companySettings.value.company?.phone || '573118796416').replace(/\+/g, '').replace(/\s/g, '')
-  const message = `Hola N3XT 3D,\n\nMe interesa este producto de su catalogo:\n\n*Producto:* ${product.value.name}\n*Cantidad:* ${quantity.value}\n*Precio Unitario:* ${product.value.price}\n\nQuisiera mas informacion para concretar la compra.`
+  const name = customerForm.value.name.trim()
+  const greeting = name ? `Hola N3XT 3D, soy *${name}*.` : 'Hola N3XT 3D,'
+  const message = `${greeting}\n\nMe interesa este producto de su catalogo:\n\n*Producto:* ${product.value.name}\n*Cantidad:* ${quantity.value}\n*Precio Unitario:* ${formatCOP(product.value.price)}\n\nQuisiera mas informacion para concretar la compra.`
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
 }
 
-const formatPrice = (p: any) => {
-  if (!p) return '$ 0'
-  if (typeof p === 'string' && p.toLowerCase().includes('cotizar')) return p.toUpperCase()
-  const val = parseFloat(String(p).replace(/[^0-9.-]+/g,""))
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val)
-}
-
 const isDiscounted = computed(() => {
-  if (!product.value?.price || !product.value?.original_price) return false
-  const p = parseFloat(String(product.value.price).replace(/[^0-9.-]+/g,""))
-  const op = parseFloat(String(product.value.original_price).replace(/[^0-9.-]+/g,""))
-  return p < op && p > 0
+  const p = parsePrice(product.value?.price)
+  const op = parsePrice(product.value?.original_price)
+  return p !== null && op !== null && p > 0 && p < op
 })
 
 onMounted(() => {
   fetchProduct()
 })
 
-onUnmounted(() => {
-})
-
 // Observar cambios en la URL para recargar el producto (Navegación entre relacionados)
-watch(() => route.params.id, () => {
-  loading.value = true
+watch(() => route.params.id, (newId, oldId) => {
+  if (!newId || newId === oldId) return
   product.value = null
   fetchProduct()
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -149,7 +179,8 @@ watch(() => route.params.id, () => {
         <!-- Columna Galería -->
         <div class="space-y-6 animate-in fade-in slide-in-from-left-4 duration-1000 lg:sticky lg:top-24">
           <div class="aspect-square bg-gray-50 dark:bg-gray-900 rounded-[3rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-2xl relative group p-10 flex items-center justify-center">
-            <img :src="selectedImage || product.image" :alt="'Detalle de producto 3D: ' + product.name + (product.category ? ' (' + product.category + ')' : '') + ' — N3XT 3D Shop'" class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-[2s]" fetchpriority="high" decoding="async" @error="(e: any) => e.target.style.display='none'" />
+            <img v-if="(selectedImage || product.image) && !mainImageFailed" :src="selectedImage || product.image" :alt="'Detalle de producto 3D: ' + product.name + (product.category ? ' (' + product.category + ')' : '') + ' — N3XT 3D Shop'" class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-[2s]" fetchpriority="high" decoding="async" @error="mainImageFailed = true" />
+            <svg v-else class="w-24 h-24 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <!-- Cloudinary Optimization Note Tag (Invisible to user) -->
             <div class="absolute top-8 right-8 px-4 py-2 bg-black/40 backdrop-blur-md rounded-xl border border-white/10">
                 <span class="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Alta definicion</span>
@@ -178,11 +209,11 @@ watch(() => route.params.id, () => {
                <div class="relative group/price">
                   <p class="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em] mb-1 ml-1 italic">Precio</p>
                   <p class="text-5xl md:text-7xl font-black text-emerald-500 dark:text-emerald-400 tracking-tighter leading-none italic drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                    {{ formatPrice(product.price) }}
+                    {{ formatCOP(product.price) }}
                   </p>
                </div>
                <div v-if="isDiscounted" class="flex flex-col mb-1 animate-bounce">
-                  <p class="text-lg font-black text-gray-400 line-through opacity-40 leading-none mb-1 italic">{{ formatPrice(product.original_price) }}</p>
+                  <p class="text-lg font-black text-gray-400 line-through opacity-40 leading-none mb-1 italic">{{ formatCOP(product.original_price) }}</p>
                   <span class="text-[9px] font-black px-3 py-1 bg-rose-600 text-white rounded-lg uppercase tracking-widest shadow-lg shadow-rose-600/20">Ahorro Activo</span>
                </div>
             </div>
@@ -215,17 +246,17 @@ v-for="spec in [
           <div class="pt-10 space-y-6">
             <div class="flex items-center gap-6">
               <div class="flex items-center bg-gray-100 dark:bg-[#0f172a] rounded-[1.5rem] p-1.5 border border-gray-200 dark:border-white/5">
-                <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl" @click="quantity > 1 ? quantity-- : null">-</button>
-                <span class="w-14 text-center font-black text-xl italic tracking-tighter">{{ quantity }}</span>
-                <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl" @click="quantity++">+</button>
+                <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl disabled:opacity-30" aria-label="Disminuir cantidad" :disabled="quantity <= 1" @click="quantity > 1 ? quantity-- : null">-</button>
+                <span class="w-14 text-center font-black text-xl italic tracking-tighter" aria-live="polite" aria-label="Cantidad">{{ quantity }}</span>
+                <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl disabled:opacity-30" aria-label="Aumentar cantidad" :disabled="quantity >= MAX_QUANTITY" @click="quantity < MAX_QUANTITY ? quantity++ : null">+</button>
               </div>
               <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest max-w-[120px] leading-tight italic">Disponibilidad inmediata bajo pedido industrial</p>
             </div>
 
             <!-- IDENTIFICACION (NOMBRE PARA WHATSAPP) -->
             <div class="space-y-3 p-6 bg-gray-100 dark:bg-[#0f172a] rounded-[2rem] border border-transparent dark:border-white/5">
-              <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest block ml-2">Tu Nombre (Para identificarte en WhatsApp)</label>
-              <input v-model="customerForm.name" type="text" placeholder="Ej. Juan Perez..." class="w-full bg-white dark:bg-black/40 border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+              <label for="product-customer-name" class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest block ml-2">Tu Nombre (Para identificarte en WhatsApp)</label>
+              <input id="product-customer-name" v-model="customerForm.name" type="text" autocomplete="name" placeholder="Ej. Juan Perez..." class="w-full bg-white dark:bg-black/40 border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-primary/20 transition-all">
             </div>
 
             <div class="flex flex-col gap-5">
@@ -268,22 +299,28 @@ v-for="spec in [
          <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
             <router-link 
                v-for="rel in relatedProducts" 
-               :key="rel.id"
+               :key="productKey(rel)"
                :to="'/catalog/' + encodeURIComponent(rel.name)"
                class="group block space-y-6"
             >
                <div class="aspect-square bg-gray-50 dark:bg-gray-900/50 rounded-3xl overflow-hidden border border-gray-100 dark:border-white/5 p-8 flex items-center justify-center group-hover:scale-[1.02] transition-all duration-500">
-                  <img :src="rel.image" :alt="'Producto relacionado: ' + rel.name + ' | N3XT 3D Shop'" class="max-w-full max-h-full object-contain" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
+                  <img v-if="rel.image" :src="rel.image" :alt="'Producto relacionado: ' + rel.name + ' | N3XT 3D Shop'" class="max-w-full max-h-full object-contain" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
                </div>
                <div class="px-4">
                   <p class="text-[8px] font-black text-primary uppercase tracking-widest mb-1">{{ rel.category }}</p>
                   <h5 class="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter italic leading-tight group-hover:text-primary transition-colors">{{ rel.name }}</h5>
-                  <p class="text-sm font-bold text-gray-400 mt-2">{{ rel.price }}</p>
+                  <p class="text-sm font-bold text-gray-400 mt-2">{{ formatCOP(rel.price) }}</p>
                </div>
             </router-link>
           </div>
        </div>
     </template>
+
+      <!-- Error de carga -->
+      <div v-else-if="loadError" class="py-40 text-center space-y-8" role="alert">
+          <h3 class="text-4xl font-black uppercase italic">No pudimos cargar el producto</h3>
+          <button class="btn-primary inline-flex px-12 py-5" @click="fetchProduct">Reintentar</button>
+      </div>
 
       <!-- Fallback Error -->
       <div v-else class="py-40 text-center space-y-8">

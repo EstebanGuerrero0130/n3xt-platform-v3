@@ -1,18 +1,30 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, type PropType } from 'vue'
+
+interface SidebarModel {
+  id: number
+  hasModel: boolean
+  hasSlicing: boolean
+  infill: number
+  layerHeight: number
+  dimensions: { x: number; y: number; z: number }
+  [key: string]: unknown
+}
+interface SidebarMaterial { id: string; name: string; category: string; cost_per_kg?: number | string; density?: number | string }
+interface SidebarExtra { id: string; qty: number }
 
 const props = defineProps({
-  models: { type: Array, default: () => [] },
+  models: { type: Array as PropType<SidebarModel[]>, default: () => [] },
   activeModelIdx: { type: Number, default: 0 },
-  materials: { type: Array, default: () => [] },
-  utilities: { type: Array, default: () => [] },
+  materials: { type: Array as PropType<SidebarMaterial[]>, default: () => [] },
+  utilities: { type: Array as PropType<SidebarMaterial[]>, default: () => [] },
   selectedTechnology: { type: String, default: 'FDM' },
   selectedMaterial: { type: String, default: '' },
   qty: { type: Number, default: 1 },
-  selectedExtras: { type: Array, default: () => [] },
-  activeCoupon: { type: Object, default: null },
+  selectedExtras: { type: Array as PropType<SidebarExtra[]>, default: () => [] },
+  activeCoupon: { type: Object as PropType<{ label: string; discount: number } | null>, default: null },
   couponCode: { type: String, default: '' },
-  breakdown: { type: Object, default: () => ({ weight: 0, duration: 0, matCost: 0, infraCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, total: 0 }) },
+  breakdown: { type: Object as PropType<{ weight: number; duration: number; matCost: number; infraCost: number; utilityCost: number; marginCost: number; discount: number; subtotal: number; iva: number; ivaPct?: number; total: number }>, default: () => ({ weight: 0, duration: 0, matCost: 0, infraCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, ivaPct: 19, total: 0 }) },
   isSlicing: { type: Boolean, default: false },
   previousTotal: { type: Number, default: 0 }
 })
@@ -33,14 +45,21 @@ const localQty = ref(props.qty)
 const localCoupon = ref(props.couponCode)
 
 watch(() => props.qty, (v) => { localQty.value = v })
-watch(localQty, (v) => emit('update:qty', Math.max(1, Number(v) || 1)))
+// Cantidad: solo enteros >= 1
+const normalizeQty = (v: unknown) => Math.max(1, Math.floor(Number(v)) || 1)
+watch(localQty, (v) => {
+  if ((v as unknown) === '') return // permitir borrar mientras se escribe
+  const n = normalizeQty(v)
+  if (n !== v) localQty.value = n
+  emit('update:qty', n)
+})
 watch(localCoupon, (v) => emit('update:couponCode', v))
 
 const filteredMaterials = computed(() =>
   props.materials.filter(m => m.category === props.selectedTechnology)
 )
 
-const formatTime = (h) => {
+const formatTime = (h: number) => {
     if (!h || h < 0) return '0m';
     const hours = Math.floor(h);
     const minutes = Math.round((h - hours) * 60);
@@ -51,6 +70,18 @@ const formatTime = (h) => {
 const hasSlicingOrSLA = computed(() => 
   props.models.some(m => m.hasSlicing) || props.selectedTechnology === 'SLA'
 )
+
+// FDM: algún modelo cargado sin laminado vigente (nuevo o con parámetros modificados)
+const needsRecalc = computed(() =>
+  props.selectedTechnology === 'FDM' && props.models.some(m => m.hasModel && !m.hasSlicing)
+)
+
+const quoteBlockedReason = computed(() => {
+  if (!props.models.some(m => m.hasModel)) return 'Sube un modelo 3D para solicitar la cotizacion.'
+  if (needsRecalc.value) return 'Calcula (o recalcula) la cotizacion antes de solicitarla.'
+  if (!(props.breakdown.total > 0)) return 'El precio aun no esta calculado.'
+  return ''
+})
 </script>
 
 <template>
@@ -100,11 +131,11 @@ v-for="mat in filteredMaterials" :key="mat.id"
     <div v-if="selectedTechnology === 'FDM'" class="grid grid-cols-2 gap-4">
       <div>
         <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block">Relleno %</label>
-        <input type="number" :value="models[activeModelIdx]?.infill || 15" min="5" max="100" step="5" class="w-full bg-gray-100 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20" @input="$emit('update:models', models.map((m, i) => i === activeModelIdx ? { ...m, infill: Number($event.target.value) } : m))">
+        <input type="number" :value="models[activeModelIdx]?.infill || 15" min="5" max="100" step="5" class="w-full bg-gray-100 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20" @input="$emit('update:models', models.map((m, i) => i === activeModelIdx ? { ...m, infill: Number(($event.target as HTMLInputElement).value) } : m))">
       </div>
       <div>
         <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block">Capa (mm)</label>
-        <select :value="models[activeModelIdx]?.layerHeight || 0.2" class="w-full bg-gray-100 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer transition-all" @change="$emit('update:models', models.map((m, i) => i === activeModelIdx ? { ...m, layerHeight: Number($event.target.value) } : m))">
+        <select :value="models[activeModelIdx]?.layerHeight || 0.2" class="w-full bg-gray-100 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer transition-all" @change="$emit('update:models', models.map((m, i) => i === activeModelIdx ? { ...m, layerHeight: Number(($event.target as HTMLSelectElement).value) } : m))">
           <option :value="0.12">0.12 Ultra</option>
           <option :value="0.16">0.16 Alta</option>
           <option :value="0.2">0.20 Estandar</option>
@@ -117,9 +148,9 @@ v-for="mat in filteredMaterials" :key="mat.id"
     <div>
       <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Cantidad</label>
       <div class="flex items-center bg-gray-100 dark:bg-white/5 rounded-2xl overflow-hidden">
-        <button class="px-6 py-4 text-gray-400 hover:text-primary font-black text-lg transition-colors" @click="localQty = Math.max(1, localQty - 1)">-</button>
-        <input v-model.number="localQty" type="number" min="1" class="flex-1 bg-transparent text-center text-lg font-black text-gray-900 dark:text-white outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
-        <button class="px-6 py-4 text-gray-400 hover:text-primary font-black text-lg transition-colors" @click="localQty++">+</button>
+        <button class="px-6 py-4 text-gray-400 hover:text-primary font-black text-lg transition-colors" aria-label="Disminuir cantidad" @click="localQty = Math.max(1, normalizeQty(localQty) - 1)">-</button>
+        <input v-model.number="localQty" type="number" min="1" step="1" inputmode="numeric" aria-label="Cantidad" class="flex-1 bg-transparent text-center text-lg font-black text-gray-900 dark:text-white outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" @blur="localQty = normalizeQty(localQty)">
+        <button class="px-6 py-4 text-gray-400 hover:text-primary font-black text-lg transition-colors" aria-label="Aumentar cantidad" @click="localQty = normalizeQty(localQty) + 1">+</button>
       </div>
     </div>
 
@@ -162,7 +193,7 @@ v-if="selectedTechnology === 'FDM'" :disabled="isSlicing || !models[activeModelI
       
       <div class="flex justify-between items-center mb-6 relative z-10">
         <p class="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Total Estimado</p>
-        <span class="bg-primary text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest">Listo</span>
+        <span class="text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest" :class="needsRecalc ? 'bg-amber-500' : 'bg-primary'">{{ needsRecalc ? 'Recalcular' : 'Listo' }}</span>
       </div>
 
       <h3
@@ -173,7 +204,7 @@ class="text-6xl lg:text-7xl font-black tracking-tighter italic text-white relati
 
       <div class="space-y-3 relative z-10">
         <div class="flex justify-between items-center bg-white/5 px-4 py-3 rounded-xl">
-          <span class="text-[9px] font-black text-white/40 uppercase tracking-widest">Masa unitaria</span>
+          <span class="text-[9px] font-black text-white/40 uppercase tracking-widest">Masa total</span>
           <span class="text-sm font-black text-white">{{ breakdown.weight.toFixed(2) }}g</span>
         </div>
         <div class="flex justify-between items-center bg-white/5 px-4 py-3 rounded-xl">
@@ -206,7 +237,7 @@ class="text-6xl lg:text-7xl font-black tracking-tighter italic text-white relati
             <span class="text-sm font-black text-white">${{ Math.round(breakdown.subtotal).toLocaleString() }}</span>
           </div>
           <div class="flex justify-between items-center px-4 py-2">
-            <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">IVA (19%)</span>
+            <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">IVA ({{ breakdown.ivaPct ?? 19 }}%)</span>
             <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.iva).toLocaleString() }}</span>
           </div>
         </div>
@@ -225,10 +256,12 @@ v-for="(val, axis) in models[activeModelIdx]?.dimensions || { x: 0, y: 0, z: 0 }
 
     <!-- CTA -->
     <button
-class="w-full bg-primary hover:bg-emerald-600 text-white font-black py-7 rounded-[2.5rem] shadow-2xl shadow-primary/20 uppercase tracking-[0.3em] text-[11px] transition-all active:scale-[0.98]"
+:disabled="!!quoteBlockedReason" class="w-full bg-primary hover:bg-emerald-600 text-white font-black py-7 rounded-[2.5rem] shadow-2xl shadow-primary/20 uppercase tracking-[0.3em] text-[11px] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary disabled:active:scale-100"
+      :aria-describedby="quoteBlockedReason ? 'quote-blocked-hint' : undefined"
       @click="$emit('requestQuote')">
       Solicitar Cotizacion
     </button>
+    <p v-if="quoteBlockedReason" id="quote-blocked-hint" class="-mt-5 text-center text-[9px] font-black text-gray-400 uppercase tracking-widest">{{ quoteBlockedReason }}</p>
   </div>
 </template>
 

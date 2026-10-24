@@ -17,6 +17,50 @@ import { usePageMeta } from '../composables/usePageMeta'
 useSplitTitle()
 useSplitButton()
 
+interface Material {
+  id: string
+  name: string
+  type: string
+  category: string
+  density?: number | string
+  cost_per_kg?: number | string
+  unit?: string
+}
+interface CuraFactors {
+  resolution?: number
+  infill_density?: number
+  shell_weight_g: number
+  internal_weight_g: number
+  support_weight_g: number
+  purge_weight_g?: number
+  filament_length_m?: number
+  prep_time_h: number
+  print_time_h: number
+}
+interface QuoteModel {
+  id: number
+  file: File | null
+  volume: number
+  totalArea: number
+  dimensions: { x: number; y: number; z: number }
+  infill: number
+  layerHeight: number
+  supportArea: number
+  currentScale: number
+  hasModel: boolean
+  hasSlicing: boolean
+  weight: number
+  duration: number
+  name: string
+  curaFactors: CuraFactors
+}
+interface CustomerForm {
+  name: string; company: string; document: string; email: string; phone: string
+  city: string; address: string; use: string; comments: string
+}
+
+const errMessage = (err: unknown): string => (err instanceof Error ? err.message : String(err))
+
 usePageMeta({
   title: 'Cotizador 3D Industrial | N3XT 3D',
   description: 'Cotiza tus piezas 3D al instante. Precios precisos con motor de calculo industrial.',
@@ -28,10 +72,10 @@ const appData = ref({
     infra: { luz_hr: 0, depr_hr: 0, mant_hr: 0, etiquetas: 0, load_factor: 0.4 },
     prep: { mano_obra_hr: 0, prep_time_pct: 10 },
     oper: { transporte: 0, ganancia: 0, marketing: 0, fallos: 0 },
-    margin: { iva: 0 }
+    margin: { iva: 19 }
 })
-const materials = ref<any[]>([])
-const utilities = ref<any[]>([])
+const materials = ref<Material[]>([])
+const utilities = ref<Material[]>([])
 const selectedExtras = ref<any[]>([])
 const autoExtras = ref<any[]>([])
 const loadingQuote = ref(true)
@@ -39,9 +83,9 @@ const quoteMessage = ref('')
 
 const fetchMaterials = async () => {
   try {
-    const data = await api.get('/materials')
-    materials.value = data.filter(m => m.type === 'material')
-    utilities.value = data.filter(m => m.type !== 'material')
+    const data: Material[] = await api.get('/materials')
+    materials.value = data.filter((m: Material) => m.type === 'material')
+    utilities.value = data.filter((m: Material) => m.type !== 'material')
     
     if (materials.value.length > 0 && !selectedMaterial.value) {
       selectedMaterial.value = materials.value[0].id
@@ -79,7 +123,9 @@ const fetchSettings = async () => {
       o.fallos = Number(o.fallos) || 0
       
       const m = appData.value.margin
-      m.iva = Number(m.iva) || 19
+      // ?? en lugar de || para permitir IVA 0%
+      const ivaNum = m.iva === null || m.iva === undefined || String(m.iva) === '' ? NaN : Number(m.iva)
+      m.iva = Number.isFinite(ivaNum) ? ivaNum : 19
     }
   } catch (err) {
     logger.error('Error fetching settings:', err)
@@ -88,7 +134,7 @@ const fetchSettings = async () => {
 
 useRevealAnim({ delay: 200 })
 
-let resizeCleanup: any = null
+let resizeCleanup: (() => void) | null = null
 
 const setupResizeListener = () => {
   const handler = () => {
@@ -132,13 +178,13 @@ const runCuraEngineAnalysis = async () => {
     const mat = materials.value.find(m => m.id === selectedMaterial.value)
     const formData = new FormData()
     formData.append('file', model.file)
-    formData.append('infill', model.infill || 15)
-    formData.append('layer_height', model.layerHeight || 0.2)
-    formData.append('total_area', model.totalArea || 0)
-    formData.append('volume_mm3', model.volume || 0)
-    formData.append('support_area', model.supportArea || 0)
+    formData.append('infill', String(model.infill || 15))
+    formData.append('layer_height', String(model.layerHeight || 0.2))
+    formData.append('total_area', String(model.totalArea || 0))
+    formData.append('volume_mm3', String(model.volume || 0))
+    formData.append('support_area', String(model.supportArea || 0))
     if (mat) {
-        formData.append('density', mat.density)
+        formData.append('density', String(mat.density ?? ''))
         formData.append('material_id', mat.id)
     }
     
@@ -148,6 +194,7 @@ const runCuraEngineAnalysis = async () => {
     if (factors && (factors.shell_weight_g >= 0)) {
         models.value[idx].curaFactors = factors
         models.value[idx].hasSlicing = true
+        slicedSignatures.set(models.value[idx].id, slicingSignature(models.value[idx]))
         // Store weight and duration from slicing
         models.value[idx].weight = (Number(factors.shell_weight_g) || 0) 
                                  + (Number(factors.internal_weight_g) || 0) 
@@ -162,15 +209,16 @@ const runCuraEngineAnalysis = async () => {
     }
   } catch (err) {
     logger.error("CuraEngine Error:", err)
-    const statusInfo = err.message.includes('(') ? ` [${err.message.split('(')[1].split(')')[0]}]` : '';
-    notify(`Error de Motor${statusInfo}: ${err.message.split(' (')[0] || 'Fallo de conexión'}`, "error")
+    const message = errMessage(err)
+    const statusInfo = message.includes('(') ? ` [${message.split('(')[1].split(')')[0]}]` : '';
+    notify(`Error de Motor${statusInfo}: ${message.split(' (')[0] || 'Fallo de conexión'}`, "error")
   } finally {
     isSlicing.value = false
   }
 }
 
 const breakdown = ref({
-  weight: 0, duration: 0, matCost: 0, infraCost: 0, laborCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, total: 0
+  weight: 0, duration: 0, matCost: 0, infraCost: 0, laborCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, ivaPct: 19, total: 0
 })
 
 const materialGuide = [
@@ -208,11 +256,11 @@ const isDesktop = ref(window.innerWidth >= 1024)
 const modalStep = ref(1)
 
 // Multi-modelo support
-const models = ref([{ id: 0, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo 1', curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }])
+const models = ref<QuoteModel[]>([{ id: 0, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo 1', curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }])
 const activeModelIdx = ref(0)
 const honeypot = ref('')
 const lastSubmitTime = ref(0)
-const customerForm = ref({
+const emptyCustomerForm = (): CustomerForm => ({
   name: '',
   company: '',
   document: '',
@@ -223,6 +271,8 @@ const customerForm = ref({
   use: 'Funcional',
   comments: ''
 })
+const customerForm = ref<CustomerForm>(emptyCustomerForm())
+const turnstileToken = ref('')
 
 const couponCode = ref('')
 const activeCoupon = ref<any>(null)
@@ -245,19 +295,21 @@ const applyCoupon = () => {
     }
 }
 
-const _timerNotif = ref<any>(null)
+const _timerNotif = ref<ReturnType<typeof setTimeout> | null>(null)
 const notification = ref({ show: false, message: '', type: 'info' })
-const notify = (msg, type = 'info') => {
+const notify = (msg: string, type = 'info') => {
+    if (_timerNotif.value) clearTimeout(_timerNotif.value)
     notification.value = { show: true, message: msg, type }
     _timerNotif.value = setTimeout(() => { notification.value.show = false }, 5000)
   }
 
-const handleModalSubmit = (payload: any) => {
+const handleModalSubmit = (payload: { customerForm: CustomerForm; captchaVerified: boolean; turnstileToken: string }) => {
   if (!payload.captchaVerified) {
     notify('Error de Verificación', 'error')
     return
   }
   customerForm.value = { ...customerForm.value, ...payload.customerForm }
+  turnstileToken.value = payload.turnstileToken || ''
   submitOrder()
 }
 
@@ -265,12 +317,34 @@ const openModal = () => {
   showModal.value = true
 }
 
-const handleFileReady = (file: any) => {
+const handleFileReady = (file: File) => {
   if (models.value[activeModelIdx.value]) {
     models.value[activeModelIdx.value].file = file
     models.value[activeModelIdx.value].hasSlicing = false
+    slicedSignatures.delete(models.value[activeModelIdx.value].id)
   }
 }
+
+// --- Invalidación del laminado FDM ---
+// El resultado de CuraEngine depende de estos parámetros; si cambian, hay que recalcular.
+const slicedSignatures = new Map<number, string>()
+const slicingSignature = (m: QuoteModel) =>
+  [selectedMaterial.value, m.infill, m.layerHeight, m.currentScale, m.volume, m.supportArea].join('|')
+
+watch(
+  () => models.value.map(m => [m.id, slicingSignature(m)] as const),
+  (sigs) => {
+    sigs.forEach(([id, sig]) => {
+      const model = models.value.find(m => m.id === id)
+      if (model?.hasSlicing && slicedSignatures.get(id) !== sig) {
+        model.hasSlicing = false
+        model.weight = 0
+        model.duration = 0
+        slicedSignatures.delete(id)
+      }
+    })
+  }
+)
 
 const submitOrder = async () => {
   if (honeypot.value) return;
@@ -291,29 +365,39 @@ const submitOrder = async () => {
     formData.append('customer_company', customerForm.value.company)
     formData.append('customer_email', customerForm.value.email)
     formData.append('customer_phone', customerForm.value.phone)
-    formData.append('shipping_address', `${customerForm.value.address} | ${customerForm.value.city}`)
+    formData.append('customer_id_document', customerForm.value.document)
+    formData.append('shipping_address', customerForm.value.address)
+    formData.append('shipping_city', customerForm.value.city)
     formData.append('comments', `USO: ${customerForm.value.use} | NOTAS: ${customerForm.value.comments}`)
+    if (turnstileToken.value) formData.append('cf_turnstile_response', turnstileToken.value)
     
     // Datos Técnicos
     formData.append('technology', selectedTechnology.value)
     formData.append('material_id', selectedMaterial.value)
     formData.append('material_name', mat ? mat.name : '')
-    formData.append('volume_mm3', models.value.reduce((s, m) => s + (m.volume || 0), 0))
-    formData.append('estimated_weight_g', breakdown.value.weight)
-    formData.append('estimated_duration_h', breakdown.value.duration)
-    formData.append('qty', qty.value)
-    formData.append('infill', models.value[0]?.infill || 15)
-    formData.append('total_price', breakdown.value.total)
-    
-    if (models.value[0]?.file) {
-      formData.append('file', models.value[0].file)
+    formData.append('volume_mm3', String(models.value.reduce((s, m) => s + (m.volume || 0), 0)))
+    formData.append('estimated_weight_g', String(breakdown.value.weight))
+    formData.append('estimated_duration_h', String(breakdown.value.duration))
+    formData.append('qty', String(qty.value))
+    formData.append('infill', String(Math.round(models.value[0]?.infill || 15)))
+    formData.append('total_price', String(breakdown.value.total))
+
+    const mainModel = models.value[0]
+    if (mainModel?.hasModel) {
+      const d = mainModel.dimensions
+      formData.append('dimensions_mm', `${d.x.toFixed(1)}x${d.y.toFixed(1)}x${d.z.toFixed(1)}`)
+      formData.append('scale_factor', String(mainModel.currentScale || 1))
+    }
+    if (mainModel?.file) {
+      formData.append('file', mainModel.file)
+      formData.append('job_name', mainModel.file.name)
     }
 
     // Extras
     if (selectedExtras.value.length > 0) {
       selectedExtras.value.forEach((extra, index) => {
         formData.append(`extra_items[${index}][material_id]`, extra.id)
-        formData.append(`extra_items[${index}][qty]`, extra.qty)
+        formData.append(`extra_items[${index}][qty]`, String(extra.qty))
       })
     }
     
@@ -324,15 +408,16 @@ const submitOrder = async () => {
     notify("¡Protocolo de Solicitud completado con éxito!", "success")
     
     // Reset form
-    customerForm.value = { name: '', email: '', phone: '', comments: '' }
+    customerForm.value = emptyCustomerForm()
   } catch (err) {
-    notify(err.response?.data?.message || err.message, "error")
+    notify(errMessage(err), "error")
   } finally {
+    turnstileToken.value = ''
     isSubmitting.value = false
   }
 }
 
-const toggleExtra = (id: any) => {
+const toggleExtra = (id: string) => {
     const idx = selectedExtras.value.findIndex(e => e.id === id)
     if (idx > -1) selectedExtras.value.splice(idx, 1)
     else selectedExtras.value.push({ id, qty: 1 })
@@ -453,7 +538,8 @@ const calculatePrice = () => {
   // Apply coupon discount separately (it's on total)
   const discountAmount = activeCoupon.value ? (subtotal * activeCoupon.value.discount) : 0
   const finalSubtotal = Math.round(subtotal - discountAmount)
-  const ivaRate = (cfg.margin.iva || 19) / 100
+  const ivaPct = cfg.margin.iva ?? 19
+  const ivaRate = ivaPct / 100
   const iva = Math.round(finalSubtotal * ivaRate)
   const total = finalSubtotal + iva
   
@@ -475,12 +561,13 @@ const calculatePrice = () => {
     discount: Math.round(discountAmount),
     subtotal: finalSubtotal,
     iva,
+    ivaPct,
     total,
   }
 }
 
 
-const handleModelLoaded = (data: any) => {
+const handleModelLoaded = (data: { volume: number; totalArea?: number; dimensions: { x: number; y: number; z: number }; scale?: number; supportArea?: number }) => {
   const idx = activeModelIdx.value
   if (models.value[idx]) {
     models.value[idx].volume = data.volume
@@ -493,7 +580,7 @@ const handleModelLoaded = (data: any) => {
   if (selectedTechnology.value !== 'FDM') calculatePrice()
 }
 
-const handleError = (msg: any) => {
+const handleError = (msg: string) => {
   notify(msg, "error")
 }
 
@@ -572,7 +659,7 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <aside v-show="showSidebar || isDesktop" :class="['w-full lg:w-[540px] bg-white dark:bg-black flex flex-col border-l border-gray-100 dark:border-white/5 shadow-2xl z-10', showSidebar || window.innerWidth >= 1024 ? '' : '']">
+      <aside v-show="showSidebar || isDesktop" class="w-full lg:w-[540px] bg-white dark:bg-black flex flex-col border-l border-gray-100 dark:border-white/5 shadow-2xl z-10">
         <QuoteSidebar
           :models="models"
           :active-model-idx="activeModelIdx"
@@ -609,7 +696,6 @@ onUnmounted(() => {
       :qty="qty"
       :breakdown="breakdown"
       :active-coupon="activeCoupon"
-      :previous-total="previousTotal"
       :is-submitting="isSubmitting"
       :notification="notification"
       @close="showModal = false; modalStep = 1"

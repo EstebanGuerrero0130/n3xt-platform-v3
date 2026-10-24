@@ -1,40 +1,35 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../services/api'
 import logger from '../utils/logger'
+import { DEFAULT_WHATSAPP_NUMBER, parseWhatsAppNumber, whatsappLink } from '../utils/contact'
 
 const router = useRouter()
 
 const isOpen = ref(false)
 const userMessage = ref('')
-const whatsappNumber = ref('573118796416') // Cargado de parámetros oficiales
+const whatsappNumber = ref(DEFAULT_WHATSAPP_NUMBER) // Fallback; se sobrescribe con el número configurado en admin
 
-const quickReplies = [
+interface QuickReply { text: string; action?: 'track'; msg?: string }
+
+const quickReplies: QuickReply[] = [
     { text: 'Seguir mi pedido', action: 'track' },
     { text: 'Cotización personalizada', msg: 'Hola N3XT! Quiero cotizar un proyecto 3D personalizado.' },
     { text: 'Duda sobre materiales', msg: 'Hola! Tengo una consulta técnica sobre los materiales de impresión.' }
 ]
 
-/* fetchSettings used to load WhatsApp number from API */
-const _loadWhatsApp = async () => {
+const loadWhatsApp = async () => {
     try {
         const data = await api.get('/settings')
-        if (data.web?.social?.whatsapp) {
-            // Extraer solo números si es un link de wa.me
-            const val = data.web.social.whatsapp
-            if (val.includes('wa.me/')) {
-                whatsappNumber.value = val.split('wa.me/')[1].split('?')[0]
-            } else {
-                whatsappNumber.value = val.replace(/\D/g, '')
-            }
-        }
+        const num = parseWhatsAppNumber(data?.web?.social?.whatsapp)
+        if (num) whatsappNumber.value = num
     } catch (err) {
         logger.error('Error fetching WhatsApp settings:', err)
     }
 }
 
-const handleQuickReply = (reply) => {
+const handleQuickReply = (reply: QuickReply) => {
     if (reply.action === 'track') {
         router.push('/track')
         isOpen.value = false
@@ -43,15 +38,27 @@ const handleQuickReply = (reply) => {
     }
 }
 
-const sendMessage = (msg) => {
-    const text = msg || userMessage.value
+const sendMessage = (msg?: string) => {
+    const text = (msg || userMessage.value).trim()
     if (!text) return
-    
-    const url = `https://wa.me/${whatsappNumber.value}?text=${encodeURIComponent(text)}`
-    window.open(url, '_blank')
+
+    window.open(whatsappLink(whatsappNumber.value, text), '_blank', 'noopener,noreferrer')
     isOpen.value = false
     userMessage.value = ''
 }
+
+const onKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isOpen.value) isOpen.value = false
+}
+
+onMounted(() => {
+    loadWhatsApp()
+    window.addEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <template>
@@ -93,14 +100,17 @@ const sendMessage = (msg) => {
         <div class="p-8 space-y-8 overflow-y-auto flex-1 scrollbar-thin">
             <div class="relative group">
                 <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-primary/20 rounded-3xl blur opacity-0 group-focus-within:opacity-100 transition duration-1000"></div>
+                <label for="wa-widget-message" class="sr-only">Mensaje para WhatsApp</label>
                 <textarea 
+                    id="wa-widget-message"
                     v-model="userMessage"
                     placeholder="Describe tu proyecto..."
                     class="relative w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-6 pr-16 text-xs font-bold text-gray-900 dark:text-white outline-none focus:bg-white dark:focus:bg-white/10 transition-all resize-none h-28 shadow-inner"
-                    @keyup.enter="sendMessage()"
+                    @keydown.enter.exact.prevent="sendMessage()"
                 ></textarea>
                 <button 
                     class="absolute right-4 bottom-4 w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center hover:scale-110 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all shadow-lg active:scale-95 group/send"
+                    aria-label="Enviar mensaje por WhatsApp"
                     @click="sendMessage()"
                 >
                     <svg class="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
@@ -141,6 +151,8 @@ const sendMessage = (msg) => {
     <button 
         :class="isOpen ? 'bg-gray-900 rotate-180 scale-90 border-white/20' : 'bg-[#1e3a34] shadow-[0_20px_40px_rgba(30,58,52,0.6)] hover:scale-110 border-emerald-500/30'"
         class="w-16 h-16 rounded-full flex items-center justify-center text-white transition-all duration-700 active:scale-95 relative border-2 backdrop-blur-xl group/fab overflow-hidden"
+        :aria-label="isOpen ? 'Cerrar chat de WhatsApp' : 'Abrir chat de WhatsApp'"
+        :aria-expanded="isOpen"
         @click="isOpen = !isOpen"
     >
         <!-- Industrial Background Glow -->

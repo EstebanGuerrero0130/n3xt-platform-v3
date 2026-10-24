@@ -1,5 +1,20 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  readonly VITE_TURNSTILE_SITE_KEY?: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+
+// Three.js ships without bundled types (no @types/three installed)
+declare module 'three'
+declare module 'three/examples/jsm/loaders/STLLoader.js'
+declare module 'three/examples/jsm/loaders/OBJLoader.js'
+declare module 'three/examples/jsm/controls/OrbitControls.js'
+declare module 'three/examples/jsm/controls/TransformControls.js'
+
 declare module '*.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<Record<string, never>, Record<string, never>, any>

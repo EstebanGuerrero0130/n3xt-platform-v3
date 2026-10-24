@@ -24,10 +24,12 @@ const { particlesRef: heroParticlesRef } = useParticles({
 const { applySplitBtn } = useSplitButton()
 
 const loading = ref(true)
+const loadError = ref(false)
 let _timerLoad: ReturnType<typeof setTimeout> | null = null
 
 // ─── TypeScript interfaces ───
 interface GalleryItem {
+  uid: number
   image: string
   title: string
   category?: string
@@ -115,21 +117,18 @@ watch(filtered, () => {
   nextTick(() => observeCards())
 }, { deep: false })
 
-const getOptimizedImage = (url: string): string => {
-  if (!url) return ''
-  if (!webSettings.value.cloudinary_name || !url.includes('cloudinary.com')) return url
-  return url.replace('/upload/', '/upload/f_auto,q_auto,w_800/')
-}
-
 const fetchSettings = async () => {
+  loading.value = true
+  loadError.value = false
+  if (_timerLoad !== null) clearTimeout(_timerLoad)
   try {
     const data = await api.get('/settings')
     if (data?.web?.gallery) {
       webSettings.value.gallery = data.web.gallery
         .map((item: any, idx: number) =>
           typeof item === 'string'
-            ? { image: item, title: `Imagen ${idx + 1}`, category: 'General', technology: '', images: [], featured: false, tags: '' }
-            : { images: [], tags: '', featured: false, ...item }
+            ? { uid: idx, image: item, title: `Imagen ${idx + 1}`, category: 'General', technology: '', images: [], featured: false, tags: '' }
+            : { images: [], tags: '', featured: false, ...item, uid: idx }
         )
         .filter((item: any) => item.image || item.title)
     }
@@ -138,6 +137,7 @@ const fetchSettings = async () => {
     }
   } catch (err) {
     logger.error('Error:', err)
+    loadError.value = true
   } finally {
     _timerLoad = setTimeout(() => {
       loading.value = false
@@ -220,10 +220,16 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Error state -->
+      <div v-else-if="loadError" class="py-40 text-center" role="alert">
+        <p class="text-xl font-black text-gray-400 uppercase tracking-widest italic">No pudimos cargar la galería.</p>
+        <button class="mt-6 px-8 py-3 bg-primary/10 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all" @click="fetchSettings">Reintentar</button>
+      </div>
+
       <!-- Gallery Grid -->
       <div v-else-if="filtered.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         <router-link
-          v-for="(item, idx) in filtered" :key="idx"
+          v-for="(item, idx) in filtered" :key="item.uid"
           :data-reveal-index="idx"
           :to="'/galeria/' + encodeURIComponent(item.title || String(idx))"
           :class="[

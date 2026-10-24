@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AppNavbar from '../components/AppNavbar.vue'
+import AppFooter from '../components/AppFooter.vue'
+import { DEFAULT_WHATSAPP_NUMBER, parseWhatsAppNumber, whatsappLink } from '../utils/contact'
 import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
-import { useRevealAnim } from '../composables/useRevealAnim'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
@@ -26,18 +27,15 @@ const { particlesRef: heroParticlesRef } = useParticles({
 
 // ─── SEO via @unhead/vue (usePageMeta at setup) ───
 
-useRevealAnim({ delay: 200 })
-
 // --- CONFIGURACIÓN DINÁMICA ---
 const whatsappNumber = ref('')
 
 const fetchSettings = async () => {
   try {
     const data = await api.get('/settings')
-    if (data.web && data.web.social && data.web.social.whatsapp) {
-      // Limpiamos el número de caracteres especiales por si acaso
-      whatsappNumber.value = data.web.social.whatsapp.replace(/\D/g, '')
-    }
+    // Extrae solo los dígitos (acepta número plano o link wa.me)
+    const num = parseWhatsAppNumber(data?.web?.social?.whatsapp)
+    if (num) whatsappNumber.value = num
   } catch (err) {
     logger.error('Error fetching settings for WhatsApp:', err)
   }
@@ -47,11 +45,11 @@ onMounted(() => {
   fetchSettings()
 })
 
-onUnmounted(() => {
-})
-
 // --- DATA DE CONFIGURACIÓN ---
-const steps = [
+type StepId = 'type' | 'tech' | 'finish' | 'priority'
+interface StepOption { id: string; label: string; icon: string; desc: string }
+
+const steps: { id: StepId; label: string; options: StepOption[] }[] = [
   {
     id: 'type',
     label: 'Tipo de Proyecto',
@@ -90,21 +88,22 @@ const steps = [
 ]
 
 const customerName = ref('')
-const selections = ref({
+const selections = ref<Record<StepId, string>>({
   type: 'figura',
   tech: 'resina',
   finish: 'bruto',
   priority: 'normal'
 })
 
-const getLabel = (stepId: any, optionId: any) => {
+const getLabel = (stepId: string, optionId: string) => {
   const step = steps.find(s => s.id === stepId)
   return step?.options.find(o => o.id === optionId)?.label || ''
 }
 
 const buildWhatsappUrl = () => {
-  const phone = whatsappNumber.value || '573219468945'
-  const nameIntro = customerName.value ? `Hola N3XT, soy *${customerName.value.toUpperCase()}*` : 'Hola N3XT'
+  const phone = whatsappNumber.value || DEFAULT_WHATSAPP_NUMBER
+  const name = customerName.value.trim()
+  const nameIntro = name ? `Hola N3XT, soy *${name.toUpperCase()}*` : 'Hola N3XT'
   
   const text = `${nameIntro}! Deseo iniciar un proyecto 3D con ustedes.
  
@@ -116,11 +115,14 @@ const buildWhatsappUrl = () => {
  
 ¿Podrían asesorarme con el análisis técnico y cotización de mi idea? Adjunto referencia...`
  
-  return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+  return whatsappLink(phone, text)
 }
 
+const hasName = computed(() => customerName.value.trim().length > 0)
+
 const sendToWhatsapp = () => {
-  window.open(buildWhatsappUrl(), '_blank')
+  if (!hasName.value) return
+  window.open(buildWhatsappUrl(), '_blank', 'noopener,noreferrer')
 }
 </script>
 
@@ -135,7 +137,7 @@ const sendToWhatsapp = () => {
       <div class="relative z-10 flex flex-col lg:flex-row gap-16">
         <div class="flex-1 space-y-16">
           <div class="space-y-6">
-            <div class="relative inline-block overflow-hidden">
+            <div class="relative inline-block overflow-hidden isolate">
               <div ref="heroParticlesRef" class="project-hero-particles" aria-hidden="true"></div>
               <!-- Glow background -->
               <div class="absolute -inset-20 bg-gradient-to-r from-emerald-500/5 via-primary/5 to-emerald-500/5 rounded-full blur-[100px] animate-pulse pointer-events-none"></div>
@@ -145,8 +147,8 @@ const sendToWhatsapp = () => {
               </h1>
             </div>
             <div class="space-y-3 max-w-md">
-              <label class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.4em] block ml-1">Identificación del Cliente</label>
-              <input v-model="customerName" type="text" placeholder="Escribe tu nombre aqui..." class="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-slate-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm">
+              <label for="project-customer-name" class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.4em] block ml-1">Identificación del Cliente</label>
+              <input id="project-customer-name" v-model="customerName" type="text" autocomplete="name" placeholder="Escribe tu nombre aqui..." class="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-slate-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm">
             </div>
             <p class="text-slate-400 dark:text-gray-400 font-bold uppercase tracking-[0.4em] text-xs">Asistente de Configuración N3XT</p>
           </div>
@@ -160,6 +162,8 @@ const sendToWhatsapp = () => {
               <button 
                 v-for="opt in step.options" 
                 :key="opt.id"
+                type="button"
+                :aria-pressed="selections[step.id] === opt.id"
                 :class="selections[step.id] === opt.id 
                   ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 shadow-[0_10px_30px_rgba(16,185,129,0.1)] dark:shadow-[0_0_20px_rgba(16,185,129,0.2)]' 
                   : 'border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:border-emerald-200 dark:hover:border-white/20'"
@@ -201,8 +205,8 @@ const sendToWhatsapp = () => {
               </div>
               <div class="space-y-6 relative z-10 pt-6">
                 <button 
-                  :disabled="!customerName"
-                  :class="!customerName ? 'opacity-40 cursor-not-allowed bg-slate-500' : 'bg-emerald-500 shadow-[0_20px_50px_-15px_rgba(16,185,129,0.4)] hover:scale-[1.02] active:scale-95'"
+                  :disabled="!hasName"
+                  :class="!hasName ? 'opacity-40 cursor-not-allowed bg-slate-500' : 'bg-emerald-500 shadow-[0_20px_50px_-15px_rgba(16,185,129,0.4)] hover:scale-[1.02] active:scale-95'"
                   class="w-full py-8 text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 group"
                   @click="sendToWhatsapp"
                 >
@@ -215,6 +219,8 @@ const sendToWhatsapp = () => {
         </aside>
       </div>
     </main>
+
+    <AppFooter />
   </div>
 </template>
 
@@ -232,16 +238,4 @@ const sendToWhatsapp = () => {
   background-image: linear-gradient(to right, rgba(16, 185, 129, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
 }
 
-
-/* --- Scroll Reveal --- */
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.reveal.revealed {
-  opacity: 1;
-  transform: translateY(0);
-}
 </style>

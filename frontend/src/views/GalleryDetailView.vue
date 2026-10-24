@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../services/api'
 import AppNavbar from '../components/AppNavbar.vue'
@@ -21,22 +21,40 @@ usePageMeta({
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
-const lightboxRef = ref<any>(null)
-const relatedGridRef = ref<any>(null)
+const loadError = ref(false)
+const lightboxRef = ref<HTMLElement | null>(null)
+const relatedGridRef = ref<HTMLElement | null>(null)
+
+interface GalleryDetailItem {
+  image: string
+  title: string
+  category?: string
+  technology?: string
+  material?: string
+  images?: string[] | string
+  tags?: string[] | string
+  subtitle?: string
+  description?: string
+  client?: string
+  date?: string
+  dimensions?: string
+  stats?: { val: string; label: string }[]
+}
 
 // ─── Scroll reveal for related projects ───
 const relatedVisible = ref(false)
-let relatedObserver = null
-let _timerFocus = null
-let _timerLoad = null
+let relatedObserver: IntersectionObserver | null = null
+let _timerFocus: ReturnType<typeof setTimeout> | null = null
+let _timerLoad: ReturnType<typeof setTimeout> | null = null
 
-const normalizeTags = (tags) => Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : [])
-const normalizeImages = (images) => Array.isArray(images) ? images : (typeof images === 'string' ? images.split(',').map(s => s.trim()).filter(Boolean) : [])
-const item = ref<any>(null)
-const webSettings = ref({ gallery: [] })
+const normalizeTags = (tags: unknown): string[] => Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : [])
+const normalizeImages = (images: unknown): string[] => Array.isArray(images) ? images : (typeof images === 'string' ? images.split(',').map(s => s.trim()).filter(Boolean) : [])
+const item = ref<GalleryDetailItem | null>(null)
+const webSettings = ref<{ gallery: GalleryDetailItem[]; cloudinary_name?: string }>({ gallery: [] })
 const lightboxOpen = ref(false)
 const lightboxIdx = ref(0)
 const mainImageFailed = ref(false)
+const brokenRelated = ref<Record<string, boolean>>({})
 
 const allImages = computed(() => {
   if (!item.value) return []
@@ -48,10 +66,18 @@ const allImages = computed(() => {
   return imgs.filter(Boolean)
 })
 
-const openLightbox = (idx) => {
+const relatedItems = computed(() =>
+  item.value ? webSettings.value.gallery.filter(g => g.title !== item.value!.title).slice(0, 3) : []
+)
+
+const openLightbox = (idx: number) => {
+  if (!allImages.value.length) return
   lightboxIdx.value = idx
   lightboxOpen.value = true
-  _timerFocus = setTimeout(() => { lightboxRef.value?.focus() }, 100)
+}
+
+const closeLightbox = () => {
+  lightboxOpen.value = false
 }
 
 const nextImage = () => {
@@ -62,7 +88,27 @@ const prevImage = () => {
   if (lightboxIdx.value > 0) lightboxIdx.value--
 }
 
-const formatDate = (d) => {
+const onLightboxKey = (e: KeyboardEvent) => {
+  if (!lightboxOpen.value) return
+  if (e.key === 'Escape') closeLightbox()
+  else if (e.key === 'ArrowRight') nextImage()
+  else if (e.key === 'ArrowLeft') prevImage()
+}
+
+watch(lightboxOpen, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+  if (open) {
+    window.addEventListener('keydown', onLightboxKey)
+    if (_timerFocus !== null) clearTimeout(_timerFocus)
+    _timerFocus = setTimeout(() => { lightboxRef.value?.focus() }, 100)
+  } else {
+    window.removeEventListener('keydown', onLightboxKey)
+  }
+})
+
+const hideImg = (e: Event) => { (e.target as HTMLImageElement).style.display = 'none' }
+
+const formatDate = (d: string) => {
   try {
     const dt = new Date(d)
     if (isNaN(dt.getTime())) return d
@@ -72,32 +118,43 @@ const formatDate = (d) => {
   }
 }
 
-const getOptimizedImage = (url) => {
+const getOptimizedImage = (url: string | undefined): string => {
   if (!url) return ''
   if (!webSettings.value.cloudinary_name || !url.includes('cloudinary.com')) return url
   return url.replace('/upload/', '/upload/f_auto,q_auto,w_1200/')
 }
 
 const fetchData = async () => {
+  loading.value = true
+  loadError.value = false
+  lightboxOpen.value = false
+  lightboxIdx.value = 0
+  mainImageFailed.value = false
+  brokenRelated.value = {}
+  relatedVisible.value = false
+  if (relatedObserver) relatedObserver.disconnect()
+  if (_timerLoad !== null) clearTimeout(_timerLoad)
   try {
     const data = await api.get('/settings')
     if (data?.web?.gallery) {
-      webSettings.value.gallery = data.web.gallery.map((item: any, idx: number) =>
-        typeof item === 'string' ? { image: item, title: `Imagen ${idx + 1}` } : item
+      webSettings.value.gallery = data.web.gallery.map((g: GalleryDetailItem | string, idx: number) =>
+        typeof g === 'string' ? { image: g, title: `Imagen ${idx + 1}` } : g
       )
-      const rawSlug = route.params.id
-      const decodedSlug = decodeURIComponent(rawSlug)
+      if (data.web.cloudinary_name) webSettings.value.cloudinary_name = data.web.cloudinary_name
+      // vue-router ya entrega el parámetro decodificado
+      const rawParam = route.params.id
+      const slug = Array.isArray(rawParam) ? rawParam.join('/') : (rawParam || '')
       item.value = webSettings.value.gallery.find(g =>
-        encodeURIComponent(g.title || '') === rawSlug ||
-        g.title === rawSlug ||
-        g.title === decodedSlug
+        g.title === slug || encodeURIComponent(g.title || '') === slug
       ) || null
     } else {
       item.value = null
     }
   } catch (err) {
     logger.error('Error:', err)
-    item.value = null    } finally {
+    item.value = null
+    loadError.value = true
+  } finally {
     _timerLoad = setTimeout(() => {
       loading.value = false
       setupRelatedReveal()
@@ -113,11 +170,12 @@ const fetchData = async () => {
 const setupRelatedReveal = () => {
   nextTick(() => {
     if (!relatedGridRef.value) return
+    if (relatedObserver) relatedObserver.disconnect()
     relatedObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           relatedVisible.value = true
-          relatedObserver.unobserve(entry.target)
+          relatedObserver?.unobserve(entry.target)
         }
       })
     }, { threshold: 0.15 })
@@ -125,14 +183,22 @@ const setupRelatedReveal = () => {
   })
 }
 
+watch(() => route.params.id, (newId, oldId) => {
+  if (!newId || newId === oldId) return
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  fetchData()
+})
+
 onMounted(() => {
   fetchData()
 })
 
 onUnmounted(() => {
-  clearTimeout(_timerFocus)
-  clearTimeout(_timerLoad)
+  if (_timerFocus !== null) clearTimeout(_timerFocus)
+  if (_timerLoad !== null) clearTimeout(_timerLoad)
   if (relatedObserver) relatedObserver.disconnect()
+  window.removeEventListener('keydown', onLightboxKey)
+  document.body.style.overflow = ''
 })
 </script>
 
@@ -145,6 +211,14 @@ onUnmounted(() => {
       <div v-if="loading" class="text-center py-40">
         <div class="w-16 h-16 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-6"></div>
         <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cargando proyecto...</p>
+      </div>
+
+      <!-- Error -->
+      <div v-else-if="loadError" class="text-center py-40 space-y-8" role="alert">
+        <p class="text-lg font-black text-gray-400 uppercase tracking-widest italic">No pudimos cargar el proyecto</p>
+        <button class="inline-flex items-center gap-3 px-10 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-xl" @click="fetchData">
+          Reintentar
+        </button>
       </div>
 
       <!-- Not Found -->
@@ -171,7 +245,7 @@ onUnmounted(() => {
 class="aspect-square rounded-[3rem] overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 relative group cursor-pointer"
                  @click="openLightbox(0)">
               <img
-v-if="!mainImageFailed" :src="getOptimizedImage(item.image)" :alt="'Proyecto de impresión 3D: ' + item.title + (item.category ? ' (' + item.category + ')' : '') + ' — N3XT 3D Galería'"
+v-if="item.image && !mainImageFailed" :src="getOptimizedImage(item.image)" :alt="'Proyecto de impresión 3D: ' + item.title + (item.category ? ' (' + item.category + ')' : '') + ' — N3XT 3D Galería'"
                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
                    fetchpriority="high"
                    decoding="async"
@@ -193,8 +267,8 @@ v-if="!mainImageFailed" :src="getOptimizedImage(item.image)" :alt="'Proyecto de 
 v-for="(img, idx) in allImages" :key="idx"
                       class="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all"
                       :class="idx === lightboxIdx && lightboxOpen ? 'border-emerald-500 scale-105' : 'border-transparent hover:border-gray-300 dark:hover:border-white/20'"
-                      @click="openLightbox(idx)">
-                <img :src="getOptimizedImage(img)" :alt="'Vista previa del proyecto: ' + item.title + ' | N3XT 3D'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
+                      :aria-label="'Ampliar imagen ' + (idx + 1)" @click="openLightbox(idx)">
+                <img :src="getOptimizedImage(img)" :alt="'Vista previa del proyecto: ' + item.title + ' | N3XT 3D'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="hideImg" />
               </button>
             </div>
           </div>
@@ -203,7 +277,7 @@ v-for="(img, idx) in allImages" :key="idx"
           <div class="space-y-8">
             <!-- Category + Tech badges -->
             <div class="flex flex-wrap gap-3">
-              <span class="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 text-[8px] font-black rounded-full uppercase tracking-[0.25em] border border-emerald-500/20">{{ item.category }}</span>
+              <span v-if="item.category" class="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 text-[8px] font-black rounded-full uppercase tracking-[0.25em] border border-emerald-500/20">{{ item.category }}</span>
               <span v-if="item.technology" class="px-4 py-1.5 bg-black/5 dark:bg-white/5 text-gray-500 text-[8px] font-black rounded-full uppercase tracking-[0.25em] border border-gray-200 dark:border-white/10">{{ item.technology }}</span>
               <span v-if="item.material" class="px-4 py-1.5 bg-black/5 dark:bg-white/5 text-gray-500 text-[8px] font-black rounded-full uppercase tracking-[0.25em] border border-gray-200 dark:border-white/10">{{ item.material }}</span>
             </div>
@@ -269,18 +343,20 @@ to="/catalog"
         </div>
 
         <!-- Related projects -->
-        <div v-if="webSettings.gallery.length > 1" ref="relatedGridRef" class="mt-32 related-grid">
+        <div v-if="relatedItems.length > 0" ref="relatedGridRef" class="mt-32 related-grid">
           <h2 class="split-title text-3xl md:text-5xl font-black tracking-tighter uppercase leading-[0.9] mb-12">Proyectos <span class="text-emerald-500">Relacionados</span></h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <router-link
-v-for="(related, idx) in webSettings.gallery.filter(g => g.title !== item.title).slice(0, 3)" :key="idx"
-              :to="'/galeria/' + encodeURIComponent(related.title || idx)"
+v-for="(related, idx) in relatedItems" :key="related.title || idx"
+              :to="'/galeria/' + encodeURIComponent(related.title || String(idx))"
               :class="['group bg-white dark:bg-white/5 rounded-[2rem] overflow-hidden border border-gray-100 dark:border-white/10 hover:border-emerald-500/30 transition-all hover:shadow-xl', relatedVisible ? 'related-revealed' : 'related-hidden']"
               :style="{ '--rel-delay': (idx * 150) + 'ms' }">
-              <div class="aspect-square overflow-hidden">
+              <div class="aspect-square overflow-hidden bg-gray-100 dark:bg-white/5 flex items-center justify-center">
                 <img
-:src="getOptimizedImage(related.image)" :alt="'Proyecto relacionado: ' + related.title + ' — N3XT 3D Galería'"
-                     class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" decoding="async" />
+v-if="related.image && !brokenRelated[related.title]" :src="getOptimizedImage(related.image)" :alt="'Proyecto relacionado: ' + related.title + ' — N3XT 3D Galería'"
+                     class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" decoding="async"
+                     @error="brokenRelated[related.title] = true" />
+                <svg v-else class="w-16 h-16 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               </div>
               <div class="p-6 text-center">
                 <h3 class="text-sm font-black tracking-tighter uppercase group-hover:text-emerald-500 transition-colors">{{ related.title }}</h3>
@@ -295,14 +371,14 @@ v-for="(related, idx) in webSettings.gallery.filter(g => g.title !== item.title)
     <!-- Lightbox Modal -->
     <transition name="fade">
       <div
-v-if="lightboxOpen && allImages.length" ref="lightboxRef" class="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12"
-           tabindex="0" @keydown.escape="lightboxOpen = false" @keydown.right="nextImage" @keydown.left="prevImage">
-        <div class="absolute inset-0 bg-black/95 backdrop-blur-2xl" @click="lightboxOpen = false"></div>
+v-if="lightboxOpen && allImages.length" ref="lightboxRef" class="fixed inset-0 z-[1100] flex items-center justify-center p-4 md:p-12"
+           role="dialog" aria-modal="true" :aria-label="'Galería de imágenes' + (item ? ': ' + item.title : '')" tabindex="-1">
+        <div class="absolute inset-0 bg-black/95 backdrop-blur-2xl" @click="closeLightbox"></div>
 
         <!-- Close -->
         <button
 class="absolute top-6 right-6 z-10 w-14 h-14 bg-white/10 hover:bg-white/20 text-white rounded-2xl flex items-center justify-center transition-all backdrop-blur-xl border border-white/10"
-                @click="lightboxOpen = false">
+                aria-label="Cerrar galería" @click="closeLightbox">
           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
 
@@ -314,14 +390,14 @@ class="absolute top-6 right-6 z-10 w-14 h-14 bg-white/10 hover:bg-white/20 text-
         <!-- Prev -->
         <button
 v-if="lightboxIdx > 0" class="absolute left-6 z-10 w-14 h-14 bg-white/10 hover:bg-white/20 text-white rounded-2xl flex items-center justify-center transition-all backdrop-blur-xl border border-white/10"
-                @click="prevImage">
+                aria-label="Imagen anterior" @click="prevImage">
           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
         </button>
 
         <!-- Next -->
         <button
 v-if="lightboxIdx < allImages.length - 1" class="absolute right-6 z-10 w-14 h-14 bg-white/10 hover:bg-white/20 text-white rounded-2xl flex items-center justify-center transition-all backdrop-blur-xl border border-white/10"
-                @click="nextImage">
+                aria-label="Imagen siguiente" @click="nextImage">
           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
         </button>
 
@@ -342,8 +418,8 @@ v-if="lightboxIdx < allImages.length - 1" class="absolute right-6 z-10 w-14 h-14
 v-for="(img, idx) in allImages" :key="idx"
                   class="w-12 h-12 rounded-xl overflow-hidden border-2 transition-all"
                   :class="idx === lightboxIdx ? 'border-emerald-500 scale-110' : 'border-white/20 opacity-50 hover:opacity-100'"
-                  @click="lightboxIdx = idx">
-            <img :src="getOptimizedImage(img)" :alt="'Miniatura ' + (idx + 1) + ' — ' + (item ? item.title : 'Proyecto') + ' | N3XT 3D'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
+                  :aria-label="'Ver imagen ' + (idx + 1)" @click="lightboxIdx = idx">
+            <img :src="getOptimizedImage(img)" :alt="'Miniatura ' + (idx + 1) + ' — ' + (item ? item.title : 'Proyecto') + ' | N3XT 3D'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="hideImg" />
           </button>
         </div>
       </div>

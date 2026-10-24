@@ -15,9 +15,15 @@ const GalleryDetailView = () => import('../views/GalleryDetailView.vue')
 const CustomerDashboard = () => import('../views/CustomerDashboard.vue')
 const PrivacyView = () => import('../views/PrivacyView.vue')
 const TermsView = () => import('../views/TermsView.vue')
+const NotFoundView = () => import('../views/NotFoundView.vue')
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(to, _from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, behavior: 'smooth' }
+    return { top: 0 }
+  },
   routes: [
     {
       path: '/',
@@ -104,6 +110,11 @@ const router = createRouter({
       path: '/terms',
       name: 'terms',
       component: TermsView
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView
     }
   ]
 })

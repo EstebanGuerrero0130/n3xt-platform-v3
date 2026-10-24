@@ -1,48 +1,115 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick, onBeforeUnmount, type PropType } from 'vue'
 import { useCaptcha } from '../composables/useCaptcha'
+import { useTurnstile } from '../composables/useTurnstile'
+
+interface QuoteModelSummary {
+  id: number
+  name: string
+  hasModel: boolean
+  dimensions: { x: number; y: number; z: number }
+}
+interface MaterialOption { id: string; name: string }
+
+interface CustomerForm {
+  name: string; company: string; document: string; email: string; phone: string
+  city: string; address: string; use: string; comments: string
+}
 
 const props = defineProps({
   show: { type: Boolean, default: false },
-  models: { type: Array, default: () => [] },
-  materials: { type: Array, default: () => [] },
+  models: { type: Array as PropType<QuoteModelSummary[]>, default: () => [] },
+  materials: { type: Array as PropType<MaterialOption[]>, default: () => [] },
   selectedTechnology: { type: String, default: 'FDM' },
   selectedMaterial: { type: String, default: '' },
   qty: { type: Number, default: 1 },
-  breakdown: { type: Object, default: () => ({ total: 0, discount: 0 }) },
-  activeCoupon: { type: Object, default: null },
-  previousTotal: { type: Number, default: 0 },
+  breakdown: { type: Object as PropType<{ total: number; discount: number; weight: number; duration: number }>, default: () => ({ total: 0, discount: 0, weight: 0, duration: 0 }) },
+  activeCoupon: { type: Object as PropType<{ label: string; discount: number } | null>, default: null },
   isSubmitting: { type: Boolean, default: false },
   notification: { type: Object, default: () => ({ show: false, message: '', type: 'info' }) }
 })
 
-const emit = defineEmits(['close', 'submit', 'update:show'])
+const emit = defineEmits<{
+  close: []
+  submit: [payload: { customerForm: CustomerForm; captchaVerified: boolean; turnstileToken: string }]
+}>()
 
 const modalStep = ref(1)
-const customerForm = ref({
+const customerForm = ref<CustomerForm>({
   name: '', company: '', document: '', email: '', phone: '',
   city: '', address: '', use: 'Funcional', comments: ''
 })
 const { challenge, answer, verify, isLocked, reset } = useCaptcha()
+const turnstile = useTurnstile()
+const turnstileEl = ref<HTMLElement | null>(null)
+const turnstileHint = ref('')
+const step1Form = ref<HTMLFormElement | null>(null)
+const step2Form = ref<HTMLFormElement | null>(null)
 
 const handleClose = () => {
   modalStep.value = 1
   emit('close')
 }
 
+/** Validates previous steps (native required/email checks) before moving forward. */
+const goToStep = (target: number) => {
+  if (target > 1 && step1Form.value && !step1Form.value.checkValidity()) {
+    modalStep.value = 1
+    nextTick(() => step1Form.value?.reportValidity())
+    return
+  }
+  if (target > 2 && step2Form.value && !step2Form.value.checkValidity()) {
+    modalStep.value = 2
+    nextTick(() => step2Form.value?.reportValidity())
+    return
+  }
+  modalStep.value = target
+}
+
 const handleConfirm = () => {
+  if (props.isSubmitting) return
+  goToStep(3)
+  if (modalStep.value !== 3) return
+  if (turnstile.enabled && !turnstile.token.value) {
+    turnstileHint.value = 'Completa la verificación anti-bot.'
+    return
+  }
+  turnstileHint.value = ''
   if (!verify()) return
-  emit('submit', { customerForm, captchaVerified: true })
+  emit('submit', { customerForm: { ...customerForm.value }, captchaVerified: true, turnstileToken: turnstile.token.value })
+}
+
+const onKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') handleClose()
 }
 
 watch(() => props.show, (v) => {
   if (v) {
     modalStep.value = 1
     reset()
+    window.addEventListener('keydown', onKeydown)
+  } else {
+    window.removeEventListener('keydown', onKeydown)
+    turnstile.remove()
   }
 })
 
-const getMaterialName = (id) => {
+// Render Turnstile once the confirmation step is visible
+watch(modalStep, (step) => {
+  if (step === 3 && props.show) nextTick(() => turnstile.render(turnstileEl.value))
+})
+
+// Turnstile tokens are single-use: reset after a failed submit (modal still open)
+watch(() => props.isSubmitting, (now, before) => {
+  if (before && !now && props.show) {
+    turnstile.reset()
+    reset()
+  }
+})
+
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+
+const getMaterialName = (id: string) => {
   const mat = props.materials.find(m => m.id === id)
   return mat ? mat.name : id
 }
@@ -60,22 +127,22 @@ const formatTime = (h: number) => {
 <transition
 enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100"
   leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
-  <div v-if="show" class="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-black/80 backdrop-blur-md">
+  <div v-if="show" class="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-black/80 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="quote-order-modal-title">
     <div class="bg-white dark:bg-[#0a0f14] w-full max-w-2xl rounded-[3.5rem] shadow-2xl border border-gray-100 dark:border-white/5 overflow-hidden flex flex-col relative max-h-[90vh]">
       
       <!-- Header -->
       <div class="bg-primary px-8 md:px-12 pt-10 pb-6 text-white relative shrink-0">
-        <button class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-white/20 rounded-full hover:bg-white hover:text-primary transition-all text-lg" @click="handleClose">✕</button>
+        <button class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-white/20 rounded-full hover:bg-white hover:text-primary transition-all text-lg" type="button" aria-label="Cerrar" @click="handleClose">✕</button>
         <p class="text-[9px] font-black uppercase tracking-[0.5em] mb-2 text-white/80">N3XT Protocol</p>
-        <h2 class="text-3xl md:text-4xl font-black tracking-tighter uppercase leading-none">Finalizar Solicitud</h2>
+        <h2 id="quote-order-modal-title" class="text-3xl md:text-4xl font-black tracking-tighter uppercase leading-none">Finalizar Solicitud</h2>
         
         <!-- Step Indicators -->
         <div class="flex items-center gap-2 mt-8">
-          <button :class="modalStep >= 1 ? 'bg-white text-primary' : 'bg-white/20 text-white/60'" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all" @click="modalStep = 1">1</button>
+          <button :class="modalStep >= 1 ? 'bg-white text-primary' : 'bg-white/20 text-white/60'" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all" type="button" aria-label="Ir al paso 1" @click="goToStep(1)">1</button>
           <div :class="modalStep >= 2 ? 'bg-white/60' : 'bg-white/10'" class="flex-1 h-0.5 rounded transition-all"></div>
-          <button :class="modalStep >= 2 ? 'bg-white text-primary' : 'bg-white/20 text-white/60'" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all" @click="modalStep = 2">2</button>
+          <button :class="modalStep >= 2 ? 'bg-white text-primary' : 'bg-white/20 text-white/60'" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all" type="button" aria-label="Ir al paso 2" @click="goToStep(2)">2</button>
           <div :class="modalStep >= 3 ? 'bg-white/60' : 'bg-white/10'" class="flex-1 h-0.5 rounded transition-all"></div>
-          <button :class="modalStep >= 3 ? 'bg-white text-primary' : 'bg-white/20 text-white/60'" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all" @click="modalStep = 3">3</button>
+          <button :class="modalStep >= 3 ? 'bg-white text-primary' : 'bg-white/20 text-white/60'" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all" type="button" aria-label="Ir al paso 3" @click="goToStep(3)">3</button>
         </div>
         <div class="flex justify-between mt-2">
           <span class="text-[7px] font-black uppercase tracking-[0.3em]" :class="modalStep === 1 ? 'text-white' : 'text-white/50'">Datos</span>
@@ -86,7 +153,7 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
 
       <div class="p-6 md:p-10 space-y-6 overflow-y-auto flex-1">
         <!-- STEP 1: DATOS DEL CLIENTE -->
-        <div v-show="modalStep === 1" class="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+        <form v-show="modalStep === 1" ref="step1Form" class="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500" novalidate @submit.prevent="goToStep(2)">
           <div class="flex items-center gap-3 mb-6">
             <div class="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center">
               <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
@@ -98,43 +165,43 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4">Nombre Completo *</label>
-              <input v-model="customerForm.name" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4" for="order-name">Nombre Completo *</label>
+              <input id="order-name" v-model="customerForm.name" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
             </div>
             <div>
-              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4">Empresa / Razon Social</label>
-              <input v-model="customerForm.company" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4">NIT / Documento</label>
-              <input v-model="customerForm.document" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-            <div>
-              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4">Email Corporativo *</label>
-              <input v-model="customerForm.email" type="email" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4" for="order-company">Empresa / Razon Social</label>
+              <input id="order-company" v-model="customerForm.company" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
             </div>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4">WhatsApp / Tel *</label>
-              <input v-model="customerForm.phone" type="tel" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4" for="order-document">NIT / Documento</label>
+              <input id="order-document" v-model="customerForm.document" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
             </div>
             <div>
-              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4">Ciudad / Ubicacion</label>
-              <input v-model="customerForm.city" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4" for="order-email">Email Corporativo *</label>
+              <input id="order-email" v-model="customerForm.email" type="email" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4" for="order-phone">WhatsApp / Tel *</label>
+              <input id="order-phone" v-model="customerForm.phone" type="tel" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+            </div>
+            <div>
+              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4" for="order-city">Ciudad / Ubicacion</label>
+              <input id="order-city" v-model="customerForm.city" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
             </div>
           </div>
           <div class="pt-4 flex justify-end">
-            <button class="px-10 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-emerald-600 transition-all flex items-center gap-3" @click="modalStep = 2">
+            <button class="px-10 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-emerald-600 transition-all flex items-center gap-3" type="submit">
               Continuar <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
             </button>
           </div>
-        </div>
+        </form>
 
         <!-- STEP 2: DIRECCION + USO -->
-        <div v-show="modalStep === 2" class="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+        <form v-show="modalStep === 2" ref="step2Form" class="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500" novalidate @submit.prevent="goToStep(3)">
           <div class="flex items-center gap-3 mb-6">
             <div class="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center">
               <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -145,13 +212,13 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
             </div>
           </div>
           <div>
-            <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4">Direccion de Envio *</label>
-            <input v-model="customerForm.address" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
+            <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4" for="order-address">Direccion de Envio *</label>
+            <input id="order-address" v-model="customerForm.address" type="text" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all" required>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4">Uso de la Pieza</label>
-              <select v-model="customerForm.use" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer">
+              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4" for="order-use">Uso de la Pieza</label>
+              <select id="order-use" v-model="customerForm.use" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer">
                 <option value="Prototipo">Prototipo Rapido</option>
                 <option value="Funcional">Pieza Mecanica / Funcional</option>
                 <option value="Decorativo">Arte / Decorativo</option>
@@ -160,22 +227,22 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
               </select>
             </div>
             <div>
-              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4">Notas Tecnicas</label>
-              <textarea v-model="customerForm.comments" rows="2" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none" placeholder="EJ. ACABADO ESPEJO..."></textarea>
+              <label class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block ml-4" for="order-comments">Notas Tecnicas</label>
+              <textarea id="order-comments" v-model="customerForm.comments" rows="2" class="w-full bg-gray-50 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none" placeholder="EJ. ACABADO ESPEJO..."></textarea>
             </div>
           </div>
           <div class="pt-4 flex justify-between">
-            <button class="px-6 py-4 bg-gray-100 dark:bg-white/5 text-gray-500 rounded-2xl font-black text-[9px] uppercase tracking-[0.3em] hover:bg-gray-200 transition-all flex items-center gap-2" @click="modalStep = 1">
+            <button class="px-6 py-4 bg-gray-100 dark:bg-white/5 text-gray-500 rounded-2xl font-black text-[9px] uppercase tracking-[0.3em] hover:bg-gray-200 transition-all flex items-center gap-2" type="button" @click="modalStep = 1">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/></svg> Atras
             </button>
-            <button class="px-10 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-emerald-600 transition-all flex items-center gap-3" @click="modalStep = 3">
+            <button class="px-10 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-emerald-600 transition-all flex items-center gap-3" type="submit">
               Revisar Pedido <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
             </button>
           </div>
-        </div>
+        </form>
 
         <!-- STEP 3: RESUMEN + CONFIRMAR -->
-        <div v-show="modalStep === 3" class="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+        <form v-show="modalStep === 3" class="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500" novalidate @submit.prevent="handleConfirm">
           <div class="flex items-center gap-3 mb-6">
             <div class="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center">
               <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -221,7 +288,6 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
             </div>
             <div class="flex items-end gap-4 mb-4">
               <p class="text-4xl md:text-5xl font-black tracking-tighter italic" :class="activeCoupon ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]' : 'text-white'">${{ Math.round(breakdown.total).toLocaleString('es-CO') }}</p>
-              <p v-if="activeCoupon && previousTotal > 0 && previousTotal !== breakdown.total" class="text-lg font-black text-gray-500 line-through opacity-60 leading-none mb-1">${{ previousTotal.toLocaleString('es-CO') }}</p>
             </div>
             <div v-if="activeCoupon" class="px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 mb-4 flex items-center gap-3">
               <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -230,11 +296,11 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
             <div class="space-y-2">
               <div class="flex justify-between items-center px-3 py-2 bg-white/5 rounded-xl">
                 <span class="text-[8px] font-black text-white/40 uppercase tracking-widest">Masa total</span>
-                <span class="text-xs font-black text-white">{{ models.reduce((s, m) => s + (m.weight || 0), 0).toFixed(2) }}g</span>
+                <span class="text-xs font-black text-white">{{ (breakdown.weight || 0).toFixed(2) }}g</span>
               </div>
               <div class="flex justify-between items-center px-3 py-2 bg-white/5 rounded-xl">
                 <span class="text-[8px] font-black text-white/40 uppercase tracking-widest">Tiempo total</span>
-                <span class="text-xs font-black text-white">{{ formatTime(models.reduce((s, m) => s + (m.duration || 0), 0)) }}</span>
+                <span class="text-xs font-black text-white">{{ formatTime(breakdown.duration || 0) }}</span>
               </div>
             </div>
           </div>
@@ -250,22 +316,27 @@ enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-
               <p class="text-[10px] font-black dark:text-white uppercase">{{ challenge.text }}</p>
               <p v-if="isLocked" class="text-[7px] font-black text-rose-400 uppercase tracking-widest">🔒 Bloqueado 30s</p>
             </div>
-            <input v-model="answer" type="number" :disabled="isLocked" class="w-20 bg-white dark:bg-white/10 border-none rounded-xl p-3 text-center text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 shadow-inner disabled:opacity-30" @keyup.enter="handleConfirm">
+            <input v-model="answer" type="number" :disabled="isLocked" aria-label="Respuesta de validación" class="w-20 bg-white dark:bg-white/10 border-none rounded-xl p-3 text-center text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 shadow-inner disabled:opacity-30">
             </div>
           </div>
 
+          <!-- Cloudflare Turnstile -->
+          <div v-if="turnstile.enabled" class="space-y-2">
+            <div ref="turnstileEl" class="flex justify-center"></div>
+            <p v-if="turnstileHint || turnstile.error.value" class="text-[8px] font-black text-rose-400 uppercase tracking-widest text-center">{{ turnstileHint || turnstile.error.value }}</p>
+          </div>
+
           <div class="pt-2 flex justify-between">
-            <button class="px-6 py-4 bg-gray-100 dark:bg-white/5 text-gray-500 rounded-2xl font-black text-[9px] uppercase tracking-[0.3em] hover:bg-gray-200 transition-all flex items-center gap-2" @click="modalStep = 2">
+            <button class="px-6 py-4 bg-gray-100 dark:bg-white/5 text-gray-500 rounded-2xl font-black text-[9px] uppercase tracking-[0.3em] hover:bg-gray-200 transition-all flex items-center gap-2" type="button" @click="modalStep = 2">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/></svg> Atras
             </button>
             <button
-:disabled="isSubmitting" class="px-10 py-4 bg-primary hover:bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 shadow-xl shadow-primary/20"
-              @click="handleConfirm">
+:disabled="isSubmitting" type="submit" class="px-10 py-4 bg-primary hover:bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 shadow-xl shadow-primary/20">
               <span v-if="isSubmitting" class="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
               <span>{{ isSubmitting ? 'PROCESANDO...' : 'CONFIRMAR PEDIDO' }}</span>
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   </div>

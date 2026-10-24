@@ -2,6 +2,7 @@
 
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { sanitizeSVG } from '../utils/sanitize'
+import { parsePrice, formatCOP } from '../utils/format'
 import { api } from '../services/api'
 import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
@@ -29,6 +30,7 @@ const tickerSection = ref<HTMLElement | null>(null)
 const tickerVisible = ref(true)
 
 const loading = ref(true)
+const loadError = ref(false)
 
 useRevealAnim()
 
@@ -102,19 +104,19 @@ const filteredItems = computed(() => {
 })
 
 const getDiscountPct = (item: CatalogItem) => {
-  if (!item.price || !item.original_price) return 0
-  const p = parseFloat(String(item.price).replace(/[^0-9.-]+/g,""))
-  const op = parseFloat(String(item.original_price).replace(/[^0-9.-]+/g,""))
+  const p = parsePrice(item.price)
+  const op = parsePrice(item.original_price)
   if (!p || !op || p >= op) return 0
   return Math.round((1 - p / op) * 100)
 }
 
 const isDiscounted = (item: CatalogItem) => {
-  if (!item.price || !item.original_price) return false
-  const p = parseFloat(String(item.price).replace(/[^0-9.-]+/g,""))
-  const op = parseFloat(String(item.original_price).replace(/[^0-9.-]+/g,""))
-  return p < op && p > 0
+  const p = parsePrice(item.price)
+  const op = parsePrice(item.original_price)
+  return p !== null && op !== null && p > 0 && p < op
 }
+
+const getSavings = (item: CatalogItem) => (parsePrice(item.original_price) || 0) - (parsePrice(item.price) || 0)
 
 const getOptimizedImage = (url: string) => {
   if (!url) return ''
@@ -127,10 +129,11 @@ const CACHE_KEY = 'n3xt_catalog_cache'
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
 
 const fetchSettings = async () => {
+  loadError.value = false
   // Intentar caché primero
-  const cached = localStorage.getItem(CACHE_KEY)
-  if (cached) {
-    try {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY)
+    if (cached) {
       const { data, timestamp } = JSON.parse(cached)
       if (Date.now() - timestamp < CACHE_TTL && data.web) {
         const newWeb = { ...data.web }
@@ -139,13 +142,13 @@ const fetchSettings = async () => {
         loading.value = false
         return
       }
-    } catch { /* ignorar cache corrupto */ }
-  }
+    }
+  } catch { /* storage bloqueado o cache corrupto: ignorar */ }
 
   loading.value = true
   try {
     const data = await api.get('/settings')
-    if (data.web) {
+    if (data?.web) {
       const newWeb = { ...data.web }
       if (!Array.isArray(newWeb.catalog)) {
           newWeb.catalog = []
@@ -158,6 +161,7 @@ const fetchSettings = async () => {
     }
   } catch (err) {
     logger.error('Error:', err)
+    loadError.value = true
   } finally {
     loading.value = false
     nextTick(() => applySplitBtn())
@@ -165,13 +169,6 @@ const fetchSettings = async () => {
 }
 
 const staggerKey = ref(0)
-const quickViewItem = ref<any>(null)
-
-// ─── PARTÍCULAS AMBIENTALES (GSAP) ───
-useParticles({
-  count: 60,
-  zIndex: 1,
-})
 
 // ─── MARCAS / FRANQUICIAS ───
 const brands = [
@@ -222,9 +219,6 @@ onMounted(() => {
   if (tickerSection.value) tickerObserver.observe(tickerSection.value)
   onUnmounted(() => tickerObserver.disconnect())
 })
-
-onUnmounted(() => {
-})
 </script>
 
 <template>
@@ -252,8 +246,10 @@ onUnmounted(() => {
             {{ webSettings.pdf_catalog_desc }}
           </p>
           <a 
+            v-if="webSettings.pdf_catalog_url"
             :href="webSettings.pdf_catalog_url" 
             target="_blank"
+            rel="noopener"
             class="split-btn group relative px-10 py-6 bg-gray-950 dark:bg-white text-white dark:text-black rounded-3xl font-black text-[10px] uppercase tracking-[0.3em] transition-all hover:scale-105 active:scale-95 shadow-2xl flex items-center gap-4"
           >
             <span>Descargar Catálogo PDF</span>
@@ -306,6 +302,12 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Error State -->
+      <div v-else-if="loadError" class="py-40 text-center" role="alert">
+        <p class="text-xl font-black text-gray-400 uppercase tracking-widest italic">No pudimos cargar el catálogo.</p>
+        <button class="mt-6 px-8 py-3 bg-primary/10 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all" @click="fetchSettings">Reintentar</button>
+      </div>
+
       <!-- Real Items Grid -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         <router-link 
@@ -341,13 +343,13 @@ onUnmounted(() => {
               <div class="relative w-20 h-20 group-hover:scale-110 transition-transform duration-500">
                 <svg class="w-full h-full drop-shadow-[0_0_20px_rgba(239,68,68,0.6)]" viewBox="0 0 100 100">
                   <defs>
-                    <linearGradient id="fireGradCat" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient :id="'fireGradCat-' + index" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stop-color="#ef4444"/>
                       <stop offset="50%" stop-color="#f97316"/>
                       <stop offset="100%" stop-color="#dc2626"/>
                     </linearGradient>
                   </defs>
-                  <polygon points="50,2 96,20 96,60 50,98 4,60 4,20" fill="url(#fireGradCat)" opacity="0.95"/>
+                  <polygon points="50,2 96,20 96,60 50,98 4,60 4,20" :fill="'url(#fireGradCat-' + index + ')'" opacity="0.95"/>
                 </svg>
                 <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span class="text-[6px] font-black text-white uppercase tracking-[0.1em] leading-tight drop-shadow-lg">OFERTA</span>
@@ -392,22 +394,22 @@ onUnmounted(() => {
                   
                   <div class="flex items-center gap-4">
                     <p :class="['text-5xl font-black tracking-tighter leading-none italic drop-shadow-[0_0_10px_rgba(16,185,129,0.2)]', isDiscounted(item) ? 'text-rose-600 dark:text-rose-500' : 'text-emerald-500 dark:text-emerald-400']">
-                      ${{ Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
+                      {{ formatCOP(item.price) }}
                     </p>
                     <p v-if="isDiscounted(item)" class="text-lg font-black text-gray-400 line-through opacity-50 leading-none italic tracking-tight">
-                      ${{ Math.round(parseFloat(String(item.original_price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
+                      {{ formatCOP(item.original_price) }}
                     </p>
                   </div>
                   
                   <div v-if="isDiscounted(item) && item.original_price" class="mt-3 self-start px-3 py-1 bg-rose-500/10 rounded-full border border-rose-500/20 inline-block">
                     <span class="text-[8px] font-black text-rose-500 dark:text-rose-400 uppercase tracking-widest">
-                      Ahorras ${{ (Math.round(parseFloat(String(item.original_price).replace(/[^0-9]+/g,"")) || 0) - Math.round(parseFloat(String(item.price).replace(/[^0-9]+/g,"")) || 0)).toLocaleString() }}
+                      Ahorras {{ formatCOP(getSavings(item)) }}
                     </span>
                   </div>
                </div>
                
                <!-- CTA (Estilo Galeria) -->
-               <div :class="['w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] transition-all duration-500 shadow-xl flex items-center justify-center gap-4 cursor-pointer', isDiscounted(item) ? 'bg-rose-600 text-white border border-rose-500 hover:bg-rose-500 hover:shadow-rose-500/40' : 'bg-gray-900 dark:bg-white/10 text-white border border-transparent dark:border-white/5 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-emerald-500/30']" @click.prevent.stop="quickViewItem = item">
+               <div :class="['w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] transition-all duration-500 shadow-xl flex items-center justify-center gap-4 cursor-pointer', isDiscounted(item) ? 'bg-rose-600 text-white border border-rose-500 hover:bg-rose-500 hover:shadow-rose-500/40' : 'bg-gray-900 dark:bg-white/10 text-white border border-transparent dark:border-white/5 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-emerald-500/30']">
                    <span>{{ isDiscounted(item) ? 'Aprovechar Oferta' : 'Analizar Pieza →' }}</span>
                </div>
             </div>
@@ -416,143 +418,60 @@ onUnmounted(() => {
       </div>
 
       <!-- No items fallback -->
-      <div v-if="filteredItems.length === 0" class="py-40 text-center">
+      <div v-if="!loading && !loadError && filteredItems.length === 0" class="py-40 text-center">
           <p class="text-xl font-black text-gray-400 uppercase tracking-widest italic">No hay piezas en esta categoría todavía.</p>
       </div>
     </main>
+
+    <!-- ─── MARQUES DE FABRICACIÓN ─── -->
+    <section ref="tickerSection" class="w-full py-20 md:py-24 overflow-hidden relative bg-gray-50 dark:bg-[#05080b] border-t border-gray-100 dark:border-white/5">
+      <div class="absolute inset-0 technical-grid opacity-5 pointer-events-none"></div>
+    
+      <div class="max-w-7xl mx-auto px-6 mb-12 md:mb-16 text-center relative">
+        <div class="inline-flex items-center gap-3 px-4 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20 mb-6">
+          <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+          <span class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">FRANQUICIAS</span>
+        </div>
+        <h2 class="text-4xl md:text-6xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-[0.9] fade-title">
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">Universos icónicos</span><br/>
+          que cobran vida en nuestras manos
+        </h2>
+      </div>
+
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 w-16 md:w-32 z-10 pointer-events-none bg-gradient-to-r from-gray-50 dark:from-[#05080b] to-transparent"></div>
+        <div class="absolute inset-y-0 right-0 w-16 md:w-32 z-10 pointer-events-none bg-gradient-to-l from-gray-50 dark:from-[#05080b] to-transparent"></div>
+
+        <div class="relative w-full overflow-hidden ticker-wrap-catalog">
+          <div class="ticker-track-catalog flex gap-0" :style="{ animationPlayState: tickerVisible ? 'running' : 'paused' }">
+            <div 
+              v-for="brand in tickerBrands" 
+              :key="brand.key" 
+              class="ticker-item-catalog flex items-center justify-center shrink-0 px-5 md:px-8" 
+              style="height: 64px;"
+            >
+              <div class="relative h-full inline-flex items-center gap-4" style="width: auto;">
+                <img 
+                  :src="brand.url" 
+                  :alt="brand.name" 
+                  :class="[brand.className, 'w-auto', 'brand-logo']"
+                  loading="lazy"
+                  decoding="async"
+                  @error="(e: any) => e.target.style.display='none'" 
+                />
+                <span class="w-px h-10 bg-emerald-500/20"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Footer Simple -->
     <footer class="py-20 border-t border-gray-100 dark:border-white/5 text-center">
         <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em]">N3XT 3D — Catalogo de piezas 2026</p>
     </footer>
   </div>
-
-  <!-- Quick View Modal -->
-  <teleport to="body">
-    <transition name="quickview">
-      <div v-if="quickViewItem" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-8">
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-md" @click="quickViewItem = null"></div>
-        
-        <!-- Modal Content -->
-        <div class="relative w-full max-w-4xl max-h-[90vh] bg-[#0f172a] border border-white/10 rounded-[3rem] overflow-y-auto shadow-2xl shadow-black/50 animate-in fade-in zoom-in-95 duration-500">
-          <!-- Close Button -->
-          <button class="absolute top-6 right-6 z-20 w-12 h-12 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center transition-all group border border-white/10" @click="quickViewItem = null">
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-0">
-            <!-- Left: Image -->
-            <div class="aspect-square md:aspect-auto md:h-full bg-gray-900/50 p-10 md:p-14 flex items-center justify-center relative min-h-[300px]">
-              <div class="absolute inset-0 bg-radial-gradient from-emerald-500/5 to-transparent"></div>
-              <img :src="getOptimizedImage(quickViewItem.image)" :alt="'Vista rápida: ' + quickViewItem.name + ' - Catálogo N3XT 3D'" class="max-w-full max-h-full object-contain relative z-10 hover:scale-105 transition-transform duration-700" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
-            </div>
-
-            <!-- Right: Info -->
-            <div class="p-8 md:p-12 flex flex-col justify-between">
-              <div class="space-y-6">
-                <!-- Category Badge -->
-                <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 rounded-full border border-emerald-500/30">
-                  <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
-                  <span class="text-[8px] font-black text-emerald-400 uppercase tracking-[0.3em]">{{ quickViewItem.category }}</span>
-                </div>
-
-                <!-- Name -->
-                <h2 class="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter leading-tight italic">{{ quickViewItem.name }}</h2>
-
-                <!-- Description -->
-                <p v-if="quickViewItem.description" class="text-sm text-gray-400 leading-relaxed font-medium">{{ quickViewItem.description }}</p>
-                <p v-else class="text-sm text-gray-500 italic">Sin descripción disponible.</p>
-
-                <!-- Price Section -->
-                <div class="flex items-end gap-4">
-                  <div>
-                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-[0.3em] mb-1">Precio</p>
-                    <p :class="['text-4xl font-black tracking-tighter leading-none italic', isDiscounted(quickViewItem) ? 'text-rose-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.2)]']">
-                      ${{ Math.round(parseFloat(String(quickViewItem.price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
-                    </p>
-                  </div>
-                  <p v-if="isDiscounted(quickViewItem)" class="text-lg font-black text-gray-500 line-through opacity-50 leading-none mb-0.5">
-                    ${{ Math.round(parseFloat(String(quickViewItem.original_price).replace(/[^0-9]+/g,"")) || 0).toLocaleString() }}
-                  </p>
-                </div>
-
-                <!-- Trust Badges -->
-                <div class="flex flex-wrap gap-3 pt-2">
-                  <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">
-                    <svg class="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM5 11V5a1 1 0 011-1h6l4 4v7"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8h5.5a1 1 0 01.8.4l2.5 3.5a1 1 0 01.2.6V15h-2"/></svg>
-                    <span class="text-[7px] font-black text-blue-400 uppercase tracking-[0.2em]">Envío Gratis</span>
-                  </div>
-                  <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-500/10 rounded-full border border-orange-500/20">
-                    <svg class="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                    <span class="text-[7px] font-black text-orange-400 uppercase tracking-[0.2em]">Garantía 6M</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Actions -->
-              <div class="mt-8 space-y-4">
-                <router-link
-:to="'/catalog/' + encodeURIComponent(quickViewItem.name)" class="split-btn w-full block text-center py-5 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-emerald-400 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20" 
-                   @click="quickViewItem = null">
-                  Ver Detalle Completo
-                </router-link>
-                <button
-class="w-full py-4 bg-white/5 text-gray-400 rounded-2xl font-black text-[9px] uppercase tracking-[0.3em] hover:bg-white/10 hover:text-white transition-all border border-white/5" 
-                        @click="quickViewItem = null">
-                  Seguir Explorando
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </transition>
-  </teleport>
-  <!-- ─── MARQUES DE FABRICACIÓN ─── -->
-  <section ref="tickerSection" class="w-full py-20 md:py-24 overflow-hidden relative bg-gray-50 dark:bg-[#05080b] border-t border-gray-100 dark:border-white/5">
-    <div class="absolute inset-0 technical-grid opacity-5 pointer-events-none"></div>
-    
-    <div class="max-w-7xl mx-auto px-6 mb-12 md:mb-16 text-center relative">
-      <div class="inline-flex items-center gap-3 px-4 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20 mb-6">
-        <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-        <span class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">FRANQUICIAS</span>
-      </div>
-      <h2 class="text-4xl md:text-6xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-[0.9] fade-title">
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">Universos icónicos</span><br/>
-        que cobran vida en nuestras manos
-      </h2>
-    </div>
-
-    <div class="relative">
-      <div class="absolute inset-y-0 left-0 w-16 md:w-32 z-10 pointer-events-none bg-gradient-to-r from-gray-50 dark:from-[#05080b] to-transparent"></div>
-      <div class="absolute inset-y-0 right-0 w-16 md:w-32 z-10 pointer-events-none bg-gradient-to-l from-gray-50 dark:from-[#05080b] to-transparent"></div>
-
-      <div class="relative w-full overflow-hidden ticker-wrap-catalog">
-        <div class="ticker-track-catalog flex gap-0" :style="{ animationPlayState: tickerVisible ? 'running' : 'paused' }">
-          <div 
-            v-for="brand in tickerBrands" 
-            :key="brand.key" 
-            class="ticker-item-catalog flex items-center justify-center shrink-0 px-5 md:px-8" 
-            style="height: 64px;"
-          >
-            <div class="relative h-full inline-flex items-center gap-4" style="width: auto;">
-              <img 
-                :src="brand.url" 
-                :alt="brand.name" 
-                :class="[brand.className, 'w-auto', 'brand-logo']"
-                loading="lazy"
-                decoding="async"
-                @error="(e: any) => e.target.style.display='none'" 
-              />
-              <span class="w-px h-10 bg-emerald-500/20"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
 </template>
 
 <style scoped>
@@ -640,24 +559,6 @@ class="w-full py-4 bg-white/5 text-gray-400 rounded-2xl font-black text-[9px] up
     transform: translateY(0) scale(1);
   }
 }
-
-/* Quick View Modal transitions */
-.quickview-enter-active {
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.quickview-leave-active {
-  transition: all 0.2s cubic-bezier(0.55, 0, 1, 0.45);
-}
-.quickview-enter-from,
-.quickview-leave-to {
-  opacity: 0;
-}
-.quickview-enter-from > div > div,
-.quickview-leave-to > div > div {
-  transform: scale(0.95) translateY(20px);
-  opacity: 0;
-}
-
 
 /* ═══════════════════════════════════════════
    SCROLL REVEAL
