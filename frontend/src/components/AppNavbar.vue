@@ -66,66 +66,70 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <header v-bind="$attrs" role="banner" class="bg-white/80 dark:bg-[#0d1117]/80 backdrop-blur-3xl px-6 md:px-12 py-4 flex justify-between items-center border-b border-gray-100 dark:border-[#21262d]/50 sticky top-0 w-full z-[1000] transition-colors duration-500">
-    <router-link to="/" class="flex items-center gap-3 group">
-      <div class="flex flex-col text-left">
-        <span class="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">N3XT <span class="text-emerald-400">3D</span></span>
-        <span class="text-[7px] md:text-[8px] font-black text-gray-400 dark:text-[#8dd6ff] uppercase tracking-[0.4em] leading-none">{{ subtext }}</span>
-      </div>
-    </router-link>
+  <header v-bind="$attrs" role="banner" class="glass-panel !border-x-0 !border-t-0 sticky top-0 w-full z-[1000] transition-colors duration-500">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
+      <router-link to="/" class="flex items-baseline gap-2 shrink-0" aria-label="N3XT 3D, ir al inicio">
+        <span class="font-display text-xl font-extrabold tracking-tight text-ink [font-stretch:118%]">N3XT<span class="text-brand">3D</span></span>
+        <span v-if="subtext" class="hidden lg:inline text-xs text-muted">{{ subtext }}</span>
+      </router-link>
 
-    <nav role="navigation" aria-label="Navegación principal" class="hidden md:flex gap-4 items-center">
+      <nav role="navigation" aria-label="Navegación principal" class="hidden md:flex items-center gap-1 h-full">
+        <router-link
+          v-for="link in navLinks"
+          :key="link.tab"
+          :to="link.to"
+          :aria-current="currentTab === link.tab ? 'page' : undefined"
+          :class="[
+            'relative h-full inline-flex items-center px-3 text-sm font-medium transition-colors',
+            currentTab === link.tab
+              ? 'text-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-primary'
+              : 'text-muted hover:text-ink'
+          ]"
+        >{{ link.label }}</router-link>
+      </nav>
+
+      <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="hidden md:inline-flex btn-secondary btn-sm">
+        {{ isAdmin ? 'Ir al taller' : 'Acceso taller' }}
+      </router-link>
+
+      <button
+        :aria-expanded="showMobileMenu"
+        aria-controls="mobile-menu"
+        :aria-label="showMobileMenu ? 'Cerrar menú' : 'Abrir menú'"
+        class="md:hidden w-11 h-11 -mr-2 flex items-center justify-center rounded-[var(--radius-control)] text-ink hover:bg-surface-2 relative z-[1010]"
+        @click="showMobileMenu = !showMobileMenu"
+      >
+        <svg v-if="!showMobileMenu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg v-else class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Menú móvil -->
+  <transition
+    enter-active-class="transition duration-300 ease-out"
+    enter-from-class="opacity-0 -translate-y-2"
+    enter-to-class="opacity-100 translate-y-0"
+    leave-active-class="transition duration-200 ease-in"
+    leave-from-class="opacity-100 translate-y-0"
+    leave-to-class="opacity-0 -translate-y-2"
+  >
+    <nav v-if="showMobileMenu" id="mobile-menu" aria-label="Navegación móvil" class="fixed inset-x-0 top-16 bottom-0 z-[999] bg-canvas md:hidden overflow-y-auto px-4 pt-4 pb-10 flex flex-col">
       <router-link
         v-for="link in navLinks"
         :key="link.tab"
         :to="link.to"
         :aria-current="currentTab === link.tab ? 'page' : undefined"
-        :class="[currentTab === link.tab ? 'text-gray-900 bg-gray-900/5 border border-gray-900/10 dark:text-white dark:bg-white/10 dark:border-white/10 px-4 py-2 rounded-[60px]' : 'text-gray-400 hover:text-[#8dd6ff] px-3 py-2', 'text-[10px] font-black uppercase tracking-[0.2em] transition-all']"
+        :class="[
+          'flex items-center justify-between py-4 border-b border-line text-2xl font-semibold [font-stretch:110%]',
+          currentTab === link.tab ? 'text-brand' : 'text-ink'
+        ]"
+        @click="showMobileMenu = false"
       >{{ link.label }}</router-link>
-    </nav>
 
-    <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="hidden md:block btn-primary text-[10px] font-black uppercase tracking-[0.2em]">
-      {{ isAdmin ? 'Ir al Taller' : 'Acceso Taller' }}
-    </router-link>
-
-    <!-- Mobile Menu Icon -->
-    <div class="md:hidden flex items-center gap-4">
-        <button :aria-expanded="showMobileMenu" aria-label="Menú de navegación" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-white/5 rounded-xl text-[#8dd6ff] border border-gray-200 dark:border-white/10 relative z-[1010]" @click="showMobileMenu = !showMobileMenu">
-            <svg v-if="!showMobileMenu" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-    </div>
-  </header>
-
-  <!-- Menú Móvil Overlay -->
-  <transition 
-    enter-active-class="transition duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]"
-    enter-from-class="opacity-0 translate-x-full"
-    enter-to-class="opacity-100 translate-x-0"
-    leave-active-class="transition duration-400 ease-[cubic-bezier(0.19,1,0.22,1)]"
-    leave-from-class="opacity-100 translate-x-0"
-    leave-to-class="opacity-0 translate-x-full"
-  >
-    <div v-if="showMobileMenu" class="fixed inset-0 z-[999] bg-white dark:bg-[#0a0f14] backdrop-blur-3xl md:hidden flex flex-col items-center justify-start overflow-y-auto gap-8 pt-28 pb-12 px-12">
-      <div class="absolute inset-0 technical-grid opacity-10 pointer-events-none"></div>
-      
-      <router-link to="/" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Inicio</router-link>
-      <router-link to="/galeria" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Galería</router-link>
-      <router-link to="/catalog" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Catálogo</router-link>
-      <router-link to="/quote" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Cotizador</router-link>
-      <router-link to="/track" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Rastrear</router-link>
-      <router-link to="/project/init" class="text-xl font-black text-gray-900 dark:text-white hover:text-emerald-500 transition-all uppercase tracking-[0.4em]" @click="showMobileMenu = false">Contáctanos</router-link>
-      
-      <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="mt-8 text-sm font-bold uppercase tracking-[0.2em] btn-primary px-12 py-4" @click="showMobileMenu = false">
-        {{ isAdmin ? 'Ir al Taller' : 'Acceso Taller' }}
+      <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="mt-8 btn-secondary btn-lg w-full" @click="showMobileMenu = false">
+        {{ isAdmin ? 'Ir al taller' : 'Acceso taller' }}
       </router-link>
-    </div>
+    </nav>
   </transition>
 </template>
-
-<style scoped>
-.technical-grid {
-  background-size: 50px 50px;
-  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
-}
-</style>

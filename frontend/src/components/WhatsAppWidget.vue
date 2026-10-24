@@ -62,141 +62,67 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-[200] font-sans flex flex-col items-end">
-    <!-- Chat Window -->
+  <div class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[200] flex flex-col items-end">
     <transition
-      enter-active-class="transition duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]"
-      enter-from-class="opacity-0 translate-y-20 scale-90"
-      enter-to-class="opacity-100 translate-y-0 scale-100"
-      leave-active-class="transition duration-400 ease-[cubic-bezier(0.19,1,0.22,1)]"
-      leave-from-class="opacity-100 translate-y-0 scale-100"
-      leave-to-class="opacity-0 translate-y-20 scale-90"
+      enter-active-class="transition duration-250 ease-out"
+      enter-from-class="opacity-0 translate-y-3"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-3"
     >
-      <div v-if="isOpen" class="absolute bottom-20 right-0 w-[calc(100vw-2rem)] sm:w-[380px] max-h-[calc(100vh-7rem)] bg-white/90 dark:bg-gray-950/90 backdrop-blur-3xl rounded-[3rem] shadow-[0_40px_80px_rgba(0,0,0,0.5)] overflow-hidden border border-white/20 dark:border-white/10 flex flex-col animate-in slide-in-from-bottom-10 duration-700">
-        <!-- Header: Industrial Gradient -->
-        <div class="bg-gradient-to-br from-[#1e3a34] to-[#0a1f1a] p-10 text-white relative overflow-hidden border-b border-white/10 flex-shrink-0">
-            <div class="absolute -right-16 -top-16 w-48 h-48 bg-emerald-500/20 rounded-full blur-[60px] animate-pulse"></div>
-            <!-- Close Button in Header -->
-            <button 
-                class="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all active:scale-95 z-20"
-                aria-label="Cerrar chat"
-                @click="isOpen = false"
-            >
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+      <div v-if="isOpen" role="dialog" aria-labelledby="wa-widget-title" class="absolute bottom-[4.5rem] right-0 w-[calc(100vw-2rem)] sm:w-[360px] max-h-[calc(100vh-7rem)] bg-surface border border-line rounded-[var(--radius-panel)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.35)] overflow-hidden flex flex-col">
+        <div class="relative px-6 pt-6 pb-5 border-b border-line">
+          <button
+            class="absolute top-4 right-4 w-9 h-9 rounded-[var(--radius-control)] flex items-center justify-center text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+            aria-label="Cerrar chat"
+            @click="isOpen = false"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+          <h3 id="wa-widget-title" class="text-xl text-ink">Escríbenos por WhatsApp</h3>
+          <p class="mt-1 text-sm text-muted">Te responde una persona del taller, normalmente el mismo día.</p>
+        </div>
+
+        <div class="p-6 space-y-6 overflow-y-auto flex-1">
+          <div>
+            <label for="wa-widget-message" class="block text-sm font-medium text-ink mb-2">Tu mensaje</label>
+            <textarea
+              id="wa-widget-message"
+              v-model="userMessage"
+              placeholder="Cuéntanos qué quieres imprimir"
+              class="w-full h-28 resize-none rounded-[var(--radius-control)] border border-line bg-canvas px-4 py-3 text-[0.9375rem] text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary transition-colors"
+              @keydown.enter.exact.prevent="sendMessage()"
+            ></textarea>
+            <button class="btn-primary w-full mt-3" @click="sendMessage()">
+              <svg class="w-4 h-4" aria-hidden="true" fill="currentColor" viewBox="0 0 362 362"><path d="M307.546 52.566C273.709 18.684 228.706.017 180.756 0 81.951 0 1.538 80.404 1.504 179.235c-.017 31.594 8.242 62.432 23.928 89.609L0 361.736l95.024-24.925c26.179 14.285 55.659 21.805 85.655 21.814h.077c98.788 0 179.21-80.413 179.244-179.244.017-47.898-18.608-92.926-52.454-126.807v-.008Zm-126.79 275.788h-.06c-26.73-.008-52.952-7.194-75.831-20.765l-5.44-3.231-56.391 14.791 15.05-54.981-3.542-5.638c-14.912-23.721-22.793-51.139-22.776-79.286.035-82.14 66.867-148.973 149.051-148.973 39.793.017 77.198 15.53 105.328 43.695 28.131 28.157 43.61 65.596 43.593 105.398-.035 82.149-66.867 148.982-148.982 148.982v.008Zm81.719-111.577c-4.478-2.243-26.497-13.073-30.606-14.568-4.108-1.496-7.09-2.243-10.073 2.243-2.982 4.487-11.568 14.577-14.181 17.559-2.613 2.991-5.226 3.361-9.704 1.117-4.477-2.243-18.908-6.97-36.02-22.226-13.313-11.878-22.304-26.54-24.916-31.027-2.613-4.486-.275-6.91 1.959-9.136 2.011-2.011 4.478-5.234 6.721-7.847 2.244-2.613 2.983-4.486 4.478-7.469 1.496-2.991.748-5.603-.369-7.847-1.118-2.243-10.073-24.289-13.812-33.253-3.636-8.732-7.331-7.546-10.073-7.692-2.613-.13-5.595-.155-8.586-.155-2.991 0-7.839 1.118-11.947 5.604-4.108 4.486-15.677 15.324-15.677 37.361s16.047 43.344 18.29 46.335c2.243 2.991 31.585 48.225 76.51 67.632 10.684 4.615 19.029 7.374 25.535 9.437 10.727 3.412 20.49 2.931 28.208 1.779 8.604-1.289 26.498-10.838 30.228-21.298 3.73-10.46 3.73-19.433 2.613-21.298-1.117-1.865-4.108-2.991-8.586-5.234l.008-.017Z"/></svg>
+              Abrir WhatsApp
             </button>
-            <div class="relative z-10">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
-                    <span class="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400/80">Soporte Técnico Especializado</span>
-                </div>
-                <h3 class="text-3xl font-black uppercase tracking-tighter italic leading-none mb-2">Chatea con <span class="text-emerald-400">N3XT</span></h3>
-                <p class="text-[11px] text-white/60 leading-relaxed font-bold uppercase tracking-wider">Fabricación digital de alta precisión</p>
-            </div>
-        </div>
+          </div>
 
-        <!-- Body / Input -->
-        <div class="p-8 space-y-8 overflow-y-auto flex-1 scrollbar-thin">
-            <div class="relative group">
-                <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-primary/20 rounded-3xl blur opacity-0 group-focus-within:opacity-100 transition duration-1000"></div>
-                <label for="wa-widget-message" class="sr-only">Mensaje para WhatsApp</label>
-                <textarea 
-                    id="wa-widget-message"
-                    v-model="userMessage"
-                    placeholder="Describe tu proyecto..."
-                    class="relative w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-6 pr-16 text-xs font-bold text-gray-900 dark:text-white outline-none focus:bg-white dark:focus:bg-white/10 transition-all resize-none h-28 shadow-inner"
-                    @keydown.enter.exact.prevent="sendMessage()"
-                ></textarea>
-                <button 
-                    class="absolute right-4 bottom-4 w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center hover:scale-110 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all shadow-lg active:scale-95 group/send"
-                    aria-label="Enviar mensaje por WhatsApp"
-                    @click="sendMessage()"
-                >
-                    <svg class="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                </button>
+          <div>
+            <p class="text-sm font-medium text-muted mb-2">O elige un tema</p>
+            <div class="grid gap-2">
+              <button
+                v-for="reply in quickReplies"
+                :key="reply.text"
+                class="w-full px-4 py-3 rounded-[var(--radius-control)] border border-line text-left text-[0.9375rem] text-ink hover:border-primary hover:bg-surface-2 transition-colors"
+                @click="handleQuickReply(reply)"
+              >{{ reply.text }}</button>
             </div>
-
-            <div class="space-y-5">
-                <div class="flex items-center gap-4">
-                    <div class="h-px flex-1 bg-gradient-to-r from-transparent via-gray-200 dark:via-white/10 to-transparent"></div>
-                    <p class="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em]">Protocolos Rápidos</p>
-                    <div class="h-px flex-1 bg-gradient-to-r from-transparent via-gray-200 dark:via-white/10 to-transparent"></div>
-                </div>
-                <div class="grid gap-3">
-                    <button 
-                        v-for="reply in quickReplies" 
-                        :key="reply.text"
-                        class="w-full p-5 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl text-[10px] font-black text-gray-700 dark:text-white uppercase tracking-[0.2em] hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:border-emerald-500/40 transition-all text-left flex items-center justify-between group/item"
-                        @click="handleQuickReply(reply)"
-                    >
-                        {{ reply.text }}
-                        <div class="w-6 h-6 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center group-hover/item:bg-emerald-500 group-hover/item:text-white transition-colors">
-                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7" /></svg>
-                        </div>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer: Industrial ID -->
-        <div class="p-6 bg-gray-50/50 dark:bg-white/5 border-t border-gray-100 dark:border-white/10 text-center relative overflow-hidden flex-shrink-0">
-            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent"></div>
-            <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.6em] relative z-10 animate-pulse">N3XT 3D ASSISTANT ACTIVE</p>
+          </div>
         </div>
       </div>
     </transition>
 
-    <!-- Toggle Button -->
-    <button 
-        :class="isOpen ? 'bg-gray-900 rotate-180 scale-90 border-white/20' : 'bg-[#1e3a34] shadow-[0_20px_40px_rgba(30,58,52,0.6)] hover:scale-110 border-emerald-500/30'"
-        class="w-16 h-16 rounded-full flex items-center justify-center text-white transition-all duration-700 active:scale-95 relative border-2 backdrop-blur-xl group/fab overflow-hidden"
-        :aria-label="isOpen ? 'Cerrar chat de WhatsApp' : 'Abrir chat de WhatsApp'"
-        :aria-expanded="isOpen"
-        @click="isOpen = !isOpen"
+    <button
+      class="w-14 h-14 rounded-full flex items-center justify-center text-white bg-[#25d366] hover:bg-[#1ebe5b] shadow-[0_10px_24px_-6px_rgba(0,0,0,0.4)] transition-colors"
+      :aria-label="isOpen ? 'Cerrar chat de WhatsApp' : 'Abrir chat de WhatsApp'"
+      :aria-expanded="isOpen"
+      @click="isOpen = !isOpen"
     >
-        <!-- Industrial Background Glow -->
-        <div class="absolute inset-0 bg-gradient-to-tr from-emerald-500/20 to-transparent opacity-0 group-hover/fab:opacity-100 transition-opacity"></div>
-        
-        <transition mode="out-in" enter-active-class="transition duration-500 ease-out" enter-from-class="opacity-0 rotate-90 scale-50" leave-active-class="transition duration-400 ease-in" leave-to-class="opacity-0 -rotate-90 scale-50">
-            <!-- Deluxe Technical Icon -->
-            <div v-if="!isOpen" key="open" class="relative">
-                <svg class="w-8 h-8 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    <circle cx="12" cy="12" r="9" stroke-width="1.5" stroke-dasharray="4 4" class="opacity-30" />
-                </svg>
-                <div class="absolute inset-0 bg-white blur-lg opacity-20 animate-pulse"></div>
-            </div>
-            <svg v-else key="close" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </transition>
-        
-        <!-- Pulse Indicator -->
-        <div v-if="!isOpen" class="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-10 pointer-events-none"></div>
+      <svg v-if="isOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+      <span v-else class="[&>svg]:w-7 [&>svg]:h-7"><svg class="w-4 h-4" aria-hidden="true" fill="currentColor" viewBox="0 0 362 362"><path d="M307.546 52.566C273.709 18.684 228.706.017 180.756 0 81.951 0 1.538 80.404 1.504 179.235c-.017 31.594 8.242 62.432 23.928 89.609L0 361.736l95.024-24.925c26.179 14.285 55.659 21.805 85.655 21.814h.077c98.788 0 179.21-80.413 179.244-179.244.017-47.898-18.608-92.926-52.454-126.807v-.008Zm-126.79 275.788h-.06c-26.73-.008-52.952-7.194-75.831-20.765l-5.44-3.231-56.391 14.791 15.05-54.981-3.542-5.638c-14.912-23.721-22.793-51.139-22.776-79.286.035-82.14 66.867-148.973 149.051-148.973 39.793.017 77.198 15.53 105.328 43.695 28.131 28.157 43.61 65.596 43.593 105.398-.035 82.149-66.867 148.982-148.982 148.982v.008Zm81.719-111.577c-4.478-2.243-26.497-13.073-30.606-14.568-4.108-1.496-7.09-2.243-10.073 2.243-2.982 4.487-11.568 14.577-14.181 17.559-2.613 2.991-5.226 3.361-9.704 1.117-4.477-2.243-18.908-6.97-36.02-22.226-13.313-11.878-22.304-26.54-24.916-31.027-2.613-4.486-.275-6.91 1.959-9.136 2.011-2.011 4.478-5.234 6.721-7.847 2.244-2.613 2.983-4.486 4.478-7.469 1.496-2.991.748-5.603-.369-7.847-1.118-2.243-10.073-24.289-13.812-33.253-3.636-8.732-7.331-7.546-10.073-7.692-2.613-.13-5.595-.155-8.586-.155-2.991 0-7.839 1.118-11.947 5.604-4.108 4.486-15.677 15.324-15.677 37.361s16.047 43.344 18.29 46.335c2.243 2.991 31.585 48.225 76.51 67.632 10.684 4.615 19.029 7.374 25.535 9.437 10.727 3.412 20.49 2.931 28.208 1.779 8.604-1.289 26.498-10.838 30.228-21.298 3.73-10.46 3.73-19.433 2.613-21.298-1.117-1.865-4.108-2.991-8.586-5.234l.008-.017Z"/></svg></span>
     </button>
   </div>
 </template>
-
-<style scoped>
-textarea::placeholder {
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-size: 10px;
-    opacity: 0.5;
-}
-.scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-.scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(16, 185, 129, 0.2);
-    border-radius: 10px;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(16, 185, 129, 0.4);
-}
-</style>
