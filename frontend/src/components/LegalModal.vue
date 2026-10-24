@@ -42,24 +42,25 @@ defineExpose({ openLegal, setContent })
 
 <template>
     <transition name="fade">
-        <div v-if="legalModal.show" class="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12" role="dialog" aria-modal="true" aria-labelledby="legal-modal-title">
-            <div class="absolute inset-0 bg-black/90 backdrop-blur-xl" @click="close"></div>
-            <div class="relative w-full max-w-4xl bg-[#0a0f14] border border-white/10 rounded-[3rem] p-10 md:p-16 shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
-                <div class="absolute top-0 right-0 p-8">
-                    <button class="w-12 h-12 rounded-2xl bg-white/5 text-white flex items-center justify-center hover:bg-primary transition-colors text-2xl" aria-label="Cerrar" @click="close">✕</button>
-                </div>
-                
-                <div class="mb-12">
-                    <h2 id="legal-modal-title" class="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter italic border-l-8 border-primary pl-8">{{ legalModal.title }}</h2>
-                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-4 ml-10">Documentación Legal Oficial N3XT 3D</p>
-                </div>
-
-                <div class="flex-1 overflow-y-auto pr-6 custom-scrollbar text-sm md:text-lg text-gray-400 font-medium leading-relaxed whitespace-pre-wrap">
-                    {{ legalModal.content }}
+        <div v-if="legalModal.show" class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="legal-modal-title">
+            <div class="absolute inset-0 bg-black/60" @click="close"></div>
+            <div class="relative w-full max-w-3xl bg-surface border border-line rounded-[var(--radius-panel)] shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+                <div class="flex items-start justify-between gap-4 px-5 sm:px-8 pt-6 pb-5 border-b border-line">
+                    <div>
+                        <h2 id="legal-modal-title" class="text-2xl md:text-3xl font-extrabold tracking-tight text-ink">{{ legalModal.title }}</h2>
+                        <p class="mt-1 text-sm text-muted">Documento legal de N3XT 3D</p>
+                    </div>
+                    <button type="button" class="icon-btn shrink-0 -mr-2 -mt-1 bg-transparent text-muted hover:bg-surface-2 hover:text-ink" aria-label="Cerrar" @click="close">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
 
-                <div class="mt-12 pt-8 border-t border-white/5 flex justify-end">
-                    <button class="px-10 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all" @click="close">Entendido</button>
+                <div class="flex-1 overflow-y-auto px-5 sm:px-8 py-6">
+                    <div class="max-w-prose text-base leading-relaxed text-ink whitespace-pre-wrap">{{ legalModal.content }}</div>
+                </div>
+
+                <div class="px-5 sm:px-8 py-4 border-t border-line flex justify-end">
+                    <button type="button" class="btn-primary" @click="close">Entendido</button>
                 </div>
             </div>
         </div>
@@ -68,7 +69,7 @@ defineExpose({ openLegal, setContent })
 
 <style scoped>
 .fade-enter-active, .fade-leave-active {
-  transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.2s ease;
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;

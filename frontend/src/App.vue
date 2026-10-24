@@ -4,7 +4,9 @@ import { useRoute } from 'vue-router'
 import WhatsAppWidget from './components/WhatsAppWidget.vue'
 
 const route = useRoute()
-const showWhatsApp = computed(() => !route.path.startsWith('/admin'))
+// Contáctanos ya abre WhatsApp y en el Cotizador el botón flotante tapa el resumen de precio
+const hideWhatsAppOn = ['/project/init', '/quote']
+const showWhatsApp = computed(() => !route.path.startsWith('/admin') && !hideWhatsAppOn.includes(route.path))
 
 onMounted(() => {
   // Respetar preferencia guardada, default dark

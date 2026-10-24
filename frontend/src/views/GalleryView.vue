@@ -6,7 +6,6 @@ import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
-import { useParticles } from '../composables/useParticles'
 import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
@@ -17,10 +16,6 @@ usePageMeta({
   image: '/assets/n3xt_og_gallery.png',
 })
 
-const { particlesRef: heroParticlesRef } = useParticles({
-  count: 30,
-  zIndex: 1,
-})
 const { applySplitBtn } = useSplitButton()
 
 const loading = ref(true)
@@ -99,6 +94,15 @@ const filters = computed(() => {
   return ['Todos', ...Array.from(cats)] as string[]
 })
 
+// Contador por categoría (sobre toda la galería cargada)
+const categoryCounts = computed(() => {
+  const counts: Record<string, number> = { Todos: webSettings.value.gallery.length }
+  webSettings.value.gallery.forEach(i => {
+    if (i.category) counts[i.category] = (counts[i.category] || 0) + 1
+  })
+  return counts
+})
+
 const techs = computed(() => {
   const t = new Set(webSettings.value.gallery.map(i => i.technology).filter(Boolean))
   return ['Todos', ...Array.from(t)] as string[]
@@ -162,157 +166,139 @@ onUnmounted(() => {
 
 
 <template>
-  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white transition-colors duration-500 overflow-x-hidden">
-    <AppNavbar active-tab="gallery" subtext="Galería de Trabajos" />
+  <div class="min-h-screen bg-canvas text-ink overflow-x-hidden">
+    <AppNavbar active-tab="gallery" subtext="Galería de trabajos" />
 
-    <main class="max-w-7xl mx-auto px-4 md:px-6 py-20">
-      <!-- Header -->
-      <div class="relative text-center mb-16 overflow-hidden">
-        <div ref="heroParticlesRef" class="gallery-hero-particles" aria-hidden="true"></div>
-        <div class="inline-flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 mb-6">
-          <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
-          <span class="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Portafolio</span>
-        </div>
-        <h1 class="split-title text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9] mb-6">
-          Nuestros <span class="text-primary">Trabajos</span>
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-bold uppercase tracking-[0.3em] max-w-xl mx-auto">
-          Piezas fabricadas con precisión industrial. Cada proyecto cuenta una historia de detalle y calidad.
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+      <!-- Encabezado -->
+      <header class="max-w-2xl mb-10">
+        <h1 class="split-title text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink">Nuestros trabajos</h1>
+        <p class="mt-4 text-lg md:text-xl text-muted">
+          Figuras, prototipos y piezas a medida que hemos impreso en resina y filamento.
         </p>
-      </div>
+      </header>
 
-      <!-- Filters: Categorías -->
-      <div class="flex flex-wrap gap-3 mb-4">
+      <!-- Filtros: categorías -->
+      <div v-if="!loading && !loadError && filters.length > 1" class="flex flex-wrap gap-2 sm:gap-3" role="group" aria-label="Filtrar por categoría">
         <button
           v-for="cat in filters" :key="cat"
-          :class="[activeFilter === cat
-            ? 'bg-primary text-white shadow-lg shadow-primary/20'
-            : 'bg-white dark:bg-white/5 text-gray-500 border border-gray-100 dark:border-white/10 hover:border-primary/30 hover:text-primary',
-            'px-5 py-2.5 rounded-2xl text-[8px] font-black uppercase tracking-widest transition-all']"
+          type="button"
+          :aria-pressed="activeFilter === cat"
+          :class="[
+            'inline-flex items-center gap-2 h-9 px-4 rounded-full border text-sm font-medium transition-colors',
+            activeFilter === cat ? 'bg-ink text-canvas border-ink' : 'border-line text-muted hover:text-ink'
+          ]"
           @click="activeFilter = cat">
           {{ cat }}
+          <span v-if="categoryCounts[cat] !== undefined" class="tabular-nums opacity-70">{{ categoryCounts[cat] }}</span>
         </button>
       </div>
 
-      <!-- Filters: Tecnología -->
-      <div v-if="techs.filter(t => t !== 'Todos' && t !== '' && t !== undefined).length > 0" class="flex flex-wrap gap-2 mb-12">
+      <!-- Filtros: tecnología -->
+      <div v-if="!loading && !loadError && techs.filter(t => t !== 'Todos' && t !== '' && t !== undefined).length > 0" class="mt-4 flex flex-wrap items-center gap-2 sm:gap-3" role="group" aria-label="Filtrar por tecnología">
+        <span class="text-sm text-muted mr-1">Tecnología</span>
         <button
           v-for="t in techs" :key="t"
-          :class="[activeTech === t
-            ? 'bg-primary/10 text-primary border-primary/30'
-            : 'bg-transparent text-gray-400 border-gray-200 dark:border-white/10 hover:border-primary/40 hover:text-primary',
-            'px-4 py-1.5 rounded-xl text-[7px] font-black uppercase tracking-[0.2em] border transition-all']"
+          type="button"
+          :aria-pressed="activeTech === t"
+          :class="[
+            'h-9 px-4 rounded-full border text-sm font-medium transition-colors',
+            activeTech === t ? 'bg-ink text-canvas border-ink' : 'border-line text-muted hover:text-ink'
+          ]"
           @click="activeTech = t">
           {{ t }}
         </button>
       </div>
-      <div v-else class="mb-12"></div>
 
-      <!-- Skeleton Loading -->
-      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-        <div v-for="i in 6" :key="i" class="bg-white dark:bg-[#0a0f14]/40 rounded-[3.5rem] overflow-hidden border border-gray-100 dark:border-white/5 p-8 flex flex-col relative">
-          <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent skeleton-scan"></div>
-          <div class="aspect-square bg-gray-50 dark:bg-white/5 rounded-[2.5rem] mb-8"></div>
-          <div class="space-y-4">
-            <div class="h-6 bg-gray-50 dark:bg-white/5 rounded-xl w-3/4"></div>
-            <div class="h-4 bg-gray-50 dark:bg-white/5 rounded-lg w-1/2"></div>
+      <div class="mt-10">
+        <!-- Skeleton -->
+        <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-hidden="true">
+          <div v-for="i in 6" :key="i" class="bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden">
+            <div class="aspect-[4/3] bg-surface-2 animate-pulse"></div>
+            <div class="p-5 space-y-3">
+              <div class="h-5 bg-surface-2 animate-pulse rounded w-3/4"></div>
+              <div class="h-4 bg-surface-2 animate-pulse rounded w-1/3"></div>
+              <div class="flex gap-2 pt-1">
+                <div class="h-6 w-16 bg-surface-2 animate-pulse rounded-md"></div>
+                <div class="h-6 w-12 bg-surface-2 animate-pulse rounded-md"></div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Error state -->
-      <div v-else-if="loadError" class="py-40 text-center" role="alert">
-        <p class="text-xl font-black text-gray-400 uppercase tracking-widest italic">No pudimos cargar la galería.</p>
-        <button class="mt-6 px-8 py-3 bg-primary/10 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all" @click="fetchSettings">Reintentar</button>
-      </div>
+        <!-- Error -->
+        <div v-else-if="loadError" class="py-24 text-center max-w-md mx-auto" role="alert">
+          <h2 class="text-2xl font-extrabold tracking-tight text-ink">No pudimos cargar la galería</h2>
+          <p class="mt-3 text-muted">Revisa tu conexión e inténtalo de nuevo.</p>
+          <button type="button" class="btn-primary mt-6" @click="fetchSettings">Reintentar</button>
+        </div>
 
-      <!-- Gallery Grid -->
-      <div v-else-if="filtered.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-        <router-link
-          v-for="(item, idx) in filtered" :key="item.uid"
-          :data-reveal-index="idx"
-          :to="'/galeria/' + encodeURIComponent(item.title || String(idx))"
-          :class="[
-            'group bg-white dark:bg-[#0d1117] rounded-[3.5rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:border-emerald-500/30 transition-all duration-500 hover:-translate-y-2 flex flex-col',
-            visibleCards.includes(idx) ? 'card-revealed' : 'card-hidden'
-          ]"
-          :style="{ '--reveal-delay': Math.min(idx * 80, 500) + 'ms' }"
-        >
-          <!-- Image Container con aspect-ratio fijo -->
-          <div class="relative overflow-hidden aspect-square bg-gray-100 dark:bg-gray-800 shrink-0">
-            <!-- Imagen Secundaria (crossfade al hover) -->
-            <img
-              v-if="item.images && item.images.length > 0"
-              :src="item.images[0]"
-              class="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10"
-              loading="lazy"
-              :alt="item.title"
-            />
-            <!-- Imagen Principal -->
-            <img
-              v-if="item.image && !brokenImages[idx]"
-              :src="item.image"
-              :alt="'Trabajo de impresión 3D: ' + item.title"
-              class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 z-0"
-              loading="lazy"
-              decoding="async"
-              @error="brokenImages[idx] = true"
-            />
-            <!-- Fallback sin imagen -->
-            <div v-else-if="!item.image || brokenImages[idx]" class="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-              <svg class="w-16 h-16 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
+        <!-- Grid -->
+        <div v-else-if="filtered.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <router-link
+            v-for="(item, idx) in filtered" :key="item.uid"
+            :data-reveal-index="idx"
+            :to="'/galeria/' + encodeURIComponent(item.title || String(idx))"
+            :class="[
+              'group flex flex-col bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden transition-colors hover:border-primary',
+              visibleCards.includes(idx) ? 'card-revealed' : 'card-hidden'
+            ]"
+            :style="{ '--reveal-delay': Math.min(idx * 60, 360) + 'ms' }"
+          >
+            <div class="relative aspect-[4/3] bg-surface-2 overflow-hidden">
+              <!-- Imagen secundaria (se muestra al pasar el cursor) -->
+              <img
+                v-if="item.images && item.images.length > 0 && !brokenImages[idx]"
+                :src="item.images[0]"
+                class="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"
+                loading="lazy"
+                decoding="async"
+                alt=""
+                aria-hidden="true"
+              />
+              <img
+                v-if="item.image && !brokenImages[idx]"
+                :src="item.image"
+                :alt="'Trabajo de impresión 3D: ' + item.title"
+                class="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                @error="brokenImages[idx] = true"
+              />
+              <div v-else class="absolute inset-0 flex items-center justify-center text-muted/60">
+                <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.25" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <span v-if="item.featured" class="absolute top-3 left-3 z-20 inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-surface text-ink border border-line">Destacado</span>
+              <span v-if="item.images && item.images.length > 0" class="absolute bottom-3 right-3 z-20 inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-black/60 text-white">+{{ item.images.length }} fotos</span>
             </div>
 
-            <!-- Badges sobre la imagen -->
-            <div class="absolute top-6 left-6 z-20 flex gap-3 flex-wrap">
-              <span v-if="item.category" class="px-4 py-1.5 bg-emerald-500/90 backdrop-blur-sm text-white text-[9px] font-black rounded-full uppercase tracking-[0.25em] shadow-lg">{{ item.category }}</span>
-              <span v-if="item.featured" class="px-4 py-1.5 bg-amber-400/90 backdrop-blur-sm text-black text-[9px] font-black rounded-full uppercase tracking-[0.25em] shadow-lg">⭐ Destacado</span>
-            </div>
-            <div v-if="item.technology" class="absolute top-6 right-6 z-20 px-4 py-1.5 bg-black/50 backdrop-blur-md text-white/80 text-[9px] font-black rounded-full uppercase tracking-[0.2em] border border-white/10">{{ item.technology }}</div>
-
-            <!-- Overlay de hover con contador de imágenes -->
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20 flex items-end p-8">
-              <span v-if="item.images && item.images.length > 0" class="text-[10px] font-black text-white/80 uppercase tracking-widest bg-black/40 backdrop-blur-sm rounded-full px-4 py-2">
-                +{{ item.images.length }} fotos
-              </span>
-            </div>
-          </div>
-
-          <!-- Info -->
-          <div class="p-8 flex flex-col flex-1">
-            <div class="flex-1">
-              <h3 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-tight group-hover:text-emerald-500 transition-colors line-clamp-2">
-                {{ item.title || 'Sin Título' }}
-              </h3>
-              <p v-if="item.description" class="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2 leading-relaxed">{{ item.description }}</p>
-
-              <!-- Tags -->
-              <div v-if="normalizeTags(item.tags).length > 0" class="flex flex-wrap gap-2 mt-4">
+            <div class="flex flex-col flex-1 p-5">
+              <h2 class="text-lg md:text-xl font-bold tracking-tight text-ink group-hover:text-brand transition-colors line-clamp-2">
+                {{ item.title || 'Sin título' }}
+              </h2>
+              <p v-if="item.category || item.technology" class="mt-1.5 flex flex-wrap gap-x-3 text-sm text-muted">
+                <span v-if="item.category">{{ item.category }}</span>
+                <span v-if="item.technology">{{ item.technology }}</span>
+              </p>
+              <div v-if="normalizeTags(item.tags).length > 0" class="mt-4 flex flex-wrap gap-2">
                 <span
-                  v-for="tag in normalizeTags(item.tags).slice(0, 3)" :key="tag"
-                  class="text-[9px] font-black px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-full uppercase tracking-[0.1em] text-gray-500">
+                  v-for="tag in normalizeTags(item.tags).slice(0, 2)" :key="tag"
+                  class="inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-surface-2 text-ink">
                   {{ tag }}
                 </span>
               </div>
             </div>
-
-            <!-- CTA -->
-            <div class="mt-8 w-full py-4 bg-gray-900 dark:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-center group-hover:bg-emerald-500 transition-all duration-500">
-              Analizar Pieza →
-            </div>
-          </div>
-        </router-link>
-      </div>
-
-      <!-- Empty state -->
-      <div v-else class="py-40 text-center">
-        <div class="w-20 h-20 bg-gray-100 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-          <svg class="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </router-link>
         </div>
-        <p class="text-xl font-black text-gray-400 uppercase tracking-widest italic">No hay trabajos en esta categoría todavía.</p>
-        <button class="mt-6 px-8 py-3 bg-primary/10 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all" @click="activeFilter = 'Todos'; activeTech = 'Todos'">Ver Todos</button>
+
+        <!-- Vacío -->
+        <div v-else class="py-24 text-center max-w-md mx-auto">
+          <h2 class="text-2xl font-extrabold tracking-tight text-ink">Aún no hay trabajos en este filtro</h2>
+          <p class="mt-3 text-muted">Prueba con otra categoría o mira todo el portafolio.</p>
+          <button type="button" class="btn-secondary mt-6" @click="activeFilter = 'Todos'; activeTech = 'Todos'">Ver todos los trabajos</button>
+        </div>
       </div>
     </main>
 
@@ -321,35 +307,20 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* ═══════════════════════════════════════════
-   PARTICLES HERO
-   ═══════════════════════════════════════════ */
-.gallery-hero-particles {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: -1;
-}
-
-/* ═══════════════════════════════════════════
-   SCROLL REVEAL
-   ═══════════════════════════════════════════ */
+/* Entrada suave al hacer scroll (solo opacidad y un leve desplazamiento) */
 .card-hidden {
   opacity: 0;
-  transform: translateY(32px) scale(0.97);
-  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(12px);
 }
 
 .card-revealed {
   opacity: 1;
-  transform: translateY(0) scale(1);
-  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
-              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms);
+  transform: translateY(0);
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+              transform 0.5s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+              border-color 0.2s ease;
 }
 
-/* line-clamp utility */
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -358,6 +329,3 @@ onUnmounted(() => {
   overflow: hidden;
 }
 </style>
-
-
-

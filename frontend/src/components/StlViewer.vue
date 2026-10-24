@@ -36,11 +36,15 @@ const isLoading = ref(false)
 const hasModel = ref(false)
 const transformMode = ref('translate')
 const captchaUnlocked = ref(false)
+const captchaFailed = ref(false)
 const { challenge, answer, verify, isLocked } = useCaptcha()
 
 const verifyCaptcha = () => {
   if (verify()) {
     captchaUnlocked.value = true
+    captchaFailed.value = false
+  } else {
+    captchaFailed.value = true
   }
 }
 
@@ -362,9 +366,9 @@ const handleDrop = (e: DragEvent) => {
   isDragging.value = false
   const file = e.dataTransfer?.files[0]
   if (!file) return
-  // El drag & drop pasa por el mismo protocolo de seguridad que el selector de archivos
+  // El drag & drop pasa por la misma verificación que el selector de archivos
   if (!captchaUnlocked.value) {
-    emit('error', 'Completa la verificación de seguridad antes de cargar un archivo.')
+    emit('error', 'Resuelve la operación de verificación antes de cargar un archivo.')
     return
   }
   if (isLoading.value) return
@@ -589,96 +593,116 @@ const loadFile = async (file: File) => {
 </script>
 
 <template>
-  <div class="relative w-full h-full flex flex-col group/viewer">
-    <!-- View & Transform Controls Toolbar -->
-    <div v-if="hasModel" class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex gap-4 bg-gray-900/90 backdrop-blur-xl p-3 rounded-2xl shadow-2xl border border-white/10 transition-all duration-500 hover:scale-105">
-      <div class="flex gap-2 border-r pr-4 border-white/10">
-        <button class="w-10 h-10 flex items-center justify-center text-[10px] font-black text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Vista Superior" @click="setView('top')">TOP</button>
-        <button class="w-10 h-10 flex items-center justify-center text-[10px] font-black text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Vista Frontal" @click="setView('front')">FRON</button>
-        <button class="w-10 h-10 flex items-center justify-center text-[10px] font-black text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Vista Isométrica" @click="setView('iso')">ISO</button>
-      </div>
-      <div class="flex items-center px-2">
-          <button class="px-6 py-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-xl shadow-primary/20 flex items-center gap-2" @click="autoOrient">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 13l-7 7-7-7m14-8l-7 7-7-7" /></svg>
-            APLANAR
-          </button>
-      </div>
-      <div class="w-px h-10 bg-white/10 mx-2"></div>
-      <div class="flex gap-2">
-        <button :class="transformMode === 'translate' ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all" title="Mover" @click="setTransformMode('translate')">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
+  <div class="relative w-full h-full flex flex-col">
+    <!-- Controles de vista y transformación -->
+    <div v-if="hasModel" class="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex justify-center">
+      <div
+        role="toolbar"
+        aria-label="Controles del visor"
+        class="pointer-events-auto flex max-w-full items-center gap-1 overflow-x-auto no-scrollbar rounded-[var(--radius-card)] border border-line bg-surface/95 p-1.5 shadow-lg backdrop-blur"
+      >
+        <button type="button" class="shrink-0 h-9 px-3 rounded-[var(--radius-control)] text-sm font-medium text-muted hover:bg-surface-2 hover:text-ink transition-colors" title="Vista superior" @click="setView('top')">Superior</button>
+        <button type="button" class="shrink-0 h-9 px-3 rounded-[var(--radius-control)] text-sm font-medium text-muted hover:bg-surface-2 hover:text-ink transition-colors" title="Vista frontal" @click="setView('front')">Frontal</button>
+        <button type="button" class="shrink-0 h-9 px-3 rounded-[var(--radius-control)] text-sm font-medium text-muted hover:bg-surface-2 hover:text-ink transition-colors" title="Vista isométrica" @click="setView('iso')">Isométrica</button>
+
+        <span class="mx-1 h-6 w-px shrink-0 bg-line" aria-hidden="true"></span>
+
+        <button type="button" class="shrink-0 h-9 px-3 inline-flex items-center gap-1.5 rounded-[var(--radius-control)] text-sm font-medium text-ink hover:bg-surface-2 transition-colors" title="Apoyar la pieza sobre su cara más plana" @click="autoOrient">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7m14-8l-7 7-7-7" /></svg>
+          Aplanar
         </button>
-        <button :class="transformMode === 'rotate' ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all" title="Rotar" @click="setTransformMode('rotate')">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+
+        <span class="mx-1 h-6 w-px shrink-0 bg-line" aria-hidden="true"></span>
+
+        <button type="button" :aria-pressed="transformMode === 'translate'" :class="transformMode === 'translate' ? 'bg-primary text-white' : 'text-muted hover:bg-surface-2 hover:text-ink'" class="shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-control)] transition-colors" title="Mover" aria-label="Mover" @click="setTransformMode('translate')">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
         </button>
-        <button :class="transformMode === 'scale' ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all" title="Escalar" @click="setTransformMode('scale')">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+        <button type="button" :aria-pressed="transformMode === 'rotate'" :class="transformMode === 'rotate' ? 'bg-primary text-white' : 'text-muted hover:bg-surface-2 hover:text-ink'" class="shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-control)] transition-colors" title="Rotar" aria-label="Rotar" @click="setTransformMode('rotate')">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+        </button>
+        <button type="button" :aria-pressed="transformMode === 'scale'" :class="transformMode === 'scale' ? 'bg-primary text-white' : 'text-muted hover:bg-surface-2 hover:text-ink'" class="shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-control)] transition-colors" title="Escalar" aria-label="Escalar" @click="setTransformMode('scale')">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
         </button>
       </div>
     </div>
 
-    <!-- 3D Canvas -->
-    <div 
-      class="flex-1 w-full relative transition-all duration-500"
+    <!-- Lienzo 3D -->
+    <div
+      class="flex-1 w-full relative"
       @dragover.prevent="isDragging = true"
       @dragleave.prevent="isDragging = false"
       @drop="handleDrop"
     >
       <div ref="container" class="w-full h-full outline-none"></div>
 
-      <!-- Upload Overlay -->
-      <div 
+      <!-- Zona de carga -->
+      <div
         v-if="!hasModel || isDragging"
-        class="absolute inset-0 flex flex-col items-center justify-center bg-transparent backdrop-blur-[2px] transition-all"
+        class="absolute inset-0 overflow-y-auto flex p-4 sm:p-8"
+        :class="hasModel ? 'bg-surface/80 backdrop-blur-sm' : 'bg-surface/60'"
       >
         <div
-class="text-center p-12 rounded-[40px] border-2 border-dashed transition-all duration-500" 
-             :class="isDragging ? 'border-primary bg-primary/5 scale-105' : 'border-gray-200 bg-white/40 shadow-2xl'">
+          class="m-auto w-full max-w-md text-center rounded-[var(--radius-card)] border-2 border-dashed px-5 py-8 sm:px-10 sm:py-10 transition-colors"
+          :class="isDragging ? 'border-primary bg-primary/5' : 'border-line bg-surface'"
+        >
           <div
-class="w-32 h-32 mx-auto mb-8 bg-white rounded-[32px] shadow-xl flex items-center justify-center transition-transform group-hover/viewer:rotate-3"
-               :class="isDragging ? 'text-primary scale-110' : 'text-gray-400'">
-            <svg v-if="!isLoading" xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            class="w-14 h-14 mx-auto mb-5 rounded-[var(--radius-control)] flex items-center justify-center"
+            :class="isDragging ? 'bg-primary text-white' : 'bg-surface-2 text-muted'"
+            aria-hidden="true"
+          >
+            <svg v-if="!isLoading" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            <svg v-else class="animate-spin h-12 w-12 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg v-else class="animate-spin h-7 w-7 text-brand" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
           </div>
-          
-          <h2 class="text-3xl font-black text-gray-900 mb-4 tracking-tighter leading-tight">
-            {{ isDragging ? '¡Suéltalo para analizar!' : (isLoading ? 'INGENIERÍA EN PROCESO...' : 'TU PROYECTO 3D COMIENZA AQUÍ') }}
+
+          <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-ink">
+            {{ isDragging ? 'Suelta el archivo aquí' : (isLoading ? 'Cargando tu modelo…' : 'Sube tu modelo 3D') }}
           </h2>
-          
-          <div v-if="isLoading" class="mb-10">
-            <div class="w-full max-w-[200px] h-1.5 bg-gray-100 rounded-full mx-auto overflow-hidden">
+
+          <div v-if="isLoading" class="mt-5" role="status">
+            <div class="w-full max-w-[220px] h-1.5 bg-surface-2 rounded-full mx-auto overflow-hidden">
               <div class="h-full bg-primary animate-progress"></div>
             </div>
-            <p class="text-[10px] font-black text-primary uppercase mt-4 tracking-[0.3em]">Escaneando Geometría...</p>
+            <p class="mt-3 text-sm text-muted">Leyendo la geometría del archivo.</p>
           </div>
 
-          <p v-if="!isLoading" class="text-sm text-gray-500 font-medium mb-10 max-w-[280px] mx-auto leading-relaxed">
-            {{ captchaUnlocked ? `Sube tu archivo STL / OBJ (máx. ${MAX_FILE_MB}MB) para un análisis de laminado instantáneo.` : 'Completa el protocolo de seguridad para habilitar la carga de geometría.' }}
-          </p>
-          
-          <div v-if="!isLoading && !captchaUnlocked" class="space-y-6">
-            <div class="flex items-center gap-4 bg-gray-900 p-6 rounded-[2rem] text-white border-2 border-primary/20">
-              <div class="text-left flex-1">
-                <p class="text-[8px] font-black text-primary uppercase tracking-[0.4em] mb-1">Data Shield Active</p>
-                <p class="text-xs font-black italic uppercase">{{ challenge.text }}</p>
-                <p v-if="isLocked" class="text-[8px] font-black text-rose-400 uppercase mt-1 tracking-widest">🔒 Bloqueado 30s</p>
+          <template v-else>
+            <p class="mt-2 text-[0.9375rem] text-muted leading-relaxed">
+              Arrastra un archivo STL u OBJ aquí o selecciónalo desde tu equipo. Máximo {{ MAX_FILE_MB }} MB.
+            </p>
+
+            <!-- Verificación anti-spam antes de habilitar la carga -->
+            <form v-if="!captchaUnlocked" class="mt-6 text-left" novalidate @submit.prevent="verifyCaptcha">
+              <label for="stl-captcha" class="block text-sm font-medium text-ink mb-2">
+                Para empezar, resuelve: <span class="font-semibold tabular-nums">{{ challenge.text }}</span>
+              </label>
+              <div class="flex gap-2">
+                <input
+                  id="stl-captcha"
+                  v-model="answer"
+                  type="number"
+                  inputmode="numeric"
+                  :disabled="isLocked"
+                  aria-label="Respuesta de validación"
+                  :aria-describedby="isLocked || captchaFailed ? 'stl-captcha-msg' : undefined"
+                  class="min-w-0 flex-1 h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink tabular-nums placeholder:text-muted/70 focus:outline-none focus:border-primary disabled:opacity-50"
+                  placeholder="Tu respuesta"
+                >
+                <button type="submit" class="btn-secondary shrink-0" :disabled="isLocked">Continuar</button>
               </div>
-              <input v-model="answer" type="number" :disabled="isLocked" aria-label="Respuesta de validación" class="w-20 bg-white/10 border border-white/20 rounded-xl p-3 text-center text-white font-black outline-none focus:border-primary disabled:opacity-30" @keyup.enter="verifyCaptcha">
-            </div>
-            <button class="w-full bg-primary hover:bg-gray-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95" @click="verifyCaptcha">
-              Verificar Identidad
-            </button>
-          </div>
+              <p v-if="isLocked" id="stl-captcha-msg" class="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">Demasiados intentos. Espera 30 segundos y vuelve a intentarlo.</p>
+              <p v-else-if="captchaFailed" id="stl-captcha-msg" class="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">Respuesta incorrecta. Prueba con la nueva operación.</p>
+            </form>
 
-          <label v-else-if="!isLoading && captchaUnlocked" class="cursor-pointer bg-gray-900 hover:bg-primary text-white px-10 py-5 rounded-2xl font-black text-[10px] tracking-widest uppercase transition-all shadow-2xl shadow-primary/20 inline-block animate-in zoom-in duration-500 active:scale-95">
-            Explorar Archivo 3D
-            <input type="file" accept=".stl,.obj" class="hidden" @change="handleFileSelect" />
-          </label>
+            <label v-else class="btn-primary mt-6 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-text)]">
+              Seleccionar archivo
+              <input type="file" accept=".stl,.obj" class="sr-only" @change="handleFileSelect" />
+            </label>
+          </template>
         </div>
       </div>
     </div>

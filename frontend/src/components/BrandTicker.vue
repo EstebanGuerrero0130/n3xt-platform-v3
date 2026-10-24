@@ -48,50 +48,34 @@ const hideImg = (e: Event) => {
 </script>
 
 <template>
-  <div
-    class="w-full py-16 md:py-20 overflow-hidden relative"
-    style="background-color: transparent;"
-  >
-    <!-- Subtle top/bottom borders -->
-    <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent"></div>
-    <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent"></div>
-
-    <!-- Section Label -->
-    <div class="max-w-7xl mx-auto px-6 mb-10 md:mb-12 text-center relative">
-      <p class="text-xs md:text-sm uppercase tracking-[0.4em] font-black text-slate-300 dark:text-white/50">
-        TRABAJAMOS CON <span class="text-emerald-500">LAS MEJORES MARCAS</span>
-      </p>
+  <section class="w-full py-12 md:py-16 overflow-hidden border-y border-line" aria-labelledby="brand-ticker-title">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+      <p id="brand-ticker-title" class="text-sm text-muted text-center">Trabajamos con equipos y plataformas de confianza</p>
     </div>
 
     <div class="relative">
-      <!-- Gradient Edges Overlay -->
-      <!-- Bordes con el mismo fondo de la sección (claro/oscuro) -->
-      <div
-        class="absolute inset-y-0 left-0 w-16 md:w-32 z-10 pointer-events-none bg-gradient-to-r from-gray-50 dark:from-[#05080b] to-transparent"
-      ></div>
-      <div
-        class="absolute inset-y-0 right-0 w-16 md:w-32 z-10 pointer-events-none bg-gradient-to-l from-gray-50 dark:from-[#05080b] to-transparent"
-      ></div>
+      <!-- Bordes de fundido con el color de fondo de la página -->
+      <div class="absolute inset-y-0 left-0 w-12 md:w-32 z-10 pointer-events-none bg-gradient-to-r from-canvas to-transparent" aria-hidden="true"></div>
+      <div class="absolute inset-y-0 right-0 w-12 md:w-32 z-10 pointer-events-none bg-gradient-to-l from-canvas to-transparent" aria-hidden="true"></div>
 
-      <!-- Ticker Track -->
       <div class="relative w-full overflow-hidden ticker-wrap">
-        <div class="ticker-track flex" :class="{ 'is-paused': !props.visible }">
-          <div
+        <ul class="ticker-track flex" :class="{ 'is-paused': !props.visible }">
+          <li
             v-for="item in tickerItems"
             :key="item.id"
-            class="ticker-item flex items-center justify-center shrink-0 px-4 md:px-6 text-slate-500 dark:text-white"
-            style="margin-right: 24px; height: 48px; width: auto;"
+            class="ticker-item flex items-center justify-center shrink-0 h-8 md:h-10 mr-12 md:mr-16 text-muted"
           >
-            <div class="relative h-full inline-block" style="width: auto;">
-            <img
-              :src="item.url"
-              :alt="item.name"
-              class="h-full w-auto opacity-0 pointer-events-none"
-              loading="lazy"
-              @error="hideImg"
-            />
-              <div
+            <span class="relative h-full inline-block">
+              <img
+                :src="item.url"
+                :alt="item.name"
+                class="h-full w-auto opacity-0 pointer-events-none"
+                loading="lazy"
+                @error="hideImg"
+              />
+              <span
                 class="absolute inset-0 w-full h-full"
+                aria-hidden="true"
                 :style="{
                   backgroundColor: 'currentColor',
                   WebkitMaskImage: `url('${item.url}')`,
@@ -103,29 +87,27 @@ const hideImg = (e: Event) => {
                   WebkitMaskPosition: 'center',
                   maskPosition: 'center'
                 }"
-              ></div>
-            </div>
-          </div>
-        </div>
+              ></span>
+            </span>
+          </li>
+        </ul>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <style scoped>
 @keyframes scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 .ticker-track {
-  display: flex;
   width: max-content;
-  animation: scroll 60s linear infinite;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation: scroll 80s linear infinite;
   will-change: transform;
 }
 
@@ -133,10 +115,8 @@ const hideImg = (e: Event) => {
   animation-play-state: paused;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ticker-track {
-    animation: none;
-  }
+.ticker-item {
+  transition: color 0.2s ease;
 }
 
 @media (hover: hover) {
@@ -144,22 +124,14 @@ const hideImg = (e: Event) => {
     animation-play-state: paused;
   }
 
-  .ticker-item {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    transform-origin: center;
-    filter: grayscale(0.6);
-    opacity: 0.7;
+  .ticker-item:hover {
+    color: var(--text-main);
   }
+}
 
-  .ticker-wrap:hover .ticker-item {
-    filter: grayscale(0);
-    opacity: 1;
-  }
-
-  .ticker-wrap .ticker-item:hover {
-    transform: scale(1.15);
-    opacity: 1;
-    filter: grayscale(0) drop-shadow(0 0 12px rgba(16, 185, 129, 0.4));
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
   }
 }
 </style>

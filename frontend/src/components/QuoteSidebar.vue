@@ -77,205 +77,230 @@ const needsRecalc = computed(() =>
 )
 
 const quoteBlockedReason = computed(() => {
-  if (!props.models.some(m => m.hasModel)) return 'Sube un modelo 3D para solicitar la cotizacion.'
-  if (needsRecalc.value) return 'Calcula (o recalcula) la cotizacion antes de solicitarla.'
-  if (!(props.breakdown.total > 0)) return 'El precio aun no esta calculado.'
+  if (!props.models.some(m => m.hasModel)) return 'Sube un modelo 3D para solicitar la cotización.'
+  if (needsRecalc.value) return 'Calcula (o recalcula) el precio antes de solicitar la cotización.'
+  if (!(props.breakdown.total > 0)) return 'El precio aún no está calculado.'
   return ''
 })
+
+// Solo presentación: hay un precio vigente que mostrar en el resumen
+const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && props.breakdown.total > 0)
 </script>
 
 <template>
-  <div class="p-8 lg:p-10 space-y-8">
-    <!-- HEADER -->
-    <div class="border-b border-gray-100 dark:border-white/5 pb-6">
-      <p class="text-[9px] font-black text-primary uppercase tracking-[0.5em] mb-1">Motor OrcaEngine</p>
-      <p class="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em]">Configuracion de Fabricacion</p>
+  <div class="p-5 sm:p-6 lg:p-8 space-y-8">
+    <!-- Encabezado -->
+    <div>
+      <h2 class="text-xl md:text-2xl font-extrabold tracking-tight text-ink">Configura tu pieza</h2>
+      <p class="mt-1 text-sm text-muted">Elige tecnología, material y parámetros. El precio se calcula con tu archivo.</p>
     </div>
 
-    <!-- TECNOLOGIA -->
-    <div>
-      <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Tecnologia</label>
-      <div class="flex bg-gray-100 dark:bg-white/5 p-1.5 rounded-2xl">
+    <!-- Tecnología -->
+    <section aria-labelledby="quote-tech-title">
+      <h3 id="quote-tech-title" class="text-sm font-semibold text-ink [font-stretch:100%] tracking-normal mb-3">Tecnología</h3>
+      <div class="grid grid-cols-2 gap-1 p-1 rounded-[var(--radius-control)] bg-surface-2 border border-line">
         <button
-v-for="t in ['FDM','SLA']" :key="t"
-          :class="selectedTechnology === t ? 'bg-white dark:bg-primary text-gray-900 dark:text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'"
-          class="flex-1 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
-          @click="$emit('update:selectedTechnology', t)">{{ t }}</button>
+          v-for="t in ['FDM', 'SLA']" :key="t"
+          type="button"
+          :aria-pressed="selectedTechnology === t"
+          :class="selectedTechnology === t ? 'bg-surface text-ink border-line' : 'border-transparent text-muted hover:text-ink'"
+          class="min-h-11 px-3 py-1.5 rounded-[6px] border text-sm font-semibold transition-colors flex flex-col items-center justify-center leading-tight"
+          @click="$emit('update:selectedTechnology', t)"
+        >
+          <span>{{ t }}</span>
+          <span class="text-xs font-normal text-muted">{{ t === 'FDM' ? 'Filamento' : 'Resina' }}</span>
+        </button>
       </div>
-    </div>
+    </section>
 
-    <!-- MATERIAL -->
-    <div>
-      <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Material</label>
-      <div class="grid grid-cols-2 gap-3">
+    <!-- Material -->
+    <section aria-labelledby="quote-material-title">
+      <h3 id="quote-material-title" class="text-sm font-semibold text-ink [font-stretch:100%] tracking-normal mb-3">Material</h3>
+      <div v-if="filteredMaterials.length" class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2">
         <button
-v-for="mat in filteredMaterials" :key="mat.id"
-          :class="[selectedMaterial === mat.id ? 'bg-primary/15 border-primary/40 ring-2 ring-primary/20 scale-[1.02]' : 'bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-primary/30 hover:bg-primary/5']"
-          class="relative text-left p-5 rounded-2xl border-2 transition-all duration-300 group"
+          v-for="mat in filteredMaterials" :key="mat.id"
+          type="button"
+          :aria-pressed="selectedMaterial === mat.id"
+          :class="selectedMaterial === mat.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-line bg-surface hover:border-muted'"
+          class="relative text-left p-3.5 rounded-[var(--radius-card)] border transition-colors"
           @click="$emit('update:selectedMaterial', mat.id)"
         >
-          <div v-if="selectedMaterial === mat.id" class="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-lg">
-            <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-          </div>
-          <div class="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-            <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.628.209a2 2 0 01-1.564 0l-.628-.209a6 6 0 00-3.86-.517L3.081 14.88a2 2 0 00-1.022.547l-.21.21a2 2 0 00.707 3.414l9.9 1.98a2 2 0 00.707 0l9.9-1.98a2 2 0 00.707-3.414l-.21-.21z"/></svg>
-          </div>
-          <p class="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-wider">{{ mat.name }}</p>
-          <p class="text-[8px] font-bold text-gray-400 mt-1">${{ mat.cost_per_kg }}/kg</p>
-          <p v-if="mat.density" class="text-[7px] text-gray-400/60 mt-0.5">{{ mat.density }}g/cm³</p>
+          <span
+            class="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center border"
+            :class="selectedMaterial === mat.id ? 'bg-primary border-primary text-white' : 'border-line'"
+            aria-hidden="true"
+          >
+            <svg v-if="selectedMaterial === mat.id" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          </span>
+          <span class="block pr-7 text-[0.9375rem] font-semibold text-ink leading-snug">{{ mat.name }}</span>
+          <span class="mt-1 block text-sm font-medium tabular-nums text-ink">${{ Number(mat.cost_per_kg || 0).toLocaleString('es-CO') }} <span class="font-normal text-muted">/ kg</span></span>
+          <span v-if="mat.density" class="block text-xs text-muted tabular-nums">{{ mat.density }} g/cm³</span>
         </button>
       </div>
-    </div>
+      <p v-else class="text-sm text-muted">No hay materiales disponibles para {{ selectedTechnology }} en este momento.</p>
+    </section>
 
-    <!-- PARAMETROS FDM -->
-    <div v-if="selectedTechnology === 'FDM'" class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block">Relleno %</label>
-        <input type="number" :value="models[activeModelIdx]?.infill || 15" min="5" max="100" step="5" class="w-full bg-gray-100 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20" @input="$emit('update:models', models.map((m, i) => i === activeModelIdx ? { ...m, infill: Number(($event.target as HTMLInputElement).value) } : m))">
+    <!-- Parámetros -->
+    <section v-if="selectedTechnology === 'FDM' || models[activeModelIdx]?.hasModel" aria-labelledby="quote-params-title">
+      <h3 id="quote-params-title" class="text-sm font-semibold text-ink [font-stretch:100%] tracking-normal mb-3">Parámetros</h3>
+      <div v-if="selectedTechnology === 'FDM'" class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4">
+        <div>
+          <label for="quote-infill" class="block text-sm font-medium text-ink mb-2">Relleno (%)</label>
+          <input id="quote-infill" type="number" :value="models[activeModelIdx]?.infill || 15" min="5" max="100" step="5" inputmode="numeric" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink tabular-nums focus:outline-none focus:border-primary" @input="$emit('update:models', models.map((m, i) => i === activeModelIdx ? { ...m, infill: Number(($event.target as HTMLInputElement).value) } : m))">
+        </div>
+        <div>
+          <label for="quote-layer" class="block text-sm font-medium text-ink mb-2">Altura de capa</label>
+          <select id="quote-layer" :value="models[activeModelIdx]?.layerHeight || 0.2" class="w-full h-11 px-3 rounded-[var(--radius-control)] border border-line bg-canvas text-ink cursor-pointer focus:outline-none focus:border-primary" @change="$emit('update:models', models.map((m, i) => i === activeModelIdx ? { ...m, layerHeight: Number(($event.target as HTMLSelectElement).value) } : m))">
+            <option :value="0.12">0,12 mm (ultra detalle)</option>
+            <option :value="0.16">0,16 mm (alta)</option>
+            <option :value="0.2">0,20 mm (estándar)</option>
+            <option :value="0.28">0,28 mm (rápida)</option>
+          </select>
+        </div>
       </div>
-      <div>
-        <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 block">Capa (mm)</label>
-        <select :value="models[activeModelIdx]?.layerHeight || 0.2" class="w-full bg-gray-100 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer transition-all" @change="$emit('update:models', models.map((m, i) => i === activeModelIdx ? { ...m, layerHeight: Number(($event.target as HTMLSelectElement).value) } : m))">
-          <option :value="0.12">0.12 Ultra</option>
-          <option :value="0.16">0.16 Alta</option>
-          <option :value="0.2">0.20 Estandar</option>
-          <option :value="0.28">0.28 Rapida</option>
-        </select>
-      </div>
-    </div>
 
-    <!-- CANTIDAD -->
-    <div>
-      <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Cantidad</label>
-      <div class="flex items-center bg-gray-100 dark:bg-white/5 rounded-2xl overflow-hidden">
-        <button class="px-6 py-4 text-gray-400 hover:text-primary font-black text-lg transition-colors" aria-label="Disminuir cantidad" @click="localQty = Math.max(1, normalizeQty(localQty) - 1)">-</button>
-        <input v-model.number="localQty" type="number" min="1" step="1" inputmode="numeric" aria-label="Cantidad" class="flex-1 bg-transparent text-center text-lg font-black text-gray-900 dark:text-white outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" @blur="localQty = normalizeQty(localQty)">
-        <button class="px-6 py-4 text-gray-400 hover:text-primary font-black text-lg transition-colors" aria-label="Aumentar cantidad" @click="localQty = normalizeQty(localQty) + 1">+</button>
-      </div>
-    </div>
+      <dl v-if="models[activeModelIdx]?.hasModel" class="mt-4 divide-y divide-line rounded-[var(--radius-control)] border border-line text-sm">
+        <div class="flex items-center justify-between gap-4 px-4 py-2.5">
+          <dt class="text-muted">Escala</dt>
+          <dd class="font-medium tabular-nums text-ink">{{ Math.round(Number(models[activeModelIdx]?.currentScale ?? 1) * 100) }} %</dd>
+        </div>
+        <div class="flex items-center justify-between gap-4 px-4 py-2.5">
+          <dt class="text-muted">Tamaño (X × Y × Z)</dt>
+          <dd class="font-medium tabular-nums text-ink text-right">
+            {{ Number(models[activeModelIdx]?.dimensions.x || 0).toFixed(1) }} × {{ Number(models[activeModelIdx]?.dimensions.y || 0).toFixed(1) }} × {{ Number(models[activeModelIdx]?.dimensions.z || 0).toFixed(1) }} mm
+          </dd>
+        </div>
+      </dl>
+      <p v-if="models[activeModelIdx]?.hasModel" class="mt-2 text-xs text-muted">Para cambiar la escala usa la herramienta Escalar del visor.</p>
+    </section>
 
-    <!-- EXTRAS -->
-    <div v-if="utilities.length > 0">
-      <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Extras / Consumibles</label>
+    <!-- Cantidad -->
+    <section>
+      <label for="quote-qty" class="block text-sm font-semibold text-ink mb-3">Cantidad</label>
+      <div class="inline-flex items-stretch h-11 rounded-[var(--radius-control)] border border-line bg-canvas overflow-hidden">
+        <button type="button" class="w-11 flex items-center justify-center text-lg text-muted hover:bg-surface-2 hover:text-ink transition-colors" aria-label="Disminuir cantidad" @click="localQty = Math.max(1, normalizeQty(localQty) - 1)">−</button>
+        <input id="quote-qty" v-model.number="localQty" type="number" min="1" step="1" inputmode="numeric" aria-label="Cantidad" class="w-16 border-x border-line bg-transparent text-center font-semibold tabular-nums text-ink focus:outline-none focus:bg-surface [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" @blur="localQty = normalizeQty(localQty)">
+        <button type="button" class="w-11 flex items-center justify-center text-lg text-muted hover:bg-surface-2 hover:text-ink transition-colors" aria-label="Aumentar cantidad" @click="localQty = normalizeQty(localQty) + 1">+</button>
+      </div>
+    </section>
+
+    <!-- Extras -->
+    <section v-if="utilities.length > 0" aria-labelledby="quote-extras-title">
+      <h3 id="quote-extras-title" class="text-sm font-semibold text-ink [font-stretch:100%] tracking-normal mb-3">Extras</h3>
       <div class="space-y-2">
         <button
-v-for="u in utilities" :key="u.id" :class="selectedExtras.find(e => e.id === u.id) ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-gray-50 dark:bg-white/5 border-transparent text-gray-500'"
-          class="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all hover:border-primary/20"
-          @click="$emit('toggleExtra', u.id)">
-          <span>{{ u.name }}</span>
-          <span class="text-[9px]">${{ u.cost_per_kg }}/u</span>
+          v-for="u in utilities" :key="u.id"
+          type="button"
+          :aria-pressed="!!selectedExtras.find(e => e.id === u.id)"
+          :class="selectedExtras.find(e => e.id === u.id) ? 'border-primary bg-primary/5' : 'border-line bg-surface hover:border-muted'"
+          class="w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-control)] border text-left text-sm transition-colors"
+          @click="$emit('toggleExtra', u.id)"
+        >
+          <span
+            class="w-5 h-5 shrink-0 rounded-[4px] border flex items-center justify-center"
+            :class="selectedExtras.find(e => e.id === u.id) ? 'bg-primary border-primary text-white' : 'border-line'"
+            aria-hidden="true"
+          >
+            <svg v-if="selectedExtras.find(e => e.id === u.id)" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          </span>
+          <span class="flex-1 font-medium text-ink">{{ u.name }}</span>
+          <span class="tabular-nums text-muted">${{ Number(u.cost_per_kg || 0).toLocaleString('es-CO') }} / u</span>
         </button>
       </div>
-    </div>
+    </section>
 
-    <!-- CUPON -->
-    <div>
-      <label class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 block">Cupon de Descuento</label>
+    <!-- Cupón -->
+    <section>
+      <label for="quote-coupon" class="block text-sm font-semibold text-ink mb-3">Cupón de descuento</label>
       <div class="flex gap-2">
-        <input v-model="localCoupon" type="text" placeholder="Codigo..." class="flex-1 bg-gray-100 dark:bg-[#0f172a] border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-[11px] font-black text-gray-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-        <button class="px-6 py-4 bg-gray-900 dark:bg-white/10 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-primary transition-all" @click="$emit('applyCoupon')">Aplicar</button>
+        <input id="quote-coupon" v-model="localCoupon" type="text" autocomplete="off" placeholder="Escribe tu código" class="min-w-0 flex-1 h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink uppercase placeholder:normal-case placeholder:text-muted/70 focus:outline-none focus:border-primary" @keyup.enter="$emit('applyCoupon')">
+        <button type="button" class="btn-secondary shrink-0" @click="$emit('applyCoupon')">Aplicar</button>
       </div>
-      <p v-if="activeCoupon" class="text-[9px] font-black text-primary uppercase tracking-widest mt-2 ml-2">{{ activeCoupon.label }} (-{{ (activeCoupon.discount * 100) }}%)</p>
+      <p v-if="activeCoupon" class="mt-2 text-sm font-medium text-resin">{{ activeCoupon.label }}: {{ Math.round(activeCoupon.discount * 100) }} % de descuento aplicado</p>
+    </section>
+
+    <!-- Calcular (FDM) -->
+    <div v-if="selectedTechnology === 'FDM'" class="space-y-2">
+      <p v-if="needsRecalc && !isSlicing" id="quote-recalc-hint" class="text-sm text-amber-700 dark:text-amber-300">
+        Calcula el precio con el archivo y los parámetros actuales para poder solicitar la cotización.
+      </p>
+      <button
+        type="button"
+        :disabled="isSlicing || !models[activeModelIdx]?.hasModel"
+        :class="needsRecalc || isSlicing ? 'btn-primary btn-lg' : 'btn-secondary'"
+        class="w-full"
+        :aria-describedby="needsRecalc && !isSlicing ? 'quote-recalc-hint' : undefined"
+        @click="$emit('calculate')"
+      >
+        <span v-if="isSlicing" class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" aria-hidden="true"></span>
+        <span>{{ isSlicing ? 'Calculando…' : (models[activeModelIdx]?.hasSlicing ? 'Recalcular precio' : 'Calcular precio') }}</span>
+      </button>
     </div>
 
-    <!-- BOTON CALCULAR (FDM) -->
-    <button
-v-if="selectedTechnology === 'FDM'" :disabled="isSlicing || !models[activeModelIdx]?.hasModel" :class="!models[activeModelIdx]?.hasModel ? 'opacity-40 cursor-not-allowed' : 'hover:bg-emerald-600 active:scale-95'"
-      class="w-full py-5 bg-gray-900 dark:bg-white/10 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
-      @click="$emit('calculate')">
-      <span v-if="isSlicing" class="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
-      <span>{{ isSlicing ? 'Procesando...' : 'Calcular Cotizacion' }}</span>
-    </button>
-
-    <!-- RESULTADO -->
-    <div v-if="hasSlicingOrSLA" class="bg-gray-900 dark:bg-[#0f172a] rounded-[3rem] p-8 text-white relative overflow-hidden border border-white/5">
-      <div class="absolute -top-10 -right-10 w-48 h-48 bg-primary/20 rounded-full blur-[80px]"></div>
-      
-      <div class="flex justify-between items-center mb-6 relative z-10">
-        <p class="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Total Estimado</p>
-        <span class="text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest" :class="needsRecalc ? 'bg-amber-500' : 'bg-primary'">{{ needsRecalc ? 'Recalcular' : 'Listo' }}</span>
+    <!-- Resumen de precio -->
+    <section aria-labelledby="quote-summary-title" aria-live="polite" class="rounded-[var(--radius-card)] border border-line bg-canvas p-5">
+      <div class="flex items-center justify-between gap-3">
+        <h3 id="quote-summary-title" class="text-sm font-semibold text-ink [font-stretch:100%] tracking-normal">Resumen de precio</h3>
+        <span class="inline-flex items-center gap-1.5 text-xs font-medium" :class="isPriced ? 'text-brand' : 'text-muted'">
+          <span class="w-1.5 h-1.5 rounded-full" :class="isPriced ? 'bg-primary' : 'bg-muted/60'" aria-hidden="true"></span>
+          {{ isPriced ? 'Calculado' : 'Pendiente de cálculo' }}
+        </span>
       </div>
 
-      <h3
-class="text-6xl lg:text-7xl font-black tracking-tighter italic text-white relative z-10 mb-8 price-count"
-        :class="{ 'bump': previousTotal !== breakdown.total && previousTotal > 0 }">
-        ${{ Math.round(breakdown.total).toLocaleString('es-CO') }}
-      </h3>
+      <template v-if="isPriced">
+        <p class="mt-3 text-sm text-muted">Total estimado (IVA incluido)</p>
+        <p class="price-count text-3xl font-extrabold tracking-tight tabular-nums text-resin" :class="{ 'bump': previousTotal !== breakdown.total && previousTotal > 0 }">
+          ${{ Math.round(breakdown.total).toLocaleString('es-CO') }}
+        </p>
 
-      <div class="space-y-3 relative z-10">
-        <div class="flex justify-between items-center bg-white/5 px-4 py-3 rounded-xl">
-          <span class="text-[9px] font-black text-white/40 uppercase tracking-widest">Masa total</span>
-          <span class="text-sm font-black text-white">{{ breakdown.weight.toFixed(2) }}g</span>
-        </div>
-        <div class="flex justify-between items-center bg-white/5 px-4 py-3 rounded-xl">
-          <span class="text-[9px] font-black text-white/40 uppercase tracking-widest">Tiempo estimado</span>
-          <span class="text-sm font-black text-white">{{ formatTime(breakdown.duration) }}</span>
-        </div>
-        <div class="flex justify-between items-center px-4 py-2">
-          <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">Material</span>
-          <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.matCost).toLocaleString() }}</span>
-        </div>
-        <div class="flex justify-between items-center px-4 py-2">
-          <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">Infraestructura</span>
-          <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.infraCost).toLocaleString() }}</span>
-        </div>
-        <div class="flex justify-between items-center px-4 py-2">
-          <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">Extras</span>
-          <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.utilityCost).toLocaleString() }}</span>
-        </div>
-        <div class="flex justify-between items-center px-4 py-2">
-          <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">Margenes Operativos</span>
-          <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.marginCost).toLocaleString() }}</span>
-        </div>
-        <div v-if="breakdown.discount > 0" class="flex justify-between items-center px-4 py-2">
-          <span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Descuento</span>
-          <span class="text-xs font-black text-emerald-400">-${{ Math.round(breakdown.discount).toLocaleString() }}</span>
-        </div>
-        <div class="border-t border-white/10 pt-3 mt-2">
-          <div class="flex justify-between items-center px-4 py-2">
-            <span class="text-[9px] font-black text-white/50 uppercase tracking-widest">Subtotal</span>
-            <span class="text-sm font-black text-white">${{ Math.round(breakdown.subtotal).toLocaleString() }}</span>
-          </div>
-          <div class="flex justify-between items-center px-4 py-2">
-            <span class="text-[9px] font-black text-white/30 uppercase tracking-widest">IVA ({{ breakdown.ivaPct ?? 19 }}%)</span>
-            <span class="text-xs font-black text-white/60">${{ Math.round(breakdown.iva).toLocaleString() }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+        <dl class="mt-4 space-y-2 text-sm">
+          <div class="flex justify-between gap-4"><dt class="text-muted">Peso estimado</dt><dd class="tabular-nums text-ink">{{ breakdown.weight.toFixed(1) }} g</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted">Tiempo de impresión</dt><dd class="tabular-nums text-ink">{{ formatTime(breakdown.duration) }}</dd></div>
+          <div class="border-t border-line pt-2 flex justify-between gap-4"><dt class="text-muted">Material</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.matCost).toLocaleString('es-CO') }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted">Máquina y energía</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.infraCost).toLocaleString('es-CO') }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted">Extras</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.utilityCost).toLocaleString('es-CO') }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted">Operación y margen</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.marginCost).toLocaleString('es-CO') }}</dd></div>
+          <div v-if="breakdown.discount > 0" class="flex justify-between gap-4"><dt class="text-resin">Descuento</dt><dd class="tabular-nums text-resin">−${{ Math.round(breakdown.discount).toLocaleString('es-CO') }}</dd></div>
+          <div class="border-t border-line pt-2 flex justify-between gap-4"><dt class="text-muted">Subtotal</dt><dd class="tabular-nums font-medium text-ink">${{ Math.round(breakdown.subtotal).toLocaleString('es-CO') }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted">IVA ({{ breakdown.ivaPct ?? 19 }} %)</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.iva).toLocaleString('es-CO') }}</dd></div>
+        </dl>
+      </template>
+      <template v-else>
+        <p class="mt-3 text-3xl font-extrabold tracking-tight text-muted/60" aria-hidden="true">$ —</p>
+        <p class="mt-2 text-sm text-muted">
+          {{ selectedTechnology === 'FDM' ? 'Sube tu modelo y pulsa Calcular precio para ver el desglose.' : 'Sube tu modelo para ver el desglose.' }}
+        </p>
+      </template>
 
-    <!-- DIMENSIONES -->
-    <div v-if="models[activeModelIdx]?.hasModel" class="grid grid-cols-3 gap-3">
-      <div
-v-for="(val, axis) in models[activeModelIdx]?.dimensions || { x: 0, y: 0, z: 0 }" :key="axis"
-        class="bg-gray-50 dark:bg-white/5 p-4 rounded-2xl text-center border border-gray-100 dark:border-white/5">
-        <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ axis.toUpperCase() }}</p>
-        <p class="text-sm font-black text-gray-900 dark:text-white">{{ Number(val).toFixed(1) }}mm</p>
-      </div>
-    </div>
+      <p class="mt-4 text-xs text-muted">Precio estimado, sujeto a revisión del taller.</p>
+    </section>
 
     <!-- CTA -->
-    <button
-:disabled="!!quoteBlockedReason" class="w-full bg-primary hover:bg-emerald-600 text-white font-black py-7 rounded-[2.5rem] shadow-2xl shadow-primary/20 uppercase tracking-[0.3em] text-[11px] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary disabled:active:scale-100"
-      :aria-describedby="quoteBlockedReason ? 'quote-blocked-hint' : undefined"
-      @click="$emit('requestQuote')">
-      Solicitar Cotizacion
-    </button>
-    <p v-if="quoteBlockedReason" id="quote-blocked-hint" class="-mt-5 text-center text-[9px] font-black text-gray-400 uppercase tracking-widest">{{ quoteBlockedReason }}</p>
+    <div>
+      <button
+        type="button"
+        :disabled="!!quoteBlockedReason"
+        class="btn-primary btn-lg w-full"
+        :aria-describedby="quoteBlockedReason ? 'quote-blocked-hint' : undefined"
+        @click="$emit('requestQuote')"
+      >
+        Solicitar cotización
+      </button>
+      <p v-if="quoteBlockedReason" id="quote-blocked-hint" class="mt-2 text-center text-sm text-muted">{{ quoteBlockedReason }}</p>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .price-count {
   display: inline-block;
-  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .price-count.bump {
-  animation: priceBump 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: priceBump 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes priceBump {
   0% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+  50% { transform: scale(1.04); }
   100% { transform: scale(1); }
 }
 </style>

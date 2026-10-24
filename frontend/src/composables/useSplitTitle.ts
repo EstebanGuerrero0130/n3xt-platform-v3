@@ -28,7 +28,7 @@ export function useSplitTitle(selector: string = '.split-title') {
     if (!els.length) return
     els.forEach(el => {
       revertEl(el)
-      const s = new SplitText(el, { type: 'chars' })
+      const s = new SplitText(el, { type: 'words,chars' }) // words: evita cortes de línea a mitad de palabra
       const tween = gsap.from(s.chars, {
         opacity: 0,
         y: 30,

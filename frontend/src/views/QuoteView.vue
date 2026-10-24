@@ -62,8 +62,8 @@ interface CustomerForm {
 const errMessage = (err: unknown): string => (err instanceof Error ? err.message : String(err))
 
 usePageMeta({
-  title: 'Cotizador 3D Industrial | N3XT 3D',
-  description: 'Cotiza tus piezas 3D al instante. Precios precisos con motor de calculo industrial.',
+  title: 'Cotizador de impresión 3D | N3XT 3D',
+  description: 'Sube tu modelo STL u OBJ y obtén un precio estimado de impresión 3D en resina o filamento.',
   image: '/assets/n3xt_og_quote.png',
 })
 
@@ -202,7 +202,7 @@ const runCuraEngineAnalysis = async () => {
                                  + (Number(factors.purge_weight_g) || 3.0)
         models.value[idx].duration = (Number(factors.prep_time_h) || 0) 
                                    + (Number(factors.print_time_h) || 0)
-        notify("Sincronización Industrial Exitosa", "success")
+        notify("Precio calculado. Revisa el resumen en el panel.", "success")
         calculatePrice()
     } else {
         throw new Error("El motor devolvió datos incompletos.")
@@ -211,7 +211,7 @@ const runCuraEngineAnalysis = async () => {
     logger.error("CuraEngine Error:", err)
     const message = errMessage(err)
     const statusInfo = message.includes('(') ? ` [${message.split('(')[1].split(')')[0]}]` : '';
-    notify(`Error de Motor${statusInfo}: ${message.split(' (')[0] || 'Fallo de conexión'}`, "error")
+    notify(`No pudimos calcular el precio${statusInfo}: ${message.split(' (')[0] || 'falló la conexión'}`, "error")
   } finally {
     isSlicing.value = false
   }
@@ -224,26 +224,26 @@ const breakdown = ref({
 const materialGuide = [
   { 
     name: 'PLA', 
-    desc: 'Facil de imprimir, biodegradable y rigido.', 
-    bestFor: 'Prototipos esteticos y figuras.',
+    desc: 'Fácil de imprimir, biodegradable y rígido.', 
+    bestFor: 'prototipos estéticos y figuras.',
     icon: `<svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>`
   },
   { 
     name: 'PETG', 
-    desc: 'Resistente al impacto y la quimica.', 
-    bestFor: 'Piezas mecanicas y exteriores.',
+    desc: 'Resistente al impacto y a químicos.', 
+    bestFor: 'piezas mecánicas y de exterior.',
     icon: `<svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>`
   },
   { 
     name: 'ABS', 
-    desc: 'Alta resistencia termica y mecanica.', 
-    bestFor: 'Carcasas y uso automotriz.',
+    desc: 'Alta resistencia térmica y mecánica.', 
+    bestFor: 'carcasas y uso automotriz.',
     icon: `<svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`
   },
   { 
-    name: 'RESINA', 
-    desc: 'Resolucion extrema y superficie lisa.', 
-    bestFor: 'Joyeria, dental y miniaturas.',
+    name: 'Resina', 
+    desc: 'Detalle muy fino y superficie lisa.', 
+    bestFor: 'joyería, dental y miniaturas.',
     icon: `<svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.628.209a2 2 0 01-1.564 0l-.628-.209a6 6 0 00-3.86-.517L3.081 14.88a2 2 0 00-1.022.547l-.21.21a2 2 0 00.707 3.414l9.9 1.98a2 2 0 00.707 0l9.9-1.98a2 2 0 00.707-3.414l-.21-.21zM6.25 8.044a2 2 0 01.97-1.712l4-2.286a2 2 0 011.56 0l4 2.286a2 2 0 01.97 1.712v4.572a2 2 0 01-.97 1.712l-4 2.286a2 2 0 01-1.56 0l-4-2.286a2 2 0 01-.97-1.712V8.044z"/></svg>`
   }
 ]
@@ -305,7 +305,7 @@ const notify = (msg: string, type = 'info') => {
 
 const handleModalSubmit = (payload: { customerForm: CustomerForm; captchaVerified: boolean; turnstileToken: string }) => {
   if (!payload.captchaVerified) {
-    notify('Error de Verificación', 'error')
+    notify('La verificación no es correcta. Inténtalo de nuevo.', 'error')
     return
   }
   customerForm.value = { ...customerForm.value, ...payload.customerForm }
@@ -401,11 +401,12 @@ const submitOrder = async () => {
       })
     }
     
-    await api.post('/orders', formData)
+    const res = await api.post('/orders', formData)
+    const orderId = res?.order_id
     
     lastSubmitTime.value = Date.now()
     showModal.value = false
-    notify("¡Protocolo de Solicitud completado con éxito!", "success")
+    notify(`Recibimos tu pedido${orderId ? ` #${orderId}` : ''}. Te escribiremos por WhatsApp o email para confirmar.`, "success")
     
     // Reset form
     customerForm.value = emptyCustomerForm()
@@ -592,74 +593,79 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white transition-colors duration-500 overflow-x-hidden selection:bg-primary/20">
-    <AppNavbar active-tab="quote" subtext="Centro de Precisión Industrial" />
+  <div class="min-h-screen flex flex-col bg-canvas text-ink overflow-x-hidden">
+    <AppNavbar active-tab="quote" subtext="Cotizador" />
 
-    <main class="flex-1 flex flex-col lg:flex-row relative">
-      <div class="absolute inset-0 technical-grid opacity-20 dark:opacity-10 pointer-events-none"></div>
-      
-      <section class="flex-1 relative flex flex-col items-center justify-center p-6 lg:p-16">
-        <div class="w-full max-w-5xl text-center mb-16 relative z-10">
-          <div class="relative inline-block">
-            <!-- Glow background -->
-            <div class="absolute -inset-20 bg-gradient-to-r from-primary/5 via-emerald-500/5 to-primary/5 rounded-full blur-[100px] animate-pulse pointer-events-none"></div>
-            <div class="flex items-center justify-center gap-4 relative">
-              <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-[0.85] animate-fade-in">
-                COTIZA.<br/>
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-emerald-500 to-primary-light drop-shadow-[0_0_15px_rgba(8,135,43,0.3)]">PRODUCE.</span>
-              </h1>
-              <button class="lg:hidden w-14 h-14 bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/10 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 transition-all shrink-0 self-start mt-2 opacity-40 hover:opacity-100" @click="showSidebar = !showSidebar">
-                <svg class="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-              </button>
-            </div>
+    <main class="flex-1 flex flex-col lg:flex-row">
+      <!-- Visor + modelos -->
+      <section class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8 lg:py-10" aria-labelledby="quote-title">
+        <div class="w-full max-w-5xl mx-auto">
+          <header class="mb-6">
+            <h1 id="quote-title" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Cotiza tu pieza 3D</h1>
+            <p class="mt-2 text-[0.9375rem] md:text-base text-muted max-w-2xl">Sube tu archivo, elige material y parámetros y obtén un precio estimado. El taller lo revisa antes de imprimir.</p>
+          </header>
+
+          <!-- Modelos -->
+          <div class="flex flex-wrap items-center gap-2 mb-4" aria-label="Modelos de la cotización" role="group">
+            <button
+              v-for="(m, mi) in models" :key="m.id"
+              type="button"
+              :aria-pressed="activeModelIdx === mi"
+              :class="activeModelIdx === mi ? 'bg-ink text-canvas border-ink' : 'border-line text-muted hover:text-ink'"
+              class="h-9 px-4 rounded-full border text-sm font-medium inline-flex items-center gap-2 transition-colors"
+              @click="activeModelIdx = mi"
+            >
+              {{ m.name || 'Modelo ' + (mi + 1) }}
+              <svg v-if="m.hasModel" class="w-4 h-4" :class="activeModelIdx === mi ? '' : 'text-brand'" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              <span v-if="m.hasModel" class="sr-only">(archivo cargado)</span>
+            </button>
+            <button type="button" class="btn-outlined btn-sm" @click="models.push({ id: models.length, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo ' + (models.length + 1), curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }); activeModelIdx = models.length - 1">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>
+              Añadir modelo
+            </button>
           </div>
-        </div>
 
-        <div class="flex flex-wrap gap-3 mb-4">
-          <button v-for="(m, mi) in models" :key="m.id" :class="activeModelIdx === mi ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105' : 'bg-white dark:bg-white/5 text-gray-500 border border-gray-100 dark:border-white/10 hover:border-primary/30'" class="px-6 py-3 rounded-2xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="activeModelIdx = mi">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-            {{ m.name || 'Modelo ' + (mi + 1) }}
-            <span v-if="m.hasModel" class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
-          </button>
-          <button class="px-5 py-3 bg-white/5 border border-dashed border-gray-200 dark:border-white/10 rounded-2xl text-[8px] font-black text-gray-400 uppercase tracking-widest hover:border-primary/40 hover:text-primary transition-all" @click="models.push({ id: models.length, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo ' + (models.length + 1), curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }); activeModelIdx = models.length - 1">
-            + Añadir Modelo
-          </button>
-        </div>
-        <!-- Loading / Message State -->
-        <div v-if="loadingQuote" class="w-full max-w-5xl mb-4 flex items-center justify-center gap-3 py-4 bg-primary/5 rounded-3xl border border-primary/20">
-          <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <span class="text-[10px] font-black text-primary uppercase tracking-[0.3em]">{{ quoteMessage }}</span>
-        </div>
-        <div v-else-if="quoteMessage && !models.some(m => m.hasModel)" class="w-full max-w-5xl mb-4 flex items-center justify-center gap-3 py-4 bg-amber-500/10 rounded-3xl border border-amber-500/20 animate-in fade-in slide-in-from-top-2 duration-500">
-          <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <span class="text-[10px] font-black text-amber-400 uppercase tracking-[0.2em]">{{ quoteMessage }}</span>
-        </div>
-        <div class="w-full max-w-5xl aspect-square md:aspect-[16/9] bg-white dark:bg-white/5 rounded-[4rem] border border-gray-100 dark:border-white/5 shadow-2xl relative overflow-hidden group mb-16">
-          <StlViewer :key="'viewer-' + activeModelIdx" @model-loaded="handleModelLoaded" @model-transformed="handleModelLoaded" @file-ready="handleFileReady" @error="handleError" />
-          <transition enter-active-class="transition duration-300" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition duration-300" leave-from-class="opacity-100" leave-to-class="opacity-0">
-            <div v-if="isSlicing" class="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                <div class="bg-gray-900 border border-primary/40 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-6">
-                    <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <p class="text-primary font-black uppercase tracking-[0.5em] text-xs">Procesando modelo {{ activeModelIdx + 1 }}</p>
-                </div>
-            </div>
-          </transition>
-        </div>
+          <!-- Estado de carga / mensaje -->
+          <div v-if="loadingQuote" class="mb-4 flex items-center gap-3 text-sm text-muted" role="status">
+            <span class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+            {{ quoteMessage }}
+          </div>
 
-        <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-4 gap-6 mb-16 reveal">
-            <div v-for="mat in materialGuide" :key="mat.name" class="bg-white dark:bg-white/5 p-8 rounded-[2.5rem] border border-gray-100 dark:border-white/5 hover:border-primary/30 transition-all group">
-                <div class="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-all" :innerHTML="sanitizeSVG(mat.icon)"></div>
-                <h4 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest mb-3">{{ mat.name }}</h4>
-                <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold leading-relaxed uppercase mb-4">{{ mat.desc }}</p>
-                <div class="pt-4 border-t border-gray-100 dark:border-white/5">
-                    <p class="text-[8px] font-black text-primary uppercase tracking-widest">Ideal para:</p>
-                    <p class="text-[9px] font-bold text-gray-800 dark:text-white uppercase mt-1">{{ mat.bestFor }}</p>
+          <!-- Visor -->
+          <div class="relative h-[480px] sm:h-[540px] lg:h-[600px] bg-surface rounded-[var(--radius-panel)] border border-line overflow-hidden">
+            <div class="technical-grid absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+            <StlViewer :key="'viewer-' + activeModelIdx" @model-loaded="handleModelLoaded" @model-transformed="handleModelLoaded" @file-ready="handleFileReady" @error="handleError" />
+            <transition enter-active-class="transition duration-200" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition duration-200" leave-from-class="opacity-100" leave-to-class="opacity-0">
+              <div v-if="isSlicing" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-canvas/70 backdrop-blur-sm" role="status" aria-live="polite">
+                <div class="bg-surface border border-line rounded-[var(--radius-card)] shadow-xl px-6 py-5 flex items-center gap-4 max-w-sm">
+                  <span class="w-8 h-8 shrink-0 border-[3px] border-primary border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+                  <div>
+                    <p class="font-semibold text-ink">Calculando el precio del modelo {{ activeModelIdx + 1 }}</p>
+                    <p class="text-sm text-muted">Estamos laminando el archivo. Puede tardar unos segundos.</p>
+                  </div>
                 </div>
+              </div>
+            </transition>
+          </div>
+
+          <!-- Guía de materiales -->
+          <section class="mt-12 reveal" aria-labelledby="material-guide-title">
+            <h2 id="material-guide-title" class="text-xl md:text-2xl font-extrabold tracking-tight text-ink">¿Qué material elegir?</h2>
+            <p class="mt-1 text-sm text-muted">Una guía rápida. Si tienes dudas, el taller te recomienda al revisar tu pedido.</p>
+            <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div v-for="mat in materialGuide" :key="mat.name" class="bg-surface p-5 rounded-[var(--radius-card)] border border-line">
+                <div class="w-10 h-10 bg-primary/10 rounded-[var(--radius-control)] flex items-center justify-center mb-4" aria-hidden="true" :innerHTML="sanitizeSVG(mat.icon)"></div>
+                <h3 class="text-base font-semibold text-ink [font-stretch:100%] tracking-normal">{{ mat.name }}</h3>
+                <p class="mt-1 text-sm text-muted leading-relaxed">{{ mat.desc }}</p>
+                <p class="mt-3 pt-3 border-t border-line text-sm text-ink"><span class="text-muted">Ideal para:</span> {{ mat.bestFor }}</p>
+              </div>
             </div>
+          </section>
         </div>
       </section>
 
-      <aside v-show="showSidebar || isDesktop" class="w-full lg:w-[540px] bg-white dark:bg-black flex flex-col border-l border-gray-100 dark:border-white/5 shadow-2xl z-10">
+      <!-- Panel de configuración -->
+      <aside class="w-full lg:w-[420px] xl:w-[460px] shrink-0 bg-surface border-t lg:border-t-0 lg:border-l border-line lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto" aria-label="Configuración y precio">
         <QuoteSidebar
           :models="models"
           :active-model-idx="activeModelIdx"
@@ -706,39 +712,12 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.technical-grid {
-  background-size: 50px 50px;
-  background-image: linear-gradient(to right, rgba(30, 58, 52, 0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 58, 52, 0.08) 1px, transparent 1px);
-}
-
-/* Count-up animation for price */
-.price-count {
-  display: inline-block;
-  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.price-count.bump {
-  animation: priceBump 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes priceBump {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.08); }
-  100% { transform: scale(1); }
-}
-
-/* Sidebar mobile transition */
-@media (max-width: 1023px) {
-  .quote-sidebar-enter { max-height: 0; opacity: 0; }
-  .quote-sidebar-enter-active { transition: all 0.4s ease-out; }
-  .quote-sidebar-enter-to { max-height: 2000px; opacity: 1; }
-}
-
-
 /* --- Scroll Reveal --- */
 .reveal {
   opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(16px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .reveal.revealed {
   opacity: 1;

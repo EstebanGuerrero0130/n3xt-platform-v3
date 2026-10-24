@@ -10,35 +10,30 @@ import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
-import { useParticles } from '../composables/useParticles'
 import { usePageMeta } from '../composables/usePageMeta'
 
 const { applySplitTitle } = useSplitTitle()
 useSplitButton()
 
 usePageMeta({
-  title: 'N3XT 3D | Manufactura Digital y Coleccionables de Alta Precisión',
-  description: 'Especialistas en fabricación digital en Colombia. Miniaturas, figuras y piezas de colección creadas con precisión industrial e inspiradas en universos icónicos.',
+  title: 'N3XT 3D | Impresión 3D en resina y filamento en Colombia',
+  description: 'Estudio de impresión 3D en Colombia. Figuras coleccionables, prototipos y piezas a medida en resina y filamento, con acabado a mano.',
   image: '/assets/n3xt_og_home.png',
 })
 
-const { particlesRef: heroParticlesRef } = useParticles({
-  count: 35,
-  zIndex: 1,
-})
-
-// Hero title animation (no SplitText — preserves gradient)
-const heroTitleRef = ref<HTMLElement | null>(null)
+// Única entrada orquestada de la página: los bloques del hero aparecen en secuencia.
+const heroRef = ref<HTMLElement | null>(null)
 
 onMounted(() => {
-  if (heroTitleRef.value) {
-    gsap.from(heroTitleRef.value, {
-      opacity: 0,
-      y: 50,
-      duration: 0.8,
-      ease: 'power3.out',
-    })
-  }
+  if (!heroRef.value) return
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  gsap.from(heroRef.value.querySelectorAll('[data-hero-item]'), {
+    opacity: 0,
+    y: 24,
+    duration: 0.7,
+    stagger: 0.08,
+    ease: 'power3.out',
+  })
 })
 
 // --- TypeScript interfaces ---
@@ -98,75 +93,34 @@ const vIntersection = {
     }
 }
 
+// Contenido estático de las secciones informativas
+const highlights = [
+  { val: '8K', label: 'Resolución en resina' },
+  { val: '24 h', label: 'Prototipado rápido' },
+  { val: '100 %', label: 'Acabado a mano' },
+]
+
+const processSteps = [
+  { t: 'Envíanos tu idea', d: 'Una imagen, un boceto o un archivo 3D. Si aún no tienes el diseño, te ayudamos a desarrollarlo.' },
+  { t: 'Te asesoramos', d: 'Revisamos el proyecto y te recomendamos material, tamaño y tecnología para tu pieza.' },
+  { t: 'Recibe tu cotización', d: 'Un precio claro según complejidad, material, acabado y tiempo de fabricación.' },
+  { t: 'Fabricamos y entregamos', d: 'Imprimimos con equipos profesionales, damos el acabado y te enviamos la pieza.' },
+]
+
+const finishingSteps = [
+  { n: 'Curado UV', icon: '<svg class=\'w-5 h-5\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z\'/></svg>' },
+  { n: 'Lijado fino', icon: '<svg class=\'w-5 h-5\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z\'/></svg>' },
+  { n: 'Imprimación', icon: '<svg class=\'w-5 h-5\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10\'/></svg>' },
+  { n: 'Aerografía', icon: '<svg class=\'w-5 h-5\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z\'/></svg>' },
+]
 
 const webSettings = ref<WebSettings>({
   social: { tiktok: '#', instagram: '#', facebook: '#', whatsapp: '#', youtube: '#' },
-  workshop_status: 'OPERATIVO 24/7',
-  news: [
-    {
-      t: 'PRECISIÓN 8K: EL FUTURO DE LA RESINA',
-      d: 'Exploramos cómo la tecnología de alta resolución está redefiniendo los estándares de detalle en miniaturas y joyería técnica.',
-      tag: 'TECNOLOGÍA',
-      i: 'https://images.unsplash.com/photo-1631033031102-f855d4872494?auto=format&fit=crop&q=80&w=800',
-      url: '#'
-    },
-    {
-      t: 'REVOLUCIÓN FDM CON BAMBU LAB',
-      d: 'Nuestra flota de alta velocidad nos permite entregar piezas funcionales en tiempo récord sin comprometer la resistencia estructural.',
-      tag: 'INDUSTRIAL',
-      i: 'https://images.unsplash.com/photo-1638202993928-7267aad84c31?auto=format&fit=crop&q=80&w=800',
-      url: '#'
-    },
-    {
-      t: 'EL ARTE DEL ACABADO MANUAL',
-      d: 'Cada pieza en N3XT pasa por un riguroso proceso de curado y lijado artesanal para garantizar superficies listas para pintura.',
-      tag: 'MAKER',
-      i: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=800',
-      url: '#'
-    },
-    {
-      t: 'N3XT 3D: MANUFACTURA NACIONAL',
-      d: 'Estamos construyendo el centro de impresión 3D más avanzado de Colombia para apoyar a creativos y empresas locales.',
-      tag: 'EVENTO',
-      i: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&q=80&w=800',
-      url: '#'
-    }
-  ],
+  workshop_status: 'Abierto de lunes a sábado',
+  // Noticias y publicaciones solo se muestran si vienen configuradas desde el panel
+  news: [],
   gallery: [],
-  posts: [
-    {
-      t: 'DRAGONES EN RESINA 8K',
-      d: 'Nivel de detalle extremo para los coleccionistas más exigentes. Cada escama cuenta.',
-      l: '1.2K',
-      i: 'https://images.unsplash.com/photo-1560972550-aba3456b5564?auto=format&fit=crop&q=80&w=600',
-      tag: 'RESINA',
-      url: '#'
-    },
-    {
-      t: 'PROTOTIPADO INDUSTRIAL',
-      d: 'Carcasas funcionales impresas en PETG para pruebas de ingeniería de alto impacto.',
-      l: '850',
-      i: 'https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&q=80&w=600',
-      tag: 'FDM',
-      url: '#'
-    },
-    {
-      t: 'ARTE DIGITAL COLECTIVO',
-      d: 'Colaboración con artistas locales para traer sus diseños al mundo físico.',
-      l: '2.1K',
-      i: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=600',
-      tag: 'MAKER',
-      url: '#'
-    },
-    {
-      t: 'TALLER N3XT EN ACCIÓN',
-      d: 'Descubre el proceso de post-procesado que hace que nuestras piezas sean únicas.',
-      l: '3.4K',
-      i: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=600',
-      tag: 'DETRÁS DE CÁMARAS',
-      url: '#'
-    }
-  ],
+  posts: [],
   catalog: [],
   pdf_catalog_url: '',
   pdf_catalog_desc: '',
@@ -178,45 +132,32 @@ const webSettings = ref<WebSettings>({
     {
       type: 'image',
       t1: 'N3XT',
-      t2: 'LAB',
-      d: 'Nuestro núcleo de innovación. Donde transformamos conceptos complejos en prototipos de alta precisión usando tecnología Bambu Lab.',
+      t2: 'Lab',
+      d: 'Nuestro taller. Aquí convertimos ideas en prototipos y piezas terminadas con impresoras de resina y filamento.',
       i: '/assets/n3xt_lab_render_hq_1778542148509.png',
-      stats: [
-        { val: '8K', label: 'Resolución' },
-        { val: 'SLA', label: 'Tecnología' },
-        { val: '.025mm', label: 'Precisión' }
-      ]
+      stats: []
     },
     {
       type: 'icon',
       t1: 'N3XT',
-      t2: 'SHOP',
-      d: 'Accede a nuestro catálogo curado de filamentos técnicos, accesorios y piezas de colección listas para entrega.',
-      i: '<svg class=\"w-8 h-8\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z\"/></svg>',
-      stats: [
-        { val: '+500', label: 'Productos' },
-        { val: '+200 SKU', label: 'Disponibles' },
-        { val: 'Envío 24H', label: 'Express' }
-      ]
+      t2: 'Shop',
+      d: 'Catálogo de figuras, piezas de colección y accesorios listos para entrega.',
+      i: '<svg class=\"w-7 h-7\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z\"/></svg>',
+      stats: []
     },
     {
       type: 'icon',
-      t1: 'MAKER',
-      t2: 'SPACE',
-      d: 'Únete a la red de creadores más grande de Colombia. Talleres, soporte técnico y proyectos colaborativos.',
-      i: '<svg class=\"w-8 h-8\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z\"/></svg>',
-      stats: [
-        { val: '+200', label: 'Miembros' },
-        { val: '24/7', label: 'Soporte' },
-        { val: 'N3XT', label: 'Comunidad' }
-      ]
+      t1: 'Maker',
+      t2: 'Space',
+      d: 'Talleres, asesoría técnica y proyectos en colaboración con creadores locales.',
+      i: '<svg class=\"w-7 h-7\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z\"/></svg>',
+      stats: []
     }
   ]
 })
 
 const isReady = ref(false)
 
-const normalizeTags = (tags: any): string[] => Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [])
 const brokenGalleryImgs = ref<Record<number, boolean>>({})
 
 const getOptimizedImage = (url: string, width = 600): string => {
@@ -262,9 +203,9 @@ const fetchSettings = async () => {
     const data = await api.get('/settings')
     if (data.web) {
       const dbWeb = data.web
-      
+
       // Merge inteligente: Priorizamos datos de la DB si existen.
-      // Si la DB está vacía (como en instalaciones nuevas), conservamos los assets generados.
+      // Si la DB está vacía (como en instalaciones nuevas), conservamos los valores por defecto.
       webSettings.value = {
         ...webSettings.value,
         social: dbWeb.social || webSettings.value.social,
@@ -292,7 +233,7 @@ const fetchSettings = async () => {
     logger.error('Error fetching settings:', err)
   } finally {
     isReady.value = true
-    // Títulos que aparecen tras la carga (p.ej. "Trabajos Destacados" bajo v-if)
+    // Títulos que aparecen tras la carga (bajo v-if)
     nextTick(() => applySplitTitle())
   }
 }
@@ -303,776 +244,387 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white overflow-x-hidden selection:bg-primary/20 transition-colors duration-500">
-    <AppNavbar active-tab="home" subtext="Centro de Precisión Industrial" />
+  <div class="min-h-screen bg-canvas text-ink overflow-x-hidden">
+    <AppNavbar active-tab="home" subtext="Impresión 3D en Colombia" />
 
-    <!-- Partículas ambientales -->
-    <!-- Hero Section -->
-    <section class="relative isolate pt-20 pb-32 px-6 overflow-hidden">
-        <div ref="heroParticlesRef" class="hero-section-particles" aria-hidden="true"></div>
-        <div class="absolute inset-0 technical-grid opacity-20 dark:opacity-10 pointer-events-none"></div>
-        <div class="absolute -top-24 -left-24 w-96 h-96 bg-primary/10 rounded-full blur-[120px] pointer-events-none"></div>
-        <div class="absolute top-1/2 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+    <!-- Hero -->
+    <section class="relative isolate overflow-hidden border-b border-line">
+      <div class="technical-grid absolute inset-0 -z-10 pointer-events-none" aria-hidden="true"></div>
 
-        <div class="max-w-7xl mx-auto flex flex-col items-center text-center relative z-10">
-            <div class="inline-flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-                <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_#10b981]"></span>
-                <span class="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-[0.4em]">Estudio de manufactura digital</span>
-            </div>
-
-            <h1 ref="heroTitleRef" class="text-6xl md:text-[13rem] font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.75] mb-16">
-                N3XT<br/>
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 dark:from-primary dark:via-emerald-500 dark:to-primary bg-[length:200%_auto] animate-gradient-shift italic">3D</span>
+      <div ref="heroRef" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 md:pt-16 md:pb-20 lg:pt-20">
+        <div class="grid gap-10 lg:grid-cols-12 lg:gap-12 lg:items-center">
+          <div class="lg:col-span-7">
+            <h1 data-hero-item class="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight leading-[0.95] text-ink [font-stretch:125%]">
+              Tu idea, impresa capa por capa.
             </h1>
-
-            <div class="max-w-5xl mx-auto mb-24 relative group px-6">
-                <!-- Elementos Decorativos Técnicos -->
-                <div class="absolute -top-8 -left-8 w-12 h-12 border-t-2 border-l-2 border-primary/20 rounded-tl-2xl opacity-0 group-hover:opacity-100 transition-all duration-1000 pointer-events-none"></div>
-                <div class="absolute -bottom-8 -right-8 w-12 h-12 border-b-2 border-r-2 border-primary/20 rounded-br-2xl opacity-0 group-hover:opacity-100 transition-all duration-1000 pointer-events-none"></div>
-                
-                <!-- Aura de luz sutil -->
-                <div class="absolute inset-0 bg-primary/5 blur-[120px] rounded-full opacity-40 pointer-events-none"></div>
-
-                <p class="relative font-black text-sm md:text-3xl uppercase tracking-tighter leading-[1.05] text-center animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
-                    <span class="text-slate-400 dark:text-gray-500">Especialistas en </span>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400 dark:from-primary dark:to-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.2)]">fabricación digital</span>.
-                    <span class="text-slate-900 dark:text-white"> Miniaturas, figuras y piezas de colección creadas con precisión industrial.</span>
-                    <br class="hidden md:block" />
-                    <span class="text-slate-400 dark:text-gray-500"> Inspirados en universos icónicos y el </span>
-                    <span class="text-emerald-500 dark:text-emerald-400 italic">espíritu de Colombia.</span>
-                </p>
-                
-                <!-- Footer técnico del bloque -->
-                <div class="flex justify-center items-center gap-4 mt-10 opacity-20 group-hover:opacity-50 transition-opacity">
-                    <div class="h-[1px] w-8 bg-primary"></div>
-                    <span class="text-[8px] font-black tracking-[0.6em] text-primary uppercase">N3XT System Core</span>
-                    <div class="h-[1px] w-8 bg-primary"></div>
-                </div>
-
-                <div class="flex flex-col md:flex-row items-center justify-center gap-8 animate-in fade-in zoom-in duration-1000 mt-16">
-                    <!-- Botón: Iniciar Proyecto (Elite Luxury) -->
-                    <router-link to="/project/init" class="group relative w-full sm:w-auto text-center px-6 sm:px-12 md:px-20 py-6 md:py-8 bg-gray-900 dark:bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] sm:tracking-[0.35em] md:tracking-[0.5em] overflow-hidden transition-all hover:-translate-y-1 hover:scale-105 active:scale-95 shadow-[0_20px_50px_-15px_rgba(16,185,129,0.4)]">                            <span class="relative z-10 flex items-center justify-center gap-4 btn-fade-in">
-                                INICIAR PROYECTO 3D
-                                <span class="relative flex h-2 w-2">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-                                </span>
-                            </span>
-                        <!-- Efecto de Brillo (Shine) -->
-                        <div class="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out"></div>
-                        <div class="absolute inset-0 bg-gradient-to-r from-emerald-500 to-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    </router-link>
-
-                    <!-- Botón: Ver Catálogo (Elite Ghost) -->
-                    <router-link to="/catalog" class="group relative w-full sm:w-auto text-center px-6 sm:px-12 md:px-20 py-6 md:py-8 bg-black/[0.03] dark:bg-white/5 backdrop-blur-2xl text-gray-800 dark:text-white/50 rounded-2xl font-black text-xs uppercase tracking-[0.2em] sm:tracking-[0.35em] md:tracking-[0.5em] overflow-hidden transition-all hover:-translate-y-1 hover:text-gray-900 dark:hover:text-white border border-black/10 dark:border-white/5 hover:border-black/30 dark:hover:border-white/20">                            <span class="relative z-10 flex items-center justify-center gap-4 btn-fade-in">
-                                VER CATÁLOGO
-                                <svg class="w-5 h-5 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                                </svg>
-                            </span>
-                        <div class="absolute inset-0 bg-black/5 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    </router-link>
-                </div>
+            <p data-hero-item class="mt-6 max-w-2xl text-lg md:text-xl leading-relaxed text-muted">
+              En N3XT 3D imprimimos en resina y filamento desde Colombia: figuras coleccionables, prototipos y piezas a medida, con acabado a mano.
+            </p>
+            <div data-hero-item class="mt-8 flex flex-col sm:flex-row gap-3">
+              <router-link to="/quote" class="btn-primary btn-lg">Cotizar mi pieza</router-link>
+              <router-link to="/galeria" class="btn-secondary btn-lg">Ver trabajos</router-link>
             </div>
-        </div>
-    </section>
-
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.04" height="60px" />
-
-    <!-- Stats Section (Estilo Industrial Refinado) -->
-    <section class="py-28 bg-gray-50 dark:bg-[#05080b] relative overflow-hidden">
-        <div class="absolute inset-0 technical-grid opacity-5"></div>
-        <div class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-12 px-6 relative z-10">
-            <div v-for="stat in [{val: '+10K', label: 'Piezas Fabricadas'}, {val: '24H', label: 'Prototipado Rapido'}, {val: '8K', label: 'Resolucion Resina'}, {val: '100%', label: 'Acabado Manual'}]" :key="stat.label" class="group relative">
-                <p class="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter mb-2 group-hover:text-emerald-500 transition-all duration-500 transform group-hover:scale-110 origin-left italic">{{ stat.val }}</p>
-                <div class="flex items-center gap-3">
-                    <p class="text-[10px] font-black text-slate-400 dark:text-gray-600 uppercase tracking-[0.3em]">{{ stat.label }}</p>
-                </div>
-                <div class="absolute -bottom-4 left-0 w-12 h-1 bg-emerald-500/20 group-hover:w-full transition-all duration-700"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.03" height="60px" />
-
-    <!-- Sección: Fabricación Digital -->
-    <section class="py-28 bg-white dark:bg-[#0a0f14] px-6 relative overflow-hidden">
-        <div class="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
-        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
-            <div class="relative group">
-                <div class="aspect-square bg-gray-900 rounded-[4.5rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(30,58,52,0.3)] relative border border-white/10">
-                    <picture>
-                      <source srcset="/assets/n3xt_industrial_maker_figures_1778542131405.webp" type="image/webp" />
-                      <img src="/assets/n3xt_industrial_maker_figures_1778542131405.webp" alt="Figuras coleccionables de anime y videojuegos fabricadas por N3XT 3D" width="1200" height="1200" class="w-full h-full object-cover group-hover:scale-110 transition-all duration-[2s]" loading="lazy" />
-                    </picture>
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
-                    <div class="absolute bottom-12 left-12 text-white">
-                        <p class="text-[10px] font-black uppercase tracking-[0.4em] mb-3 text-primary">FABRICA TU PEDIDO</p>
-                        <h3 class="text-4xl font-black uppercase tracking-tighter italic">N3XT <span class="text-primary">3D</span></h3>
-                    </div>
-                </div>
-                <div class="absolute -top-6 -right-6 w-32 h-32 border-t-2 border-r-2 border-primary/40 rounded-tr-[3rem]"></div>
-                <div class="absolute -bottom-6 -left-6 w-32 h-32 border-b-2 border-l-2 border-primary/40 rounded-bl-[3rem]"></div>
-            </div>
-
-            <div class="space-y-10 text-left">
-                <div class="inline-block px-5 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                    <span class="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-[0.4em]">¿QUÉ HACEMOS?</span>
-                </div>
-                <h2 class="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.9] animate-fade-in">
-                    EL SIGUIENTE NIVEL DE LA<br/>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400 dark:from-emerald-400 dark:to-emerald-200 italic">FABRICACIÓN DIGITAL.</span>
-                </h2>
-                <p class="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-bold uppercase leading-relaxed tracking-[0.3em]">
-                    En N3XT no solo fabricamos piezas; damos vida a universos, personajes y proyectos personalizados con acabados premium y detalle profesional.
-                </p>
-                <div class="grid grid-cols-1 gap-10 pt-12">
-                    <!-- Categoría 1: Figuras -->
-                    <div class="group p-6 bg-white dark:bg-white/10 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 transition-all duration-700 relative overflow-hidden hover:-translate-y-2 shadow-sm hover:shadow-xl">
-                        <div class="absolute -right-12 -top-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
-                        <div class="flex items-center gap-6 relative z-10">
-                            <div class="flex-shrink-0 w-16 h-16 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)] group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500">
-                                <svg class="w-8 h-8 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-                            </div>
-                            <div class="text-left">
-                                <h4 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-2 italic">Figuras <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700 dark:from-emerald-400 dark:to-emerald-600">Premium</span></h4>
-                                <p class="text-xs md:text-sm text-slate-400 dark:text-gray-400 font-bold uppercase leading-relaxed tracking-tight mb-4 max-w-md">Piezas artísticas en alta resolución con acabados de museo.</p>
-                                <div class="flex flex-wrap gap-2">
-                                    <span v-for="tag in ['Resina SLA', 'Aerografia', 'Detalle 8K']" :key="tag" class="text-[9px] font-black px-3 py-1 bg-emerald-500/5 dark:bg-black/40 rounded-full border border-emerald-500/20 uppercase tracking-[0.2em] text-emerald-600 shadow-inner">{{ tag }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Categoría 2: Impresión 3D -->
-                    <div class="group p-6 bg-white dark:bg-white/10 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 transition-all duration-700 relative overflow-hidden hover:-translate-y-2 shadow-sm hover:shadow-xl">
-                        <div class="absolute -right-12 -top-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
-                        <div class="flex items-center gap-6 relative z-10">
-                            <div class="flex-shrink-0 w-16 h-16 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)] group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500">
-                                <svg class="w-8 h-8 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            </div>
-                            <div class="text-left">
-                                <h4 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-2 italic">Fabricación <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700 dark:from-emerald-400 dark:to-emerald-600">Multimaterial</span></h4>
-                                <p class="text-xs md:text-sm text-slate-400 dark:text-gray-400 font-bold uppercase leading-relaxed tracking-tight mb-4 max-w-md">Flota de alta gama para resultados industriales.</p>
-                                <div class="flex flex-wrap gap-2">
-                                    <span v-for="tag in ['Bambulab', 'Elegoo', 'Creality', 'Anycubic']" :key="tag" class="text-[9px] font-black px-3 py-1 bg-emerald-500/5 dark:bg-black/40 rounded-full border border-emerald-500/20 uppercase tracking-[0.2em] text-emerald-600 shadow-inner">{{ tag }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Categoría 3: Prototipos -->
-                    <div class="group p-6 bg-white dark:bg-white/10 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-emerald-400/50 transition-all duration-700 relative overflow-hidden hover:-translate-y-2 shadow-sm hover:shadow-xl">
-                        <div class="absolute -right-12 -top-12 w-32 h-32 bg-emerald-400/10 rounded-full blur-3xl group-hover:bg-emerald-400/20 transition-all duration-700"></div>
-                        <div class="flex items-center gap-6 relative z-10">
-                            <div class="flex-shrink-0 w-16 h-16 bg-emerald-400/10 rounded-xl flex items-center justify-center border border-emerald-400/20 shadow-[0_0_20px_rgba(52,211,153,0.1)] group-hover:bg-emerald-400 group-hover:text-white transition-all duration-500">
-                                <svg class="w-8 h-8 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
-                            </div>
-                            <div class="text-left">
-                                <h4 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-2 italic">Prototipos <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-primary">Funcionales</span></h4>
-                                <p class="text-xs md:text-sm text-slate-400 dark:text-gray-400 font-bold uppercase leading-relaxed tracking-tight mb-4 max-w-md">Ingeniería aplicada con precisión mecánica industrial.</p>
-                                <div class="flex flex-wrap gap-2">
-                                    <span v-for="tag in ['Ingenieria', 'Nylon / PETG', 'Prueba de Estrés']" :key="tag" class="text-[9px] font-black px-3 py-1 bg-emerald-400/5 dark:bg-black/40 rounded-full border border-emerald-400/20 uppercase tracking-[0.2em] text-emerald-600 shadow-inner">{{ tag }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.04" height="60px" flip />
-
-    <!-- Sección: Proceso de Fabricación N3XT (Numbered Steps) -->
-    <section class="py-28 bg-gray-50 dark:bg-[#05080b] px-6 relative overflow-hidden">
-        <div class="absolute inset-0 technical-grid opacity-10 pointer-events-none"></div>
-        
-        <div class="max-w-7xl mx-auto mb-32 text-center relative z-10">
-            <h2 class="split-title text-5xl md:text-7xl font-black text-slate-400 dark:text-white/30 tracking-tighter uppercase leading-[0.9] mb-8 transition-colors duration-500">
-                NUESTRO <span class="text-emerald-600 dark:text-emerald-400">PROCESO</span><br/>
-                <span class="text-slate-500 dark:text-white/40 transition-all duration-700">DE FABRICACIÓN.</span>
-            </h2>
-            <div class="flex items-center justify-center gap-4">
-                <div class="h-px w-12 bg-gradient-to-r from-transparent to-emerald-500/50"></div>
-                <p class="text-[10px] md:text-xs text-emerald-400/80 font-black uppercase tracking-[0.4em]">N3XT • DISEÑO, PRECISIÓN Y DETALLE</p>
-                <div class="h-px w-12 bg-gradient-to-l from-transparent to-emerald-500/50"></div>
-            </div>
-        </div>
-
-        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
-            <!-- Paso 01 -->
-            <div class="group relative p-10 bg-white dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 transition-all duration-500 overflow-hidden shadow-sm hover:shadow-xl">
-                <div class="absolute -right-4 -top-4 text-8xl font-black text-slate-200 dark:text-white/10 group-hover:text-emerald-500/20 transition-all duration-500 tracking-tighter italic">01</div>
-                <div class="mb-8 w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-500 shadow-lg">
-                    <svg class="w-7 h-7 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z"/></svg>
-                </div>
-                <h4 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4 italic">Envíanos tu <span class="text-emerald-500 dark:text-emerald-400">Idea</span></h4>
-                <p class="text-xs text-slate-400 dark:text-gray-400 leading-relaxed font-bold uppercase tracking-tight">
-                    Compártenos tu idea, imagen o archivo 3D. Si aún no tienes el diseño listo, <span class="text-slate-900 dark:text-white/60">te ayudamos a desarrollarlo.</span>
-                </p>
-                <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-            </div>
-
-            <!-- Paso 02 -->
-            <div class="group relative p-10 bg-white dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 transition-all duration-500 overflow-hidden shadow-sm hover:shadow-xl">
-                <div class="absolute -right-4 -top-4 text-8xl font-black text-slate-200 dark:text-white/10 group-hover:text-emerald-500/20 transition-all duration-500 tracking-tighter italic">02</div>
-                <div class="mb-8 w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-500 shadow-lg">
-                    <svg class="w-7 h-7 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                </div>
-                <h4 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4 italic">Asesoría <span class="text-emerald-500 dark:text-emerald-400">Personalizada</span></h4>
-                <p class="text-xs text-slate-400 dark:text-gray-400 leading-relaxed font-bold uppercase tracking-tight">
-                    Analizamos tu proyecto y te recomendamos el <span class="text-slate-900 dark:text-white/60">material, tamaño y tipo de fabricación</span> ideal para tu pieza.
-                </p>
-                <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-            </div>
-
-            <!-- Paso 03 -->
-            <div class="group relative p-10 bg-white dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 transition-all duration-500 overflow-hidden shadow-sm hover:shadow-xl">
-                <div class="absolute -right-4 -top-4 text-8xl font-black text-slate-200 dark:text-white/10 group-hover:text-emerald-500/20 transition-all duration-500 tracking-tighter italic">03</div>
-                <div class="mb-8 w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-500 shadow-lg">
-                    <svg class="w-7 h-7 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-                <h4 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4 italic">Recibe tu <span class="text-emerald-500 dark:text-emerald-400">Cotización</span></h4>
-                <p class="text-xs text-slate-400 dark:text-gray-400 leading-relaxed font-bold uppercase tracking-tight">
-                    Te enviamos una <span class="text-slate-900 dark:text-white/60">cotización clara</span> según complejidad, materiales, acabados y tiempo de fabricación.
-                </p>
-                <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-            </div>
-
-            <!-- Paso 04 -->
-            <div class="group relative p-10 bg-white dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 transition-all duration-500 overflow-hidden shadow-sm hover:shadow-xl">
-                <div class="absolute -right-4 -top-4 text-8xl font-black text-slate-200 dark:text-white/10 group-hover:text-emerald-500/20 transition-all duration-500 tracking-tighter italic">04</div>
-                <div class="mb-8 w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-500 shadow-lg">
-                    <svg class="w-7 h-7 text-emerald-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/></svg>
-                </div>
-                <h4 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4 italic">Fabricación y <span class="text-emerald-500 dark:text-emerald-400">Entrega</span></h4>
-                <p class="text-xs text-slate-400 dark:text-gray-400 leading-relaxed font-bold uppercase tracking-tight">
-                    Fabricamos tu pieza con equipos profesionales y la entregamos con <span class="text-slate-900 dark:text-white/60">acabados premium y detalle profesional.</span>
-                </p>
-                <div class="mt-8 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-1000 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-            </div>
-        </div>
-
-        <div class="max-w-7xl mx-auto mt-32 text-center relative z-10">
-            <router-link to="/project/init" class="inline-flex items-center gap-6 px-16 py-7 bg-slate-900 dark:bg-white text-white dark:text-gray-950 rounded-full font-black text-xs uppercase tracking-[0.4em] hover:bg-emerald-500 dark:hover:bg-emerald-500 hover:text-white transition-all duration-500 shadow-[0_20px_50px_-10px_rgba(16,185,129,0.3)] hover:scale-105">
-                <span class="btn-fade-in">INICIAR PROYECTO 3D <span class="text-xl">→</span></span>
-            </router-link>
-        </div>
-    </section>
-
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.03" height="50px" />
-
-    <!-- Sección: Marcas que Nos Respaldan (Brand Ticker) -->
-    <section v-intersection="'brandticker'" class="py-20 bg-gray-50 dark:bg-[#05080b] relative overflow-hidden transition-colors duration-500 min-h-[200px]">
-        <transition name="smooth-reveal">
-            <BrandTicker v-if="visibleSections['brandticker']" :visible="visibleSections['brandticker']" />
-        </transition>
-    </section>
-
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.04" height="60px" flip />
-
-    <!-- Sección: Proceso Artesanal -->
-    <section class="py-28 bg-slate-50 dark:bg-gray-950 relative overflow-hidden transition-colors duration-500">
-        <div class="absolute inset-0 opacity-10 dark:opacity-10 technical-grid pointer-events-none"></div>
-        <div class="absolute -right-40 top-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]"></div>
-        
-        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center px-6">
-            <div class="order-2 lg:order-1 space-y-12">
-                <div class="inline-flex items-center gap-4 px-6 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-                    <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.4em]">Acabado artesanal</span>
-                </div>
-                <h2 class="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-[0.9] fade-title">
-                    EL ARTE DE LA<br/>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400 italic">POST-PRODUCCIÓN.</span>
-                </h2>
-                <p class="text-slate-500 dark:text-white/50 text-xs md:text-sm font-bold uppercase tracking-[0.3em] leading-relaxed max-w-xl">
-                    Cada pieza pasa por un proceso de <span class="text-slate-900 dark:text-white">curado, lijado y acabado manual</span> para lograr superficies limpias, detalles definidos y una <span class="text-emerald-600 dark:text-emerald-400">apariencia premium.</span>
-                </p>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl">
-                    <div
-v-for="step in [
-                        {n: 'Curado UV Pro', code: 'UV', icon: '<svg class=\'w-7 h-7\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z\'/></svg>'}, 
-                        {n: 'Lijado fino', code: 'FINISH', icon: '<svg class=\'w-7 h-7\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z\'/></svg>'}, 
-                        {n: 'Imprimacion', code: 'BASE', icon: '<svg class=\'w-7 h-7\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10\'/></svg>'}, 
-                        {n: 'Aerografia', code: 'PREM', icon: '<svg class=\'w-7 h-7\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z\'/></svg>'}
-                    ]" :key="step.n" class="group flex flex-col items-center justify-center text-center gap-4 bg-white dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-6 rounded-[2rem] hover:border-emerald-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl relative overflow-hidden aspect-square">
-                        <div class="w-14 h-14 bg-slate-100 dark:bg-gray-900 rounded-2xl flex items-center justify-center group-hover:bg-emerald-500 transition-all duration-500 border border-slate-200 dark:border-white/5 shadow-inner">
-                            <span :innerHTML="sanitizeSVG(step.icon)" class="text-emerald-500 group-hover:text-white transition-all duration-500 group-hover:scale-110"></span>
-                        </div>
-                        <span class="text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-[0.2em] leading-tight max-w-[80px]">{{ step.n }}</span>
-                        <div class="absolute inset-x-0 bottom-0 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-700"></div>
-                    </div>
-                </div>
-
-            <!-- Botón: Ir a Galería debajo de Post-Producción -->
-            <div class="flex justify-center mt-16"><router-link
-to="/galeria"
-                class="group inline-flex items-center gap-6 px-16 py-7 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-full font-black text-xs uppercase tracking-[0.4em] hover:bg-emerald-500 dark:hover:bg-emerald-500 hover:text-white transition-all duration-500 shadow-[0_20px_50px_-10px_rgba(16,185,129,0.3)] hover:scale-105">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                <span class="relative z-10 flex items-center gap-4 btn-fade-in">
-                  VER GALERÍA
-                  <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                  </svg>
-                </span>
-              </router-link>
-            </div>
-            </div>
-            <div class="order-1 lg:order-2">
-                <div class="aspect-[4/3] bg-white/5 rounded-[4rem] overflow-hidden border border-white/10 shadow-2xl relative group transform hover:rotate-2 transition-all duration-700">
-                    <picture>
-                      <source srcset="/assets/n3xt_airbrush_process_hq_1778542148509.webp" type="image/webp" />
-                      <img src="/assets/n3xt_airbrush_process_hq_1778542148509.webp" alt="Proceso de aerografía y pintura artesanal en figuras 3D" width="1200" height="900" class="w-full h-full object-cover group-hover:scale-125 transition-transform duration-[2.5s]" loading="lazy" />
-                    </picture>
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.03" height="60px" />
-
-    <!-- Sección: Ecosistema N3XT 3D (Rediseño Premium Industrial) -->
-    <section v-intersection="'ecosystem'" class="py-28 bg-white dark:bg-[#0a0f14] px-6 relative overflow-hidden min-h-[600px]">
-        <transition name="smooth-reveal">
-            <div v-if="visibleSections['ecosystem']" class="w-full h-full">
-                <div class="absolute inset-0 technical-grid opacity-5 pointer-events-none"></div>
-                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 blur-[150px] rounded-full pointer-events-none"></div>
-                
-                <div class="max-w-7xl mx-auto mb-32 text-center relative z-10">
-                    <h2 class="text-5xl md:text-7xl font-black text-slate-400 dark:text-white/30 tracking-tighter uppercase leading-[0.9] mb-8 transition-all duration-500 fade-title">
-                        EL <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">ECOSISTEMA</span><br/>
-                        <span class="text-slate-500 dark:text-white/40">N3XT 3D.</span>
-                    </h2>
-                    <p class="text-xs md:text-sm text-gray-400 font-bold uppercase tracking-[0.3em]">Manufactura Avanzada • Cultura Maker • Innovación Digital</p>
-                </div>
-
-        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
-            <!-- Card Ecosistema — Estilo originui adaptado -->
-            <div
-v-for="(card, cidx) in webSettings.ecosystem" :key="cidx" 
-                 class="group bg-white dark:bg-white/5 rounded-[2.5rem] border border-gray-100 dark:border-white/10 hover:border-emerald-500/40 transition-all duration-500 flex flex-col shadow-lg hover:shadow-xl overflow-hidden">
-                
-                <!-- Imagen (clean, aspect-square, rounded-2xl como la referencia) -->
-                <div v-if="card.type === 'image'" class="relative p-4 pb-0">
-                    <div class="aspect-square w-full rounded-2xl overflow-hidden bg-gray-900 relative">
-                        <img
-:src="getImages(card.i)[activeIndices[cidx] ?? 0] || getImages(card.i)[0]"
-                             :alt="card.t1"
-                             class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                             loading="lazy"
-                             @error="(e: any) => e.target.style.display='none'" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <!-- Badge -->
-                        <div v-if="card.badge" class="absolute top-4 left-4 px-4 py-1.5 bg-emerald-500 text-white text-[9px] font-black rounded-full uppercase tracking-[0.3em] shadow-lg">{{ card.badge }}</div>
-                        <!-- Indicador carrusel -->
-                        <div v-if="getImages(card.i).length > 1" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-                            <div
-v-for="(_, dotIdx) in getImages(card.i)" :key="dotIdx" 
-                                 :class="['h-1.5 rounded-full transition-all duration-500', activeIndices[cidx] === dotIdx ? 'w-6 bg-emerald-400' : 'w-1.5 bg-white/30']"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Icono (clean icon container) -->
-                <div v-else-if="card.type === 'icon'" class="p-6 pb-0 flex justify-center">
-                    <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:border-emerald-500 transition-all duration-500">
-                        <span :innerHTML="sanitizeSVG(card.i)" class="text-emerald-400 group-hover:text-white transition-colors duration-500"></span>
-                    </div>
-                </div>
-
-                <!-- Content -->
-                <div class="p-6 flex-1 flex flex-col gap-4">
-                    <h3 class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic leading-tight">
-                        {{ card.t1 }}<br/>
-                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-400">{{ card.t2 }}</span>
-                    </h3>
-                    <p class="text-[11px] text-gray-400 font-bold uppercase leading-relaxed tracking-wide">
-                        {{ card.d }}
-                    </p>
-                </div>
-
-                <!-- Stats row (dinámico desde card.stats, con separadores verticales) -->
-                <div v-if="card.stats && card.stats.length" class="px-6 pb-4">
-                    <div class="flex items-center justify-around py-3.5 bg-gray-50 dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/5">
-                        <template v-for="(stat, si) in card.stats" :key="si">
-                            <!-- Separador vertical entre stats -->
-                            <div v-if="Number(si) > 0" class="w-px h-8 bg-gray-200 dark:bg-white/10"></div>
-                            <div class="flex flex-col items-center gap-1">
-                                <p class="text-base md:text-lg font-black text-gray-900 dark:text-white tracking-tight">{{ stat.val }}</p>
-                                <span class="text-[8px] md:text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em]">{{ stat.label }}</span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- CTA Button (rounded-full como referencia) -->
-                <div class="px-6 pb-6">
-                    <router-link
-                        :to="ecosystemLink(card)"
-                        class="group/btn flex items-center justify-center gap-3 w-full py-4 bg-gray-900 dark:bg-white/10 hover:bg-emerald-500 text-white rounded-full text-[9px] font-black uppercase tracking-[0.35em] transition-all duration-500 shadow-lg shadow-black/10">
-                        <span>Explorar</span>
-                        <svg class="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                    </router-link>
-                </div>
-            </div>
-        </div>
-        </div>
-        </transition>
-    </section>
-
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.04" height="50px" />
-
-    <!-- Sección: Trabajos Destacados de la Galería (N3XT Portfolio) -->
-    <section v-if="webSettings.gallery && webSettings.gallery.length > 0" class="py-28 bg-white dark:bg-[#0a0f14] px-6 relative overflow-hidden transition-colors duration-500">
-      <div class="max-w-7xl mx-auto">
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-          <div>
-            <div class="inline-flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 mb-6">
-              <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
-              <span class="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Portafolio</span>
-            </div>
-            <h2 class="split-title text-5xl md:text-7xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-[0.9]">
-              Trabajos <span class="text-emerald-500">Destacados</span>
-            </h2>
           </div>
-          <router-link to="/galeria" class="group flex items-center gap-4 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-emerald-500 transition-all">
-            Ver Galería Completa
-            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-          </router-link>
+
+          <div data-hero-item class="lg:col-span-5">
+            <div class="aspect-[4/3] lg:aspect-[4/5] overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface-2">
+              <img
+                src="/assets/n3xt_industrial_maker_figures_1778542131405.webp"
+                alt="Figuras coleccionables de anime y videojuegos fabricadas por N3XT 3D"
+                width="1200"
+                height="1200"
+                fetchpriority="high"
+                class="w-full h-full object-cover"
+              />
+            </div>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Cifras -->
+        <dl class="mt-14 md:mt-16 pt-8 border-t border-line grid grid-cols-3 gap-6 max-w-3xl">
+          <div v-for="stat in highlights" :key="stat.label" class="flex flex-col-reverse">
+            <dt class="mt-1 text-sm text-muted">{{ stat.label }}</dt>
+            <dd class="text-3xl font-extrabold tracking-tight text-ink tabular-nums">{{ stat.val }}</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Qué hacemos -->
+    <section class="py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl">
+          <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">Qué hacemos</h2>
+          <p class="mt-4 text-lg text-muted">
+            Piezas únicas o pequeñas series. Tú traes la idea; nosotros elegimos el material y la tecnología que mejor le sirven.
+          </p>
+        </div>
+
+        <div class="mt-12 grid gap-6 md:grid-cols-3">
+          <article class="flex flex-col p-6 bg-surface border border-line rounded-[var(--radius-card)]">
+            <div class="flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] bg-surface-2 text-brand" aria-hidden="true">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+            </div>
+            <h3 class="mt-5 text-lg md:text-xl font-extrabold tracking-tight text-ink">Figuras coleccionables</h3>
+            <p class="mt-2 text-[0.9375rem] leading-relaxed text-muted flex-1">Personajes y miniaturas en resina de alta resolución, listos para exhibir o pintados a mano.</p>
+            <ul class="mt-5 flex flex-wrap gap-2">
+              <li v-for="tag in ['Resina SLA', 'Aerografía', 'Detalle 8K']" :key="tag" class="inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-surface-2 text-ink">{{ tag }}</li>
+            </ul>
+          </article>
+
+          <article class="flex flex-col p-6 bg-surface border border-line rounded-[var(--radius-card)]">
+            <div class="flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] bg-surface-2 text-brand" aria-hidden="true">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <h3 class="mt-5 text-lg md:text-xl font-extrabold tracking-tight text-ink">Impresión multimaterial</h3>
+            <p class="mt-2 text-[0.9375rem] leading-relaxed text-muted flex-1">Piezas en resina y filamento con una flota de impresoras profesionales para cada tipo de trabajo.</p>
+            <ul class="mt-5 flex flex-wrap gap-2">
+              <li v-for="tag in ['Bambu Lab', 'Elegoo', 'Creality', 'Anycubic']" :key="tag" class="inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-surface-2 text-ink">{{ tag }}</li>
+            </ul>
+          </article>
+
+          <article class="flex flex-col p-6 bg-surface border border-line rounded-[var(--radius-card)]">
+            <div class="flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] bg-surface-2 text-brand" aria-hidden="true">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
+            </div>
+            <h3 class="mt-5 text-lg md:text-xl font-extrabold tracking-tight text-ink">Prototipos funcionales</h3>
+            <p class="mt-2 text-[0.9375rem] leading-relaxed text-muted flex-1">Carcasas, soportes y repuestos para probar un diseño antes de producirlo.</p>
+            <ul class="mt-5 flex flex-wrap gap-2">
+              <li v-for="tag in ['Ingeniería', 'Nylon / PETG', 'Pruebas de resistencia']" :key="tag" class="inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-surface-2 text-ink">{{ tag }}</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Proceso -->
+    <section class="py-16 md:py-24 bg-surface border-y border-line">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl">
+          <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">Cómo trabajamos</h2>
+          <p class="mt-4 text-lg text-muted">De la idea a la pieza en tus manos, en cuatro pasos.</p>
+        </div>
+
+        <ol class="mt-12 grid gap-10 lg:grid-cols-4 lg:gap-8">
+          <li v-for="(step, i) in processSteps" :key="step.t" class="relative pl-14 lg:pl-0 lg:pt-14">
+            <span class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-full border border-line bg-canvas text-base font-semibold text-ink tabular-nums" aria-hidden="true">{{ i + 1 }}</span>
+            <span
+              v-if="i < processSteps.length - 1"
+              class="absolute left-5 top-12 -bottom-8 w-px bg-line lg:left-12 lg:top-5 lg:bottom-auto lg:-right-6 lg:h-px lg:w-auto"
+              aria-hidden="true"
+            ></span>
+            <h3 class="text-lg md:text-xl font-extrabold tracking-tight text-ink">{{ step.t }}</h3>
+            <p class="mt-2 text-[0.9375rem] leading-relaxed text-muted">{{ step.d }}</p>
+          </li>
+        </ol>
+
+        <div class="mt-12">
+          <router-link to="/project/init" class="btn-primary btn-lg">Iniciar un proyecto</router-link>
+        </div>
+      </div>
+    </section>
+
+    <!-- Marcas -->
+    <section v-intersection="'brandticker'" class="py-16 min-h-[200px]">
+      <transition name="smooth-reveal">
+        <BrandTicker v-if="visibleSections['brandticker']" :visible="visibleSections['brandticker']" />
+      </transition>
+    </section>
+
+    <WaveDivider />
+
+    <!-- Acabado artesanal -->
+    <section class="py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid gap-12 lg:grid-cols-2 lg:items-center">
+        <div>
+          <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">Acabado a mano</h2>
+          <p class="mt-4 max-w-prose text-lg text-muted">
+            Cada pieza pasa por curado, lijado y acabado manual para llegar con superficies limpias y detalles definidos.
+          </p>
+          <ul class="mt-8 grid grid-cols-2 gap-4 max-w-md">
+            <li v-for="step in finishingSteps" :key="step.n" class="flex items-center gap-3 p-4 bg-surface border border-line rounded-[var(--radius-card)]">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-surface-2 text-brand" aria-hidden="true" :innerHTML="sanitizeSVG(step.icon)"></span>
+              <span class="text-[0.9375rem] font-medium text-ink">{{ step.n }}</span>
+            </li>
+          </ul>
+          <div class="mt-10">
+            <router-link to="/galeria" class="btn-secondary">Ver galería</router-link>
+          </div>
+        </div>
+        <div class="aspect-[4/3] overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface-2">
+          <img
+            src="/assets/n3xt_airbrush_process_hq_1778542148509.webp"
+            alt="Proceso de aerografía y pintura artesanal en figuras 3D"
+            width="1200"
+            height="900"
+            class="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Ecosistema -->
+    <section v-intersection="'ecosystem'" class="py-16 md:py-24 bg-surface border-y border-line min-h-[600px]">
+      <transition name="smooth-reveal">
+        <div v-if="visibleSections['ecosystem']" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="max-w-2xl">
+            <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">El ecosistema N3XT</h2>
+            <p class="mt-4 text-lg text-muted">Taller, tienda y comunidad: tres formas de trabajar con nosotros.</p>
+          </div>
+
+          <div class="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <article
+              v-for="(card, cidx) in webSettings.ecosystem" :key="cidx"
+              class="flex flex-col overflow-hidden bg-canvas border border-line rounded-[var(--radius-card)] transition-colors hover:border-brand/40"
+            >
+              <div class="relative aspect-[4/3] overflow-hidden bg-surface-2">
+                <template v-if="card.type === 'image'">
+                  <img
+                    :src="getImages(card.i)[activeIndices[cidx] ?? 0] || getImages(card.i)[0]"
+                    :alt="card.t1 + ' ' + card.t2"
+                    class="w-full h-full object-cover"
+                    loading="lazy"
+                    @error="(e: any) => e.target.style.display='none'"
+                  />
+                  <span v-if="card.badge" class="absolute top-3 left-3 inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-surface text-ink">{{ card.badge }}</span>
+                  <div v-if="getImages(card.i).length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5" aria-hidden="true">
+                    <span
+                      v-for="(_, dotIdx) in getImages(card.i)" :key="dotIdx"
+                      :class="['h-1.5 rounded-full transition-all duration-300', activeIndices[cidx] === dotIdx ? 'w-5 bg-white' : 'w-1.5 bg-white/50']"
+                    ></span>
+                  </div>
+                </template>
+                <div v-else-if="card.type === 'icon'" class="absolute inset-0 flex items-center justify-center text-brand technical-grid">
+                  <span class="flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-surface border border-line" :innerHTML="sanitizeSVG(card.i)"></span>
+                </div>
+              </div>
+
+              <div class="p-5 flex flex-1 flex-col">
+                <h3 class="text-lg md:text-xl font-extrabold tracking-tight text-ink">{{ card.t1 }} {{ card.t2 }}</h3>
+                <p class="mt-2 text-[0.9375rem] leading-relaxed text-muted line-clamp-2 flex-1">{{ card.d }}</p>
+                <router-link :to="ecosystemLink(card)" class="mt-4 self-start text-[0.9375rem] font-medium text-brand hover:underline underline-offset-4">
+                  Conocer más
+                </router-link>
+              </div>
+            </article>
+          </div>
+        </div>
+      </transition>
+    </section>
+
+    <!-- Trabajos destacados -->
+    <section v-if="webSettings.gallery && webSettings.gallery.length > 0" class="py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div class="max-w-2xl">
+            <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">Trabajos destacados</h2>
+            <p class="mt-4 text-lg text-muted">Algunas piezas que han salido del taller.</p>
+          </div>
+          <router-link to="/galeria" class="text-[0.9375rem] font-medium text-brand hover:underline underline-offset-4">Ver toda la galería</router-link>
+        </div>
+
+        <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <component
             :is="work.title ? 'router-link' : 'div'"
             v-for="(work, idx) in (webSettings.gallery.filter(g => g.featured).length > 0 ? webSettings.gallery.filter(g => g.featured) : webSettings.gallery).slice(0, 6)" :key="idx"
             :to="work.title ? '/galeria/' + encodeURIComponent(work.title) : undefined"
-            class="group bg-white dark:bg-white/5 rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-white/10 hover:border-emerald-500/40 transition-all duration-500 shadow-sm hover:shadow-xl hover:-translate-y-1">
-            <!-- Image -->
-              <div class="p-4 pb-0">
-                <div class="aspect-square rounded-2xl overflow-hidden relative bg-gray-100 dark:bg-gray-800">
-                  <!-- Imagen Secundaria (aparece en hover si existe) -->
-                  <img
-                    v-if="work.images && work.images.length > 0"
-                    :src="getOptimizedImage(work.images[0])"
-                    class="absolute inset-0 w-full h-full object-cover scale-110 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700 z-10"
-                    loading="lazy"
-                  />
-                  <!-- Imagen Principal -->
-                  <img
-                    v-if="!brokenGalleryImgs[idx]"
-                    :src="getOptimizedImage(work.image)" :alt="work.title"
-                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 relative z-0"
-                    loading="lazy"
-                    @error="brokenGalleryImgs[idx] = true"
-                  />
-                  <div v-if="!work.image || brokenGalleryImgs[idx]" class="absolute inset-0 flex items-center justify-center">
-                  <svg class="w-12 h-12 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                </div>
-                <div class="absolute top-3 left-3 px-3 py-1 bg-emerald-500/90 text-white text-[7px] font-black rounded-full uppercase tracking-[0.25em] shadow-lg">{{ work.category }}</div>
+            class="group flex flex-col overflow-hidden bg-surface border border-line rounded-[var(--radius-card)] transition-colors hover:border-brand/40"
+          >
+            <div class="relative aspect-[4/3] overflow-hidden bg-surface-2">
+              <!-- Imagen secundaria (aparece en hover si existe) -->
+              <img
+                v-if="work.images && work.images.length > 0"
+                :src="getOptimizedImage(work.images[0])"
+                alt=""
+                class="absolute inset-0 z-10 w-full h-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                loading="lazy"
+              />
+              <img
+                v-if="!brokenGalleryImgs[idx]"
+                :src="getOptimizedImage(work.image)" :alt="work.title"
+                class="w-full h-full object-cover"
+                loading="lazy"
+                @error="brokenGalleryImgs[idx] = true"
+              />
+              <div v-if="!work.image || brokenGalleryImgs[idx]" class="absolute inset-0 flex items-center justify-center text-muted" aria-hidden="true">
+                <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               </div>
             </div>
-            <!-- Info -->
-            <div class="p-6 text-center">
-              <h3 class="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-tight group-hover:text-emerald-500 transition-colors">{{ work.title }}</h3>
-              <p v-if="work.subtitle" class="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1.5">{{ work.subtitle }}</p>
-              <!-- Tags -->
-              <div v-if="normalizeTags(work.tags).length > 0" class="flex flex-wrap justify-center gap-1.5 mt-3">
-                <span v-for="tag in normalizeTags(work.tags).slice(0, 3)" :key="tag" class="text-[6px] font-black px-2 py-0.5 bg-gray-100 dark:bg-white/5 rounded-full uppercase tracking-[0.15em] text-gray-500">{{ tag }}</span>
-              </div>
-              <div v-if="work.title" class="mt-4 w-full py-3.5 bg-gray-950 dark:bg-white/10 text-white rounded-full text-[8px] font-black uppercase tracking-[0.3em] group-hover:bg-emerald-500 transition-all duration-500 shadow-lg">
-                Ver Proyecto
-              </div>
+            <div class="p-5 flex flex-1 flex-col">
+              <p v-if="work.category" class="text-xs text-muted">{{ work.category }}</p>
+              <h3 class="mt-1 text-lg md:text-xl font-extrabold tracking-tight text-ink">{{ work.title }}</h3>
+              <p v-if="work.subtitle" class="mt-2 text-[0.9375rem] text-muted line-clamp-2 flex-1">{{ work.subtitle }}</p>
+              <span v-if="work.title" class="mt-4 text-[0.9375rem] font-medium text-brand group-hover:underline underline-offset-4">Ver proyecto</span>
             </div>
           </component>
         </div>
       </div>
     </section>
 
-        <!-- Sección: Social Media Hub (Tus últimas publicaciones) -->
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.03" height="50px" />
-
-    <!-- SECCIÓN 1: NOVEDADES 3D COLOMBIA (Editorial) -->
-    <section v-if="webSettings.news.length > 0" id="news" v-intersection="'news'" class="py-28 px-6 md:px-12 bg-white dark:bg-[#0a0f14] relative overflow-hidden transition-colors duration-500 min-h-[600px]">
-        <transition name="smooth-reveal">
-            <div v-if="visibleSections['news']" class="w-full h-full">
-                <div class="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
-                
-                <div class="max-w-7xl mx-auto mb-24 flex flex-col md:flex-row md:items-end justify-between gap-8">
-                    <div class="relative z-10">
-                        <div class="inline-flex items-center gap-3 px-5 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/30 mb-6 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                            <span class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_12px_#10b981]"></span>
-                            <span class="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-[0.4em]">NOTICIAS LOCALES</span>
-                        </div>
-                        <h2 class="text-5xl md:text-7xl font-black text-slate-400 dark:text-white/30 tracking-tighter uppercase leading-[0.9] mb-4 transition-all duration-500 fade-title">
-                            NOVEDADES <br class="md:hidden"/> <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">3D COLOMBIA</span>
-                        </h2>
-                        <p class="text-xs md:text-sm text-slate-500 dark:text-gray-500 font-bold uppercase tracking-[0.3em] flex items-center gap-3">
-                            <span class="w-8 h-[2px] bg-emerald-500"></span>
-                            El pulso de la manufactura nacional
-                        </p>
-                    </div>
-                    <a href="https://www.3dnatives.com/es/" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest hover:text-primary transition-all">
-                        Explorar Más Noticias
-                        <span class="w-12 h-12 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all text-xl">→</span>
-                    </a>
-                </div>
-
-                <!-- Skeleton Loader during fetch -->
-                <div v-if="!isReady" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div v-for="i in 4" :key="i" class="bg-gray-100 dark:bg-white/5 rounded-[2.5rem] animate-pulse overflow-hidden">
-                        <div class="p-4">
-                            <div class="aspect-square w-full rounded-2xl bg-gray-200 dark:bg-white/10"></div>
-                        </div>
-                        <div class="p-5 space-y-3">
-                            <div class="h-4 w-3/4 bg-gray-200 dark:bg-white/10 rounded-full"></div>
-                            <div class="h-3 w-full bg-gray-200 dark:bg-white/10 rounded-full"></div>
-                            <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/10 rounded-full"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-else class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div
-v-for="(item, idx) in webSettings.news" :key="item.t" 
-                        class="group bg-white dark:bg-white/5 rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-white/10 hover:border-emerald-500/40 transition-all duration-500 flex flex-col shadow-lg hover:shadow-xl"
-                        :style="{ animationDelay: (idx * 150) + 'ms' }">
-                        <!-- Imagen clean aspect-square rounded-2xl como referencia -->
-                        <div class="p-4 pb-0">
-                            <div class="aspect-square w-full rounded-2xl overflow-hidden relative bg-gray-100 dark:bg-gray-800">
-                                <img
-:src="item.i" 
-                                     :alt="'Noticia: ' + item.t"
-                                     class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                     loading="lazy"
-                                     @error="(e: any) => e.target.src = 'https://images.unsplash.com/photo-1631033031102-f855d4872494?auto=format&fit=crop&q=80&w=800'"
-                                />
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                                <div class="absolute top-3 left-3">
-                                    <span class="px-3.5 py-1.5 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-[0.25em] rounded-full shadow-lg shadow-emerald-500/20">{{ item.tag }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Content -->
-                        <div class="p-5 flex-1 flex flex-col gap-3">
-                            <h4 class="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight leading-tight group-hover:text-emerald-500 transition-colors">{{ item.t }}</h4>
-                            <p class="text-[10px] text-gray-400 font-bold leading-relaxed uppercase tracking-tight flex-1">{{ item.d }}</p>
-                            <!-- CTA rounded-full como referencia -->
-                            <a
-                               v-if="isRealUrl(item.url)"
-                               :href="item.url" target="_blank" rel="noopener noreferrer"
-                               class="mt-2 flex items-center justify-center gap-2 w-full py-3.5 bg-gray-900 dark:bg-white/10 hover:bg-emerald-500 text-white rounded-full text-[8px] font-black uppercase tracking-[0.35em] transition-all duration-500 shadow-md">
-                                <span>Leer</span>
-                                <svg class="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                            </a>
-                        </div>
-                    </div>
-                </div>
+    <!-- Novedades -->
+    <WaveDivider v-if="webSettings.news.length > 0 && webSettings.gallery.length > 0" />
+    <section v-if="webSettings.news.length > 0" id="news" v-intersection="'news'" class="py-16 md:py-24 min-h-[600px]">
+      <transition name="smooth-reveal">
+        <div v-if="visibleSections['news']" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div class="max-w-2xl">
+              <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">Novedades de la impresión 3D en Colombia</h2>
+              <p class="mt-4 text-lg text-muted">Lo que está pasando en la manufactura digital del país.</p>
             </div>
-        </transition>
+            <a href="https://www.3dnatives.com/es/" target="_blank" rel="noopener noreferrer" class="text-[0.9375rem] font-medium text-brand hover:underline underline-offset-4">Más noticias en 3Dnatives</a>
+          </div>
+
+          <!-- Esqueleto mientras carga -->
+          <div v-if="!isReady" class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div v-for="i in 4" :key="i" class="overflow-hidden bg-surface border border-line rounded-[var(--radius-card)]">
+              <div class="aspect-[4/3] bg-surface-2 animate-pulse"></div>
+              <div class="p-5 space-y-3">
+                <div class="h-5 w-3/4 rounded bg-surface-2 animate-pulse"></div>
+                <div class="h-4 w-full rounded bg-surface-2 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <article
+              v-for="item in webSettings.news" :key="item.t"
+              class="flex flex-col overflow-hidden bg-surface border border-line rounded-[var(--radius-card)] transition-colors hover:border-brand/40"
+            >
+              <div class="aspect-[4/3] overflow-hidden bg-surface-2">
+                <img
+                  :src="item.i"
+                  :alt="'Noticia: ' + item.t"
+                  class="w-full h-full object-cover"
+                  loading="lazy"
+                  @error="(e: any) => e.target.style.display='none'"
+                />
+              </div>
+              <div class="p-5 flex flex-1 flex-col">
+                <p v-if="item.tag" class="text-xs text-muted">{{ item.tag }}</p>
+                <h3 class="mt-1 text-lg md:text-xl font-extrabold tracking-tight text-ink">{{ item.t }}</h3>
+                <p class="mt-2 text-[0.9375rem] leading-relaxed text-muted line-clamp-2 flex-1">{{ item.d }}</p>
+                <a
+                  v-if="isRealUrl(item.url)"
+                  :href="item.url" target="_blank" rel="noopener noreferrer"
+                  class="mt-4 self-start text-[0.9375rem] font-medium text-brand hover:underline underline-offset-4"
+                >Leer nota</a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </transition>
     </section>
 
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.03" height="50px" flip />
-
-    <!-- SECCIÓN 2: SOCIAL HUB N3XT (TikTok/Instagram Feed) -->
-    <section v-if="webSettings.posts.length > 0" class="py-28 bg-white dark:bg-[#0a0f14] px-6 overflow-hidden relative transition-colors duration-500">
-        <div class="absolute inset-0 technical-grid opacity-5 pointer-events-none"></div>
-        
-        <div class="max-w-7xl mx-auto text-center mb-24 relative z-10">
-            <div class="inline-flex items-center gap-3 px-5 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/30 mb-8 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                <span class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_12px_#10b981]"></span>
-                <span class="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-[0.4em]">REDES SOCIALES</span>
-            </div>
-            <h2 class="text-5xl md:text-7xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-[0.9] mb-12 fade-title">NOVEDADES<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">EN TIEMPO REAL.</span></h2>
-            
-            <div class="flex flex-wrap justify-center gap-6 md:gap-8 items-center mb-20">
-                <a v-if="isRealUrl(webSettings.social.tiktok)" :href="webSettings.social.tiktok" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 bg-white dark:bg-white/5 px-8 py-4 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-primary/50 transition-all">
-                    <svg class="w-5 h-5 text-black dark:text-white group-hover:scale-125 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-1.13-.32-2.43-.23-3.41.45-.83.53-1.33 1.47-1.38 2.44-.01.52.16 1.03.45 1.46.39.58 1.02.95 1.7 1.02 1.3.16 2.61-.41 3.17-1.58.34-.7.4-1.5.39-2.28-.02-5.91-.01-11.83-.01-17.74z"/></svg>
-                    <span class="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">TikTok</span>
-                </a>
-                <a v-if="isRealUrl(webSettings.social.instagram)" :href="webSettings.social.instagram" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 bg-white dark:bg-white/5 px-8 py-4 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-primary/50 transition-all">
-                    <svg class="w-5 h-5 text-rose-500 group-hover:scale-125 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.058-1.69-.072-4.949-.072zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c.796 0 1.441.645 1.441 1.44s-.645 1.44-1.441 1.44c-.795 0-1.439-.645-1.439-1.44s.644-1.44 1.439-1.44z"/></svg>
-                    <span class="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Instagram</span>
-                </a>
-                <a v-if="isRealUrl(webSettings.social.youtube)" :href="webSettings.social.youtube" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 bg-white dark:bg-white/5 px-8 py-4 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-rose-500/50 transition-all">
-                    <svg class="w-5 h-5 text-red-600 group-hover:scale-125 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                    <span class="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">YouTube</span>
-                </a>
-            </div>
-        </div>
-        
-        <!-- Skeleton Loader Social -->
-        <div v-if="!isReady" class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-            <div v-for="i in 4" :key="i" class="bg-white dark:bg-gray-900 rounded-[2.5rem] animate-pulse overflow-hidden">
-                <div class="p-4">
-                    <div class="aspect-square w-full rounded-2xl bg-gray-200 dark:bg-white/10"></div>
-                </div>
-                <div class="p-5 space-y-3">
-                    <div class="h-4 w-3/4 bg-gray-200 dark:bg-white/10 rounded-full"></div>
-                    <div class="h-3 w-full bg-gray-200 dark:bg-white/10 rounded-full"></div>
-                </div>
-            </div>
+    <!-- Redes sociales -->
+    <WaveDivider v-if="webSettings.posts.length > 0 && (webSettings.news.length > 0 || webSettings.gallery.length > 0)" />
+    <section v-if="webSettings.posts.length > 0" class="py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div class="max-w-2xl">
+            <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">En redes</h2>
+            <p class="mt-4 text-lg text-muted">Lo último que hemos publicado desde el taller.</p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <a v-if="isRealUrl(webSettings.social.tiktok)" :href="webSettings.social.tiktok" target="_blank" rel="noopener noreferrer" class="btn-outlined btn-sm">
+              <svg class="w-4 h-4" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-1.13-.32-2.43-.23-3.41.45-.83.53-1.33 1.47-1.38 2.44-.01.52.16 1.03.45 1.46.39.58 1.02.95 1.7 1.02 1.3.16 2.61-.41 3.17-1.58.34-.7.4-1.5.39-2.28-.02-5.91-.01-11.83-.01-17.74z"/></svg>
+              TikTok
+            </a>
+            <a v-if="isRealUrl(webSettings.social.instagram)" :href="webSettings.social.instagram" target="_blank" rel="noopener noreferrer" class="btn-outlined btn-sm">
+              <svg class="w-4 h-4" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.058-1.69-.072-4.949-.072zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c.796 0 1.441.645 1.441 1.44s-.645 1.44-1.441 1.44c-.795 0-1.439-.645-1.439-1.44s.644-1.44 1.439-1.44z"/></svg>
+              Instagram
+            </a>
+            <a v-if="isRealUrl(webSettings.social.youtube)" :href="webSettings.social.youtube" target="_blank" rel="noopener noreferrer" class="btn-outlined btn-sm">
+              <svg class="w-4 h-4" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+              YouTube
+            </a>
+          </div>
         </div>
 
-        <div v-else class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-            <div
-v-for="(post, idx) in webSettings.posts" :key="post.t" 
-                 class="group bg-white dark:bg-gray-900 rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-white/5 hover:border-emerald-500/40 transition-all duration-500 flex flex-col shadow-lg hover:shadow-xl"
-                 :style="{ animationDelay: (idx * 200) + 'ms' }">
-                
-                <!-- Imagen clean aspect-square rounded-2xl como referencia -->
-                <div class="p-4 pb-0">
-                    <div class="aspect-square w-full rounded-2xl overflow-hidden relative bg-gray-100 dark:bg-gray-800">
-                        <img :src="post.i" :alt="'Publicación social de ' + post.t" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <!-- Likes badge -->
-                        <div class="absolute bottom-3 right-3 bg-black/50 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
-                            <svg class="w-3 h-3 text-rose-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                            <span class="text-[9px] font-black text-white uppercase">{{ post.l }}</span>
-                        </div>
-                        <!-- Tag badge -->
-                        <div v-if="post.tag" class="absolute top-3 left-3 px-3 py-1.5 bg-emerald-500/90 text-white text-[7px] font-black rounded-full uppercase tracking-[0.25em]">{{ post.tag }}</div>
-                    </div>
-                </div>
-
-                <!-- Content -->
-                <div class="p-5 flex-1 flex flex-col gap-2">
-                    <!-- Header con avatar y nombre (más compacto) -->
-                    <div class="flex items-center gap-2.5 mb-1">
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[9px] font-black text-gray-900 dark:text-white uppercase tracking-wider">{{ webSettings.company_name }}</span>
-                            <svg class="w-3 h-3 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/></svg>
-                        </div>
-                    </div>
-
-                    <h4 class="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight leading-tight group-hover:text-emerald-500 transition-colors">{{ post.t }}</h4>
-                    <p class="text-[9px] text-gray-400 font-bold uppercase leading-relaxed flex-1">{{ post.d }}</p>
-
-                    <!-- Stats row con separadores verticales (como referencia) -->
-                    <div class="flex items-center justify-around py-2.5 mt-2 bg-gray-50 dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/5">
-                        <div class="flex flex-col items-center gap-0.5">
-                            <span class="text-[10px] font-black text-gray-900 dark:text-white">{{ post.l }}</span>
-                            <span class="text-[7px] font-bold text-gray-400 uppercase tracking-wider">Me Gusta</span>
-                        </div>
-                    </div>
-
-                    <!-- CTA rounded-full como referencia -->
-                    <a
-                       v-if="isRealUrl(post.url)"
-                       :href="post.url" target="_blank" rel="noopener noreferrer"
-                       class="mt-1 flex items-center justify-center gap-2 w-full py-3 bg-gray-900 dark:bg-white/10 hover:bg-emerald-500 text-white rounded-full text-[8px] font-black uppercase tracking-[0.35em] transition-all duration-500 shadow-md">
-                        <span>Ver Post</span>
-                        <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                    </a>
-                </div>
+        <!-- Esqueleto mientras carga -->
+        <div v-if="!isReady" class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div v-for="i in 4" :key="i" class="overflow-hidden bg-surface border border-line rounded-[var(--radius-card)]">
+            <div class="aspect-[4/3] bg-surface-2 animate-pulse"></div>
+            <div class="p-5 space-y-3">
+              <div class="h-5 w-3/4 rounded bg-surface-2 animate-pulse"></div>
+              <div class="h-4 w-full rounded bg-surface-2 animate-pulse"></div>
             </div>
+          </div>
         </div>
+
+        <div v-else class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <article
+            v-for="post in webSettings.posts" :key="post.t"
+            class="flex flex-col overflow-hidden bg-surface border border-line rounded-[var(--radius-card)] transition-colors hover:border-brand/40"
+          >
+            <div class="aspect-[4/3] overflow-hidden bg-surface-2">
+              <img :src="post.i" :alt="'Publicación de ' + webSettings.company_name + ': ' + post.t" class="w-full h-full object-cover" loading="lazy" @error="(e: any) => e.target.style.display='none'" />
+            </div>
+            <div class="p-5 flex flex-1 flex-col">
+              <p class="text-xs text-muted">{{ post.tag || webSettings.company_name }}</p>
+              <h3 class="mt-1 text-lg md:text-xl font-extrabold tracking-tight text-ink">{{ post.t }}</h3>
+              <p class="mt-2 text-[0.9375rem] leading-relaxed text-muted line-clamp-2 flex-1">{{ post.d }}</p>
+              <a
+                v-if="isRealUrl(post.url)"
+                :href="post.url" target="_blank" rel="noopener noreferrer"
+                class="mt-4 self-start text-[0.9375rem] font-medium text-brand hover:underline underline-offset-4"
+              >Ver publicación</a>
+            </div>
+          </article>
+        </div>
+      </div>
     </section>
-
-    <!-- Wave Divider -->
-    <WaveDivider color="#10b981" opacity="0.04" height="80px" />
 
     <AppFooter />
   </div>
 </template>
 
 <style scoped>
-.technical-grid {
-  background-size: 50px 50px;
-  background-image: 
-    linear-gradient(to right, rgba(30, 58, 52, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(30, 58, 52, 0.08) 1px, transparent 1px);
-}
-
-.dark .technical-grid {
-  background-image: 
-    linear-gradient(to right, rgba(30, 58, 52, 0.15) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(30, 58, 52, 0.15) 1px, transparent 1px);
-}
-
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.animate-gradient-shift {
-  animation: gradient-shift 5s ease infinite;
-}
-/* Transiciones Globales Ultra-Fluidas */
+/* Revelado de secciones diferidas: fundido simple, sin desplazamiento */
 .smooth-reveal-enter-active {
-    transition: all 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+  transition: opacity 0.4s ease;
 }
 .smooth-reveal-enter-from {
-    opacity: 0;
-    transform: translateY(100px) scale(0.95);
-}
-
-.fade-carousel-enter-active, .fade-carousel-leave-active {
-    transition: opacity 1.5s ease-in-out;
-}
-.fade-carousel-enter-from, .fade-carousel-leave-to {
-    opacity: 0;
-}
-
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 1s ease;
-}
-.fade-enter-from, .fade-leave-to {
   opacity: 0;
-}
-
-.hero-section-particles {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: -1;
-}
-
-/* Animación para títulos con gradiente (sin SplitText) */
-.fade-title {
-  opacity: 0;
-  animation: titleFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-
-@keyframes titleFadeIn {
-  0% {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Botones sin SplitText — fade-in limpio */
-.btn-fade-in {
-  animation: btnFadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-@keyframes btnFadeIn {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 </style>

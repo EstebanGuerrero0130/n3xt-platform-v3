@@ -324,9 +324,10 @@ p {
   border: 1px solid var(--glass-border);
 }
 
+@layer components {
 /* ─── Sistema de botones ───
-   Fuera de @layer a propósito: fija tamaño y tipografía aunque la vista
-   añada utilidades de tracking/uppercase heredadas. Variantes: .btn-lg, .btn-sm */
+   En @layer components para que utilidades como hidden/md:inline-flex/w-full
+   puedan ajustarlos. Variantes: .btn-lg, .btn-sm */
 .btn-primary,
 .btn-secondary,
 .btn-outlined,
@@ -454,6 +455,7 @@ p {
 .icon-btn-danger:hover {
   background-color: #c9253f;
   color: #fff;
+}
 }
 
 /* Typography Utilities */

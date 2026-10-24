@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { sanitizeSVG } from '../utils/sanitize'
 import { parsePrice, formatCOP } from '../utils/format'
 import { api } from '../services/api'
 import { useRevealAnim } from '../composables/useRevealAnim'
@@ -35,6 +34,9 @@ interface CatalogProduct {
   price?: string | number
   original_price?: string | number
   support_phone?: string
+  technology?: string
+  material?: string
+  dimensions?: string
 }
 
 const MAX_QUANTITY = 99
@@ -135,6 +137,24 @@ const isDiscounted = computed(() => {
   return p !== null && op !== null && p > 0 && p < op
 })
 
+const discountPct = computed(() => {
+  const p = parsePrice(product.value?.price)
+  const op = parsePrice(product.value?.original_price)
+  if (!isDiscounted.value || !p || !op) return 0
+  return Math.round((1 - p / op) * 100)
+})
+
+// Especificaciones: solo las que vienen del producto
+const specs = computed(() => {
+  const p = product.value
+  if (!p) return []
+  return [
+    { label: 'Tecnología', value: p.technology },
+    { label: 'Material', value: p.material },
+    { label: 'Dimensiones', value: p.dimensions },
+  ].filter((s): s is { label: string; value: string } => typeof s.value === 'string' && s.value.trim() !== '')
+})
+
 onMounted(() => {
   fetchProduct()
 })
@@ -149,183 +169,180 @@ watch(() => route.params.id, (newId, oldId) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white transition-colors duration-500 overflow-x-hidden">
+  <div class="min-h-screen bg-canvas text-ink overflow-x-hidden">
     <AppNavbar active-tab="catalog" subtext="Detalle de producto" />
 
-    <main class="max-w-7xl mx-auto px-6 py-12 md:py-20">
-      <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-2 gap-24 py-12 md:py-20 animate-in fade-in duration-500">
-          <!-- Skeleton Galeria -->
-          <div class="space-y-6 relative overflow-hidden rounded-[3rem]">
-             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent skeleton-scan z-10"></div>
-             <div class="aspect-square bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-[3.5rem]"></div>
-             <div class="grid grid-cols-4 gap-4">
-                <div v-for="i in 4" :key="i" class="aspect-square bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5"></div>
-             </div>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+      <!-- Cargando -->
+      <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16" aria-hidden="true">
+        <div class="space-y-4">
+          <div class="aspect-square bg-surface-2 animate-pulse rounded-[var(--radius-card)]"></div>
+          <div class="grid grid-cols-4 gap-3">
+            <div v-for="i in 4" :key="i" class="aspect-square bg-surface-2 animate-pulse rounded-[var(--radius-control)]"></div>
           </div>
-          <!-- Skeleton Info -->
-          <div class="space-y-10 relative overflow-hidden">
-             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent skeleton-scan z-10"></div>
-             <div class="w-32 h-8 bg-white dark:bg-white/5 rounded-full"></div>
-             <div class="w-full h-24 bg-white dark:bg-white/5 rounded-[2rem]"></div>
-             <div class="w-2/3 h-12 bg-white dark:bg-white/5 rounded-xl"></div>
-             <div class="grid grid-cols-2 gap-8">
-                <div v-for="i in 4" :key="i" class="h-24 bg-white dark:bg-white/5 rounded-[1.5rem]"></div>
-             </div>
-          </div>
+        </div>
+        <div class="space-y-4">
+          <div class="h-4 bg-surface-2 animate-pulse rounded w-24"></div>
+          <div class="h-12 bg-surface-2 animate-pulse rounded w-3/4"></div>
+          <div class="h-8 bg-surface-2 animate-pulse rounded w-1/3"></div>
+          <div class="h-4 bg-surface-2 animate-pulse rounded w-full mt-6"></div>
+          <div class="h-4 bg-surface-2 animate-pulse rounded w-5/6"></div>
+          <div class="h-12 bg-surface-2 animate-pulse rounded-[var(--radius-control)] w-full mt-8"></div>
+        </div>
       </div>
 
       <template v-else-if="product">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24 items-start">
-        <!-- Columna Galería -->
-        <div class="space-y-6 animate-in fade-in slide-in-from-left-4 duration-1000 lg:sticky lg:top-24">
-          <div class="aspect-square bg-gray-50 dark:bg-gray-900 rounded-[3rem] overflow-hidden border border-gray-100 dark:border-white/5 shadow-2xl relative group p-10 flex items-center justify-center">
-            <img v-if="(selectedImage || product.image) && !mainImageFailed" :src="selectedImage || product.image" :alt="'Detalle de producto 3D: ' + product.name + (product.category ? ' (' + product.category + ')' : '') + ' — N3XT 3D Shop'" class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-[2s]" fetchpriority="high" decoding="async" @error="mainImageFailed = true" />
-            <svg v-else class="w-24 h-24 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <!-- Cloudinary Optimization Note Tag (Invisible to user) -->
-            <div class="absolute top-8 right-8 px-4 py-2 bg-black/40 backdrop-blur-md rounded-xl border border-white/10">
-                <span class="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Alta definicion</span>
+        <router-link to="/catalog" class="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-brand transition-colors mb-8">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          Volver al catálogo
+        </router-link>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+          <!-- Galería -->
+          <div class="space-y-4 min-w-0 lg:sticky lg:top-24">
+            <div class="relative aspect-square bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden flex items-center justify-center p-6">
+              <img
+                v-if="(selectedImage || product.image) && !mainImageFailed"
+                :src="selectedImage || product.image"
+                :alt="'Detalle de producto 3D: ' + product.name + (product.category ? ' (' + product.category + ')' : '') + ' — N3XT 3D Shop'"
+                class="max-w-full max-h-full object-contain"
+                fetchpriority="high"
+                decoding="async"
+                @error="mainImageFailed = true" />
+              <svg v-else class="w-20 h-20 text-muted/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.25" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             </div>
-          </div>
-          <!-- Miniaturas -->
-          <div v-if="product.images && product.images.length > 1" class="grid grid-cols-4 gap-4">
-             <div v-for="(img, i) in product.images" :key="i" :class="[selectedImage === img ? 'border-primary opacity-100 ring-2 ring-primary/30' : 'border-gray-200 dark:border-white/10 opacity-50']" class="aspect-square bg-gray-100 dark:bg-white/5 rounded-2xl border overflow-hidden cursor-pointer hover:opacity-100 hover:border-primary transition-all" @click="selectedImage = img">
+
+            <!-- Miniaturas -->
+            <div v-if="product.images && product.images.length > 1" class="grid grid-cols-4 gap-3" role="group" aria-label="Imágenes del producto">
+              <button
+                v-for="(img, i) in product.images" :key="i"
+                type="button"
+                :aria-pressed="selectedImage === img"
+                :aria-label="'Ver imagen ' + (i + 1)"
+                :class="selectedImage === img ? 'border-primary' : 'border-line hover:border-muted'"
+                class="aspect-square bg-surface-2 rounded-[var(--radius-control)] border-2 overflow-hidden transition-colors"
+                @click="selectedImage = img">
                 <img :src="img" :alt="'Vista previa ' + (i + 1) + ' de ' + product.name + ' — N3XT 3D Shop'" class="w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
-             </div>
-          </div>
-        </div>
-
-        <!-- Columna Información -->
-        <div class="space-y-10 text-left animate-in fade-in slide-in-from-right-4 duration-1000">
-          <div>
-            <div class="inline-flex items-center gap-3 px-5 py-2 bg-emerald-500/20 dark:bg-emerald-500/10 rounded-full border border-emerald-500/40 dark:border-emerald-500/30 mb-8 shadow-[0_0_25px_rgba(16,185,129,0.3)] animate-pulse hover:animate-none transition-all cursor-default">
-                <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_12px_#34d399]"></span>
-                <span class="text-[10px] font-black text-emerald-400 dark:text-emerald-300 uppercase tracking-[0.4em] drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">{{ product.category }}</span>
-            </div>
-            <h1 class="split-title text-5xl md:text-7xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-[0.9] mb-4">
-              {{ product.name }}
-            </h1>
-            <div class="flex items-center gap-6">
-            <div class="flex items-end gap-6 mb-2">
-               <div class="relative group/price">
-                  <p class="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em] mb-1 ml-1 italic">Precio</p>
-                  <p class="text-5xl md:text-7xl font-black text-emerald-500 dark:text-emerald-400 tracking-tighter leading-none italic drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                    {{ formatCOP(product.price) }}
-                  </p>
-               </div>
-               <div v-if="isDiscounted" class="flex flex-col mb-1 animate-bounce">
-                  <p class="text-lg font-black text-gray-400 line-through opacity-40 leading-none mb-1 italic">{{ formatCOP(product.original_price) }}</p>
-                  <span class="text-[9px] font-black px-3 py-1 bg-rose-600 text-white rounded-lg uppercase tracking-widest shadow-lg shadow-rose-600/20">Ahorro Activo</span>
-               </div>
-            </div>
-            </div>
-          </div>
-
-          <p class="text-gray-500 dark:text-gray-400 text-sm md:text-base font-bold leading-relaxed">
-            {{ product.description }}
-          </p>
-
-          <!-- Specifications List -->
-          <div class="grid grid-cols-2 gap-6 pt-8 border-t border-gray-100 dark:border-white/5">
-             <div
-v-for="spec in [
-               {l: 'Tecnologia', v: 'Resina 8K / FDM Pro', c: 'text-primary', i: `<svg class='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z'/></svg>`},
-               {l: 'Material', v: 'Grado industrial', c: 'text-emerald-500', i: `<svg class='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'/></svg>`},
-               {l: 'Envio', v: 'Nacional (Colombia)', c: 'text-blue-500', i: `<svg class='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M12 19l9 2-9-18-9 18 9-2zm0 0v-8'/></svg>`},
-               {l: 'Garantia', v: '6 Meses N3XT', c: 'text-orange-500', i: `<svg class='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'/></svg>`}
-             ]" :key="spec.l" class="group/spec flex items-center gap-5 p-5 bg-gray-50 dark:bg-[#0f172a] rounded-[2rem] border border-transparent hover:border-primary/20 transition-all duration-500">
-                <div class="w-12 h-12 bg-white dark:bg-black/40 rounded-2xl flex items-center justify-center shadow-lg group-hover/spec:scale-110 group-hover/spec:bg-primary/10 transition-all" :innerHTML="sanitizeSVG(spec.i)">
-                </div>
-                <div>
-                   <p class="text-[8px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1">{{ spec.l }}</p>
-                   <p :class="['text-[10px] font-black uppercase tracking-widest italic', spec.c]">{{ spec.v }}</p>
-                </div>
-             </div>
-          </div>
-
-          <!-- Checkout Controls -->
-          <div class="pt-10 space-y-6">
-            <div class="flex items-center gap-6">
-              <div class="flex items-center bg-gray-100 dark:bg-[#0f172a] rounded-[1.5rem] p-1.5 border border-gray-200 dark:border-white/5">
-                <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl disabled:opacity-30" aria-label="Disminuir cantidad" :disabled="quantity <= 1" @click="quantity > 1 ? quantity-- : null">-</button>
-                <span class="w-14 text-center font-black text-xl italic tracking-tighter" aria-live="polite" aria-label="Cantidad">{{ quantity }}</span>
-                <button class="w-12 h-12 flex items-center justify-center text-xl font-black hover:text-primary transition-colors hover:bg-white/5 rounded-xl disabled:opacity-30" aria-label="Aumentar cantidad" :disabled="quantity >= MAX_QUANTITY" @click="quantity < MAX_QUANTITY ? quantity++ : null">+</button>
-              </div>
-              <p class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest max-w-[120px] leading-tight italic">Disponibilidad inmediata bajo pedido industrial</p>
-            </div>
-
-            <!-- IDENTIFICACION (NOMBRE PARA WHATSAPP) -->
-            <div class="space-y-3 p-6 bg-gray-100 dark:bg-[#0f172a] rounded-[2rem] border border-transparent dark:border-white/5">
-              <label for="product-customer-name" class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest block ml-2">Tu Nombre (Para identificarte en WhatsApp)</label>
-              <input id="product-customer-name" v-model="customerForm.name" type="text" autocomplete="name" placeholder="Ej. Juan Perez..." class="w-full bg-white dark:bg-black/40 border border-transparent dark:border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-gray-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-
-            <div class="flex flex-col gap-5">
-              <button class="split-btn w-full px-10 py-6 bg-emerald-500 text-white rounded-[2rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-3xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4 group" @click="checkoutWhatsApp">
-                <svg class="w-6 h-6 group-hover:rotate-12 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.67-1.618-.918-2.213-.242-.588-.487-.51-.67-.51-.172-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                <span>Adquirir por WhatsApp</span>
               </button>
             </div>
+          </div>
 
-            <div class="p-6 bg-emerald-500/5 rounded-3xl border border-emerald-500/10 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                    </div>
-                    <div>
-                        <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest">Soporte Técnico Especializado</p>
-                        <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">WhatsApp: {{ product.support_phone || companySettings.company?.phone || '+57 3118796416' }}</p>
-                    </div>
+          <!-- Información -->
+          <div class="min-w-0">
+            <p v-if="product.category" class="text-sm text-muted">
+              {{ product.category }}<template v-if="product.subcategory"> / {{ product.subcategory }}</template>
+            </p>
+            <h1 class="split-title mt-2 text-4xl sm:text-5xl font-extrabold tracking-tight text-ink break-words [overflow-wrap:anywhere]">
+              {{ product.name }}
+            </h1>
+
+            <div class="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-2">
+              <p class="text-3xl md:text-4xl font-semibold tabular-nums text-resin">{{ formatCOP(product.price) }}</p>
+              <template v-if="isDiscounted">
+                <p class="text-lg tabular-nums text-muted line-through"><span class="sr-only">Antes </span>{{ formatCOP(product.original_price) }}</p>
+                <span class="inline-flex items-center h-6 px-2 rounded-md text-xs font-semibold bg-surface-2 text-resin tabular-nums">-{{ discountPct }}%</span>
+              </template>
+            </div>
+
+            <p v-if="product.description" class="mt-6 max-w-prose text-base leading-relaxed text-ink whitespace-pre-line">
+              {{ product.description }}
+            </p>
+
+            <!-- Especificaciones (solo si vienen del producto) -->
+            <dl v-if="specs.length" class="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-line pt-6">
+              <div v-for="spec in specs" :key="spec.label">
+                <dt class="text-sm text-muted">{{ spec.label }}</dt>
+                <dd class="mt-1 font-medium text-ink">{{ spec.value }}</dd>
+              </div>
+            </dl>
+
+            <!-- Pedido -->
+            <div class="mt-8 pt-8 border-t border-line space-y-6">
+              <div>
+                <p id="product-quantity-label" class="block text-sm font-medium text-ink mb-2">Cantidad</p>
+                <div class="inline-flex items-center h-11 rounded-[var(--radius-control)] border border-line bg-surface" role="group" aria-labelledby="product-quantity-label">
+                  <button type="button" class="w-11 h-full flex items-center justify-center text-lg text-ink hover:bg-surface-2 rounded-l-[var(--radius-control)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Disminuir cantidad" :disabled="quantity <= 1" @click="quantity > 1 ? quantity-- : null">−</button>
+                  <span class="w-12 text-center font-semibold tabular-nums" aria-live="polite" aria-label="Cantidad">{{ quantity }}</span>
+                  <button type="button" class="w-11 h-full flex items-center justify-center text-lg text-ink hover:bg-surface-2 rounded-r-[var(--radius-control)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Aumentar cantidad" :disabled="quantity >= MAX_QUANTITY" @click="quantity < MAX_QUANTITY ? quantity++ : null">+</button>
                 </div>
-                <div class="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 rounded-full">
-                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                    <span class="text-[7px] font-black text-emerald-500 uppercase">En Línea</span>
-                </div>
+              </div>
+
+              <div>
+                <label for="product-customer-name" class="block text-sm font-medium text-ink mb-2">Tu nombre <span class="font-normal text-muted">(opcional, para saludarte en WhatsApp)</span></label>
+                <input
+                  id="product-customer-name"
+                  v-model="customerForm.name"
+                  type="text"
+                  autocomplete="name"
+                  placeholder="Ej. Juan Pérez"
+                  class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary">
+              </div>
+
+              <button type="button" class="split-btn btn-primary btn-lg w-full" @click="checkoutWhatsApp">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.67-1.618-.918-2.213-.242-.588-.487-.51-.67-.51-.172-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <span>Pedir por WhatsApp</span>
+              </button>
+
+              <ul class="space-y-2 text-sm text-muted">
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-brand shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  Envíos a todo Colombia
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-brand shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  Garantía de 6 meses
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-brand shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  <span>¿Dudas? Escríbenos al <span class="font-medium text-ink tabular-nums">{{ product.support_phone || companySettings.company?.phone || '+57 3118796416' }}</span></span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
-      </div>
-      <!-- Related Products Section -->
-      <div v-if="product && relatedProducts.length > 0" class="mt-40 pt-20 border-t border-gray-100 dark:border-white/5 reveal">
-         <div class="flex flex-col md:flex-row justify-between items-end gap-6 mb-16">
-            <div>
-               <h4 class="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic mb-2">Colecciones Similares</h4>
-               <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Piezas de la misma línea técnica o temática</p>
-            </div>
-            <router-link to="/catalog" class="text-[10px] font-black text-primary uppercase tracking-[0.4em] hover:tracking-[0.6em] transition-all flex items-center gap-3">
-               Ver Todo el Catálogo <span class="text-xl">→</span>
-            </router-link>
-         </div>
 
-         <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <router-link 
-               v-for="rel in relatedProducts" 
-               :key="productKey(rel)"
-               :to="'/catalog/' + encodeURIComponent(rel.name)"
-               class="group block space-y-6"
+        <!-- Relacionados -->
+        <section v-if="product && relatedProducts.length > 0" class="mt-20 md:mt-28 pt-12 border-t border-line reveal" aria-labelledby="related-heading">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+            <div>
+              <h2 id="related-heading" class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">Piezas similares</h2>
+              <p class="mt-2 text-muted">De la misma línea o temática.</p>
+            </div>
+            <router-link to="/catalog" class="text-sm font-medium text-brand hover:underline underline-offset-4">Ver todo el catálogo</router-link>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <router-link
+              v-for="rel in relatedProducts"
+              :key="productKey(rel)"
+              :to="'/catalog/' + encodeURIComponent(rel.name)"
+              class="group flex flex-col bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden transition-colors hover:border-primary"
             >
-               <div class="aspect-square bg-gray-50 dark:bg-gray-900/50 rounded-3xl overflow-hidden border border-gray-100 dark:border-white/5 p-8 flex items-center justify-center group-hover:scale-[1.02] transition-all duration-500">
-                  <img v-if="rel.image" :src="rel.image" :alt="'Producto relacionado: ' + rel.name + ' | N3XT 3D Shop'" class="max-w-full max-h-full object-contain" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
-               </div>
-               <div class="px-4">
-                  <p class="text-[8px] font-black text-primary uppercase tracking-widest mb-1">{{ rel.category }}</p>
-                  <h5 class="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter italic leading-tight group-hover:text-primary transition-colors">{{ rel.name }}</h5>
-                  <p class="text-sm font-bold text-gray-400 mt-2">{{ formatCOP(rel.price) }}</p>
-               </div>
+              <div class="relative aspect-square bg-surface-2 overflow-hidden">
+                <img v-if="rel.image" :src="rel.image" :alt="'Producto relacionado: ' + rel.name + ' | N3XT 3D Shop'" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />
+              </div>
+              <div class="flex flex-col flex-1 p-5">
+                <p v-if="rel.category" class="text-xs text-muted">{{ rel.category }}</p>
+                <h3 class="mt-1 text-lg md:text-xl font-bold tracking-tight text-ink group-hover:text-brand transition-colors">{{ rel.name }}</h3>
+                <p class="mt-auto pt-4 text-xl font-semibold tabular-nums text-resin">{{ formatCOP(rel.price) }}</p>
+              </div>
             </router-link>
           </div>
-       </div>
-    </template>
+        </section>
+      </template>
 
       <!-- Error de carga -->
-      <div v-else-if="loadError" class="py-40 text-center space-y-8" role="alert">
-          <h3 class="text-4xl font-black uppercase italic">No pudimos cargar el producto</h3>
-          <button class="btn-primary inline-flex px-12 py-5" @click="fetchProduct">Reintentar</button>
+      <div v-else-if="loadError" class="py-24 text-center max-w-md mx-auto" role="alert">
+        <h1 class="text-2xl font-extrabold tracking-tight text-ink">No pudimos cargar el producto</h1>
+        <p class="mt-3 text-muted">Revisa tu conexión e inténtalo de nuevo.</p>
+        <button type="button" class="btn-primary mt-6" @click="fetchProduct">Reintentar</button>
       </div>
 
-      <!-- Fallback Error -->
-      <div v-else class="py-40 text-center space-y-8">
-          <h3 class="text-4xl font-black uppercase italic">Producto no encontrado</h3>
-          <router-link to="/catalog" class="btn-primary inline-flex px-12 py-5">Volver al Catálogo</router-link>
+      <!-- No encontrado -->
+      <div v-else class="py-24 text-center max-w-md mx-auto">
+        <h1 class="text-2xl font-extrabold tracking-tight text-ink">Producto no encontrado</h1>
+        <p class="mt-3 text-muted">Puede que ya no esté disponible. Mira las demás piezas del catálogo.</p>
+        <router-link to="/catalog" class="btn-primary mt-6">Volver al catálogo</router-link>
       </div>
     </main>
 
@@ -334,15 +351,11 @@ v-for="spec in [
 </template>
 
 <style scoped>
-/* Estilos específicos del detalle si son necesarios */
-
-
-/* --- Scroll Reveal --- */
 .reveal {
   opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(12px);
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .reveal.revealed {
   opacity: 1;
