@@ -50,7 +50,7 @@ class AdminAccessTest extends TestCase
 
     public function test_user_endpoint_reports_explicit_role(): void
     {
-        $this->getJson('/api/user')->assertUnauthorized();
+        $this->getJson('/api/user')->assertOk()->assertExactJson(['role' => null]);
 
         $this->actingAs($this->customer(), 'customer');
         $this->getJson('/api/user')->assertOk()->assertJson(['role' => 'customer'])->assertJsonMissing(['password']);

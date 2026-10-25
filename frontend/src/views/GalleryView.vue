@@ -218,7 +218,7 @@ onUnmounted(() => {
             :data-reveal-index="idx"
             :to="item.sample ? undefined : '/galeria/' + encodeURIComponent(item.title || String(idx))"
             :class="[
-              'group relative overflow-hidden rounded-[var(--radius-card)] bg-surface-2',
+              'group relative overflow-hidden rounded-[var(--radius-card)] bg-surface-2 [container-type:inline-size]',
               idx % 6 === 0 ? 'sm:col-span-2 sm:row-span-2' : '',
               visibleCards.includes(idx) ? 'card-revealed' : 'card-hidden'
             ]"
@@ -245,7 +245,7 @@ onUnmounted(() => {
             <span v-if="item.featured" class="absolute left-4 top-4 rounded-full bg-primary px-3 py-1 text-sm font-semibold text-white">Destacado</span>
             <span v-if="item.images && item.images.length > 0" class="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-sm font-semibold text-white">+{{ item.images.length }} fotos</span>
             <span class="absolute inset-x-0 bottom-0 p-5 md:p-6">
-              <h2 class="font-black uppercase tracking-tight leading-none text-white [font-stretch:115%]" :class="idx % 6 === 0 ? 'text-3xl md:text-5xl' : 'text-xl md:text-2xl'">{{ item.title || 'Sin título' }}</h2>
+              <h2 class="font-black uppercase tracking-tight leading-none text-white [font-stretch:115%] hyphens-auto" :class="idx % 6 === 0 ? 'text-[clamp(1.75rem,6.5cqi,3rem)]' : 'text-[clamp(1.0625rem,6.8cqi,1.5rem)]'">{{ item.title || 'Sin título' }}</h2>
               <span class="mt-2 block text-sm font-semibold text-[#3fcf72]">{{ [item.category, item.technology].filter(Boolean).join(' · ') }}</span>
               <span v-if="idx % 6 === 0 && (item.subtitle || item.description)" class="mt-3 block max-w-md text-base leading-relaxed text-white/85 line-clamp-2">{{ item.subtitle || item.description }}</span>
             </span>

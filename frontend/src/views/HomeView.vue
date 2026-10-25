@@ -648,6 +648,10 @@ onMounted(() => {
 
 <style scoped>
 /* ─── Hero ─── */
+/* El hero es oscuro en ambos temas: el verde de acento usa el tono para fondo oscuro */
+.hero .text-brand {
+  color: #3fcf72;
+}
 .hero-media img {
   object-position: 50% 55%;
 }
@@ -657,7 +661,8 @@ onMounted(() => {
     radial-gradient(ellipse 60% 50% at 50% 48%, rgba(14, 21, 18, 0.55), rgba(14, 21, 18, 0) 70%),
     linear-gradient(to bottom, rgba(14, 21, 18, 0.35), rgba(14, 21, 18, 0) 30%, rgba(14, 21, 18, 0) 60%, var(--bg-main));
 }
-:global(:root:not(.dark)) .hero-scrim {
+/* Ancestro sin :global(): Vue descartaba el resto del selector y la regla no aplicaba */
+:root:not(.dark) .hero-scrim {
   background:
     radial-gradient(ellipse 60% 50% at 50% 48%, rgba(14, 21, 18, 0.55), rgba(14, 21, 18, 0) 70%),
     linear-gradient(to bottom, rgba(14, 21, 18, 0.35), rgba(14, 21, 18, 0) 30%, rgba(14, 21, 18, 0) 60%, #0e1512);

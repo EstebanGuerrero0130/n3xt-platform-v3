@@ -52,7 +52,8 @@ Route::get('/user', function (Request $request) {
     if ($customer = auth('customer')->user()) {
         return response()->json(array_merge($customer->only(['id', 'name', 'email']), ['role' => 'customer']));
     }
-    return response()->json(['message' => 'Unauthenticated.'], 401);
+    // Visitante sin sesión: 200 con rol nulo (un 401 en cada página ensucia la consola y Lighthouse)
+    return response()->json(['role' => null]);
 });
 
 // Rutas protegidas para Administrador

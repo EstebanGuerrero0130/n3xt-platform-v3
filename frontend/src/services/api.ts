@@ -131,6 +131,8 @@ export const api = {
       const user = await res.json()
       // El servidor devuelve el rol explícito ('admin' | 'customer')
       const role = user?.role === 'admin' || user?.role === 'customer' ? user.role : null
+      // Sin sesión el servidor responde 200 con role: null
+      if (!role) return { authenticated: false, user: null, role: null }
       return { authenticated: true, user, role }
     } catch {
       return { authenticated: false, user: null, role: null }
