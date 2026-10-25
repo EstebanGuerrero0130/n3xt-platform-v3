@@ -14,7 +14,7 @@ class TestUserSeeder extends Seeder
             ['email' => 'admin@n3xt.com'],
             [
                 'name' => 'Admin N3XT',
-                'password' => Hash::make('admin123')
+                'password' => Hash::make(env('TEST_ADMIN_PASSWORD') ?: \Illuminate\Support\Str::password(20))
             ]
         );
     }

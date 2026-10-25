@@ -19,13 +19,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Contraseña desde .env (ADMIN_PASSWORD); si falta, una aleatoria que se imprime una vez
+        $adminPassword = env('ADMIN_PASSWORD') ?: \Illuminate\Support\Str::password(20);
         User::updateOrCreate(
-            ['email' => 'admin@n3xt3d.com'],
+            ['email' => env('ADMIN_EMAIL', 'admin@n3xt3d.com')],
             [
                 'name' => 'Admin N3XT',
-                'password' => 'N3xt_Admin!2026#'
+                'password' => $adminPassword
             ]
         );
+        if (!env('ADMIN_PASSWORD') && $this->command) {
+            $this->command->warn("ADMIN_PASSWORD no definido. Contraseña generada para el admin: {$adminPassword}");
+        }
 
         $settings = [
             'infra' => ['luz_hr' => 926, 'depr_hr' => 400, 'mant_hr' => 700],

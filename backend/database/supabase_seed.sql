@@ -9,7 +9,7 @@
 -- USUARIO ADMINISTRADOR
 -- Password: el hash que necesites generar desde Laravel
 -- Puedes generar uno con: php artisan tinker → bcrypt('tu_password')
--- El siguiente hash corresponde a la contraseña: "administrador@12-@"
+-- Sustituye el hash por uno propio antes de ejecutar (no reutilices contraseñas publicadas).
 -- ============================================================
 INSERT INTO users (name, email, password, created_at, updated_at)
 VALUES (

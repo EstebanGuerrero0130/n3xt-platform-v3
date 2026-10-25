@@ -106,8 +106,8 @@ export const api = {
       })
       if (!res.ok) return { authenticated: false, user: null, role: null }
       const user = await res.json()
-      // Determine role: check explicit role field, email pattern, or name presence
-      const role = user?.role || (user?.email?.includes('admin') ? 'admin' : 'customer') || null
+      // El servidor devuelve el rol explícito ('admin' | 'customer')
+      const role = user?.role === 'admin' || user?.role === 'customer' ? user.role : null
       return { authenticated: true, user, role }
     } catch {
       return { authenticated: false, user: null, role: null }

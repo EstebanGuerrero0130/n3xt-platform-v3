@@ -8,7 +8,6 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class UnifiedAuthController extends Controller
 {
@@ -19,10 +18,6 @@ class UnifiedAuthController extends Controller
      */
     public function login(Request $request)
     {
-        Log::info('Intento de Acceso N3XT', [
-            'email' => $request->email
-        ]);
-
         $request->validate([
             'email'    => 'required|email',
             'password' => 'required',

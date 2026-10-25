@@ -34,7 +34,8 @@ return [
     |
     */
 
-    'guard' => ['web', 'customer'],
+    // Solo admins (users). Los clientes usan `auth:customer` explícitamente.
+    'guard' => ['web'],
 
     /*
     |--------------------------------------------------------------------------

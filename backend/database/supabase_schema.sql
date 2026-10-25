@@ -144,6 +144,7 @@ CREATE TABLE IF NOT EXISTS orders (
     comments TEXT NULL,
     file_path VARCHAR(255) NULL,                          -- Ruta del archivo STL
     original_filename VARCHAR(255) NULL,
+    models JSON NULL,                                     -- [{path, original_filename, qty, scale_factor, ...}]
 
     -- Estado y tracking
     status VARCHAR(255) NOT NULL DEFAULT 'pending',       -- pending, printing, completed, shipped

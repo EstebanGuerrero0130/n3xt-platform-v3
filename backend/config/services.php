@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    'cloudinary' => [
+        'cloud_name' => env('CLOUDINARY_CLOUD_NAME', 'dplcy7vbm'),
+        'upload_preset' => env('CLOUDINARY_UPLOAD_PRESET', 'ml_default'),
+    ],
+
     'turnstile' => [
         'secret' => env('TURNSTILE_SECRET'),
     ],

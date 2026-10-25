@@ -7,6 +7,10 @@ use App\Models\Inventory;
 use App\Models\Material;
 use App\Models\Printer;
 use App\Services\CostCalculatorService;
+use App\Services\MeshVolumeService;
+use App\Services\QuotePricingService;
+use App\Exceptions\InvalidMeshException;
+use App\Http\Middleware\EnsureAdmin;
 use App\Traits\ApiResponse;
 use App\Models\Setting;
 use App\Http\Requests\StoreOrderRequest;
@@ -23,7 +27,9 @@ class OrderController extends Controller
     use ApiResponse;
 
     public function __construct(
-        protected CostCalculatorService $costCalculator
+        protected CostCalculatorService $costCalculator,
+        protected QuotePricingService $pricing,
+        protected MeshVolumeService $meshVolume,
     ) {}
 
     /**
@@ -57,10 +63,14 @@ class OrderController extends Controller
 
     /**
      * Store a new order (Public or Admin)
+     *
+     * Con modelos (`models[]` o un `file` STL/OBJ suelto) el servidor mide cada malla y
+     * calcula volumen, peso, tiempo y precio: lo que mande el cliente no cuenta.
+     * Sin modelos solo el admin puede crear pedidos manuales con sus propias métricas.
      */
     public function store(StoreOrderRequest $request)
     {
-        $isAdmin = auth('sanctum')->check();
+        $isAdmin = EnsureAdmin::check();
 
         // 1. Bot Protection (Turnstile)
         if (!$isAdmin) {
@@ -69,79 +79,241 @@ class OrderController extends Controller
             }
         }
 
-        // 2. Validation (using StoreOrderRequest)
         $validated = $request->validated();
 
-        // 3. File Handling
+        $material = Material::find($validated['material_id']);
+        if (!$material || ($material->type ?? 'material') !== 'material') {
+            return $this->error('El material seleccionado no existe.', 422);
+        }
+        if (!$isAdmin && strtoupper((string)$material->category) !== strtoupper($validated['technology'])) {
+            return $this->error('El material no corresponde a la tecnología seleccionada.', 422);
+        }
+
+        $uploads = $this->collectModelUploads($request, $validated, $isAdmin);
+
+        if (empty($uploads)) {
+            if (!$isAdmin) {
+                return $this->error('Debes adjuntar al menos un archivo STL u OBJ.', 422);
+            }
+            return $this->storeManualOrder($request, $validated, $material);
+        }
+
+        return $this->storeQuotedOrder($validated, $material, $uploads, $isAdmin);
+    }
+
+    /**
+     * Normaliza `models[]` y el `file` suelto (legacy) a una sola lista de uploads.
+     * El `file` suelto del admin es un pedido manual con su propio precio.
+     */
+    private function collectModelUploads(Request $request, array $validated, bool $isAdmin): array
+    {
+        $uploads = [];
+        foreach (array_values($request->file('models') ?? []) as $i => $m) {
+            if (!isset($m['file'])) continue;
+            $meta = $validated['models'][$i] ?? [];
+            $uploads[] = ['file' => $m['file']] + $meta;
+        }
+
+        if (empty($uploads) && !$isAdmin && $request->hasFile('file')) {
+            $file = $request->file('file');
+            if (in_array(strtolower($file->getClientOriginalExtension()), ['stl', 'obj'], true)) {
+                $uploads[] = [
+                    'file' => $file,
+                    'qty' => $validated['qty'] ?? 1,
+                    'scale_factor' => $validated['scale_factor'] ?? 1,
+                    'dimensions_mm' => $validated['dimensions_mm'] ?? null,
+                ];
+            }
+        }
+
+        return $uploads;
+    }
+
+    private function storeQuotedOrder(array $validated, Material $material, array $uploads, bool $isAdmin)
+    {
+        $stored = [];
+        $pricingModels = [];
+
+        try {
+            foreach ($uploads as $i => $up) {
+                $file = $up['file'];
+                $extension = strtolower($file->getClientOriginalExtension());
+                $path = $file->storeAs('orders_models', 'n3xt_' . time() . '_' . Str::random(10) . '.' . $extension, 'local');
+                $stored[] = $path;
+
+                $mesh = $this->meshVolume->analyze(Storage::disk('local')->path($path), $extension);
+
+                $pricingModels[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'qty' => $up['qty'] ?? 1,
+                    'scale_factor' => $up['scale_factor'] ?? 1,
+                    'volume_mm3' => $mesh['volume_mm3'],
+                    'total_area_mm2' => $mesh['total_area_mm2'],
+                    // Misma orientación que el visor (normales hacia -Y de la geometría)
+                    'support_area_mm2' => $mesh['down_area_mm2']['y'],
+                    'bbox_mm' => $mesh['bbox']['size'],
+                    'dimensions_mm' => $up['dimensions_mm'] ?? null,
+                    'infill' => $up['infill'] ?? null,
+                    'layer_height' => $up['layer_height'] ?? null,
+                ];
+            }
+        } catch (InvalidMeshException $e) {
+            Storage::disk('local')->delete($stored);
+            $name = isset($file) ? $file->getClientOriginalName() : 'el archivo';
+            return $this->error("No pudimos leer {$name}: {$e->getMessage()}", 422);
+        }
+
+        $settings = $this->pricing->loadSettings();
+        $coupon = $this->pricing->findActiveCoupon($validated['coupon_code'] ?? null, $settings);
+        $quote = $this->pricing->quote(
+            [
+                'technology' => $validated['technology'],
+                'infill' => $validated['infill'] ?? null,
+                'layer_height' => $validated['layer_height'] ?? null,
+                'models' => $pricingModels,
+                'extras' => $validated['extra_items'] ?? [],
+            ],
+            $settings,
+            ['id' => $material->id, 'cost_per_kg' => $material->cost_per_kg, 'density' => $material->density],
+            $this->pricing->loadUtilities(),
+            $coupon
+        );
+
+        $now = now()->toIso8601String();
+        $modelsOut = [];
+        foreach ($quote['models'] as $i => $qm) {
+            $modelsOut[] = [
+                'path' => $pricingModels[$i]['path'],
+                'original_filename' => $pricingModels[$i]['name'],
+                'qty' => $qm['qty'],
+                'scale_factor' => $qm['scale_factor'],
+                'dimensions_mm' => $pricingModels[$i]['dimensions_mm'],
+                'volume_mm3' => $qm['volume_mm3'],
+                'weight_g' => $qm['weight_g'],
+                'duration_h' => $qm['duration_h'],
+                'subtotal' => $qm['subtotal'],
+            ];
+        }
+        $extras = array_map(fn ($e) => $e + ['added_at' => $now], $quote['extras']);
+
+        $first = $modelsOut[0];
+        $order = DB::transaction(fn () => Order::create(array_merge($this->orderFields($validated), [
+            'material_id'          => $material->id,
+            'material_name'        => $material->name,
+            'qty'                  => $quote['qty'],
+            'volume_mm3'           => round($quote['volume_mm3'], 2),
+            'estimated_weight_g'   => round($quote['weight_g'], 2),
+            'estimated_duration_h' => round($quote['duration_h'], 3),
+            'total_price'          => $quote['total'],
+            'dimensions_mm'        => count($modelsOut) === 1 ? $first['dimensions_mm'] : null,
+            'scale_factor'         => count($modelsOut) === 1 ? $first['scale_factor'] : 1,
+            'file_path'            => $first['path'],
+            'original_filename'    => $first['original_filename'],
+            'models'               => $modelsOut,
+            'status'               => 'pending',
+            'extra_items'          => count($extras) > 0 ? $extras : null,
+            'extras_cost'          => $quote['extras_cost'],
+            'cost_snapshot'        => [
+                'settings' => $settings,
+                'material_cost_per_kg' => $material->cost_per_kg,
+                'quote' => array_intersect_key($quote, array_flip(['unit_price', 'subtotal', 'coupon', 'discount', 'subtotal_after_discount', 'iva_pct', 'iva', 'total'])),
+                'captured_at' => $now,
+            ],
+        ])));
+
+        return $this->success([
+            'order_id' => $order->id,
+            'total_price' => $quote['total'],
+            'breakdown' => array_diff_key($quote, array_flip(['production'])),
+        ], 'Orden creada con éxito.', 201);
+    }
+
+    /** Pedido manual del admin (sin malla medible): métricas y precio vienen del formulario. */
+    private function storeManualOrder(Request $request, array $validated, Material $material)
+    {
         $path = null;
         $originalFilename = 'Manual Order';
-
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $extension = strtolower($file->getClientOriginalExtension());
-            
-            if (!in_array($extension, ['stl', 'obj', '3mf'])) {
-                return $this->error('Protocolo de Seguridad: Formato de archivo no autorizado. Solo se permiten .STL, .OBJ y .3MF.', 422);
-            }
-
-            $path = $file->storeAs('orders_models', 'n3xt_' . time() . '_' . Str::random(10) . '.' . $extension, 'local');
+            $path = $file->storeAs('orders_models', 'n3xt_' . time() . '_' . Str::random(10) . '.' . strtolower($file->getClientOriginalExtension()), 'local');
             $originalFilename = $file->getClientOriginalName();
         }
 
-        // 4. Persistence with Extras Handling
-        return DB::transaction(function () use ($validated, $path, $originalFilename, $request) {
-            $extrasCost = 0;
-            $processedExtras = [];
-
-            if ($request->has('extra_items') && is_array($request->extra_items)) {
-                foreach ($request->extra_items as $extra) {
-                    $material = Material::findOrFail($extra['material_id']);
-                    $inventory = Inventory::where('material_id', $material->id)->first();
-
-                    if ($inventory && $inventory->stock_available >= $extra['qty']) {
-                        $inventory->stock_available -= $extra['qty'];
-                        $inventory->save();
-
-                        $cost = $this->costCalculator->calculateExtraCost(
-                            (float)$material->cost_per_kg,
-                            $material->unit,
-                            (float)$extra['qty']
-                        );
-
-                        $processedExtras[] = [
-                            'material_id' => $material->id,
-                            'name' => $material->name,
-                            'qty' => $extra['qty'],
-                            'cost' => $cost,
-                            'added_at' => now()->toIso8601String()
-                        ];
-                        $extrasCost += $cost;
-                    }
-                }
-            }
-
-            // Capture Cost Snapshot for Historical Integrity
-            $settings = Setting::all()->pluck('value', 'key');
-            $material = Material::find($validated['material_id']);
-            $costSnapshot = [
-                'settings' => $settings,
-                'material_cost_per_kg' => $material ? $material->cost_per_kg : 0,
-                'captured_at' => now()->toIso8601String()
+        // El stock de los extras se descuenta al confirmar el pago (togglePaid), no aquí
+        $extrasCost = 0;
+        $processedExtras = [];
+        foreach ($validated['extra_items'] ?? [] as $extra) {
+            $extraMaterial = Material::find($extra['material_id']);
+            if (!$extraMaterial) continue;
+            $cost = $this->costCalculator->calculateExtraCost((float)$extraMaterial->cost_per_kg, $extraMaterial->unit, (float)$extra['qty']);
+            $processedExtras[] = [
+                'material_id' => $extraMaterial->id,
+                'name' => $extraMaterial->name,
+                'qty' => $extra['qty'],
+                'unit' => $extraMaterial->unit,
+                'cost' => $cost,
+                'added_at' => now()->toIso8601String()
             ];
+            $extrasCost += $cost;
+        }
 
-            $order = Order::create(array_merge($validated, [
-                'material_name'     => $validated['material_name'] ?? $validated['material_id'],
-                'qty'               => $validated['qty'] ?? 1,
-                'file_path'         => $path,
-                'original_filename' => $originalFilename,
-                'status'            => 'pending',
-                'extra_items'       => count($processedExtras) > 0 ? $processedExtras : null,
-                'extras_cost'       => $extrasCost,
-                'cost_snapshot'     => $costSnapshot
-            ]));
+        $order = Order::create(array_merge($this->orderFields($validated), [
+            'material_id'          => $material->id,
+            'material_name'        => $validated['material_name'] ?? $material->name,
+            'qty'                  => $validated['qty'] ?? 1,
+            'volume_mm3'           => $validated['volume_mm3'],
+            'estimated_weight_g'   => $validated['estimated_weight_g'],
+            'estimated_duration_h' => $validated['estimated_duration_h'] ?? 0,
+            'total_price'          => $validated['total_price'],
+            'dimensions_mm'        => $validated['dimensions_mm'] ?? null,
+            'scale_factor'         => $validated['scale_factor'] ?? 1,
+            'file_path'            => $path,
+            'original_filename'    => $originalFilename,
+            'status'               => 'pending',
+            'extra_items'          => count($processedExtras) > 0 ? $processedExtras : null,
+            'extras_cost'          => $extrasCost,
+            'cost_snapshot'        => [
+                'settings' => Setting::all()->pluck('value', 'key'),
+                'material_cost_per_kg' => $material->cost_per_kg,
+                'captured_at' => now()->toIso8601String()
+            ]
+        ]));
 
-            return $this->success(['order_id' => $order->id], 'Orden creada con éxito.', 201);
-        });
+        return $this->success(['order_id' => $order->id, 'total_price' => $order->total_price], 'Orden creada con éxito.', 201);
+    }
+
+    /** Campos del cliente/envío que se guardan tal cual en el pedido. */
+    private function orderFields(array $validated): array
+    {
+        return array_intersect_key($validated, array_flip([
+            'customer_name', 'customer_company', 'customer_email', 'customer_phone', 'customer_id_document',
+            'shipping_address', 'shipping_city', 'shipping_zip', 'shipping_reference',
+            'job_name', 'comments', 'technology', 'infill',
+        ]));
+    }
+
+    /**
+     * Valida un cupón (Public). Responde solo el cupón pedido, nunca la lista.
+     */
+    public function validateCoupon(Request $request)
+    {
+        $data = $request->validate(['code' => 'required|string|max:50|alpha_num']);
+        $coupon = $this->pricing->findActiveCoupon($data['code']);
+
+        if (!$coupon) {
+            return $this->error('Ese cupón no existe o ya no está activo.', 404);
+        }
+
+        return $this->success($coupon);
+    }
+
+    /**
+     * Show a single order (Admin only)
+     */
+    public function show($id)
+    {
+        return $this->success(Order::with('printer')->findOrFail($id));
     }
 
     /**
@@ -327,7 +499,7 @@ class OrderController extends Controller
         } elseif ($request->filled('tracking_guide')) {
             $query->where('tracking_guide', $request->tracking_guide);
             if ($request->filled('carrier')) {
-                $query->where('tracking_carrier', 'LIKE', '%' . $request->carrier . '%');
+                $query->whereRaw('LOWER(tracking_carrier) = ?', [strtolower($request->carrier)]);
             }
         } else {
             return $this->error('Se requiere (ID de Proyecto + Email) o (Número de Guía) para el rastreo.', 422);
@@ -412,7 +584,8 @@ class OrderController extends Controller
         // 1. Deduct Main Material
         $inventory = Inventory::where('material_id', $order->material_id)->first();
         if ($inventory) {
-            $requiredStock = $order->estimated_weight_g * $order->qty;
+            // estimated_weight_g ya es el total del pedido (todas las piezas)
+            $requiredStock = (float)$order->estimated_weight_g;
             $inventory->stock_available -= $requiredStock;
             $inventory->save();
         }

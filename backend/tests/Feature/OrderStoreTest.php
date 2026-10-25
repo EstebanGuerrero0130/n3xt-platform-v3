@@ -1,0 +1,187 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Inventory;
+use App\Models\Material;
+use App\Models\Order;
+use App\Models\Setting;
+use App\Models\User;
+use App\Services\MeshVolumeService;
+use App\Services\QuotePricingService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class OrderStoreTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('local');
+
+        Setting::updateOrCreate(['key' => 'infra'], ['value' => ['luz_hr' => 926, 'depr_hr' => 400, 'mant_hr' => 700]]);
+        Setting::updateOrCreate(['key' => 'prep'], ['value' => ['mano_obra_hr' => 1000]]);
+        Setting::updateOrCreate(['key' => 'oper'], ['value' => ['transporte' => 50, 'ganancia' => 50, 'marketing' => 50, 'fallos' => 30]]);
+        Setting::updateOrCreate(['key' => 'margin'], ['value' => ['iva' => 19]]);
+        Setting::updateOrCreate(['key' => 'coupons'], ['value' => [['code' => 'N3XT10', 'discount_pct' => 10, 'label' => 'Bienvenida', 'active' => true]]]);
+
+        Material::create(['id' => 'PLA_BLACK', 'name' => 'PLA Negro', 'category' => 'FDM', 'type' => 'material', 'unit' => 'g', 'cost_per_kg' => 85000, 'density' => 1.24]);
+        Material::create(['id' => 'RES_GREY', 'name' => 'Resina Gris', 'category' => 'SLA', 'type' => 'material', 'unit' => 'ml', 'cost_per_kg' => 120000, 'density' => 1.1]);
+        Material::create(['id' => 'Caja_Piez_02', 'name' => 'Caja', 'category' => 'FDM', 'type' => 'utility', 'unit' => 'pieza', 'cost_per_kg' => 900]);
+        Inventory::create(['material_id' => 'Caja_Piez_02', 'stock_available' => 10]);
+    }
+
+    /** Cubo de lado $l mm en STL ASCII (12 triángulos, normales hacia fuera). */
+    private function cubeStl(float $l = 20): string
+    {
+        $v = [[0, 0, 0], [$l, 0, 0], [$l, $l, 0], [0, $l, 0], [0, 0, $l], [$l, 0, $l], [$l, $l, $l], [0, $l, $l]];
+        $faces = [[0, 3, 2], [0, 2, 1], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [2, 3, 7], [2, 7, 6], [1, 2, 6], [1, 6, 5], [0, 4, 7], [0, 7, 3]];
+        $out = "solid cube\n";
+        foreach ($faces as $f) {
+            $out .= "facet normal 0 0 0\nouter loop\n";
+            foreach ($f as $i) {
+                $out .= 'vertex ' . implode(' ', $v[$i]) . "\n";
+            }
+            $out .= "endloop\nendfacet\n";
+        }
+        return $out . "endsolid cube\n";
+    }
+
+    private function payload(array $overrides = []): array
+    {
+        return array_merge([
+            'customer_name' => 'Ana',
+            'customer_email' => 'ana@example.com',
+            'technology' => 'FDM',
+            'material_id' => 'PLA_BLACK',
+            'infill' => 20,
+            'layer_height' => 0.2,
+            'models' => [
+                ['file' => UploadedFile::fake()->createWithContent('cubo.stl', $this->cubeStl()), 'qty' => 2, 'scale_factor' => 1],
+            ],
+        ], $overrides);
+    }
+
+    public function test_public_order_is_priced_by_server_and_ignores_client_price(): void
+    {
+        $res = $this->post('/api/orders', $this->payload(['total_price' => 1, 'volume_mm3' => 1]), ['Accept' => 'application/json']);
+
+        $res->assertCreated();
+        $order = Order::findOrFail($res->json('data.order_id'));
+
+        $this->assertEqualsWithDelta(8000 * 2, $order->volume_mm3, 0.01);
+        $this->assertGreaterThan(1000, $order->total_price);
+        $this->assertSame((float)$res->json('data.total_price'), (float)$order->total_price);
+        $this->assertSame(2, $order->qty);
+        $this->assertNotNull($order->file_path);
+        Storage::disk('local')->assertExists($order->file_path);
+        $this->assertCount(1, $order->models);
+        $this->assertSame('cubo.stl', $order->models[0]['original_filename']);
+        $this->assertArrayHasKey('path', $order->models[0]);
+    }
+
+    public function test_server_price_matches_pricing_service(): void
+    {
+        $res = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->assertCreated();
+
+        $mesh = (new MeshVolumeService())->analyze(Storage::disk('local')->path(Order::first()->file_path), 'stl');
+        $svc = app(QuotePricingService::class);
+        $settings = $svc->loadSettings();
+        $quote = $svc->quote(
+            ['technology' => 'FDM', 'infill' => 20, 'layer_height' => 0.2, 'models' => [[
+                'qty' => 2, 'scale_factor' => 1, 'volume_mm3' => $mesh['volume_mm3'],
+                'total_area_mm2' => $mesh['total_area_mm2'], 'support_area_mm2' => $mesh['down_area_mm2']['y'],
+            ]]],
+            $settings,
+            ['id' => 'PLA_BLACK', 'cost_per_kg' => 85000, 'density' => 1.24],
+            $svc->loadUtilities()
+        );
+
+        $this->assertSame($quote['total'], $res->json('data.total_price'));
+    }
+
+    public function test_coupon_is_applied_server_side(): void
+    {
+        $plain = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->json('data.breakdown');
+        $withCoupon = $this->post('/api/orders', $this->payload(['coupon_code' => 'n3xt10']), ['Accept' => 'application/json'])->json('data.breakdown');
+
+        $this->assertNull($plain['coupon']);
+        $this->assertSame('N3XT10', $withCoupon['coupon']['code']);
+        $this->assertLessThan($plain['total'], $withCoupon['total']);
+    }
+
+    public function test_extras_do_not_touch_stock_until_paid(): void
+    {
+        $res = $this->post('/api/orders', $this->payload([
+            'extra_items' => [['material_id' => 'Caja_Piez_02', 'qty' => 3]],
+        ]), ['Accept' => 'application/json'])->assertCreated();
+
+        $this->assertSame(10.0, Inventory::where('material_id', 'Caja_Piez_02')->first()->stock_available);
+
+        $order = Order::findOrFail($res->json('data.order_id'));
+        $this->assertSame(2700.0, (float)$order->extras_cost);
+
+        $this->actingAs(User::factory()->create(), 'web');
+        $this->postJson("/api/admin/orders/{$order->id}/toggle-paid")->assertOk();
+        $this->assertSame(7.0, Inventory::where('material_id', 'Caja_Piez_02')->first()->stock_available);
+    }
+
+    public function test_invalid_mesh_is_rejected_with_422(): void
+    {
+        $this->post('/api/orders', $this->payload([
+            'models' => [['file' => UploadedFile::fake()->createWithContent('roto.stl', "solid x\nendsolid x\n")]],
+        ]), ['Accept' => 'application/json'])->assertStatus(422);
+
+        $this->assertSame(0, Order::count());
+        $this->assertEmpty(Storage::disk('local')->allFiles('orders_models'));
+    }
+
+    public function test_material_must_exist_and_match_technology(): void
+    {
+        $this->post('/api/orders', $this->payload(['material_id' => 'NOPE']), ['Accept' => 'application/json'])->assertStatus(422);
+        $this->post('/api/orders', $this->payload(['material_id' => 'RES_GREY']), ['Accept' => 'application/json'])->assertStatus(422);
+        $this->post('/api/orders', $this->payload(['material_id' => 'Caja_Piez_02']), ['Accept' => 'application/json'])->assertStatus(422);
+    }
+
+    public function test_public_order_requires_a_model(): void
+    {
+        $this->post('/api/orders', $this->payload(['models' => null]), ['Accept' => 'application/json'])->assertStatus(422);
+    }
+
+    public function test_admin_manual_order_keeps_its_own_price(): void
+    {
+        $this->actingAs(User::factory()->create(), 'web');
+
+        $res = $this->postJson('/api/orders', [
+            'customer_name' => 'Taller',
+            'technology' => 'FDM',
+            'material_id' => 'PLA_BLACK',
+            'volume_mm3' => 1000,
+            'estimated_weight_g' => 15,
+            'total_price' => 42000,
+        ])->assertCreated();
+
+        $this->assertSame(42000.0, (float)Order::findOrFail($res->json('data.order_id'))->total_price);
+    }
+
+    public function test_coupon_endpoint(): void
+    {
+        $this->postJson('/api/quote/coupon', ['code' => 'n3xt10'])->assertOk()
+            ->assertJsonPath('data.code', 'N3XT10')
+            ->assertJsonPath('data.discount_pct', 10);
+        $this->postJson('/api/quote/coupon', ['code' => 'FAKE'])->assertNotFound();
+    }
+
+    public function test_admin_can_show_single_order(): void
+    {
+        $id = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->json('data.order_id');
+
+        $this->getJson("/api/admin/orders/{$id}")->assertUnauthorized();
+        $this->actingAs(User::factory()->create(), 'web');
+        $this->getJson("/api/admin/orders/{$id}")->assertOk()->assertJsonPath('data.id', $id);
+    }
+}

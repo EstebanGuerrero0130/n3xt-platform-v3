@@ -52,17 +52,30 @@ $app = Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
         ]);
+
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\EnsureAdmin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) use ($isVercel): void {
         if ($isVercel) {
+            // Solo errores inesperados: validación (422), auth (401/403) y HTTP (404...) siguen su curso normal
             $exceptions->render(function (\Throwable $e) {
-                return response()->json([
-                    'error' => 'N3XT_INTERNAL_ERROR',
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => explode("\n", $e->getTraceAsString())
-                ], 500);
+                if ($e instanceof \Illuminate\Validation\ValidationException
+                    || $e instanceof \Illuminate\Auth\AuthenticationException
+                    || $e instanceof \Illuminate\Auth\Access\AuthorizationException
+                    || $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
+                    || $e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                    return null;
+                }
+
+                $payload = ['error' => 'N3XT_INTERNAL_ERROR', 'message' => 'Error interno del servidor.'];
+                if (config('app.debug')) {
+                    $payload['message'] = $e->getMessage();
+                    $payload['file'] = $e->getFile();
+                    $payload['line'] = $e->getLine();
+                }
+                return response()->json($payload, 500);
             });
         }
     })->create();

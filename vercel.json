@@ -13,8 +13,8 @@
     "APP_ROUTES_CACHE": "/tmp/storage/bootstrap/cache/routes.php",
     "APP_SERVICES_CACHE": "/tmp/storage/bootstrap/cache/services.php",
     "VIEW_COMPILED_PATH": "/tmp/storage/framework/views",
-    "CACHE_STORE": "array",
-    "CACHE_DRIVER": "array",
+    "CACHE_STORE": "database",
+    "CACHE_DRIVER": "database",
     "SESSION_DRIVER": "cookie"
   },
   "rewrites": [

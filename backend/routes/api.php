@@ -30,23 +30,32 @@ Route::get('/sitemap', [SitemapController::class, 'index'])->name('sitemap');
 // Ruta pública protegida por rate limit
 Route::middleware('throttle:5,1')->post('/orders', [OrderController::class, 'store']);
 Route::middleware('throttle:15,1')->post('/process-stl', [OrderController::class, 'processStl']);
-Route::get('/orders/track', [OrderController::class, 'track']);
+Route::middleware('throttle:20,1')->get('/orders/track', [OrderController::class, 'track']);
+Route::middleware('throttle:10,1')->post('/quote/coupon', [OrderController::class, 'validateCoupon']);
 
 // Ruta pública para leer configuraciones y materiales
 Route::get('/settings', [SettingController::class, 'index']);
 Route::get('/materials', [MaterialController::class, 'index']);
 
 // Rutas de autenticación Maker (Clientes) - Legacy
-Route::post('/maker-access/register', [CustomerAuthController::class, 'register']);
-Route::post('/maker-access/login', [CustomerAuthController::class, 'login']);
-Route::middleware('auth:sanctum')->get('/customer/profile', [CustomerAuthController::class, 'profile']);
-Route::middleware('auth:sanctum')->post('/customer/logout', [CustomerAuthController::class, 'logout']);
+Route::middleware('throttle:5,1')->post('/maker-access/register', [CustomerAuthController::class, 'register']);
+Route::middleware('throttle:10,1')->post('/maker-access/login', [CustomerAuthController::class, 'login']);
+Route::middleware('auth:customer')->get('/customer/profile', [CustomerAuthController::class, 'profile']);
+Route::middleware('auth:customer')->post('/customer/logout', [CustomerAuthController::class, 'logout']);
+
+// Sesión actual (admin o cliente) con rol explícito
+Route::get('/user', function (Request $request) {
+    if ($admin = auth('web')->user()) {
+        return response()->json(array_merge($admin->only(['id', 'name', 'email']), ['role' => 'admin']));
+    }
+    if ($customer = auth('customer')->user()) {
+        return response()->json(array_merge($customer->only(['id', 'name', 'email']), ['role' => 'customer']));
+    }
+    return response()->json(['message' => 'Unauthenticated.'], 401);
+});
 
 // Rutas protegidas para Administrador
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function (Request $request) {
-        return response()->json($request->user());
-    });
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     // Analytics & Accounting
     Route::get('/admin/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index']);
     Route::get('/admin/export-csv', [\App\Http\Controllers\Admin\AnalyticsController::class, 'exportCsv']);
@@ -59,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Panel de control
     Route::get('/admin/orders', [OrderController::class, 'index']);
+    Route::get('/admin/orders/{id}', [OrderController::class, 'show']);
     Route::patch('/admin/orders/{id}/status', [OrderController::class, 'updateStatus']);
     Route::post('/admin/orders/{id}/toggle-paid', [OrderController::class, 'togglePaid']);
     Route::delete('/admin/orders/{id}', [OrderController::class, 'destroy']);

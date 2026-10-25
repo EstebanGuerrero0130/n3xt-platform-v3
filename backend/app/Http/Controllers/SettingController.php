@@ -5,12 +5,19 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\Models\Setting;
+use App\Http\Middleware\EnsureAdmin;
 
 class SettingController extends Controller
 {
+    /** Claves que solo ve el admin (p. ej. códigos de cupón). */
+    private const PRIVATE_KEYS = ['coupons', 'security'];
+
     public function index()
     {
         $settings = Setting::all()->pluck('value', 'key');
+        if (!EnsureAdmin::check()) {
+            $settings = $settings->except(self::PRIVATE_KEYS);
+        }
         return response()->json($settings);
     }
 
@@ -41,7 +48,7 @@ class SettingController extends Controller
     public function uploadLogo(Request $request)
     {
         $request->validate([
-            'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'logo' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
         if ($request->hasFile('logo')) {
@@ -69,10 +76,8 @@ class SettingController extends Controller
     public function uploadImage(Request $request)
     {
         $request->validate([
-            'file' => 'required|image|mimes:jpeg,png,jpg,gif,webp,svg|max:5120',
-            'cloud_name' => 'nullable|string',
-            'upload_preset' => 'nullable|string',
-            'public_id' => 'nullable|string',
+            'file' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'public_id' => 'nullable|string|max:120|regex:/^[A-Za-z0-9_\-\/]+$/',
         ]);
 
         if (!$request->hasFile('file')) {
@@ -80,8 +85,9 @@ class SettingController extends Controller
         }
 
         $file = $request->file('file');
-        $cloudName = $request->input('cloud_name', 'dplcy7vbm');
-        $uploadPreset = $request->input('upload_preset', 'ml_default');
+        // Destino fijo del servidor: el cliente no decide a qué cuenta se sube
+        $cloudName = config('services.cloudinary.cloud_name');
+        $uploadPreset = config('services.cloudinary.upload_preset');
         $publicId = $request->input('public_id', 'n3xt_upload_' . time());
 
         // Construir el multipart form data

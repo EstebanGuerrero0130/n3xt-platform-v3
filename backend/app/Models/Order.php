@@ -17,7 +17,7 @@ class Order extends Model
         'printer_id', 'estimated_duration_h',
         'extras_cost', 'extra_items', 'cost_snapshot', 'is_paid',
         'stock_deducted', 'hours_added_to_printer', 'project_id',
-        'job_name'
+        'job_name', 'models'
     ];
 
     protected $casts = [
@@ -30,6 +30,7 @@ class Order extends Model
         'estimated_duration_h' => 'float',
         'extras_cost' => 'float',
         'extra_items' => 'array',
+        'models' => 'array',
         'cost_snapshot' => 'array',
         'is_paid' => 'boolean',
         'stock_deducted' => 'boolean',

@@ -88,9 +88,8 @@ const login = async () => {
     if (rememberMe.value) store.set('remember_email', email.value)
     else store.remove('remember_email')
     
-    // Confiar en el role de la API como fuente única de verdad
-    // Solo usar email como fallback si la API no devuelve role
-    const role = data.role || (email.value.includes('admin@n3xt3d.com') ? 'admin' : 'customer')
+    // El role de la API es la única fuente de verdad
+    const role = data?.role === 'admin' ? 'admin' : 'customer'
     if (role === 'admin') {
         window.location.href = '/admin'
     } else {

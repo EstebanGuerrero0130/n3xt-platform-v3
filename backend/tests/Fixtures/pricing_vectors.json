@@ -1,0 +1,543 @@
+{
+    "generated_by": "scratchpad/gen_pricing_vectors.mjs (importa frontend/src/services/costCalculator.ts) | casos multi-modelo actualizados a calcQuoteEstimate (piezas = Σqty)",
+    "utilities": [
+        {
+            "id": "Argo_Piez_01",
+            "name": "Argolla metalica",
+            "unit": "pieza",
+            "cost_per_kg": 150
+        },
+        {
+            "id": "Caja_Piez_02",
+            "name": "Caja carton microrrugado",
+            "unit": "pieza",
+            "cost_per_kg": 900
+        },
+        {
+            "id": "Mano_Serv_04",
+            "name": "Mano de obra Postprocesado",
+            "unit": "servicio",
+            "cost_per_kg": 100
+        },
+        {
+            "id": "Alco_ML_05",
+            "name": "Alcohol isopropílico",
+            "unit": "ml",
+            "cost_per_kg": 30
+        },
+        {
+            "id": "Cicl_Serv_06",
+            "name": "Ciclo de Lavado y Curado UV",
+            "unit": "servicio",
+            "cost_per_kg": 2000
+        },
+        {
+            "id": "Prim_Serv_10",
+            "name": "Primer",
+            "unit": "servicio",
+            "cost_per_kg": 325
+        }
+    ],
+    "cases": [
+        {
+            "name": "fdm_single_qty1_seeded",
+            "input": {
+                "technology": "FDM",
+                "infill": 15,
+                "layer_height": 0.2,
+                "settings": {
+                    "infra": {
+                        "luz_hr": 926,
+                        "depr_hr": 400,
+                        "mant_hr": 700
+                    },
+                    "prep": {
+                        "mano_obra_hr": 1000
+                    },
+                    "oper": {
+                        "transporte": 50,
+                        "ganancia": 50,
+                        "marketing": 50,
+                        "fallos": 30
+                    },
+                    "margin": {
+                        "iva": 19
+                    }
+                },
+                "material": {
+                    "id": "PLA_BLACK",
+                    "cost_per_kg": "85000.00",
+                    "density": "1.2400"
+                },
+                "coupon": null,
+                "extras": [],
+                "models": [
+                    {
+                        "name": "cubo20.stl",
+                        "volume_mm3": 8000,
+                        "total_area_mm2": 2400,
+                        "support_area_mm2": 400,
+                        "bbox_mm": [
+                            20,
+                            20,
+                            20
+                        ],
+                        "scale_factor": 1,
+                        "qty": 1
+                    }
+                ]
+            },
+            "expected": {
+                "models": [
+                    {
+                        "weight_g": 6.68528,
+                        "duration_h": 0.5808293444328824
+                    }
+                ],
+                "weight_g": 6.68528,
+                "duration_h": 0.5808293444328824,
+                "production_cost": 1480.3832024973983,
+                "extras_cost": 0,
+                "unit_price": 4145,
+                "subtotal": 4145,
+                "discount": 0,
+                "subtotal_after_discount": 4145,
+                "iva_pct": 19,
+                "iva": 788,
+                "total": 4933
+            }
+        },
+        {
+            "name": "fdm_two_models_qty3_coupon_extra",
+            "input": {
+                "technology": "FDM",
+                "infill": 20,
+                "layer_height": 0.12,
+                "settings": {
+                    "infra": {
+                        "luz_hr": 926,
+                        "depr_hr": 400,
+                        "mant_hr": 700
+                    },
+                    "prep": {
+                        "mano_obra_hr": 1000
+                    },
+                    "oper": {
+                        "transporte": 50,
+                        "ganancia": 50,
+                        "marketing": 50,
+                        "fallos": 30
+                    },
+                    "margin": {
+                        "iva": 19
+                    }
+                },
+                "material": {
+                    "id": "PLA_BLACK",
+                    "cost_per_kg": "85000.00",
+                    "density": "1.2400"
+                },
+                "coupon": {
+                    "code": "N3XT10",
+                    "discount_pct": 10,
+                    "label": "Cupón Bienvenida"
+                },
+                "extras": [
+                    {
+                        "material_id": "Caja_Piez_02",
+                        "qty": 1
+                    }
+                ],
+                "models": [
+                    {
+                        "name": "cubo20.stl",
+                        "volume_mm3": 8000,
+                        "total_area_mm2": 2400,
+                        "support_area_mm2": 400,
+                        "bbox_mm": [
+                            20,
+                            20,
+                            20
+                        ],
+                        "scale_factor": 1.5,
+                        "qty": 3
+                    },
+                    {
+                        "name": "soporte.obj",
+                        "volume_mm3": 23456.789,
+                        "total_area_mm2": 9876.54321,
+                        "support_area_mm2": 1234.5,
+                        "bbox_mm": [
+                            80.2,
+                            15.5,
+                            42.75
+                        ],
+                        "scale_factor": 0.8,
+                        "qty": 3
+                    }
+                ]
+            },
+            "expected": {
+                "models": [
+                    {
+                        "weight_g": 14.37204,
+                        "duration_h": 1.4792747138397504
+                    },
+                    {
+                        "weight_g": 11.337679762595842,
+                        "duration_h": 1.2161494764651268
+                    }
+                ],
+                "weight_g": 77.12915928778753,
+                "duration_h": 8.086272570914632,
+                "production_cost": 20154.660984826278,
+                "extras_cost": 900,
+                "unit_price": 9406,
+                "subtotal": 56436,
+                "discount": 5644,
+                "subtotal_after_discount": 50792,
+                "iva_pct": 19,
+                "iva": 9650,
+                "total": 60442
+            }
+        },
+        {
+            "name": "sla_single_qty1_auto_extras",
+            "input": {
+                "technology": "SLA",
+                "infill": 15,
+                "layer_height": 0.2,
+                "settings": {
+                    "infra": {
+                        "luz_hr": 926,
+                        "depr_hr": 400,
+                        "mant_hr": 700
+                    },
+                    "prep": {
+                        "mano_obra_hr": 1000
+                    },
+                    "oper": {
+                        "transporte": 50,
+                        "ganancia": 50,
+                        "marketing": 50,
+                        "fallos": 30
+                    },
+                    "margin": {
+                        "iva": 19
+                    }
+                },
+                "material": {
+                    "id": "SLA_GRAY",
+                    "cost_per_kg": "250000.00",
+                    "density": null
+                },
+                "coupon": null,
+                "extras": [],
+                "models": [
+                    {
+                        "name": "mini.stl",
+                        "volume_mm3": 3210.5,
+                        "total_area_mm2": 2950.25,
+                        "support_area_mm2": 610.75,
+                        "bbox_mm": [
+                            22.4,
+                            18.1,
+                            35.6
+                        ],
+                        "scale_factor": 1,
+                        "qty": 1
+                    }
+                ]
+            },
+            "expected": {
+                "models": [
+                    {
+                        "weight_g": 3.884705000000001,
+                        "duration_h": 1.4240000000000002
+                    }
+                ],
+                "weight_g": 3.884705000000001,
+                "duration_h": 1.4240000000000002,
+                "production_cost": 5208.9258500000005,
+                "extras_cost": 2001.5,
+                "unit_price": 14585,
+                "subtotal": 14585,
+                "discount": 0,
+                "subtotal_after_discount": 14585,
+                "iva_pct": 19,
+                "iva": 2771,
+                "total": 17356
+            }
+        },
+        {
+            "name": "sla_qty4_coupon15_iva0_custom_infra",
+            "input": {
+                "technology": "SLA",
+                "infill": 15,
+                "layer_height": 0.2,
+                "settings": {
+                    "infra": {
+                        "luz_hr": 926,
+                        "depr_hr": 400,
+                        "mant_hr": 700,
+                        "etiquetas": 500,
+                        "load_factor": 0.6
+                    },
+                    "prep": {
+                        "mano_obra_hr": 1000
+                    },
+                    "oper": {
+                        "transporte": 50,
+                        "ganancia": 50,
+                        "marketing": 50,
+                        "fallos": 30
+                    },
+                    "margin": {
+                        "iva": 0
+                    }
+                },
+                "material": {
+                    "id": "SLA_GRAY",
+                    "cost_per_kg": "250000.00",
+                    "density": "1.15"
+                },
+                "coupon": {
+                    "code": "FDM2026",
+                    "discount_pct": 15,
+                    "label": "Lanzamiento Industrial"
+                },
+                "extras": [
+                    {
+                        "material_id": "Prim_Serv_10",
+                        "qty": 1
+                    }
+                ],
+                "models": [
+                    {
+                        "name": "mini.stl",
+                        "volume_mm3": 3210.5,
+                        "total_area_mm2": 2950.25,
+                        "support_area_mm2": 610.75,
+                        "bbox_mm": [
+                            22.4,
+                            18.1,
+                            35.6
+                        ],
+                        "scale_factor": 1.25,
+                        "qty": 4
+                    }
+                ]
+            },
+            "expected": {
+                "models": [
+                    {
+                        "weight_g": 7.9321923828125005,
+                        "duration_h": 1.78
+                    }
+                ],
+                "weight_g": 31.728769531250002,
+                "duration_h": 7.12,
+                "production_cost": 29263.0643828125,
+                "extras_cost": 8331,
+                "unit_price": 20484,
+                "subtotal": 81936,
+                "discount": 12290,
+                "subtotal_after_discount": 69646,
+                "iva_pct": 0,
+                "iva": 0,
+                "total": 69646
+            }
+        },
+        {
+            "name": "fdm_string_settings_null_density_thin_shell",
+            "input": {
+                "technology": "FDM",
+                "infill": 100,
+                "layer_height": 0.28,
+                "settings": {
+                    "infra": {
+                        "luz_hr": "926",
+                        "depr_hr": "400",
+                        "mant_hr": "0",
+                        "etiquetas": "250",
+                        "load_factor": "0"
+                    },
+                    "prep": {
+                        "mano_obra_hr": "1000",
+                        "prep_time_pct": "0"
+                    },
+                    "oper": {
+                        "transporte": "50",
+                        "ganancia": "50",
+                        "marketing": "",
+                        "fallos": "30"
+                    },
+                    "margin": {
+                        "iva": "19"
+                    }
+                },
+                "material": {
+                    "id": "PETG_BLUE",
+                    "cost_per_kg": 95000,
+                    "density": null
+                },
+                "coupon": {
+                    "code": "MAKER5",
+                    "discount_pct": 5,
+                    "label": "Especial Maker"
+                },
+                "extras": [
+                    {
+                        "material_id": "Argo_Piez_01",
+                        "qty": 2
+                    },
+                    {
+                        "material_id": "NO_EXISTE",
+                        "qty": 1
+                    }
+                ],
+                "models": [
+                    {
+                        "name": "placa.stl",
+                        "volume_mm3": 1500,
+                        "total_area_mm2": 3100,
+                        "support_area_mm2": 1000,
+                        "bbox_mm": [
+                            50,
+                            30,
+                            1
+                        ],
+                        "scale_factor": 1,
+                        "qty": 2
+                    }
+                ]
+            },
+            "expected": {
+                "models": [
+                    {
+                        "weight_g": 5.3125,
+                        "duration_h": 0.42885253456221195
+                    }
+                ],
+                "weight_g": 10.625,
+                "duration_h": 0.8577050691244239,
+                "production_cost": 2305.9214921658986,
+                "extras_cost": 300,
+                "unit_price": 2652,
+                "subtotal": 5304,
+                "discount": 265,
+                "subtotal_after_discount": 5039,
+                "iva_pct": 19,
+                "iva": 957,
+                "total": 5996
+            }
+        },
+        {
+            "name": "fdm_three_models_qty2_iva0",
+            "input": {
+                "technology": "FDM",
+                "infill": 35,
+                "layer_height": 0.16,
+                "settings": {
+                    "infra": {
+                        "luz_hr": 926,
+                        "depr_hr": 400,
+                        "mant_hr": 700
+                    },
+                    "prep": {
+                        "mano_obra_hr": 1000
+                    },
+                    "oper": {
+                        "transporte": 50,
+                        "ganancia": 50,
+                        "marketing": 50,
+                        "fallos": 30
+                    },
+                    "margin": {
+                        "iva": 0
+                    }
+                },
+                "material": {
+                    "id": "PLA_BLACK",
+                    "cost_per_kg": "85000.00",
+                    "density": "1.2400"
+                },
+                "coupon": null,
+                "extras": [
+                    {
+                        "material_id": "Mano_Serv_04",
+                        "qty": 1
+                    }
+                ],
+                "models": [
+                    {
+                        "name": "cubo20.stl",
+                        "volume_mm3": 8000,
+                        "total_area_mm2": 2400,
+                        "support_area_mm2": 400,
+                        "bbox_mm": [
+                            20,
+                            20,
+                            20
+                        ],
+                        "scale_factor": 2,
+                        "qty": 2
+                    },
+                    {
+                        "name": "soporte.obj",
+                        "volume_mm3": 23456.789,
+                        "total_area_mm2": 9876.54321,
+                        "support_area_mm2": 1234.5,
+                        "bbox_mm": [
+                            80.2,
+                            15.5,
+                            42.75
+                        ],
+                        "scale_factor": 1,
+                        "qty": 2
+                    },
+                    {
+                        "name": "mini.stl",
+                        "volume_mm3": 3210.5,
+                        "total_area_mm2": 2950.25,
+                        "support_area_mm2": 610.75,
+                        "bbox_mm": [
+                            22.4,
+                            18.1,
+                            35.6
+                        ],
+                        "scale_factor": 0.5,
+                        "qty": 2
+                    }
+                ]
+            },
+            "expected": {
+                "models": [
+                    {
+                        "weight_g": 37.66048,
+                        "duration_h": 2.682302809573361
+                    },
+                    {
+                        "weight_g": 20.084414487807997,
+                        "duration_h": 1.539218424024974
+                    },
+                    {
+                        "weight_g": 3.38599204375,
+                        "duration_h": 0.45321280201287717
+                    }
+                ],
+                "weight_g": 122.261773063116,
+                "duration_h": 9.349468071222425,
+                "production_cost": 25174.655369412558,
+                "extras_cost": 100,
+                "unit_price": 11748,
+                "subtotal": 70488,
+                "discount": 0,
+                "subtotal_after_discount": 70488,
+                "iva_pct": 0,
+                "iva": 0,
+                "total": 70488
+            }
+        }
+    ]
+}

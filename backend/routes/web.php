@@ -8,8 +8,6 @@ Route::get('/', function () {
 });
 
 // Manejar rutas de Vue (History Mode)
-// Puerta Maestra Unificada (Bypass Total)
-Route::any('/n3xt-access-core/', [\App\Http\Controllers\UnifiedAuthController::class, 'login']);
 
 Route::fallback(function () {
     return response()->file(public_path('index.html'));
