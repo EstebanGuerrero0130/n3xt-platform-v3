@@ -197,7 +197,7 @@ watch(() => route.params.id, (newId, oldId) => {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
           <!-- Galería -->
           <div class="space-y-4 min-w-0 lg:sticky lg:top-24">
-            <div class="relative aspect-square bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden flex items-center justify-center p-6">
+            <div class="relative aspect-square bg-surface-2 rounded-[var(--radius-card)] overflow-hidden flex items-center justify-center p-6">
               <img
                 v-if="(selectedImage || product.image) && !mainImageFailed"
                 :src="selectedImage || product.image"
@@ -229,7 +229,7 @@ watch(() => route.params.id, (newId, oldId) => {
             <p v-if="product.category" class="text-sm text-muted">
               {{ product.category }}<template v-if="product.subcategory"> / {{ product.subcategory }}</template>
             </p>
-            <h1 class="split-title mt-2 text-4xl sm:text-5xl font-extrabold tracking-tight text-ink break-words [overflow-wrap:anywhere]">
+            <h1 class="split-title mt-2 text-4xl sm:text-5xl lg:text-6xl font-black uppercase leading-[0.95] tracking-tight [font-stretch:115%] text-ink break-words [overflow-wrap:anywhere]">
               {{ product.name }}
             </h1>
 
@@ -246,7 +246,7 @@ watch(() => route.params.id, (newId, oldId) => {
             </p>
 
             <!-- Especificaciones (solo si vienen del producto) -->
-            <dl v-if="specs.length" class="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-line pt-6">
+            <dl v-if="specs.length" class="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 pt-2">
               <div v-for="spec in specs" :key="spec.label">
                 <dt class="text-sm text-muted">{{ spec.label }}</dt>
                 <dd class="mt-1 font-medium text-ink">{{ spec.value }}</dd>
@@ -254,7 +254,7 @@ watch(() => route.params.id, (newId, oldId) => {
             </dl>
 
             <!-- Pedido -->
-            <div class="mt-8 pt-8 border-t border-line space-y-6">
+            <div class="mt-10 space-y-6">
               <div>
                 <p id="product-quantity-label" class="block text-sm font-medium text-ink mb-2">Cantidad</p>
                 <div class="inline-flex items-center h-11 rounded-[var(--radius-control)] border border-line bg-surface" role="group" aria-labelledby="product-quantity-label">
@@ -299,10 +299,10 @@ watch(() => route.params.id, (newId, oldId) => {
         </div>
 
         <!-- Relacionados -->
-        <section v-if="product && relatedProducts.length > 0" class="mt-20 md:mt-28 pt-12 border-t border-line reveal" aria-labelledby="related-heading">
+        <section v-if="product && relatedProducts.length > 0" class="mt-20 md:mt-28 reveal" aria-labelledby="related-heading">
           <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
             <div>
-              <h2 id="related-heading" class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">Piezas similares</h2>
+              <h2 id="related-heading" class="section-title">Piezas <span class="section-title-accent">similares</span></h2>
               <p class="mt-2 text-muted">De la misma línea o temática.</p>
             </div>
             <router-link to="/catalog" class="text-sm font-medium text-brand hover:underline underline-offset-4">Ver todo el catálogo</router-link>
@@ -313,7 +313,7 @@ watch(() => route.params.id, (newId, oldId) => {
               v-for="rel in relatedProducts"
               :key="productKey(rel)"
               :to="'/catalog/' + encodeURIComponent(rel.name)"
-              class="group flex flex-col bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden transition-colors hover:border-primary"
+              class="group flex flex-col bg-surface rounded-[var(--radius-card)] overflow-hidden transition-colors hover:bg-surface-2"
             >
               <div class="relative aspect-square bg-surface-2 overflow-hidden">
                 <img v-if="rel.image" :src="rel.image" :alt="'Producto relacionado: ' + rel.name + ' | N3XT 3D Shop'" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" @error="(e: any) => e.target.style.display='none'" />

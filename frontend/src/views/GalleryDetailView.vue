@@ -251,7 +251,7 @@ onUnmounted(() => {
           <div class="space-y-4 min-w-0">
             <button
               type="button"
-              class="relative block w-full aspect-[4/3] rounded-[var(--radius-card)] overflow-hidden bg-surface-2 border border-line cursor-zoom-in"
+              class="relative block w-full aspect-[4/3] rounded-[var(--radius-card)] overflow-hidden bg-surface-2 cursor-zoom-in"
               :aria-label="'Ampliar imagen ' + (selectedIdx + 1) + ' de ' + (allImages.length || 1)"
               @click="openLightbox(selectedIdx)">
               <img
@@ -288,12 +288,12 @@ onUnmounted(() => {
 
           <!-- Información -->
           <div class="min-w-0">
-            <h1 class="split-title text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink break-words [overflow-wrap:anywhere]">{{ item.title }}</h1>
+            <h1 class="split-title text-4xl sm:text-5xl lg:text-6xl font-black uppercase leading-[0.95] tracking-tight [font-stretch:115%] text-ink break-words [overflow-wrap:anywhere]">{{ item.title }}</h1>
             <p v-if="item.subtitle" class="mt-3 text-lg md:text-xl text-muted">{{ item.subtitle }}</p>
 
             <p v-if="item.description" class="mt-6 max-w-prose text-base leading-relaxed text-ink whitespace-pre-line">{{ item.description }}</p>
 
-            <dl v-if="hasMeta" class="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-line pt-6">
+            <dl v-if="hasMeta" class="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 pt-2">
               <div v-if="item.category">
                 <dt class="text-sm text-muted">Categoría</dt>
                 <dd class="mt-1 font-medium text-ink">{{ item.category }}</dd>
@@ -336,13 +336,13 @@ onUnmounted(() => {
         </div>
 
         <!-- Relacionados -->
-        <section v-if="relatedItems.length > 0" ref="relatedGridRef" class="mt-20 md:mt-28 pt-12 border-t border-line" aria-labelledby="related-heading">
-          <h2 id="related-heading" class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink mb-8">Otros trabajos</h2>
+        <section v-if="relatedItems.length > 0" ref="relatedGridRef" class="mt-20 md:mt-28" aria-labelledby="related-heading">
+          <h2 id="related-heading" class="section-title mb-12">Otros <span class="section-title-accent">trabajos</span></h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <router-link
               v-for="(related, idx) in relatedItems" :key="related.title || idx"
               :to="'/galeria/' + encodeURIComponent(related.title || String(idx))"
-              :class="['group flex flex-col bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden transition-colors hover:border-primary', relatedVisible ? 'related-revealed' : 'related-hidden']"
+              :class="['group flex flex-col bg-surface rounded-[var(--radius-card)] overflow-hidden transition-colors hover:bg-surface-2 hover:border-primary', relatedVisible ? 'related-revealed' : 'related-hidden']"
               :style="{ '--rel-delay': (idx * 80) + 'ms' }">
               <div class="relative aspect-[4/3] bg-surface-2 overflow-hidden">
                 <img

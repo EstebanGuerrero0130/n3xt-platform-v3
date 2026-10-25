@@ -8,6 +8,7 @@ import BrandTicker from '../components/BrandTicker.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { srcsetFor } from '../utils/images'
+import { sampleGallery } from '../data/sampleGallery'
 import { usePageMeta } from '../composables/usePageMeta'
 import { prefersReducedMotion } from '../composables/useMotion'
 
@@ -219,15 +220,6 @@ const webSettings = ref<WebSettings>({
 
 const isReady = ref(false)
 
-// Trabajos de ejemplo (imágenes del proyecto) mientras el panel no tenga galería.
-// `sample` evita enlazar a /galeria/:titulo, que solo existe para trabajos reales.
-const sampleGallery: (GalleryItem & { sample?: boolean })[] = [
-  { image: '/assets/n3xt_social_solo_leveling_1778543107506.webp', title: 'Sung Jinwoo pintado a mano', category: 'Figura coleccionable', technology: 'Resina 8K', sample: true },
-  { image: '/assets/img/gallery2.webp', title: 'Maqueta arquitectónica', category: 'Arquitectura', technology: 'Resina', sample: true },
-  { image: '/assets/img/gallery3.webp', title: 'Celosía flexible', category: 'Prototipo', technology: 'TPU', sample: true },
-  { image: '/assets/n3xt_social_overwatch_prop_1778543121526.webp', title: 'Prop de cosplay', category: 'Cosplay', technology: 'PLA + aerografía', sample: true },
-  { image: '/assets/img/gallery1.webp', title: 'Engranaje de repuesto', category: 'Repuesto', technology: 'PETG', sample: true },
-]
 const featuredWorks = computed(() => {
   const g = webSettings.value.gallery.length ? webSettings.value.gallery : sampleGallery
   const featured = g.filter(w => w.featured)

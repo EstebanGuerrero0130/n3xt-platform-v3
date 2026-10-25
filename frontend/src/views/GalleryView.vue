@@ -4,10 +4,9 @@ import { api } from '../services/api'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
-import { useSplitTitle } from '../composables/useSplitTitle'
+import { srcsetFor } from '../utils/images'
+import { sampleGallery } from '../data/sampleGallery'
 import { usePageMeta } from '../composables/usePageMeta'
-
-useSplitTitle()
 
 usePageMeta({
   title: 'Galería de Trabajos | N3XT 3D',
@@ -32,6 +31,7 @@ interface GalleryItem {
   subtitle?: string
   description?: string
   stats?: { val: string; label: string }[]
+  sample?: boolean
 }
 
 interface GallerySettings {
@@ -133,6 +133,10 @@ const fetchSettings = async () => {
         )
         .filter((item: any) => item.image || item.title)
     }
+    // Sin galería en el panel: trabajos de ejemplo (sin enlace a un detalle que no existe)
+    if (!webSettings.value.gallery.length) {
+      webSettings.value.gallery = sampleGallery.map((w, idx) => ({ ...w, uid: idx, images: [], tags: '' }))
+    }
     if (data?.web?.cloudinary_name) {
       webSettings.value.cloudinary_name = data.web.cloudinary_name
     }
@@ -165,137 +169,108 @@ onUnmounted(() => {
   <div class="min-h-screen bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="gallery" subtext="Galería de trabajos" />
 
-    <main id="main" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+    <main id="main" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24 md:pt-24 md:pb-36">
       <!-- Encabezado -->
-      <header class="max-w-2xl mb-10">
-        <h1 class="split-title text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink">Nuestros trabajos</h1>
-        <p class="mt-4 text-lg md:text-xl text-muted">
-          Figuras, prototipos y piezas a medida que hemos impreso en resina y filamento.
-        </p>
+      <header class="grid gap-6 lg:grid-cols-12 lg:items-end">
+        <h1 class="section-title lg:col-span-7">Nuestros <span class="section-title-accent">trabajos</span></h1>
+        <p class="section-lead lg:col-span-5">Figuras, prototipos y piezas a medida que hemos impreso en resina y filamento.</p>
       </header>
 
-      <!-- Filtros: categorías -->
-      <div v-if="!loading && !loadError && filters.length > 1" class="flex flex-wrap gap-2 sm:gap-3" role="group" aria-label="Filtrar por categoría">
+      <!-- Filtros -->
+      <div v-if="!loading && !loadError && filters.length > 2" class="mt-12 flex flex-wrap gap-2 sm:gap-3" role="group" aria-label="Filtrar por categoría">
         <button
           v-for="cat in filters" :key="cat"
-          type="button"
+          type="button" class="chip"
           :aria-pressed="activeFilter === cat"
-          :class="[
-            'inline-flex items-center gap-2 h-9 px-4 rounded-full border text-sm font-medium transition-colors',
-            activeFilter === cat ? 'bg-ink text-canvas border-ink' : 'border-line text-muted hover:text-ink'
-          ]"
           @click="activeFilter = cat">
           {{ cat }}
           <span v-if="categoryCounts[cat] !== undefined" class="tabular-nums opacity-70">{{ categoryCounts[cat] }}</span>
         </button>
       </div>
-
-      <!-- Filtros: tecnología -->
-      <div v-if="!loading && !loadError && techs.filter(t => t !== 'Todos' && t !== '' && t !== undefined).length > 0" class="mt-4 flex flex-wrap items-center gap-2 sm:gap-3" role="group" aria-label="Filtrar por tecnología">
-        <span class="text-sm text-muted mr-1">Tecnología</span>
+      <div v-if="!loading && !loadError && techs.filter(t => t !== 'Todos' && t).length > 1" class="mt-3 flex flex-wrap items-center gap-2 sm:gap-3" role="group" aria-label="Filtrar por tecnología">
+        <span class="text-base font-semibold text-muted mr-1">Tecnología</span>
         <button
           v-for="t in techs" :key="t"
-          type="button"
+          type="button" class="chip"
           :aria-pressed="activeTech === t"
-          :class="[
-            'h-9 px-4 rounded-full border text-sm font-medium transition-colors',
-            activeTech === t ? 'bg-ink text-canvas border-ink' : 'border-line text-muted hover:text-ink'
-          ]"
-          @click="activeTech = t">
-          {{ t }}
-        </button>
+          @click="activeTech = t">{{ t }}</button>
       </div>
 
-      <div class="mt-10">
-        <!-- Skeleton -->
-        <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-hidden="true">
-          <div v-for="i in 6" :key="i" class="bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden">
-            <div class="aspect-[4/3] bg-surface-2 animate-pulse"></div>
-            <div class="p-5 space-y-3">
-              <div class="h-5 bg-surface-2 animate-pulse rounded w-3/4"></div>
-              <div class="h-4 bg-surface-2 animate-pulse rounded w-1/3"></div>
-              <div class="flex gap-2 pt-1">
-                <div class="h-6 w-16 bg-surface-2 animate-pulse rounded-md"></div>
-                <div class="h-6 w-12 bg-surface-2 animate-pulse rounded-md"></div>
-              </div>
-            </div>
-          </div>
+      <div class="mt-12">
+        <!-- Esqueleto -->
+        <div v-if="loading" class="grid auto-rows-[16rem] gap-4 sm:grid-cols-2 lg:grid-cols-4" role="status">
+          <span class="sr-only">Cargando trabajos…</span>
+          <div v-for="i in 6" :key="i" class="rounded-[var(--radius-card)] bg-surface-2 animate-pulse" :class="i === 1 ? 'sm:col-span-2 sm:row-span-2' : ''" aria-hidden="true"></div>
         </div>
 
         <!-- Error -->
         <div v-else-if="loadError" class="py-24 text-center max-w-md mx-auto" role="alert">
-          <h2 class="text-2xl font-extrabold tracking-tight text-ink">No pudimos cargar la galería</h2>
-          <p class="mt-3 text-muted">Revisa tu conexión e inténtalo de nuevo.</p>
+          <h2 class="text-3xl font-black uppercase tracking-tight">No pudimos cargar la galería</h2>
+          <p class="mt-3 text-lg text-muted">Revisa tu conexión e inténtalo de nuevo.</p>
           <button type="button" class="btn-primary mt-6" @click="fetchSettings">Reintentar</button>
         </div>
 
-        <!-- Grid -->
-        <div v-else-if="filtered.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <router-link
+        <!-- Mosaico: cada 6 trabajos, uno protagonista -->
+        <div v-else-if="filtered.length > 0" class="grid auto-rows-[16rem] gap-4 sm:grid-cols-2 md:auto-rows-[18rem] lg:grid-cols-4">
+          <component
+            :is="item.sample ? 'div' : 'router-link'"
             v-for="(item, idx) in filtered" :key="item.uid"
             :data-reveal-index="idx"
-            :to="'/galeria/' + encodeURIComponent(item.title || String(idx))"
+            :to="item.sample ? undefined : '/galeria/' + encodeURIComponent(item.title || String(idx))"
             :class="[
-              'group flex flex-col bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden transition-colors hover:border-primary',
+              'group relative overflow-hidden rounded-[var(--radius-card)] bg-surface-2',
+              idx % 6 === 0 ? 'sm:col-span-2 sm:row-span-2' : '',
               visibleCards.includes(idx) ? 'card-revealed' : 'card-hidden'
             ]"
             :style="{ '--reveal-delay': Math.min(idx * 60, 360) + 'ms' }"
           >
-            <div class="relative aspect-[4/3] bg-surface-2 overflow-hidden">
-              <!-- Imagen secundaria (se muestra al pasar el cursor) -->
-              <img
-                v-if="item.images && item.images.length > 0 && !brokenImages[idx]"
-                :src="item.images[0]"
-                class="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"
-                loading="lazy"
-                decoding="async"
-                alt=""
-                aria-hidden="true"
-              />
-              <img
-                v-if="item.image && !brokenImages[idx]"
-                :src="item.image"
-                :alt="'Trabajo de impresión 3D: ' + item.title"
-                class="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
-                decoding="async"
-                @error="brokenImages[idx] = true"
-              />
-              <div v-else class="absolute inset-0 flex items-center justify-center text-muted/60">
-                <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.25" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-              </div>
-              <span v-if="item.featured" class="absolute top-3 left-3 z-20 inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-surface text-ink border border-line">Destacado</span>
-              <span v-if="item.images && item.images.length > 0" class="absolute bottom-3 right-3 z-20 inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-black/60 text-white">+{{ item.images.length }} fotos</span>
-            </div>
-
-            <div class="flex flex-col flex-1 p-5">
-              <h2 class="text-lg md:text-xl font-bold tracking-tight text-ink group-hover:text-brand transition-colors line-clamp-2">
-                {{ item.title || 'Sin título' }}
-              </h2>
-              <p v-if="item.category || item.technology" class="mt-1.5 flex flex-wrap gap-x-3 text-sm text-muted">
-                <span v-if="item.category">{{ item.category }}</span>
-                <span v-if="item.technology">{{ item.technology }}</span>
-              </p>
-              <div v-if="normalizeTags(item.tags).length > 0" class="mt-4 flex flex-wrap gap-2">
-                <span
-                  v-for="tag in normalizeTags(item.tags).slice(0, 2)" :key="tag"
-                  class="inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-surface-2 text-ink">
-                  {{ tag }}
-                </span>
-              </div>
-            </div>
-          </router-link>
+            <img
+              v-if="item.image && !brokenImages[idx]"
+              :src="item.image"
+              :srcset="srcsetFor(item.image)"
+              :sizes="idx % 6 === 0 ? '(min-width: 640px) 50vw, 100vw' : '(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw'"
+              :alt="item.title"
+              class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+              loading="lazy" decoding="async"
+              @error="brokenImages[idx] = true"
+            />
+            <!-- Segunda foto al pasar el cursor -->
+            <img
+              v-if="item.images && item.images.length > 0 && !brokenImages[idx]"
+              :src="item.images[0]" alt="" aria-hidden="true"
+              class="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              loading="lazy" decoding="async"
+            />
+            <span class="photo-scrim absolute inset-0" aria-hidden="true"></span>
+            <span v-if="item.featured" class="absolute left-4 top-4 rounded-full bg-primary px-3 py-1 text-sm font-semibold text-white">Destacado</span>
+            <span v-if="item.images && item.images.length > 0" class="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-sm font-semibold text-white">+{{ item.images.length }} fotos</span>
+            <span class="absolute inset-x-0 bottom-0 p-5 md:p-6">
+              <h2 class="font-black uppercase tracking-tight leading-none text-white [font-stretch:115%]" :class="idx % 6 === 0 ? 'text-3xl md:text-5xl' : 'text-xl md:text-2xl'">{{ item.title || 'Sin título' }}</h2>
+              <span class="mt-2 block text-sm font-semibold text-[#3fcf72]">{{ [item.category, item.technology].filter(Boolean).join(' · ') }}</span>
+              <span v-if="idx % 6 === 0 && (item.subtitle || item.description)" class="mt-3 block max-w-md text-base leading-relaxed text-white/85 line-clamp-2">{{ item.subtitle || item.description }}</span>
+            </span>
+          </component>
         </div>
 
         <!-- Vacío -->
         <div v-else class="py-24 text-center max-w-md mx-auto">
-          <h2 class="text-2xl font-extrabold tracking-tight text-ink">Aún no hay trabajos en este filtro</h2>
-          <p class="mt-3 text-muted">Prueba con otra categoría o mira todo el portafolio.</p>
+          <h2 class="text-3xl font-black uppercase tracking-tight">Nada en este filtro</h2>
+          <p class="mt-3 text-lg text-muted">Prueba con otra categoría o mira todo el portafolio.</p>
           <button type="button" class="btn-secondary mt-6" @click="activeFilter = 'Todos'; activeTech = 'Todos'">Ver todos los trabajos</button>
         </div>
       </div>
+
+      <!-- Cierre -->
+      <section class="mt-24 md:mt-36 grid gap-8 rounded-[var(--radius-panel)] bg-surface p-8 md:p-14 lg:grid-cols-12 lg:items-center">
+        <h2 class="section-title lg:col-span-7">¿Tienes una <span class="section-title-accent">idea?</span></h2>
+        <div class="lg:col-span-5">
+          <p class="section-lead">Envíanos tu archivo 3D o una referencia y te cotizamos la pieza.</p>
+          <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+            <router-link to="/quote" class="btn-primary btn-lg">Cotizar mi pieza</router-link>
+            <router-link to="/project/init" class="btn-secondary btn-lg">Sin archivo, solo la idea</router-link>
+          </div>
+        </div>
+      </section>
     </main>
 
     <AppFooter />

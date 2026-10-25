@@ -43,7 +43,6 @@ onMounted(async () => {
 
 <template>
   <footer class="relative mt-24 bg-surface">
-    <div class="technical-grid absolute inset-0 pointer-events-none" aria-hidden="true"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
       <div class="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div class="max-w-sm">

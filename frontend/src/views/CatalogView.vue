@@ -6,10 +6,7 @@ import { api } from '../services/api'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
-import { useSplitTitle } from '../composables/useSplitTitle'
 import { usePageMeta } from '../composables/usePageMeta'
-
-useSplitTitle()
 
 usePageMeta({
   title: 'Catálogo de Piezas 3D | N3XT 3D',
@@ -144,20 +141,20 @@ const staggerKey = ref(0)
 
 // ─── MARCAS / FRANQUICIAS ───
 const brands = [
-  { name: 'Pokémon', url: '/assets/brands/pokemon.svg', className: 'h-8 md:h-10' },
-  { name: 'Warhammer 40k', url: '/assets/brands/warhammer-40k.svg', className: 'h-10 md:h-12' },
-  { name: 'Dungeons & Dragons', url: '/assets/brands/dungeons-dragons.svg', className: 'h-8 md:h-10' },
-  { name: 'Star Wars', url: '/assets/brands/star-wars.svg', className: 'h-8 md:h-10' },
-  { name: 'Marvel', url: '/assets/brands/marvel.svg', className: 'h-7 md:h-9' },
-  { name: 'Bandai Namco', url: '/assets/brands/bandai-namco.svg', className: 'h-6 md:h-8' },
-  { name: 'Nintendo', url: '/assets/brands/nintendo.svg', className: 'h-7 md:h-9' },
-  { name: 'LEGO', url: '/assets/brands/lego.svg', className: 'h-8 md:h-10' },
-  { name: 'DC Comics', url: '/assets/brands/dc-comics.svg', className: 'h-8 md:h-10' },
-  { name: 'One Piece', url: '/assets/brands/one-piece.svg', className: 'h-8 md:h-10' },
-  { name: 'Dragon Ball Z', url: '/assets/brands/dragon-ball-z.svg', className: 'h-8 md:h-10' },
-  { name: 'Sonic', url: '/assets/brands/sonic.svg', className: 'h-7 md:h-9' },
-  { name: 'Minecraft', url: '/assets/brands/minecraft.svg', className: 'h-8 md:h-10' },
-  { name: 'Harry Potter', url: '/assets/brands/harry-potter.svg', className: 'h-7 md:h-9' },
+  { name: 'Pokémon', url: '/assets/brands/pokemon.svg', className: 'h-10 md:h-14' },
+  { name: 'Warhammer 40k', url: '/assets/brands/warhammer-40k.svg', className: 'h-12 md:h-16' },
+  { name: 'Dungeons & Dragons', url: '/assets/brands/dungeons-dragons.svg', className: 'h-10 md:h-14' },
+  { name: 'Star Wars', url: '/assets/brands/star-wars.svg', className: 'h-10 md:h-14' },
+  { name: 'Marvel', url: '/assets/brands/marvel.svg', className: 'h-9 md:h-12' },
+  { name: 'Bandai Namco', url: '/assets/brands/bandai-namco.svg', className: 'h-8 md:h-11' },
+  { name: 'Nintendo', url: '/assets/brands/nintendo.svg', className: 'h-9 md:h-12' },
+  { name: 'LEGO', url: '/assets/brands/lego.svg', className: 'h-10 md:h-14' },
+  { name: 'DC Comics', url: '/assets/brands/dc-comics.svg', className: 'h-10 md:h-14' },
+  { name: 'One Piece', url: '/assets/brands/one-piece.svg', className: 'h-10 md:h-14' },
+  { name: 'Dragon Ball Z', url: '/assets/brands/dragon-ball-z.svg', className: 'h-10 md:h-14' },
+  { name: 'Sonic', url: '/assets/brands/sonic.svg', className: 'h-9 md:h-12' },
+  { name: 'Minecraft', url: '/assets/brands/minecraft.svg', className: 'h-10 md:h-14' },
+  { name: 'Harry Potter', url: '/assets/brands/harry-potter.svg', className: 'h-9 md:h-12' },
 ]
 
 // Intercalar marcas: crear un array plano con las marcas mezcladas, repetido 3 veces
@@ -197,172 +194,147 @@ onMounted(() => {
   <div class="min-h-screen bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="catalog" subtext="Catálogo de piezas" />
 
-    <main id="main" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+    <main id="main" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24 md:pt-24 md:pb-36">
       <!-- Encabezado -->
-      <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-        <div class="max-w-2xl">
-          <h1 class="split-title text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink">Catálogo</h1>
-          <p class="mt-4 text-lg md:text-xl text-muted">Piezas listas para pedir: figuras, coleccionables y accesorios impresos en nuestro taller.</p>
-        </div>
-        <div v-if="webSettings.pdf_catalog_url" class="flex flex-col items-start md:items-end gap-2 shrink-0">
+      <header class="grid gap-6 lg:grid-cols-12 lg:items-end">
+        <h1 class="section-title lg:col-span-7">Catálogo <span class="section-title-accent">N3XT</span></h1>
+        <div class="lg:col-span-5">
+          <p class="section-lead">Piezas listas para pedir: figuras, coleccionables y accesorios impresos en nuestro taller.</p>
           <a
-            :href="webSettings.pdf_catalog_url"
-            target="_blank"
-            rel="noopener"
-            class="split-btn btn-secondary"
+            v-if="webSettings.pdf_catalog_url"
+            :href="webSettings.pdf_catalog_url" target="_blank" rel="noopener"
+            class="btn-secondary mt-6"
           >
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" /></svg>
-            <span>Descargar catálogo en PDF</span>
+            Descargar catálogo en PDF
           </a>
-          <p v-if="webSettings.pdf_catalog_desc" class="text-sm text-muted md:text-right max-w-xs">{{ webSettings.pdf_catalog_desc }}</p>
+          <p v-if="webSettings.pdf_catalog_url && webSettings.pdf_catalog_desc" class="mt-2 text-sm text-muted">{{ webSettings.pdf_catalog_desc }}</p>
         </div>
       </header>
 
-      <!-- Franja de confianza -->
-      <ul class="mt-8 flex flex-col sm:flex-row sm:flex-wrap gap-x-8 gap-y-3 py-4 border-y border-line text-sm text-ink" aria-label="Condiciones de compra">
-        <li class="inline-flex items-center gap-2">
-          <svg class="w-5 h-5 text-brand shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM5 17H3V6a1 1 0 011-1h9v12M13 9h4l3 4v4h-1"/></svg>
-          Envíos a todo Colombia
-        </li>
-        <li class="inline-flex items-center gap-2">
-          <svg class="w-5 h-5 text-brand shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-          Garantía de 6 meses
-        </li>
-        <li class="inline-flex items-center gap-2">
-          <svg class="w-5 h-5 text-brand shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-          Pedidos y asesoría por WhatsApp
+      <!-- Condiciones de compra -->
+      <ul class="mt-12 grid gap-4 sm:grid-cols-3" aria-label="Condiciones de compra">
+        <li v-for="c in [
+          { t: 'Envíos a todo Colombia', d: 'Empaque protegido para piezas delicadas.' },
+          { t: 'Garantía de 6 meses', d: 'Si algo falla por fabricación, lo reponemos.' },
+          { t: 'Asesoría por WhatsApp', d: 'Te ayudamos a elegir tamaño, color y acabado.' },
+        ]" :key="c.t" class="rounded-[var(--radius-card)] bg-surface p-5">
+          <p class="text-lg font-black uppercase tracking-tight [font-stretch:115%]">{{ c.t }}</p>
+          <p class="mt-1 text-base text-muted">{{ c.d }}</p>
         </li>
       </ul>
 
-      <!-- Filtros: categorías -->
-      <div v-if="categories.length > 1" class="mt-8 flex flex-wrap gap-2 sm:gap-3" role="group" aria-label="Filtrar por categoría">
+      <!-- Filtros -->
+      <div v-if="categories.length > 1" class="mt-12 flex flex-wrap gap-2 sm:gap-3" role="group" aria-label="Filtrar por categoría">
         <button
-          v-for="cat in categories"
-          :key="cat"
-          type="button"
+          v-for="cat in categories" :key="cat"
+          type="button" class="chip"
           :aria-pressed="activeCategory === cat"
-          :class="[
-            'h-9 px-4 rounded-full border text-sm font-medium transition-colors',
-            activeCategory === cat ? 'bg-ink text-canvas border-ink' : 'border-line text-muted hover:text-ink'
-          ]"
           @click="activeCategory = cat; activeSubcategory = 'Todos'"
-        >
-          {{ cat }}
-        </button>
+        >{{ cat }}</button>
       </div>
-
-      <!-- Filtros: subcategorías -->
-      <div v-if="availableSubcategories.length > 0" class="mt-4 flex flex-wrap items-center gap-2 sm:gap-3" role="group" aria-label="Filtrar por subcategoría">
-        <span class="text-sm text-muted mr-1">{{ activeCategory }}</span>
+      <div v-if="availableSubcategories.length > 0" class="mt-3 flex flex-wrap items-center gap-2 sm:gap-3" role="group" aria-label="Filtrar por subcategoría">
+        <span class="text-base font-semibold text-muted mr-1">{{ activeCategory }}</span>
         <button
-          v-for="sub in availableSubcategories"
-          :key="sub"
-          type="button"
+          v-for="sub in availableSubcategories" :key="sub"
+          type="button" class="chip"
           :aria-pressed="activeSubcategory === sub"
-          :class="[
-            'h-9 px-4 rounded-full border text-sm font-medium transition-colors',
-            activeSubcategory === sub ? 'bg-ink text-canvas border-ink' : 'border-line text-muted hover:text-ink'
-          ]"
           @click="activeSubcategory = sub"
-        >
-          {{ sub }}
-        </button>
+        >{{ sub }}</button>
       </div>
 
-      <div class="mt-10">
-        <!-- Skeleton -->
-        <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-hidden="true">
-          <div v-for="i in 6" :key="i" class="bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden">
-            <div class="aspect-square bg-surface-2 animate-pulse"></div>
-            <div class="p-5 space-y-3">
-              <div class="h-3 bg-surface-2 animate-pulse rounded w-1/4"></div>
-              <div class="h-5 bg-surface-2 animate-pulse rounded w-3/4"></div>
-              <div class="h-6 bg-surface-2 animate-pulse rounded w-1/3"></div>
-            </div>
-          </div>
+      <div class="mt-12">
+        <!-- Esqueleto -->
+        <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" role="status">
+          <span class="sr-only">Cargando catálogo…</span>
+          <div v-for="i in 6" :key="i" class="aspect-[4/5] rounded-[var(--radius-panel)] bg-surface-2 animate-pulse" aria-hidden="true"></div>
         </div>
 
         <!-- Error -->
         <div v-else-if="loadError" class="py-24 text-center max-w-md mx-auto" role="alert">
-          <h2 class="text-2xl font-extrabold tracking-tight text-ink">No pudimos cargar el catálogo</h2>
-          <p class="mt-3 text-muted">Revisa tu conexión e inténtalo de nuevo.</p>
+          <h2 class="text-3xl font-black uppercase tracking-tight">No pudimos cargar el catálogo</h2>
+          <p class="mt-3 text-lg text-muted">Revisa tu conexión e inténtalo de nuevo.</p>
           <button type="button" class="btn-primary mt-6" @click="fetchSettings">Reintentar</button>
         </div>
 
-        <!-- Productos -->
+        <!-- Productos: foto de fondo, nombre y precio encima -->
         <div v-else-if="filteredItems.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <router-link
             v-for="(item, index) in filteredItems"
             :key="'cat-' + staggerKey + '-' + index"
             :to="'/catalog/' + encodeURIComponent(item.name)"
             :style="{ '--stagger-delay': Math.min(index * 50, 400) + 'ms' }"
-            class="group flex flex-col bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden transition-colors hover:border-primary stagger-item"
+            class="product-card group relative flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-[var(--radius-panel)] bg-surface-2 p-6 stagger-item"
           >
-            <div class="relative aspect-square bg-surface-2 overflow-hidden">
-              <img
-                v-if="item.image"
-                :src="getOptimizedImage(item.image)"
-                :alt="'Catálogo N3XT 3D — ' + item.name"
-                :fetchpriority="index === 0 ? 'high' : 'auto'"
-                class="absolute inset-0 w-full h-full object-cover"
-                :loading="index === 0 ? 'eager' : 'lazy'"
-                decoding="async"
-                @error="(e: any) => e.target.style.display='none'"
-              />
-              <span v-if="isDiscounted(item)" class="absolute top-3 left-3 inline-flex items-center h-6 px-2 rounded-md text-xs font-semibold bg-surface text-resin border border-line tabular-nums">
-                -{{ getDiscountPct(item) }}%
-              </span>
-            </div>
-
-            <div class="flex flex-col flex-1 p-5">
-              <p v-if="item.category" class="text-xs text-muted">{{ item.category }}</p>
-              <h2 class="mt-1 text-lg md:text-xl font-bold tracking-tight text-ink group-hover:text-brand transition-colors line-clamp-2">{{ item.name }}</h2>
-              <p class="mt-auto pt-4 flex flex-wrap items-baseline gap-x-2">
-                <span class="text-xl font-semibold tabular-nums text-resin">{{ formatCOP(item.price) }}</span>
-                <span v-if="isDiscounted(item)" class="text-sm tabular-nums text-muted line-through">
+            <img
+              v-if="item.image"
+              :src="getOptimizedImage(item.image)"
+              :alt="item.name"
+              :fetchpriority="index === 0 ? 'high' : 'auto'"
+              :loading="index < 3 ? 'eager' : 'lazy'"
+              decoding="async"
+              class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+              @error="(e: any) => e.target.style.display='none'"
+            />
+            <span class="photo-scrim absolute inset-0" aria-hidden="true"></span>
+            <span v-if="isDiscounted(item)" class="absolute left-4 top-4 rounded-full bg-[#f0a63c] px-3 py-1 text-sm font-bold text-[#1a1206] tabular-nums">
+              -{{ getDiscountPct(item) }}%
+            </span>
+            <div class="relative">
+              <p v-if="item.category" class="text-sm font-semibold text-[#3fcf72]">{{ [item.category, item.subcategory].filter(Boolean).join(' · ') }}</p>
+              <h2 class="product-card-title mt-1 font-black uppercase tracking-tight leading-[0.95] text-white line-clamp-2">{{ item.name }}</h2>
+              <p class="mt-4 flex flex-wrap items-baseline gap-x-3">
+                <span class="text-2xl font-black tabular-nums text-white">{{ formatCOP(item.price) }}</span>
+                <span v-if="isDiscounted(item)" class="text-base tabular-nums text-white/70 line-through">
                   <span class="sr-only">Antes </span>{{ formatCOP(item.original_price) }}
                 </span>
               </p>
+              <span class="mt-4 inline-flex items-center gap-2 text-base font-semibold text-white">
+                Ver pieza
+                <svg class="btn-arrow w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+              </span>
             </div>
           </router-link>
         </div>
 
         <!-- Vacío -->
-        <div v-else class="py-24 text-center max-w-md mx-auto">
-          <h2 class="text-2xl font-extrabold tracking-tight text-ink">Aún no hay piezas en esta categoría</h2>
-          <p class="mt-3 text-muted">Prueba con otra categoría o cotiza una pieza a medida.</p>
-          <button type="button" class="btn-secondary mt-6" @click="activeCategory = 'Todos'; activeSubcategory = 'Todos'">Ver todo el catálogo</button>
+        <div v-else class="grid gap-8 rounded-[var(--radius-panel)] bg-surface p-8 md:p-14 lg:grid-cols-12 lg:items-center">
+          <h2 class="section-title lg:col-span-7">Pronto, <span class="section-title-accent">nuevas piezas</span></h2>
+          <div class="lg:col-span-5">
+            <p class="section-lead">{{ activeCategory === 'Todos' ? 'Estamos preparando el catálogo. Mientras tanto, cotiza la pieza que necesitas.' : 'Aún no hay piezas en esta categoría.' }}</p>
+            <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+              <router-link to="/quote" class="btn-primary btn-lg">Cotizar una pieza</router-link>
+              <button v-if="activeCategory !== 'Todos'" type="button" class="btn-secondary btn-lg" @click="activeCategory = 'Todos'; activeSubcategory = 'Todos'">Ver todo el catálogo</button>
+              <router-link v-else to="/galeria" class="btn-secondary btn-lg">Ver trabajos</router-link>
+            </div>
+          </div>
         </div>
       </div>
     </main>
 
     <!-- Franquicias -->
-    <section ref="tickerSection" class="py-16 md:py-20 overflow-hidden bg-surface border-t border-line" aria-labelledby="brands-heading">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
-        <h2 id="brands-heading" class="text-3xl md:text-4xl font-extrabold tracking-tight text-ink">Universos que imprimimos</h2>
-        <p class="mt-3 text-muted max-w-2xl">Figuras y accesorios inspirados en las franquicias que más piden nuestros clientes.</p>
+    <section ref="tickerSection" class="bg-surface py-24 md:py-36 overflow-hidden" aria-labelledby="brands-heading">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 md:mb-16 grid gap-6 lg:grid-cols-12 lg:items-end">
+        <h2 id="brands-heading" class="section-title lg:col-span-7">Universos <span class="section-title-accent">que imprimimos</span></h2>
+        <p class="section-lead lg:col-span-5">Figuras y accesorios inspirados en las franquicias que más piden nuestros clientes.</p>
       </div>
 
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 w-12 md:w-24 z-10 pointer-events-none bg-gradient-to-r from-surface to-transparent"></div>
-        <div class="absolute inset-y-0 right-0 w-12 md:w-24 z-10 pointer-events-none bg-gradient-to-l from-surface to-transparent"></div>
-
-        <div class="relative w-full overflow-hidden ticker-wrap-catalog">
-          <div class="ticker-track-catalog flex" :style="{ animationPlayState: tickerVisible ? 'running' : 'paused' }">
-            <div
-              v-for="brand in tickerBrands"
-              :key="brand.key"
-              class="flex items-center justify-center shrink-0 h-16 px-6 md:px-10"
-            >
-              <img
-                :src="brand.url"
-                :alt="brand.name"
-                :class="[brand.className, 'w-auto', 'brand-logo']"
-                loading="lazy"
-                decoding="async"
-                @error="(e: any) => e.target.style.display='none'"
-              />
-            </div>
+      <div class="relative w-full overflow-hidden ticker-wrap-catalog">
+        <div class="ticker-track-catalog flex" :style="{ animationPlayState: tickerVisible ? 'running' : 'paused' }">
+          <div
+            v-for="(brand, bi) in tickerBrands"
+            :key="brand.key"
+            class="flex items-center justify-center shrink-0 h-20 px-8 md:px-12"
+            :aria-hidden="bi >= brands.length ? 'true' : undefined"
+          >
+            <img
+              :src="brand.url"
+              :alt="bi >= brands.length ? '' : brand.name"
+              :class="[brand.className, 'w-auto', 'brand-logo']"
+              loading="lazy"
+              decoding="async"
+              @error="(e: any) => e.target.style.display='none'"
+            />
           </div>
         </div>
       </div>
@@ -417,6 +389,13 @@ onMounted(() => {
     filter: none;
     opacity: 1;
   }
+}
+
+/* Nombre del producto: escala con el ancho de la tarjeta */
+.product-card { container-type: inline-size; }
+.product-card-title {
+  font-size: clamp(1.5rem, 8cqi, 2.5rem);
+  font-stretch: 112%;
 }
 
 .line-clamp-2 {
