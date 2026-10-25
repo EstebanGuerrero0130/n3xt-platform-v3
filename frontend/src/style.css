@@ -763,3 +763,29 @@ html.lenis.lenis-stopped {
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+
+/* ─── Títulos de sección en dos colores ───
+   <h2 class="section-title">Trabajos <span class="section-title-accent">destacados</span></h2>
+   Mayúsculas gruesas y anchas; la segunda parte en verde de marca. */
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  font-weight: 900;
+  font-stretch: 118%;
+  text-transform: uppercase;
+  color: var(--text-main);
+  text-wrap: balance;
+}
+.section-title-accent {
+  color: var(--brand-text);
+}
+/* Texto de entrada bajo un título: tamaño lead, tinta completa atenuada lo justo */
+.section-lead {
+  font-size: var(--text-lead);
+  line-height: 1.5;
+  color: var(--text-muted);
+  max-width: 46ch;
+  text-wrap: pretty;
+}

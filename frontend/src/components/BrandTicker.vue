@@ -48,7 +48,7 @@ const hideImg = (e: Event) => {
 </script>
 
 <template>
-  <section class="w-full py-12 md:py-16 overflow-hidden border-y border-line" aria-labelledby="brand-ticker-title">
+  <section class="w-full py-12 md:py-16 overflow-hidden" aria-labelledby="brand-ticker-title">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
       <p id="brand-ticker-title" class="text-sm text-muted text-center">Trabajamos con equipos y plataformas de confianza</p>
     </div>

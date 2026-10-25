@@ -42,7 +42,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <footer class="relative mt-24 border-t border-line bg-surface">
+  <footer class="relative mt-24 bg-surface">
     <div class="technical-grid absolute inset-0 pointer-events-none" aria-hidden="true"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
       <div class="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
@@ -90,7 +90,7 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="mt-14 pt-6 border-t border-line flex flex-col sm:flex-row gap-4 justify-between text-sm text-muted">
+      <div class="mt-14 pt-6 flex flex-col sm:flex-row gap-4 justify-between text-sm text-muted">
         <p>&copy; {{ year }} N3XT 3D</p>
         <div class="flex gap-6">
           <router-link to="/privacy" class="hover:text-ink transition-colors">Privacidad</router-link>

@@ -126,7 +126,7 @@ onUnmounted(() => {
         <span v-if="subtext" class="navbar-subtext hidden lg:inline text-xs text-muted">{{ subtext }}</span>
       </router-link>
 
-      <nav ref="navRef" role="navigation" aria-label="Navegación principal" class="relative hidden md:flex items-center gap-1 h-full">
+      <nav ref="navRef" role="navigation" aria-label="Navegación principal" class="relative hidden lg:flex items-center gap-1 h-full">
         <router-link
           v-for="link in navLinks"
           :key="link.tab"
@@ -145,7 +145,7 @@ onUnmounted(() => {
         ></span>
       </nav>
 
-      <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="hidden md:inline-flex btn-secondary btn-sm">
+      <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="hidden lg:inline-flex btn-secondary btn-sm">
         {{ isAdmin ? 'Ir al taller' : 'Acceso taller' }}
       </router-link>
 
@@ -154,7 +154,7 @@ onUnmounted(() => {
         :aria-expanded="showMobileMenu"
         aria-controls="mobile-menu"
         :aria-label="showMobileMenu ? 'Cerrar menú' : 'Abrir menú'"
-        class="md:hidden w-11 h-11 -mr-2 flex items-center justify-center rounded-[var(--radius-control)] text-ink hover:bg-surface-2 relative z-[1010]"
+        class="lg:hidden w-11 h-11 -mr-2 flex items-center justify-center rounded-[var(--radius-control)] text-ink hover:bg-surface-2 relative z-[1010]"
         @click="showMobileMenu = !showMobileMenu"
       >
         <svg v-if="!showMobileMenu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -172,7 +172,7 @@ onUnmounted(() => {
     leave-from-class="opacity-100 translate-y-0"
     leave-to-class="opacity-0 -translate-y-2"
   >
-    <nav v-if="showMobileMenu" id="mobile-menu" ref="mobileMenu" aria-label="Navegación móvil" class="fixed inset-x-0 top-16 bottom-0 z-[999] bg-canvas md:hidden overflow-y-auto px-4 pt-4 pb-10 flex flex-col">
+    <nav v-if="showMobileMenu" id="mobile-menu" ref="mobileMenu" aria-label="Navegación móvil" class="fixed inset-x-0 top-16 bottom-0 z-[999] bg-canvas lg:hidden overflow-y-auto px-4 pt-4 pb-10 flex flex-col">
       <router-link
         v-for="link in navLinks"
         :key="link.tab"
