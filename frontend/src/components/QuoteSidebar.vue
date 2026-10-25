@@ -9,7 +9,7 @@ interface SidebarModel {
   dimensions: { x: number; y: number; z: number }
   [key: string]: unknown
 }
-interface SidebarMaterial { id: string; name: string; category: string; cost_per_kg?: number | string; density?: number | string }
+interface SidebarMaterial { id: string; name: string; category: string; cost_per_kg?: number | string; density?: number | string; color?: string }
 interface SidebarExtra { id: string; qty: number }
 interface ModelSummary { id: number; name: string; qty: number; total: number; priced: boolean }
 
@@ -168,7 +168,11 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
           >
             <svg v-if="selectedMaterial === mat.id" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
           </span>
-          <span class="block pr-7 text-[0.9375rem] font-semibold text-ink leading-snug">{{ mat.name }}</span>
+          <span class="flex items-start gap-2 pr-7 text-[0.9375rem] font-semibold text-ink leading-snug">
+            <!-- Muestra del color: distingue materiales con el mismo nombre (PLA negro / blanco) -->
+            <span v-if="mat.color" class="mt-[0.2rem] w-3.5 h-3.5 shrink-0 rounded-full ring-1 ring-inset ring-[color-mix(in_srgb,var(--text-main)_35%,transparent)]" :style="{ backgroundColor: mat.color }" aria-hidden="true"></span>
+            {{ mat.name }}
+          </span>
           <span class="mt-1 block text-sm font-medium tabular-nums text-ink">${{ Number(mat.cost_per_kg || 0).toLocaleString('es-CO') }} <span class="font-normal text-muted">/ kg</span></span>
           <span v-if="mat.density" class="block text-xs text-muted tabular-nums">{{ mat.density }} g/cm³</span>
         </button>

@@ -237,29 +237,18 @@ const shareUrl = computed(() => {
   <div class="min-h-screen flex flex-col bg-canvas text-ink">
     <AppNavbar active-tab="track" />
 
-    <main id="main" class="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-      <header class="mb-10">
-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight">Rastrear pedido</h1>
-        <p class="mt-4 text-lg md:text-xl text-muted max-w-2xl">Consulta en qué paso va tu pedido con el número y el correo con el que lo hiciste.</p>
+    <main id="main" class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+      <header class="mb-10 md:mb-14 grid lg:grid-cols-12 gap-6 lg:items-end">
+        <h1 class="section-title lg:col-span-7">Rastrea tu <span class="section-title-accent">pedido</span></h1>
+        <p class="section-lead lg:col-span-5">Consulta en qué paso va tu pedido con el número y el correo con el que lo hiciste.</p>
       </header>
 
-      <!-- Formulario -->
-      <section v-if="!order" class="bg-surface border border-line rounded-[var(--radius-panel)] p-5 sm:p-8 max-w-2xl">
-        <div class="inline-flex p-1 mb-6 bg-surface-2 rounded-[var(--radius-control)]" role="group" aria-label="Tipo de búsqueda">
-          <button
-            type="button"
-            :aria-pressed="searchMode === 'project'"
-            :class="searchMode === 'project' ? 'bg-surface text-ink border-line' : 'text-muted border-transparent hover:text-ink'"
-            class="h-9 px-4 rounded-md border text-sm font-medium transition-colors"
-            @click="searchMode = 'project'"
-          >Número de pedido</button>
-          <button
-            type="button"
-            :aria-pressed="searchMode === 'shipping'"
-            :class="searchMode === 'shipping' ? 'bg-surface text-ink border-line' : 'text-muted border-transparent hover:text-ink'"
-            class="h-9 px-4 rounded-md border text-sm font-medium transition-colors"
-            @click="searchMode = 'shipping'"
-          >Guía de envío</button>
+      <!-- Formulario + guía de estados -->
+      <div v-if="!order" class="grid lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+      <section class="lg:col-span-7 bg-surface rounded-[var(--radius-panel)] p-5 sm:p-8" aria-label="Buscar pedido">
+        <div class="flex flex-wrap gap-2 mb-6" role="group" aria-label="Tipo de búsqueda">
+          <button type="button" class="chip" :aria-pressed="searchMode === 'project'" @click="searchMode = 'project'">Número de pedido</button>
+          <button type="button" class="chip" :aria-pressed="searchMode === 'shipping'" @click="searchMode = 'shipping'">Guía de envío</button>
         </div>
 
         <form class="space-y-5" novalidate @submit.prevent="trackOrder">
@@ -301,15 +290,33 @@ const shareUrl = computed(() => {
           </div>
         </form>
 
-        <div v-if="error" role="alert" class="mt-6 p-4 rounded-[var(--radius-control)] border border-red-600/30 bg-red-600/5">
-          <p class="font-semibold text-red-600 dark:text-red-400">No pudimos mostrar el pedido</p>
+        <div v-if="error" role="alert" class="mt-6 p-4 rounded-[var(--radius-control)] border border-danger/30 bg-danger/5">
+          <p class="font-semibold text-danger">No pudimos mostrar el pedido</p>
           <p class="mt-1 text-sm text-ink">{{ error }}</p>
         </div>
       </section>
 
+      <!-- Qué significa cada estado -->
+      <aside class="lg:col-span-5" aria-labelledby="track-steps-title">
+        <h2 id="track-steps-title" class="text-xl md:text-2xl font-extrabold tracking-tight">Así avanza <span class="text-brand">tu pedido</span></h2>
+        <ol class="mt-6 space-y-3">
+          <li v-for="(step, index) in statusSteps" :key="step.id" class="flex gap-4 p-4 bg-surface rounded-[var(--radius-card)]">
+            <span class="shrink-0 w-10 h-10 rounded-full bg-primary/10 text-brand flex items-center justify-center" aria-hidden="true">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="step.icon" /></svg>
+            </span>
+            <div>
+              <p class="font-semibold text-ink"><span class="text-muted tabular-nums mr-1.5">{{ index + 1 }}.</span>{{ step.label }}</p>
+              <p class="mt-0.5 text-sm text-muted">{{ step.desc }}</p>
+            </div>
+          </li>
+        </ol>
+        <p class="mt-5 text-sm text-muted">¿No encuentras tu número de pedido? Está en el correo de confirmación, o escríbenos por WhatsApp.</p>
+      </aside>
+      </div>
+
       <!-- Resultado -->
-      <div v-else class="space-y-6">
-        <section class="bg-surface border border-line rounded-[var(--radius-panel)] p-5 sm:p-8" aria-labelledby="track-result-title">
+      <div v-else class="space-y-6 max-w-4xl">
+        <section class="bg-surface rounded-[var(--radius-panel)] p-5 sm:p-8" aria-labelledby="track-result-title">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-6 border-b border-line">
             <div>
               <p v-if="order.customer_name" class="text-sm text-muted">Hola, {{ order.customer_name }}</p>
@@ -317,8 +324,8 @@ const shareUrl = computed(() => {
             </div>
             <span
               role="status"
-              :class="isCancelled ? 'bg-red-600/10 text-red-600 dark:text-red-400' : 'bg-primary text-white'"
-              class="self-start inline-flex items-center h-8 px-3 rounded-md text-sm font-semibold"
+              :class="isCancelled ? 'bg-danger/10 text-danger' : 'bg-primary text-white'"
+              class="self-start inline-flex items-center h-8 px-3.5 rounded-full text-sm font-semibold"
             >{{ statusLabel }}</span>
           </div>
 
@@ -342,8 +349,8 @@ const shareUrl = computed(() => {
           </dl>
 
           <!-- Pedido cancelado: sin progreso -->
-          <div v-if="isCancelled" class="mt-6 p-4 rounded-[var(--radius-control)] border border-red-600/30 bg-red-600/5">
-            <p class="font-semibold text-red-600 dark:text-red-400">Pedido cancelado</p>
+          <div v-if="isCancelled" class="mt-6 p-4 rounded-[var(--radius-control)] border border-danger/30 bg-danger/5">
+            <p class="font-semibold text-danger">Pedido cancelado</p>
             <p class="mt-1 text-sm text-ink">Este pedido fue cancelado. Si tienes dudas, escríbenos por WhatsApp.</p>
           </div>
 
@@ -385,7 +392,7 @@ const shareUrl = computed(() => {
 
         <div class="grid gap-6" :class="order.tracking_guide ? 'sm:grid-cols-2' : ''">
           <!-- Envío -->
-          <section v-if="order.tracking_guide" class="bg-surface border border-line rounded-[var(--radius-card)] p-5 sm:p-6" aria-labelledby="track-shipping-title">
+          <section v-if="order.tracking_guide" class="bg-surface rounded-[var(--radius-card)] p-5 sm:p-6" aria-labelledby="track-shipping-title">
             <h3 id="track-shipping-title" class="text-lg md:text-xl font-extrabold tracking-tight">Envío</h3>
             <dl class="mt-4 space-y-3">
               <div>
@@ -401,7 +408,7 @@ const shareUrl = computed(() => {
           </section>
 
           <!-- Compartir -->
-          <section class="bg-surface border border-line rounded-[var(--radius-card)] p-5 sm:p-6 flex items-center gap-5" aria-labelledby="track-share-title">
+          <section class="bg-surface rounded-[var(--radius-card)] p-5 sm:p-6 flex items-center gap-5" aria-labelledby="track-share-title">
             <div class="shrink-0 p-2 bg-white rounded-[var(--radius-control)] border border-line">
               <qrcode-vue :value="shareUrl" :size="96" level="H" :render-as="'svg'" background="#ffffff" foreground="#101814" />
             </div>

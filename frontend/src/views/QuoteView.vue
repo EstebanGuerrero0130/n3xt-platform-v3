@@ -683,13 +683,14 @@ onUnmounted(() => {
   <div class="min-h-screen flex flex-col bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="quote" subtext="Cotizador" />
 
-    <main id="main" class="flex-1 flex flex-col lg:flex-row">
+    <!-- Grid: en móvil visor → configuración → guía; en escritorio el panel va a la derecha y la guía bajo el visor -->
+    <main id="main" class="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_460px] lg:grid-rows-[auto_1fr]">
       <!-- Visor + modelos -->
-      <section class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8 lg:py-10" aria-labelledby="quote-title">
+      <section class="min-w-0 px-4 sm:px-6 lg:px-8 pt-8 lg:pt-10 pb-8 lg:pb-0" aria-labelledby="quote-title">
         <div class="w-full max-w-5xl mx-auto">
-          <header class="mb-6">
-            <h1 id="quote-title" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Cotiza tu pieza 3D</h1>
-            <p class="mt-2 text-[0.9375rem] md:text-base text-muted max-w-2xl">Sube uno o varios archivos, elige material y parámetros y obtén un precio estimado. El taller revisa el pedido y confirma el precio definitivo antes de imprimir.</p>
+          <header class="mb-8">
+            <h1 id="quote-title" class="section-title">Cotiza tu <span class="section-title-accent">pieza 3D</span></h1>
+            <p class="section-lead mt-4 max-w-[60ch]">Sube uno o varios archivos, elige material y parámetros y obtén un precio estimado. El taller revisa el pedido y confirma el precio definitivo antes de imprimir.</p>
           </header>
 
           <!-- Modelos -->
@@ -747,7 +748,6 @@ onUnmounted(() => {
 
           <!-- Visor (persistente: un solo StlViewer para todos los modelos) -->
           <div class="surface-card relative h-[480px] sm:h-[540px] lg:h-[600px] bg-surface rounded-[var(--radius-panel)] border border-line overflow-hidden">
-            <div class="technical-grid absolute inset-0 pointer-events-none" aria-hidden="true"></div>
             <StlViewer
               ref="viewerRef"
               :active-key="activeModel?.id ?? 0"
@@ -772,24 +772,27 @@ onUnmounted(() => {
             </transition>
           </div>
 
-          <!-- Guía de materiales -->
-          <section class="mt-12 reveal" aria-labelledby="material-guide-title">
-            <h2 id="material-guide-title" class="text-xl md:text-2xl font-extrabold tracking-tight text-ink">¿Qué material elegir?</h2>
-            <p class="mt-1 text-sm text-muted">Una guía rápida. Si tienes dudas, el taller te recomienda al revisar tu pedido.</p>
-            <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              <div v-for="mat in materialGuide" :key="mat.name" class="surface-card bg-surface p-5 rounded-[var(--radius-card)] border border-line">
+        </div>
+      </section>
+
+      <!-- Guía de materiales -->
+      <section class="min-w-0 px-4 sm:px-6 lg:px-8 py-12 lg:pt-16 lg:pb-10 lg:col-start-1 lg:row-start-2 order-last lg:order-none" aria-labelledby="material-guide-title">
+        <div class="w-full max-w-5xl mx-auto">
+            <h2 id="material-guide-title" class="section-title">¿Qué material <span class="section-title-accent">elegir?</span></h2>
+            <p class="section-lead mt-4">Una guía rápida. Si tienes dudas, el taller te recomienda al revisar tu pedido.</p>
+            <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div v-for="mat in materialGuide" :key="mat.name" class="bg-surface p-5 rounded-[var(--radius-card)]">
                 <div class="w-10 h-10 bg-primary/10 rounded-[var(--radius-control)] flex items-center justify-center mb-4" aria-hidden="true" :innerHTML="sanitizeSVG(mat.icon)"></div>
                 <h3 class="text-base font-semibold text-ink [font-stretch:100%] tracking-normal">{{ mat.name }}</h3>
                 <p class="mt-1 text-sm text-muted leading-relaxed">{{ mat.desc }}</p>
-                <p class="mt-3 pt-3 border-t border-line text-sm text-ink"><span class="text-muted">Ideal para:</span> {{ mat.bestFor }}</p>
+                <p class="mt-4 text-sm text-ink"><span class="text-muted">Ideal para:</span> {{ mat.bestFor }}</p>
               </div>
             </div>
-          </section>
         </div>
       </section>
 
       <!-- Panel de configuración -->
-      <aside class="w-full lg:w-[420px] xl:w-[460px] shrink-0 bg-surface border-t lg:border-t-0 lg:border-l border-line lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto" aria-label="Configuración y precio">
+      <aside class="lg:col-start-2 lg:row-start-1 lg:row-span-2 bg-surface border-t lg:border-t-0 lg:border-l border-line lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto" aria-label="Configuración y precio">
         <QuoteSidebar
           :models="models"
           :active-model-idx="activeModelIdx"
@@ -842,16 +845,3 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped>
-/* --- Scroll Reveal --- */
-.reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.reveal.revealed {
-  opacity: 1;
-  transform: translateY(0);
-}
-</style>
