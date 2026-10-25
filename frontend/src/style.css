@@ -10,6 +10,21 @@
 @theme {
   --font-sans: 'Archivo', system-ui, -apple-system, sans-serif;
   --font-display: 'Archivo', system-ui, sans-serif;
+  /* Acento: solo itálica, solo para una palabra clave de un titular (nunca texto corrido) */
+  --font-accent: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+
+  /* Escala tipográfica: pocos tamaños que hacen todo el trabajo.
+     display ≈ 8.4vw en escritorio (mediana de los sitios mejor puntuados del estudio) */
+  --text-display: clamp(3.25rem, 1.1rem + 7.4vw, 9rem);
+  --text-display--line-height: 0.92;
+  --text-display--letter-spacing: -0.035em;
+  --text-title: clamp(2.25rem, 1.1rem + 3.4vw, 4.5rem);
+  --text-title--line-height: 1;
+  --text-title--letter-spacing: -0.03em;
+  --text-lead: clamp(1.125rem, 1rem + 0.45vw, 1.375rem);
+  --text-lead--line-height: 1.5;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.6;
 
   /* Marca (relleno de botones, siempre con texto blanco: 4.7:1) */
   --color-primary: #08872b;
@@ -32,6 +47,8 @@
   --radius-control: 8px;
   --radius-card: 14px;
   --radius-panel: 22px;
+  /* Botones: completamente redondos (decidido una vez para todo el sitio) */
+  --radius-button: 999px;
 }
 
 /* Tokens semánticos: cambian con el tema → utilidades bg-canvas, text-ink, etc. */
@@ -139,7 +156,7 @@ body {
   color: var(--text-main);
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--text-body);
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
@@ -157,6 +174,16 @@ h1, h2, h3, h4, h5, h6 {
 
 p {
   text-wrap: pretty;
+}
+
+/* Palabra de acento dentro de un titular: serif itálica, mismo color.
+   Uso: <h1>Tu idea, impresa <em class="accent">capa por capa.</em></h1> */
+.accent {
+  font-family: var(--font-accent);
+  font-style: italic;
+  font-weight: 400;
+  font-stretch: 100%;
+  letter-spacing: -0.01em;
 }
 
 /* El texto verde de marca necesita más luz en oscuro para pasar AA */
@@ -426,7 +453,7 @@ html.lenis.lenis-stopped {
   gap: 0.5rem;
   min-height: 44px;
   padding: 0.625rem 1.25rem;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-button);
   border: 1px solid transparent;
   font-family: var(--font-sans);
   font-size: 0.9375rem;
@@ -450,63 +477,29 @@ html.lenis.lenis-stopped {
 .btn-lg { min-height: 52px; padding: 0.875rem 1.75rem; font-size: 1rem; }
 .btn-sm { min-height: 36px; padding: 0.375rem 0.875rem; font-size: 0.875rem; }
 
-/* Primario: degradado verde sutil (más claro arriba), borde más oscuro,
-   highlight interior y sombra coloreada que crece al hover. */
+/* Primario: verde plano, sin degradado ni sombra; al hover se oscurece un tono */
 .btn-primary {
-  overflow: hidden;
   color: #ffffff;
   background-color: var(--btn-primary-mid);
-  background-image: linear-gradient(180deg, var(--btn-primary-top) 0%, var(--btn-primary-mid) 55%, var(--btn-primary-bottom) 100%);
-  border-color: var(--btn-primary-edge);
-  text-shadow: 0 1px 0 rgba(0, 40, 12, 0.25);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 1px 2px rgba(4, 50, 18, 0.25),
-    0 4px 12px -4px var(--btn-primary-glow);
-}
-/* Brillo diagonal: cruza UNA vez al entrar el cursor; al salir vuelve sin transición (oculto) */
-.btn-primary::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.22) 48%, rgba(255, 255, 255, 0.05) 56%, transparent 70%);
-  transform: translateX(-110%);
 }
 @media (hover: hover) {
-  .btn-primary:hover {
-    filter: brightness(1.06) saturate(1.04);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      0 1px 2px rgba(4, 50, 18, 0.25),
-      0 10px 24px -8px var(--btn-primary-glow-hover);
-  }
-  .btn-primary:hover::after {
-    transform: translateX(110%);
-    transition: transform 0.75s var(--ease-premium);
-  }
+  .btn-primary:hover { background-color: var(--btn-primary-bottom); }
 }
 
-/* Secundario: superficie con highlight interior y borde fino */
+/* Secundario: un paso de tono sobre el fondo, sin borde ni sombra */
 .btn-secondary,
 .btn-pdf {
-  background-color: var(--bg-surface);
-  background-image: linear-gradient(180deg, var(--btn-surface-top), var(--btn-surface-bottom));
+  background-color: var(--bg-surface-2);
   color: var(--text-main);
-  border-color: var(--border-main);
-  box-shadow: inset 0 1px 0 var(--btn-inset), var(--btn-shadow);
 }
 @media (hover: hover) {
   .btn-secondary:hover,
   .btn-pdf:hover {
-    border-color: color-mix(in srgb, var(--brand-text) 45%, var(--border-main));
-    box-shadow: inset 0 1px 0 var(--btn-inset), var(--btn-shadow-hover);
-    transform: translateY(-1px);
+    background-color: color-mix(in srgb, var(--bg-surface-2) 80%, var(--text-main));
   }
 }
 
-/* Contorno: transparente; al hover gana tinte de marca */
+/* Contorno (solo paneles internos): transparente; al hover gana tinte de marca */
 .btn-outlined {
   background-color: transparent;
   color: var(--text-main);
@@ -516,15 +509,12 @@ html.lenis.lenis-stopped {
   .btn-outlined:hover {
     border-color: var(--brand-text);
     color: var(--brand-text);
-    background-color: color-mix(in srgb, var(--brand-text) 7%, transparent);
   }
 }
 
 .btn-danger {
   background-color: #c9253f;
   color: #ffffff;
-  border-color: #a91d34;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .btn-danger:hover { background-color: #a91d34; }
 
@@ -551,10 +541,6 @@ html.lenis.lenis-stopped {
   cursor: not-allowed;
   transform: none;
   filter: none;
-}
-.btn-primary:disabled::after,
-.btn-primary[aria-disabled="true"]::after {
-  display: none;
 }
 
 /* ─── Tarjetas premium ───
