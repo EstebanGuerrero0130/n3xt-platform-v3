@@ -11,8 +11,7 @@ useSplitTitle()
 
 usePageMeta({
   title: 'Galería de Trabajos | N3XT 3D',
-  description: 'Explora nuestra galería de piezas fabricadas con precisión industrial. Figuras, prototipos y coleccionables en 3D.',
-  image: '/assets/n3xt_og_gallery.png',
+  description: 'Trabajos reales de nuestro taller: figuras pintadas a mano, prototipos funcionales y piezas a medida impresas en resina y filamento.',
 })
 
 
@@ -163,10 +162,10 @@ onUnmounted(() => {
 
 
 <template>
-  <div class="min-h-screen bg-canvas text-ink overflow-x-hidden">
+  <div class="min-h-screen bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="gallery" subtext="Galería de trabajos" />
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+    <main id="main" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
       <!-- Encabezado -->
       <header class="max-w-2xl mb-10">
         <h1 class="split-title text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink">Nuestros trabajos</h1>

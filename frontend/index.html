@@ -9,12 +9,16 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Preload Critical Assets: Hero image (LCP optimization) -->
-    <link rel="preload" href="/assets/n3xt_industrial_maker_figures_1778542131405.webp" as="image" type="image/webp" />
-    
-    <!-- Preload Critical Fonts (cuts FCP by ~400ms) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <!-- Tema antes del primer pintado (evita el destello claro); default: oscuro -->
+    <script>
+      try { if (localStorage.getItem('n3xt_theme') !== 'light') document.documentElement.classList.add('dark') }
+      catch { document.documentElement.classList.add('dark') }
+    </script>
+
+    <!-- Fuentes: <link> directo en vez de @import en CSS (no encadena la descarga) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" />
     
     <!-- SEO Primary Tags -->
     <title>N3XT 3D | Manufactura Digital y Coleccionables de Alta Precisión</title>
@@ -23,7 +27,7 @@
     <meta name="keywords" content="impresión 3d colombia, figuras anime 3d, prototipado rápido, resina sla, filamento pla, n3xt 3d, manufactura digital" />
     <meta name="author" content="N3XT 3D Systems" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#1e3a34" />
+    <meta name="theme-color" content="#0e1512" />
     
     <!-- Security Headers & CSP (Cyber-Fortress Layer) -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://images.unsplash.com https://res.cloudinary.com https://*; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://*.supabase.co https://*; frame-src https://challenges.cloudflare.com;" />
@@ -33,26 +37,23 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="canonical" href="https://n3xt3d.com/" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://n3xt3d.com/" />
     <meta property="og:title" content="N3XT 3D | Manufactura Digital y Coleccionables de Alta Precisión" />
     <meta property="og:description" content="Servicio experto de impresión 3D en resina y filamento. Fabricamos figuras coleccionables y prototipos industriales." />
-    <meta property="og:image" content="/assets/n3xt_og_image.png" />
+    <meta property="og:image" content="https://n3xt3d.com/assets/n3xt_og_default.jpg" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://n3xt3d.com/" />
     <meta property="twitter:title" content="N3XT 3D | Manufactura Digital y Coleccionables de Alta Precisión" />
     <meta property="twitter:description" content="Servicio experto de impresión 3D en resina y filamento. Prototipado y arte digital." />
-    <meta property="twitter:image" content="/assets/n3xt_og_image.png" />
+    <meta property="twitter:image" content="https://n3xt3d.com/assets/n3xt_og_default.jpg" />
 
   </head>
   <body>
     <!-- Accessibility: Skip to main content -->
-    <a href="#app" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:bg-[#1e3a34] focus:text-white focus:px-6 focus:py-3 focus:rounded-xl focus:font-bold focus:text-sm" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">Saltar al contenido principal</a>
+    <a href="#main" class="skip-link">Saltar al contenido principal</a>
     <noscript>
       <div style="padding:2rem;text-align:center;font-family:system-ui;background:#0a0f14;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;">
         <div>

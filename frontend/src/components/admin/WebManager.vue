@@ -30,7 +30,7 @@ const handleCreateCatalogProduct = () => {
   }
   props.settings.web.catalog.unshift(newProduct)
   editingCatalogItemIndex.value = 0
-  props.showNotify('Nuevo producto creado en el borrador del catalogo', 'success')
+  props.showNotify('Nuevo producto creado en el borrador del catálogo', 'success')
 }
 
 const handleResetCatalog = () => {

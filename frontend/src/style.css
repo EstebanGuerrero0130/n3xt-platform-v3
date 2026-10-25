@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -45,6 +44,10 @@
   --color-muted: var(--text-muted);
   --color-brand: var(--brand-text);
   --color-resin: var(--resin);
+  /* Estados: texto/borde sobre canvas o surface (contraste AA en ambos temas) */
+  --color-danger: var(--danger);
+  --color-warning: var(--resin);
+  --color-success: var(--brand-text);
 }
 
 :root {
@@ -55,7 +58,9 @@
   --text-muted: #4e5c55;
   --border-main: #d5ddd7;
   --brand-text: #06701f;
-  --resin: #b86e0c;
+  /* #9a5a08: 5.0:1 sobre canvas (el anterior #b86e0c no llegaba a 4.5:1) */
+  --resin: #9a5a08;
+  --danger: #b42318;
   --glass-bg: rgba(255, 255, 255, 0.78);
   --glass-border: rgba(16, 24, 20, 0.08);
 
@@ -101,6 +106,7 @@
   --border-main: #2a3832;
   --brand-text: #3fcf72;
   --resin: #f0a63c;
+  --danger: #f97066;
   --glass-bg: rgba(14, 21, 18, 0.78);
   --glass-border: rgba(238, 242, 239, 0.08);
 
@@ -750,4 +756,24 @@ html.lenis.lenis-stopped {
   to {
     transform: translateY(100%);
   }
+}
+/* Enlace "Saltar al contenido": invisible hasta recibir foco con teclado */
+.skip-link {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  background: var(--btn-primary-mid);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  transform: translateY(-200%);
+  transition: transform 0.2s var(--ease-premium);
+}
+.skip-link:focus-visible {
+  transform: none;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }

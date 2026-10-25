@@ -8,11 +8,11 @@ import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { usePageMeta } from '../composables/usePageMeta'
+import { useFocusTrap } from '../composables/useFocusTrap'
 
 usePageMeta({
   title: 'Rastrear Pedido 3D | N3XT 3D',
-  description: 'Consulta el estado de tu pedido de impresion 3D en tiempo real. Rastreo por proyecto o envio.',
-  image: '/assets/n3xt_og_track.png',
+  description: 'Consulta el estado de tu pedido de impresión 3D en tiempo real. Rastreo por proyecto o por guía de envío.',
 })
 
 // ─── SEO via @unhead/vue (usePageMeta at setup) ───
@@ -46,9 +46,9 @@ let scannerSession = 0
 const firstQuery = (v: LocationQueryValue | LocationQueryValue[] | undefined): string =>
   (Array.isArray(v) ? v[0] : v) || ''
 
-const onScannerKey = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') stopScanner()
-}
+// Foco atrapado en el modal del escáner, Escape cierra y devuelve el foco al botón
+const scannerPanel = ref<HTMLElement | null>(null)
+useFocusTrap(scannerPanel, showScanner, { onEscape: () => { stopScanner() } })
 
 const onScanSuccess = async (decodedText: string) => {
   try {
@@ -71,7 +71,6 @@ const onScanSuccess = async (decodedText: string) => {
 const startScanner = async () => {
   const session = ++scannerSession
   showScanner.value = true
-  window.addEventListener('keydown', onScannerKey)
   try {
     // Carga diferida: html5-qrcode solo se descarga al abrir el escáner
     const { Html5QrcodeScanner: Scanner } = await import('html5-qrcode')
@@ -92,7 +91,6 @@ const startScanner = async () => {
 
 const stopScanner = async () => {
   scannerSession++
-  window.removeEventListener('keydown', onScannerKey)
   const current = scanner
   scanner = null
   if (current) {
@@ -119,7 +117,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   scannerSession++
-  window.removeEventListener('keydown', onScannerKey)
   if (scanner) {
     scanner.clear().catch(err => logger.error('Error clearing scanner:', err))
     scanner = null
@@ -240,7 +237,7 @@ const shareUrl = computed(() => {
   <div class="min-h-screen flex flex-col bg-canvas text-ink">
     <AppNavbar active-tab="track" />
 
-    <main class="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+    <main id="main" class="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
       <header class="mb-10">
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight">Rastrear pedido</h1>
         <p class="mt-4 text-lg md:text-xl text-muted max-w-2xl">Consulta en qué paso va tu pedido con el número y el correo con el que lo hiciste.</p>
@@ -269,11 +266,11 @@ const shareUrl = computed(() => {
           <template v-if="searchMode === 'project'">
             <div>
               <label for="track-order-id" class="block text-sm font-medium text-ink mb-2">Número de pedido</label>
-              <input id="track-order-id" v-model="orderId" type="text" inputmode="numeric" placeholder="Ej: 1024" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary">
+              <input id="track-order-id" v-model="orderId" type="text" inputmode="numeric" placeholder="Ej: 1024" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)]">
             </div>
             <div>
               <label for="track-email" class="block text-sm font-medium text-ink mb-2">Correo electrónico</label>
-              <input id="track-email" v-model="email" autocomplete="email" type="email" placeholder="tu@correo.com" aria-describedby="track-email-hint" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary">
+              <input id="track-email" v-model="email" autocomplete="email" type="email" placeholder="tu@correo.com" aria-describedby="track-email-hint" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)]">
               <p id="track-email-hint" class="mt-1.5 text-sm text-muted">
                 <template v-if="orderId && !email">Escribe el correo del pedido #{{ orderId }} para ver su avance.</template>
                 <template v-else>El mismo correo que usaste al hacer el pedido.</template>
@@ -284,11 +281,11 @@ const shareUrl = computed(() => {
           <template v-else>
             <div>
               <label for="track-guide" class="block text-sm font-medium text-ink mb-2">Número de guía</label>
-              <input id="track-guide" v-model="trackingGuide" type="text" placeholder="Ej: 982347123" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary">
+              <input id="track-guide" v-model="trackingGuide" type="text" placeholder="Ej: 982347123" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)]">
             </div>
             <div>
               <label for="track-carrier" class="block text-sm font-medium text-ink mb-2">Transportadora <span class="font-normal text-muted">(opcional)</span></label>
-              <input id="track-carrier" v-model="carrier" type="text" placeholder="Ej: Servientrega" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary">
+              <input id="track-carrier" v-model="carrier" type="text" placeholder="Ej: Servientrega" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)]">
             </div>
           </template>
 
@@ -423,7 +420,7 @@ const shareUrl = computed(() => {
     <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0">
       <div v-if="showScanner" class="fixed inset-0 z-[1100] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
         <div class="absolute inset-0 bg-black/70" @click="stopScanner"></div>
-        <div class="relative w-full max-w-lg bg-surface border border-line rounded-[var(--radius-panel)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.35)] p-5 sm:p-6">
+        <div ref="scannerPanel" class="relative w-full max-w-lg bg-surface border border-line rounded-[var(--radius-panel)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.35)] p-5 sm:p-6 outline-none">
           <div class="flex items-center justify-between gap-4 mb-4">
             <div>
               <h3 id="scanner-title" class="text-lg md:text-xl font-extrabold tracking-tight">Escanear QR del pedido</h3>

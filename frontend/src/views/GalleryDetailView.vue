@@ -7,14 +7,10 @@ import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { usePageMeta } from '../composables/usePageMeta'
+import { useFocusTrap } from '../composables/useFocusTrap'
 
 const { applySplitTitle } = useSplitTitle()
 
-usePageMeta({
-  title: 'Detalle del Proyecto | N3XT 3D',
-  description: 'Explora en detalle nuestros proyectos de fabricación digital. Piezas únicas creadas con precisión industrial.',
-  image: '/assets/n3xt_og_gallery_detail.png',
-})
 
 const route = useRoute()
 const router = useRouter()
@@ -42,12 +38,15 @@ interface GalleryDetailItem {
 // ─── Scroll reveal for related projects ───
 const relatedVisible = ref(false)
 let relatedObserver: IntersectionObserver | null = null
-let _timerFocus: ReturnType<typeof setTimeout> | null = null
 let _timerLoad: ReturnType<typeof setTimeout> | null = null
 
 const normalizeTags = (tags: unknown): string[] => Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : [])
 const normalizeImages = (images: unknown): string[] => Array.isArray(images) ? images : (typeof images === 'string' ? images.split(',').map(s => s.trim()).filter(Boolean) : [])
 const item = ref<GalleryDetailItem | null>(null)
+usePageMeta(() => ({
+  title: item.value?.title ? `${item.value.title} | Galería N3XT 3D` : 'Proyecto | Galería N3XT 3D',
+  description: item.value?.description || 'Un proyecto impreso en 3D en nuestro taller: proceso, materiales y acabado.',
+}))
 const webSettings = ref<{ gallery: GalleryDetailItem[]; cloudinary_name?: string }>({ gallery: [] })
 const lightboxOpen = ref(false)
 const lightboxIdx = ref(0)
@@ -96,22 +95,18 @@ const prevImage = () => {
   if (lightboxIdx.value > 0) lightboxIdx.value--
 }
 
+// Foco atrapado, Escape, bloqueo de scroll y foco de vuelta a la miniatura (useFocusTrap)
+useFocusTrap(lightboxRef, lightboxOpen, { onEscape: closeLightbox })
+
 const onLightboxKey = (e: KeyboardEvent) => {
   if (!lightboxOpen.value) return
-  if (e.key === 'Escape') closeLightbox()
-  else if (e.key === 'ArrowRight') nextImage()
+  if (e.key === 'ArrowRight') nextImage()
   else if (e.key === 'ArrowLeft') prevImage()
 }
 
 watch(lightboxOpen, (open) => {
-  document.body.style.overflow = open ? 'hidden' : ''
-  if (open) {
-    window.addEventListener('keydown', onLightboxKey)
-    if (_timerFocus !== null) clearTimeout(_timerFocus)
-    _timerFocus = setTimeout(() => { lightboxRef.value?.focus() }, 100)
-  } else {
-    window.removeEventListener('keydown', onLightboxKey)
-  }
+  if (open) window.addEventListener('keydown', onLightboxKey)
+  else window.removeEventListener('keydown', onLightboxKey)
 })
 
 const hideImg = (e: Event) => { (e.target as HTMLImageElement).style.display = 'none' }
@@ -202,19 +197,17 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (_timerFocus !== null) clearTimeout(_timerFocus)
   if (_timerLoad !== null) clearTimeout(_timerLoad)
   if (relatedObserver) relatedObserver.disconnect()
   window.removeEventListener('keydown', onLightboxKey)
-  document.body.style.overflow = ''
 })
 </script>
 
 <template>
-  <div class="min-h-screen bg-canvas text-ink overflow-x-hidden">
+  <div class="min-h-screen bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="gallery" subtext="Galería de trabajos" />
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+    <main id="main" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
       <!-- Cargando -->
       <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16" aria-hidden="true">
         <div class="space-y-4">

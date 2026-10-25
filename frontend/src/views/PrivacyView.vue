@@ -15,10 +15,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white transition-colors duration-500 overflow-x-hidden">
+  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white transition-colors duration-500 overflow-x-clip">
     <AppNavbar active-tab="" subtext="Privacidad" />
 
-    <main class="max-w-4xl mx-auto px-6 py-20 md:py-32">
+    <main id="main" class="max-w-4xl mx-auto px-6 py-20 md:py-32">
       <!-- Header -->
       <div class="mb-16">
         <div class="inline-flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 mb-6">

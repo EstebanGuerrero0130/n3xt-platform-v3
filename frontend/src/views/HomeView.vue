@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+import { useHead } from '@unhead/vue'
 import gsap from 'gsap'
 import { api } from '../services/api'
 import { sanitizeSVG } from '../utils/sanitize'
@@ -14,10 +15,12 @@ import { prefersReducedMotion } from '../composables/useMotion'
 
 const { applySplitTitle } = useSplitTitle()
 
+// LCP: la imagen del hero se precarga solo en Home (antes se precargaba en todas las rutas)
+useHead({ link: [{ rel: 'preload', as: 'image', type: 'image/webp', href: '/assets/n3xt_industrial_maker_figures_1778542131405.webp' }] })
+
 usePageMeta({
   title: 'N3XT 3D | Impresión 3D en resina y filamento en Colombia',
   description: 'Estudio de impresión 3D en Colombia. Figuras coleccionables, prototipos y piezas a medida en resina y filamento, con acabado a mano.',
-  image: '/assets/n3xt_og_home.png',
 })
 
 // ─── Entrada firma del hero: "capa por capa" ───
@@ -183,7 +186,7 @@ const webSettings = ref<WebSettings>({
       t1: 'N3XT',
       t2: 'Lab',
       d: 'Nuestro taller. Aquí convertimos ideas en prototipos y piezas terminadas con impresoras de resina y filamento.',
-      i: '/assets/n3xt_lab_render_hq_1778542148509.png',
+      i: '/assets/n3xt_airbrush_process_hq_1778542148509.webp',
       stats: []
     },
     {
@@ -231,7 +234,10 @@ const getImages = (iString: string): string[] => String(iString || '').split(','
 let carouselInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
+    // Sin autoavance con reduced-motion; y solo con la pestaña visible
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     carouselInterval = setInterval(() => {
+        if (document.hidden) return
         webSettings.value.ecosystem.forEach((card, idx) => {
             if (card.type === 'image') {
                 const imgs = getImages(card.i)
@@ -293,9 +299,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-canvas text-ink overflow-x-hidden">
+  <div class="min-h-screen bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="home" subtext="Impresión 3D en Colombia" />
 
+    <main id="main">
     <!-- Hero -->
     <section class="hero relative isolate overflow-hidden border-b border-line">
       <div class="hero-grid technical-grid absolute inset-0 -z-10 pointer-events-none" aria-hidden="true"></div>
@@ -688,6 +695,8 @@ onMounted(() => {
         </div>
       </div>
     </section>
+
+    </main>
 
     <AppFooter />
   </div>

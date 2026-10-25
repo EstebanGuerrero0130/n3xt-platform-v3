@@ -12,12 +12,6 @@ import { usePageMeta } from '../composables/usePageMeta'
 
 const { applySplitTitle } = useSplitTitle()
 
-usePageMeta({
-  title: 'Detalles del Producto | N3XT 3D Shop',
-  description: 'Explora nuestros productos 3D de alta precision. Figuras, prototipos y piezas industriales.',
-  image: '/assets/n3xt_og_product.png',
-  type: 'product',
-})
 
 const { observe: observeReveal } = useRevealAnim({ delay: 200 })
 
@@ -42,6 +36,13 @@ const MAX_QUANTITY = 99
 const route = useRoute()
 const quantity = ref(1)
 const product = ref<CatalogProduct | null>(null)
+
+usePageMeta(() => ({
+  title: product.value ? `${product.value.name} | N3XT 3D` : 'Detalle del producto | N3XT 3D',
+  description: product.value?.description || 'Figuras, prototipos y piezas impresas en 3D con acabado a mano en nuestro taller.',
+  image: product.value?.image || undefined,
+  type: 'product',
+}))
 const selectedImage = ref('')
 const mainImageFailed = ref(false)
 const loading = ref(true)
@@ -100,7 +101,6 @@ const fetchProduct = async () => {
       quantity.value = 1
       selectedImage.value = found.images && found.images.length > 0 ? found.images[0] : (found.image || '')
       mainImageFailed.value = false
-      usePageMeta({ title: `${found.name} | N3XT 3D Shop`, description: found.description || 'Explora nuestros productos 3D de alta precision.', image: found.image || '/assets/n3xt_og_product.png', type: 'product' })
     } else {
       product.value = null
     }
@@ -124,7 +124,7 @@ const checkoutWhatsApp = () => {
   const phone = (product.value.support_phone || companySettings.value.company?.phone || '573118796416').replace(/\+/g, '').replace(/\s/g, '')
   const name = customerForm.value.name.trim()
   const greeting = name ? `Hola N3XT 3D, soy *${name}*.` : 'Hola N3XT 3D,'
-  const message = `${greeting}\n\nMe interesa este producto de su catalogo:\n\n*Producto:* ${product.value.name}\n*Cantidad:* ${quantity.value}\n*Precio Unitario:* ${formatCOP(product.value.price)}\n\nQuisiera mas informacion para concretar la compra.`
+  const message = `${greeting}\n\nMe interesa este producto de su catálogo:\n\n*Producto:* ${product.value.name}\n*Cantidad:* ${quantity.value}\n*Precio Unitario:* ${formatCOP(product.value.price)}\n\nQuisiera más información para concretar la compra.`
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
 }
 
@@ -166,10 +166,10 @@ watch(() => route.params.id, (newId, oldId) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-canvas text-ink overflow-x-hidden">
+  <div class="min-h-screen bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="catalog" subtext="Detalle de producto" />
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+    <main id="main" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
       <!-- Cargando -->
       <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16" aria-hidden="true">
         <div class="space-y-4">
@@ -272,7 +272,7 @@ watch(() => route.params.id, (newId, oldId) => {
                   type="text"
                   autocomplete="name"
                   placeholder="Ej. Juan Pérez"
-                  class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary">
+                  class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)]">
               </div>
 
               <button type="button" class="split-btn btn-primary btn-lg w-full" @click="checkoutWhatsApp">

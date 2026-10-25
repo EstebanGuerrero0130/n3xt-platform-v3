@@ -74,7 +74,6 @@ const formatCop = (n: number) => `$ ${Math.round(n).toLocaleString('es-CO')}`
 usePageMeta({
   title: 'Cotizador de impresión 3D | N3XT 3D',
   description: 'Sube tu modelo STL u OBJ y obtén un precio estimado de impresión 3D en resina o filamento.',
-  image: '/assets/n3xt_og_quote.png',
 })
 
 // --- N3XT CORE DATA ---
@@ -681,10 +680,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-canvas text-ink overflow-x-hidden">
+  <div class="min-h-screen flex flex-col bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="quote" subtext="Cotizador" />
 
-    <main class="flex-1 flex flex-col lg:flex-row">
+    <main id="main" class="flex-1 flex flex-col lg:flex-row">
       <!-- Visor + modelos -->
       <section class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8 lg:py-10" aria-labelledby="quote-title">
         <div class="w-full max-w-5xl mx-auto">

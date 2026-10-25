@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../services/api'
 import logger from '../utils/logger'
@@ -51,6 +51,14 @@ const onKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && isOpen.value) isOpen.value = false
 }
 
+// Al abrir, foco dentro del panel; al cerrar, de vuelta al botón flotante
+const panel = ref<HTMLElement | null>(null)
+const toggle = ref<HTMLButtonElement | null>(null)
+watch(isOpen, (open) => {
+    if (open) nextTick(() => panel.value?.querySelector<HTMLElement>('textarea, input, button')?.focus())
+    else if (!document.activeElement || document.activeElement === document.body || panel.value?.contains(document.activeElement)) toggle.value?.focus()
+})
+
 onMounted(() => {
     loadWhatsApp()
     window.addEventListener('keydown', onKeydown)
@@ -71,7 +79,7 @@ onUnmounted(() => {
       leave-from-class="opacity-100 translate-y-0"
       leave-to-class="opacity-0 translate-y-3"
     >
-      <div v-if="isOpen" role="dialog" aria-labelledby="wa-widget-title" class="absolute bottom-[4.5rem] right-0 w-[calc(100vw-2rem)] sm:w-[360px] max-h-[calc(100vh-7rem)] bg-surface border border-line rounded-[var(--radius-panel)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.35)] overflow-hidden flex flex-col">
+      <div v-if="isOpen" ref="panel" role="dialog" aria-labelledby="wa-widget-title" class="absolute bottom-[4.5rem] right-0 w-[calc(100vw-2rem)] sm:w-[360px] max-h-[calc(100vh-7rem)] bg-surface border border-line rounded-[var(--radius-panel)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.35)] overflow-hidden flex flex-col">
         <div class="relative px-6 pt-6 pb-5 border-b border-line">
           <button
             class="absolute top-4 right-4 w-9 h-9 rounded-[var(--radius-control)] flex items-center justify-center text-muted hover:text-ink hover:bg-surface-2 transition-colors"
@@ -91,7 +99,7 @@ onUnmounted(() => {
               id="wa-widget-message"
               v-model="userMessage"
               placeholder="Cuéntanos qué quieres imprimir"
-              class="w-full h-28 resize-none rounded-[var(--radius-control)] border border-line bg-canvas px-4 py-3 text-[0.9375rem] text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary transition-colors"
+              class="w-full h-28 resize-none rounded-[var(--radius-control)] border border-line bg-canvas px-4 py-3 text-[0.9375rem] text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)] transition-colors"
               @keydown.enter.exact.prevent="sendMessage()"
             ></textarea>
             <button class="btn-primary w-full mt-3" @click="sendMessage()">
@@ -116,7 +124,8 @@ onUnmounted(() => {
     </transition>
 
     <button
-      class="w-14 h-14 rounded-full flex items-center justify-center text-white bg-[#25d366] hover:bg-[#1ebe5b] shadow-[0_10px_24px_-6px_rgba(0,0,0,0.4)] transition-colors"
+      ref="toggle"
+      class="w-14 h-14 rounded-full flex items-center justify-center text-white bg-[#0f7a40] hover:bg-[#0c6634] shadow-[0_10px_24px_-6px_rgba(0,0,0,0.4)] transition-colors"
       :aria-label="isOpen ? 'Cerrar chat de WhatsApp' : 'Abrir chat de WhatsApp'"
       :aria-expanded="isOpen"
       @click="isOpen = !isOpen"

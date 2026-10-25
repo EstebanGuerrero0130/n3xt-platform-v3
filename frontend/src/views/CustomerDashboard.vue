@@ -10,8 +10,7 @@ import { usePageMeta } from '../composables/usePageMeta'
 
 usePageMeta({
   title: 'Panel del Cliente | N3XT 3D',
-  description: 'Gestiona tus pedidos de impresion 3D. Consulta el estado de tus proyectos y solicita nuevas cotizaciones.',
-  image: '/assets/n3xt_og_dashboard.png',
+  description: 'Gestiona tus pedidos de impresión 3D. Consulta el estado de tus proyectos y solicita nuevas cotizaciones.',
   noIndex: true,
 })
 
@@ -96,7 +95,7 @@ const getStatusLabel = (status: string) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] transition-colors duration-500 relative overflow-hidden">
+  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] transition-colors duration-500 relative overflow-clip">
     <AppNavbar active-tab="dashboard" subtext="Terminal del Usuario" />
     
     <!-- Background Industrial Engine -->

@@ -10,9 +10,8 @@ import { usePageMeta } from '../composables/usePageMeta'
 useSplitTitle()
 
 usePageMeta({
-  title: 'Acceso N3XT 3D | Login',
-  description: 'Accede al panel de control N3XT 3D. Inicia sesion como cliente o administrador.',
-  image: '/assets/n3xt_og_login.png',
+  title: 'Iniciar sesión | N3XT 3D',
+  description: 'Accede a tu cuenta N3XT 3D para ver tus pedidos, o al panel del taller.',
 })
 
 // ─── SEO via @unhead/vue (usePageMeta at setup) ───

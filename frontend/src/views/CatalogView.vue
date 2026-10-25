@@ -13,8 +13,7 @@ useSplitTitle()
 
 usePageMeta({
   title: 'Catálogo de Piezas 3D | N3XT 3D',
-  description: 'Explora nuestra galería de piezas fabricadas con precisión industrial. Figuras, prototipos y coleccionables en 3D.',
-  image: '/assets/n3xt_og_catalog.png',
+  description: 'Piezas impresas en 3D listas para pedir: figuras coleccionables, accesorios y repuestos en resina y filamento, con envío a toda Colombia.',
 })
 
 const tickerSection = ref<HTMLElement | null>(null)
@@ -195,10 +194,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-canvas text-ink overflow-x-hidden">
+  <div class="min-h-screen bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="catalog" subtext="Catálogo de piezas" />
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+    <main id="main" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
       <!-- Encabezado -->
       <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div class="max-w-2xl">

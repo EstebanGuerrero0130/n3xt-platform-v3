@@ -10,8 +10,7 @@ import { usePageMeta } from '../composables/usePageMeta'
 
 usePageMeta({
   title: 'Iniciar Proyecto 3D | N3XT 3D',
-  description: 'Configura tu proyecto de impresion 3D. Selecciona tipo, tecnologia, acabado y urgencia.',
-  image: '/assets/n3xt_og_project.png',
+  description: 'Cuéntanos tu proyecto de impresión 3D y te asesoramos con la tecnología, el material y el acabado.',
 })
 
 // ─── SEO via @unhead/vue (usePageMeta at setup) ───
@@ -119,7 +118,7 @@ const sendToWhatsapp = () => {
   <div class="min-h-screen flex flex-col bg-canvas text-ink pb-24 lg:pb-0">
     <AppNavbar active-tab="contact" />
 
-    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+    <main id="main" class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
       <div class="flex flex-col lg:flex-row gap-10 lg:gap-12">
         <div class="flex-1 min-w-0 space-y-10">
           <header>
@@ -129,7 +128,7 @@ const sendToWhatsapp = () => {
 
           <div class="max-w-md">
             <label for="project-customer-name" class="block text-sm font-medium text-ink mb-2">Tu nombre</label>
-            <input id="project-customer-name" v-model="customerName" type="text" autocomplete="name" placeholder="Ej: Laura Gómez" aria-describedby="project-name-hint" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary">
+            <input id="project-customer-name" v-model="customerName" type="text" autocomplete="name" placeholder="Ej: Laura Gómez" aria-describedby="project-name-hint" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink placeholder:text-muted/70 focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)]">
             <p id="project-name-hint" class="mt-1.5 text-sm text-muted">Lo necesitamos para enviar tu solicitud por WhatsApp.</p>
           </div>
 

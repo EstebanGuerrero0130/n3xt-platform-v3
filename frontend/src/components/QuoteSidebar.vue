@@ -182,11 +182,11 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
       <div v-if="selectedTechnology === 'FDM'" class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4">
         <div>
           <label for="quote-infill" class="block text-sm font-medium text-ink mb-2">Relleno (%)</label>
-          <input id="quote-infill" type="number" :value="infill || 15" min="5" max="100" step="5" inputmode="numeric" :aria-describedby="models.length > 1 ? 'quote-params-scope' : undefined" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink tabular-nums focus:outline-none focus:border-primary" @input="onInfillInput" @change="onInfillChange">
+          <input id="quote-infill" type="number" :value="infill || 15" min="5" max="100" step="5" inputmode="numeric" :aria-describedby="models.length > 1 ? 'quote-params-scope' : undefined" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink tabular-nums focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)]" @input="onInfillInput" @change="onInfillChange">
         </div>
         <div>
           <label for="quote-layer" class="block text-sm font-medium text-ink mb-2">Altura de capa</label>
-          <select id="quote-layer" :value="layerHeight || 0.2" :aria-describedby="models.length > 1 ? 'quote-params-scope' : undefined" class="w-full h-11 px-3 rounded-[var(--radius-control)] border border-line bg-canvas text-ink cursor-pointer focus:outline-none focus:border-primary" @change="$emit('update:layerHeight', Number(($event.target as HTMLSelectElement).value))">
+          <select id="quote-layer" :value="layerHeight || 0.2" :aria-describedby="models.length > 1 ? 'quote-params-scope' : undefined" class="w-full h-11 px-3 rounded-[var(--radius-control)] border border-line bg-canvas text-ink cursor-pointer focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)]" @change="$emit('update:layerHeight', Number(($event.target as HTMLSelectElement).value))">
             <option :value="0.12">0,12 mm (ultra detalle)</option>
             <option :value="0.16">0,16 mm (alta)</option>
             <option :value="0.2">0,20 mm (estándar)</option>
@@ -259,8 +259,8 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
           placeholder="Escribe tu código"
           :aria-invalid="couponError ? 'true' : undefined"
           :aria-describedby="couponError ? 'quote-coupon-error' : (activeCoupon ? 'quote-coupon-ok' : undefined)"
-          class="min-w-0 flex-1 h-11 px-4 rounded-[var(--radius-control)] border bg-canvas text-ink uppercase placeholder:normal-case placeholder:text-muted/70 focus:outline-none focus:border-primary"
-          :class="couponError ? 'border-red-600 dark:border-red-400' : 'border-line'"
+          class="min-w-0 flex-1 h-11 px-4 rounded-[var(--radius-control)] border bg-canvas text-ink uppercase placeholder:normal-case placeholder:text-muted/70 focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)]"
+          :class="couponError ? 'border-danger' : 'border-line'"
           @keyup.enter="$emit('applyCoupon')"
         >
         <button type="button" class="btn-secondary shrink-0" :disabled="couponLoading" @click="$emit('applyCoupon')">
@@ -268,7 +268,7 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
           <span>{{ couponLoading ? 'Validando…' : 'Aplicar' }}</span>
         </button>
       </div>
-      <p v-if="couponError" id="quote-coupon-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">{{ couponError }}</p>
+      <p v-if="couponError" id="quote-coupon-error" class="mt-1.5 text-sm text-danger" role="alert">{{ couponError }}</p>
       <div v-else-if="activeCoupon" id="quote-coupon-ok" class="mt-2 flex items-center justify-between gap-3">
         <p class="text-sm font-medium text-resin">{{ activeCoupon.label }} ({{ activeCoupon.code }}): {{ activeCoupon.discount_pct }} % de descuento</p>
         <button type="button" class="shrink-0 text-sm font-medium text-muted underline underline-offset-2 hover:text-ink" :aria-label="`Quitar el cupón ${activeCoupon.code}`" @click="$emit('removeCoupon')">Quitar</button>
@@ -277,7 +277,7 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
 
     <!-- Calcular (FDM) -->
     <div v-if="selectedTechnology === 'FDM'" class="space-y-2">
-      <p v-if="needsRecalc && !isSlicing" id="quote-recalc-hint" class="text-sm text-amber-700 dark:text-amber-300">
+      <p v-if="needsRecalc && !isSlicing" id="quote-recalc-hint" class="text-sm text-warning">
         {{ pendingCount > 1 ? `Hay ${pendingCount} modelos sin precio. Calcúlalo` : 'Calcula el precio' }} con los archivos y parámetros actuales para poder solicitar la cotización.
       </p>
       <button

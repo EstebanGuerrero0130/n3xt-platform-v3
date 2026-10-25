@@ -39,11 +39,17 @@ const navLinks = [
 
 const showMobileMenu = ref(false)
 
+const menuToggle = ref<HTMLButtonElement | null>(null)
+const mobileMenu = ref<HTMLElement | null>(null)
+
 watch(showMobileMenu, (isOpen) => {
   if (isOpen) {
     document.body.classList.add('overflow-hidden')
+    // Foco al primer enlace del menú; al cerrar vuelve al botón que lo abrió
+    nextTick(() => mobileMenu.value?.querySelector<HTMLElement>('a, button')?.focus())
   } else {
     document.body.classList.remove('overflow-hidden')
+    if (mobileMenu.value?.contains(document.activeElement) || document.activeElement === document.body) menuToggle.value?.focus()
   }
 })
 
@@ -144,6 +150,7 @@ onUnmounted(() => {
       </router-link>
 
       <button
+        ref="menuToggle"
         :aria-expanded="showMobileMenu"
         aria-controls="mobile-menu"
         :aria-label="showMobileMenu ? 'Cerrar menú' : 'Abrir menú'"
@@ -165,7 +172,7 @@ onUnmounted(() => {
     leave-from-class="opacity-100 translate-y-0"
     leave-to-class="opacity-0 -translate-y-2"
   >
-    <nav v-if="showMobileMenu" id="mobile-menu" aria-label="Navegación móvil" class="fixed inset-x-0 top-16 bottom-0 z-[999] bg-canvas md:hidden overflow-y-auto px-4 pt-4 pb-10 flex flex-col">
+    <nav v-if="showMobileMenu" id="mobile-menu" ref="mobileMenu" aria-label="Navegación móvil" class="fixed inset-x-0 top-16 bottom-0 z-[999] bg-canvas md:hidden overflow-y-auto px-4 pt-4 pb-10 flex flex-col">
       <router-link
         v-for="link in navLinks"
         :key="link.tab"

@@ -4,8 +4,8 @@
   "description": "Manufactura Digital y Coleccionables de Alta Precisión",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0f14",
-  "theme_color": "#1e3a34",
+  "background_color": "#0e1512",
+  "theme_color": "#0e1512",
   "icons": [
     {
       "src": "/favicon.png",

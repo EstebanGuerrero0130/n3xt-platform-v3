@@ -1572,7 +1572,7 @@ const handlePurgeAll = () => {
     />
 
     <!-- MAIN CONTENT AREA -->
-    <main class="flex-1 flex flex-col min-w-0 bg-transparent h-screen overflow-hidden relative z-10">
+    <main id="main" class="flex-1 flex flex-col min-w-0 bg-transparent h-screen overflow-hidden relative z-10">
 
         <!-- PREMIUM HEADER (extraído a AdminHeader.vue) -->
         <AdminHeader

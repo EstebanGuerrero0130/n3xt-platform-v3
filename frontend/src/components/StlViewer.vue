@@ -747,20 +747,20 @@ const loadFile = async (file: File) => {
 
         <span class="mx-1 h-6 w-px shrink-0 bg-line" aria-hidden="true"></span>
 
-        <button type="button" class="shrink-0 h-9 px-3 inline-flex items-center gap-1.5 rounded-[var(--radius-control)] text-sm font-medium text-ink hover:bg-surface-2 transition-colors" title="Apoyar la pieza sobre su cara más plana" @click="autoOrient()">
+        <button type="button" class="shrink-0 h-9 pointer-coarse:h-11 px-3 inline-flex items-center gap-1.5 rounded-[var(--radius-control)] text-sm font-medium text-ink hover:bg-surface-2 transition-colors" title="Apoyar la pieza sobre su cara más plana" @click="autoOrient()">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7m14-8l-7 7-7-7" /></svg>
           Aplanar
         </button>
 
         <span class="mx-1 h-6 w-px shrink-0 bg-line" aria-hidden="true"></span>
 
-        <button type="button" :aria-pressed="transformMode === 'translate'" :class="transformMode === 'translate' ? 'bg-primary text-white' : 'text-muted hover:bg-surface-2 hover:text-ink'" class="shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-control)] transition-colors" title="Mover" aria-label="Mover" @click="setTransformMode('translate')">
+        <button type="button" :aria-pressed="transformMode === 'translate'" :class="transformMode === 'translate' ? 'bg-primary text-white' : 'text-muted hover:bg-surface-2 hover:text-ink'" class="shrink-0 w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 flex items-center justify-center rounded-[var(--radius-control)] transition-colors" title="Mover" aria-label="Mover" @click="setTransformMode('translate')">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
         </button>
-        <button type="button" :aria-pressed="transformMode === 'rotate'" :class="transformMode === 'rotate' ? 'bg-primary text-white' : 'text-muted hover:bg-surface-2 hover:text-ink'" class="shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-control)] transition-colors" title="Rotar" aria-label="Rotar" @click="setTransformMode('rotate')">
+        <button type="button" :aria-pressed="transformMode === 'rotate'" :class="transformMode === 'rotate' ? 'bg-primary text-white' : 'text-muted hover:bg-surface-2 hover:text-ink'" class="shrink-0 w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 flex items-center justify-center rounded-[var(--radius-control)] transition-colors" title="Rotar" aria-label="Rotar" @click="setTransformMode('rotate')">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
         </button>
-        <button type="button" :aria-pressed="transformMode === 'scale'" :class="transformMode === 'scale' ? 'bg-primary text-white' : 'text-muted hover:bg-surface-2 hover:text-ink'" class="shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-control)] transition-colors" title="Escalar" aria-label="Escalar" @click="setTransformMode('scale')">
+        <button type="button" :aria-pressed="transformMode === 'scale'" :class="transformMode === 'scale' ? 'bg-primary text-white' : 'text-muted hover:bg-surface-2 hover:text-ink'" class="shrink-0 w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 flex items-center justify-center rounded-[var(--radius-control)] transition-colors" title="Escalar" aria-label="Escalar" @click="setTransformMode('scale')">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
         </button>
       </div>
@@ -828,15 +828,14 @@ const loadFile = async (file: File) => {
                   type="number"
                   inputmode="numeric"
                   :disabled="isLocked"
-                  aria-label="Respuesta de validación"
                   :aria-describedby="isLocked || captchaFailed ? 'stl-captcha-msg' : undefined"
-                  class="min-w-0 flex-1 h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink tabular-nums placeholder:text-muted/70 focus:outline-none focus:border-primary disabled:opacity-50"
+                  class="min-w-0 flex-1 h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink tabular-nums placeholder:text-muted/70 focus:outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-text)] disabled:opacity-50"
                   placeholder="Tu respuesta"
                 >
                 <button type="submit" class="btn-secondary shrink-0" :disabled="isLocked">Continuar</button>
               </div>
-              <p v-if="isLocked" id="stl-captcha-msg" class="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">Demasiados intentos. Espera 30 segundos y vuelve a intentarlo.</p>
-              <p v-else-if="captchaFailed" id="stl-captcha-msg" class="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">Respuesta incorrecta. Prueba con la nueva operación.</p>
+              <p v-if="isLocked" id="stl-captcha-msg" class="mt-1.5 text-sm text-danger" role="alert">Demasiados intentos. Espera 30 segundos y vuelve a intentarlo.</p>
+              <p v-else-if="captchaFailed" id="stl-captcha-msg" class="mt-1.5 text-sm text-danger" role="alert">Respuesta incorrecta. Prueba con la nueva operación.</p>
             </form>
 
             <label v-else class="btn-primary mt-6 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-text)]">

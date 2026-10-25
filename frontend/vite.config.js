@@ -19,19 +19,18 @@ export default defineConfig({
     outDir: 'dist',
     chunkSizeWarningLimit: 700,
     assetsInlineLimit: 4096,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes('node_modules/chart.js') || id.includes('node_modules/vue-chartjs')) {
-            return 'chart-vendor'
-          }
-          if (id.includes('node_modules/vue') || id.includes('node_modules/vue-router')) {
-            return 'vue-vendor'
-          }
-
-        }
-      }
-    }
+        // Grupos con prioridad: Vue se captura primero, así el grupo de gráficas
+        // (solo admin) no lo arrastra y echarts no se precarga en las páginas públicas.
+        codeSplitting: {
+          groups: [
+            { name: 'vue-vendor', test: /node_modules[\\/](vue|@vue|vue-router|@unhead)[\\/]/, priority: 20 },
+            { name: 'charts-vendor', test: /node_modules[\\/](echarts|zrender|vue-echarts)[\\/]/, priority: 10 },
+          ],
+        },
+      },
+    },
   },
   server: {
     host: true,

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onBeforeUnmount, type PropType } from 'vue'
+import { ref, toRef, watch, nextTick, type PropType } from 'vue'
 import { useCaptcha } from '../composables/useCaptcha'
 import { useTurnstile } from '../composables/useTurnstile'
+import { useFocusTrap } from '../composables/useFocusTrap'
 
 interface QuoteModelSummary {
   id: number
@@ -82,17 +83,15 @@ const handleConfirm = () => {
   emit('submit', { customerForm: { ...customerForm.value }, captchaVerified: true, turnstileToken: turnstile.token.value })
 }
 
-const onKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') handleClose()
-}
+// Foco dentro del modal, Escape para cerrar y foco de vuelta al botón que lo abrió
+const panel = ref<HTMLElement | null>(null)
+useFocusTrap(panel, toRef(props, 'show'), { onEscape: handleClose })
 
 watch(() => props.show, (v) => {
   if (v) {
     modalStep.value = 1
     reset()
-    window.addEventListener('keydown', onKeydown)
   } else {
-    window.removeEventListener('keydown', onKeydown)
     turnstile.remove()
   }
 })
@@ -110,7 +109,6 @@ watch(() => props.isSubmitting, (now, before) => {
   }
 })
 
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 const getMaterialName = (id: string) => {
   const mat = props.materials.find(m => m.id === id)
@@ -135,7 +133,7 @@ const formatTime = (h: number) => {
   enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0" enter-to-class="opacity-100"
   leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0">
   <div v-if="show" class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/60" role="dialog" aria-modal="true" aria-labelledby="quote-order-modal-title">
-    <div class="bg-surface w-full max-w-2xl rounded-[var(--radius-panel)] shadow-2xl border border-line overflow-hidden flex flex-col max-h-[92vh]">
+    <div ref="panel" class="bg-surface w-full max-w-2xl rounded-[var(--radius-panel)] shadow-2xl border border-line overflow-hidden flex flex-col max-h-[92dvh] outline-none">
 
       <!-- Encabezado + pasos -->
       <div class="px-5 sm:px-8 pt-6 pb-5 border-b border-line shrink-0">
@@ -174,11 +172,11 @@ const formatTime = (h: number) => {
         <form v-show="modalStep === 1" ref="step1Form" class="space-y-5" novalidate @submit.prevent="goToStep(2)">
           <div>
             <h3 class="text-lg font-semibold text-ink [font-stretch:100%] tracking-normal">Tus datos</h3>
-            <p class="text-sm text-muted">Paso 1 de 3. Los campos con <span class="text-red-600 dark:text-red-400">*</span> son obligatorios.</p>
+            <p class="text-sm text-muted">Paso 1 de 3. Los campos con <span class="text-danger">*</span> son obligatorios.</p>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-ink mb-2" for="order-name">Nombre completo <span class="text-red-600 dark:text-red-400" aria-hidden="true">*</span></label>
+              <label class="block text-sm font-medium text-ink mb-2" for="order-name">Nombre completo <span class="text-danger" aria-hidden="true">*</span></label>
               <input id="order-name" v-model="customerForm.name" type="text" autocomplete="name" aria-describedby="order-name-error" class="field" required>
               <p id="order-name-error" class="field-error">Escribe tu nombre.</p>
             </div>
@@ -191,12 +189,12 @@ const formatTime = (h: number) => {
               <input id="order-document" v-model="customerForm.document" type="text" class="field">
             </div>
             <div>
-              <label class="block text-sm font-medium text-ink mb-2" for="order-email">Email <span class="text-red-600 dark:text-red-400" aria-hidden="true">*</span></label>
+              <label class="block text-sm font-medium text-ink mb-2" for="order-email">Email <span class="text-danger" aria-hidden="true">*</span></label>
               <input id="order-email" v-model="customerForm.email" type="email" autocomplete="email" aria-describedby="order-email-error" class="field" required>
               <p id="order-email-error" class="field-error">Escribe un email válido, por ejemplo nombre@correo.com.</p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-ink mb-2" for="order-phone">WhatsApp o teléfono <span class="text-red-600 dark:text-red-400" aria-hidden="true">*</span></label>
+              <label class="block text-sm font-medium text-ink mb-2" for="order-phone">WhatsApp o teléfono <span class="text-danger" aria-hidden="true">*</span></label>
               <input id="order-phone" v-model="customerForm.phone" type="tel" autocomplete="tel" aria-describedby="order-phone-error" class="field" required>
               <p id="order-phone-error" class="field-error">Escribe un número de contacto.</p>
             </div>
@@ -217,7 +215,7 @@ const formatTime = (h: number) => {
             <p class="text-sm text-muted">Paso 2 de 3</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-ink mb-2" for="order-address">Dirección de envío <span class="text-red-600 dark:text-red-400" aria-hidden="true">*</span></label>
+            <label class="block text-sm font-medium text-ink mb-2" for="order-address">Dirección de envío <span class="text-danger" aria-hidden="true">*</span></label>
             <input id="order-address" v-model="customerForm.address" type="text" autocomplete="street-address" aria-describedby="order-address-error" class="field" required>
             <p id="order-address-error" class="field-error">Escribe la dirección donde quieres recibir el pedido.</p>
           </div>
@@ -290,13 +288,13 @@ const formatTime = (h: number) => {
           <div>
             <label for="order-captcha" class="block text-sm font-medium text-ink mb-2">Verificación: <span id="order-captcha-q" class="font-semibold tabular-nums">{{ challenge.text }}</span></label>
             <input id="order-captcha" v-model="answer" type="number" inputmode="numeric" :disabled="isLocked" aria-label="Respuesta de validación" aria-describedby="order-captcha-q" class="field w-32 tabular-nums disabled:opacity-50" placeholder="Respuesta">
-            <p v-if="isLocked" class="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">Demasiados intentos. Espera 30 segundos y vuelve a intentarlo.</p>
+            <p v-if="isLocked" class="mt-1.5 text-sm text-danger" role="alert">Demasiados intentos. Espera 30 segundos y vuelve a intentarlo.</p>
           </div>
 
           <!-- Cloudflare Turnstile -->
           <div v-if="turnstile.enabled" class="space-y-2">
             <div ref="turnstileEl"></div>
-            <p v-if="turnstileHint || turnstile.error.value" class="text-sm text-red-600 dark:text-red-400" role="alert">{{ turnstileHint || turnstile.error.value }}</p>
+            <p v-if="turnstileHint || turnstile.error.value" class="text-sm text-danger" role="alert">{{ turnstileHint || turnstile.error.value }}</p>
           </div>
 
           <div class="pt-2 flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
@@ -343,13 +341,14 @@ const formatTime = (h: number) => {
 }
 .field::placeholder { color: color-mix(in srgb, var(--text-muted) 70%, transparent); }
 .field:focus { outline: none; border-color: var(--color-primary); }
-.field:user-invalid { border-color: var(--color-red-600, #dc2626); }
+/* Anillo visible al navegar con teclado (el borde de 1 px solo no basta) */
+.field:focus-visible { outline: 2px solid var(--brand-text); outline-offset: 2px; }
+.field:user-invalid { border-color: var(--danger); }
 .field-error {
   display: none;
   margin-top: 0.375rem;
   font-size: 0.875rem;
-  color: var(--color-red-600, #dc2626);
+  color: var(--danger);
 }
-:where(.dark) .field-error { color: var(--color-red-400, #f87171); }
 .field:user-invalid + .field-error { display: block; }
 </style>
