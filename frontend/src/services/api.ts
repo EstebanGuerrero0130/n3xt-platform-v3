@@ -73,12 +73,28 @@ const getCached = (key: string): any | null => {
     apiCache.delete(key)
     return null
   }
-  return entry.data
+  // Copia: quien edite la respuesta no debe contaminar la caché compartida
+  return structuredClone(entry.data)
 }
 
 const setCached = (key: string, data: any): void => {
-  apiCache.set(key, { data, timestamp: Date.now() })
+  apiCache.set(key, { data: structuredClone(data), timestamp: Date.now() })
 }
+
+/** Error HTTP de la API con su código de estado. */
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+type AuthState = { authenticated: boolean; user: any; role: 'admin' | 'customer' | null }
+
+/** Estado de sesión compartido entre vistas (evita un GET /user por navegación). */
+const AUTH_TTL = 30 * 1000
+let authCache: { value: Promise<AuthState>; timestamp: number } | null = null
+const AUTH_ENDPOINT = /\/(auth|login|logout|register|maker-access)/
 
 /** Limpia endpoints relacionados a datos mutables */
 const invalidateDataCache = () => {
@@ -98,7 +114,14 @@ export const api = {
    * Check if the current session is authenticated.
    * @returns {Promise<{authenticated: boolean, user: object|null, role: string|null}>}
    */
-  async checkAuth() {
+  async checkAuth(force = false): Promise<AuthState> {
+    if (!force && authCache && Date.now() - authCache.timestamp < AUTH_TTL) return authCache.value
+    const value = this.fetchAuth()
+    authCache = { value, timestamp: Date.now() }
+    return value
+  },
+
+  async fetchAuth(): Promise<AuthState> {
     try {
       const res = await fetch(`${API_BASE_URL}/user`, {
         credentials: 'include',
@@ -114,10 +137,12 @@ export const api = {
     }
   },
 
-  async get(endpoint: string): Promise<any> {
-    // Revisar cache primero
-    const cached = getCached(endpoint)
-    if (cached !== null) return cached
+  /** GET con caché de 5 min; `fresh = true` la salta (paneles que deben ver datos al día). */
+  async get(endpoint: string, fresh = false): Promise<any> {
+    if (!fresh) {
+      const cached = getCached(endpoint)
+      if (cached !== null) return cached
+    }
 
     const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('GET'))
     const data = await this.handleResponse(res, endpoint)
@@ -138,6 +163,7 @@ export const api = {
     const data = await this.handleResponse(res, endpoint)
     // POST muta datos → limpiar cache
     invalidateDataCache()
+    if (AUTH_ENDPOINT.test(endpoint)) authCache = null
     return data
   },
 
@@ -179,9 +205,10 @@ export const api = {
     if (!res.ok) {
       if (res.status === 401) {
         logger.error(`[AUTH] Sesión expirada en ${endpoint}.`)
-        throw new Error(data.message || 'Sesión no autenticada. Inicia sesión primero.')
+        authCache = null
+        throw new ApiError(data.message || 'Sesión no autenticada. Inicia sesión primero.', 401)
       }
-      throw new Error(data.message || `Error del servidor (${res.status})`)
+      throw new ApiError(data.message || `Error del servidor (${res.status})`, res.status)
     }
     return data.data !== undefined ? data.data : data
   },

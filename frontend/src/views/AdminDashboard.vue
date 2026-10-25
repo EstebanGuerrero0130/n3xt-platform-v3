@@ -33,12 +33,8 @@ import SettingsPanel from '../components/admin/SettingsPanel.vue'
  *
  * ✅ COMPOSABLES EXTRAÍDOS:
  *   - useSimulator.ts   → Simulador de costos de producción
- *   - useUploads.ts     → Subida de imágenes (proxy Cloudinary)
  *   - usePrinters.ts    → API wrappers para impresoras
  *   - usePDF.ts         → Generación de PDFs (cotizaciones, guías)
- *   - useOrders.ts      → Gestión de pedidos
- *   - useSettings.ts    → Gestión de configuración
- *   - useUI.ts          → Utilidades de UI (animaciones, etc.)
  *
  * 📦 SUB-COMPONENTES (carga asíncrona):
  *   KanbanBoard, InventoryManager, AccountingDashboard,
@@ -71,6 +67,7 @@ const ContactManager = defineAsyncComponent(() => import('../components/admin/Co
 const DiscountManager = defineAsyncComponent(() => import('../components/admin/DiscountManager.vue'))
 
 const router = useRouter()
+const route = useRoute()
 
 // --- State ---
 const orders = ref([])
@@ -327,6 +324,12 @@ const syncAll = async (silent = false) => {
         if (!silent) showNotify(`Fallo parcial: ${task.name}`, 'warning')
       }
     }))
+    // Cada fetch atrapa sus errores: la sesión expirada se detecta aquí
+    const auth = await api.checkAuth(true)
+    if (!auth.authenticated || auth.role !== 'admin') {
+      showNotify('Sesión expirada. Por favor ingresa de nuevo.', 'warning')
+      logout()
+    }
   } finally {
     if (!isSilent) {
       setTimeout(() => { loading.value = false }, 500)
@@ -474,36 +477,18 @@ const handleStatusUpdate = async ({ orderId, status, tracking_guide, tracking_ca
 
   try {
     const order = orders.value.find(o => o.id === orderId);
-    
-    // Lógica de Deducción Automática de Stock al terminar
-    if (status === 'completed' && order && order.material_id) {
-        const material = inventoryData.value.find(m => m.id === order.material_id);
-        if (material) {
-            const usedWeight = parseFloat(order.estimated_weight_g || 0);
-            const currentStock = parseFloat(material.stock_available || 0);
-            const newStock = Math.max(0, currentStock - usedWeight);
-            
-            logger.info(`[STOCK] Deduciendo ${usedWeight}g de ${material.name}. Nuevo: ${newStock}`);
-            await api.post(`/materials/${material.id}/stock`, { stock_available: newStock }, true);
-        }
-    }
 
+    // El stock lo descuenta el servidor al confirmar el pago (toggle-paid) y las horas
+    // de impresora al salir de "printing" (updateStatus): aquí no se duplica.
     await api.patch(`/admin/orders/${orderId}/status`, { 
         status, 
         tracking_guide, 
         tracking_carrier 
     }, true)
     
-    // Liberación de impresora y actualización de horas en web
+    // Liberar la impresora (las horas ya las suma el servidor)
     if ((status === 'completed' || status === 'cancelled') && order && order.printer_id) {
-        const printer = printers.value.find(p => p.id === order.printer_id);
-        const updateData = { status: 'idle' };
-        
-        if (status === 'completed' && printer) {
-            updateData.total_hours_run = (parseFloat(printer.total_hours_run) || 0) + (parseFloat(order.estimated_duration_h) || 0);
-        }
-        
-        await api.patch(`/admin/printers/${order.printer_id}`, updateData, true);
+        await api.patch(`/admin/printers/${order.printer_id}`, { status: 'idle' });
     }
     
     showNotify('Estado actualizado: ' + status.toUpperCase(), 'success');
@@ -518,10 +503,14 @@ const handleTogglePaid = async (orderId) => {
   try {
     const order = orders.value.find(o => o.id === orderId)
     if (!order) return
-    const newState = order.is_paid ? 0 : 1
+    // El pago confirmado no se revierte (protege el inventario ya descontado)
+    if (order.is_paid) {
+      showNotify('El pago ya está confirmado y no puede revertirse.', 'warning')
+      return
+    }
 
-    await api.post(`/admin/orders/${orderId}/toggle-paid`, { is_paid: newState }, true)
-    showNotify(newState ? 'Pedido marcado como pagado' : 'Pago pendiente', 'success')
+    await api.post(`/admin/orders/${orderId}/toggle-paid`)
+    showNotify('Pedido marcado como pagado', 'success')
     syncAll(true)
   } catch (err) {
     showNotify('Error al procesar pago: ' + err.message, 'error')
@@ -1039,7 +1028,6 @@ onMounted(async () => {
   }
 
   // --- Auto-Open Order from URL (Admin Bridge) ---
-  const route = useRoute()
   if (route.query.open_order) {
     setTimeout(async () => {
       const orderToOpen = orders.value.find(o => String(o.id) === String(route.query.open_order))
@@ -1060,12 +1048,7 @@ onMounted(async () => {
   try {
     await syncAll()
   } catch (err) {
-    if (err.message.includes('401')) {
-       showNotify('Sesion expirada. Por favor ingresa de nuevo.', 'warning')
-       logout()
-    } else {
-       logger.error('Error inicial de carga:', err)
-    }
+    logger.error('Error inicial de carga:', err)
   }
 })
 

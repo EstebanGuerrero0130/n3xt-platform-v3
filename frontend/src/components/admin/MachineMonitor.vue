@@ -9,7 +9,7 @@ const props = defineProps({
 defineEmits(['sync', 'add-printer', 'update-printer-status', 'maintenance-complete', 'edit-printer', 'delete-printer'])
 
 const getStatusLabel = (status: any) => {
-  const labels = {
+  const labels: Record<string, string> = {
     'idle': 'Libre / Lista',
     'printing': 'OCUPADA',
     'maintenance': 'Mantenimiento',
@@ -19,7 +19,7 @@ const getStatusLabel = (status: any) => {
 }
 
 const getStatusColor = (status: any) => {
-  const colors = {
+  const colors: Record<string, string> = {
     'idle': 'bg-emerald-500',
     'printing': 'bg-amber-500',
     'maintenance': 'bg-rose-500',

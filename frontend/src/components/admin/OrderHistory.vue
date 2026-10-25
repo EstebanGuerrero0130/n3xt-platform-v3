@@ -16,7 +16,7 @@ const dateRange = ref({
   end: ''
 })
 
-const setQuickMonth = (offset) => {
+const setQuickMonth = (offset: number) => {
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth() + offset, 1)
   const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0)
@@ -73,7 +73,7 @@ const topCustomers = computed(() => {
 })
 
 const getStatusColor = (status: any) => {
-  const map = {
+  const map: Record<string, string> = {
     pending: 'bg-red-50 text-red-600 border-red-200',
     printing: 'bg-amber-50 text-amber-600 border-amber-200',
     'post-processing': 'bg-blue-50 text-blue-600 border-blue-200',
@@ -84,7 +84,7 @@ const getStatusColor = (status: any) => {
 }
 
 const getStatusLabel = (status: any) => {
-  const map = {
+  const map: Record<string, string> = {
     pending: 'Pendiente',
     printing: 'En Máquina',
     'post-processing': 'Post-Proceso',

@@ -55,6 +55,21 @@ const localCoupon = ref(props.couponCode)
 
 watch(() => props.qty, (v) => { localQty.value = v })
 watch(() => props.couponCode, (v) => { if (v !== localCoupon.value) localCoupon.value = v })
+// Relleno: 5–100 %. Mientras se escribe solo se emiten valores válidos; al confirmar se acota.
+const INFILL_MIN = 5
+const INFILL_MAX = 100
+const onInfillInput = (e: Event) => {
+  const v = Number((e.target as HTMLInputElement).value)
+  if (Number.isFinite(v) && v >= INFILL_MIN && v <= INFILL_MAX) emit('update:infill', Math.round(v))
+}
+const onInfillChange = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const raw = Number(input.value)
+  const v = Number.isFinite(raw) && input.value !== '' ? Math.min(INFILL_MAX, Math.max(INFILL_MIN, Math.round(raw))) : 15
+  input.value = String(v)
+  emit('update:infill', v)
+}
+
 // Cantidad: solo enteros >= 1
 const normalizeQty = (v: unknown) => Math.max(1, Math.floor(Number(v)) || 1)
 watch(localQty, (v) => {
@@ -167,7 +182,7 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
       <div v-if="selectedTechnology === 'FDM'" class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4">
         <div>
           <label for="quote-infill" class="block text-sm font-medium text-ink mb-2">Relleno (%)</label>
-          <input id="quote-infill" type="number" :value="infill || 15" min="5" max="100" step="5" inputmode="numeric" :aria-describedby="models.length > 1 ? 'quote-params-scope' : undefined" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink tabular-nums focus:outline-none focus:border-primary" @input="$emit('update:infill', Number(($event.target as HTMLInputElement).value))">
+          <input id="quote-infill" type="number" :value="infill || 15" min="5" max="100" step="5" inputmode="numeric" :aria-describedby="models.length > 1 ? 'quote-params-scope' : undefined" class="w-full h-11 px-4 rounded-[var(--radius-control)] border border-line bg-canvas text-ink tabular-nums focus:outline-none focus:border-primary" @input="onInfillInput" @change="onInfillChange">
         </div>
         <div>
           <label for="quote-layer" class="block text-sm font-medium text-ink mb-2">Altura de capa</label>

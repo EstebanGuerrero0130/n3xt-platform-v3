@@ -90,6 +90,7 @@
 
         <div class="p-4 md:p-6 border-t border-gray-800 flex flex-col sm:flex-row justify-end gap-3 md:gap-4">
           <button class="w-full sm:w-auto px-6 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold transition-all text-sm" @click="$emit('close')">Descartar</button>
+          <p v-if="submitError" role="alert" class="text-sm text-red-400 sm:mr-auto self-center">{{ submitError }}</p>
           <button :disabled="submitting" class="w-full sm:w-auto px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black transition-all text-sm" @click="submit">
             {{ submitting ? 'Creando...' : 'CREAR ORDEN' }}
           </button>
@@ -100,23 +101,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, type PropType } from 'vue'
 import { api } from '../../services/api'
 import logger from '../../utils/logger'
 
+interface MaterialOption { id: string; name: string; category?: string; cost_per_kg?: number | string }
+interface ContactOption {
+  id: number | string; name: string; company?: string; customer_id_document?: string
+  email?: string; phone?: string; address_full?: string; location?: string
+  city_dept_country?: string; zip_code?: string; location_reference?: string; notes?: string
+}
+
 const props = defineProps({
   visible: Boolean,
-  materials: { type: Array, default: () => [] },
-  contacts: { type: Array, default: () => [] },
+  materials: { type: Array as PropType<MaterialOption[]>, default: () => [] },
+  contacts: { type: Array as PropType<ContactOption[]>, default: () => [] },
   settings: { type: Object, default: () => ({ infra: {}, prep: {}, margin: {} }) },
 })
 
 const emit = defineEmits(['close', 'created'])
 
 const submitting = ref(false)
+const submitError = ref('')
 
 const form = reactive({
-  customer_id: '', customer_name: '', customer_company: '', customer_id_document: '',
+  customer_id: '' as number | string, customer_name: '', customer_company: '', customer_id_document: '',
   customer_email: '', customer_phone: '', shipping_address: '', shipping_city: '',
   shipping_zip: '', shipping_reference: '',
   material_id: '', weight_g: 0, duration_h: 0, total_price: 0,
@@ -143,6 +152,7 @@ const selectCustomer = (e: any) => {
 const submit = async () => {
   if (submitting.value) return
   submitting.value = true
+  submitError.value = ''
   try {
     await api.post('/orders', {
       ...form, estimated_weight_g: form.weight_g, estimated_duration_h: form.duration_h,
@@ -151,11 +161,12 @@ const submit = async () => {
         settings: JSON.parse(JSON.stringify(props.settings)),
         material_cost_per_kg: props.materials.find(m => m.id === form.material_id)?.cost_per_kg || 0,
       }
-    }, true)
+    })
     emit('created')
     reset()
   } catch (err) {
     logger.error('Error:', err)
+    submitError.value = err instanceof Error ? err.message : 'No se pudo crear la orden.'
   } finally {
     submitting.value = false
   }

@@ -4,12 +4,10 @@ import { useRouter } from 'vue-router'
 import { api } from '../services/api'
 import store from '../utils/cache'
 import { useSplitTitle } from '../composables/useSplitTitle'
-import { useSplitButton } from '../composables/useSplitButton'
 import { useCaptcha } from '../composables/useCaptcha'
 import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
-useSplitButton()
 
 usePageMeta({
   title: 'Acceso N3XT 3D | Login',
@@ -96,7 +94,7 @@ const login = async () => {
         window.location.href = '/customer/dashboard'
     }
   } catch (err) {
-    error.value = err.response?.data?.message || err.message
+    error.value = err instanceof Error ? err.message : 'No pudimos procesar la solicitud. Inténtalo de nuevo.'
   } finally {
     loading.value = false
   }
@@ -134,7 +132,7 @@ const register = async () => {
     // Sanctum SPA: session cookie is set automatically
     router.push('/customer/dashboard')
   } catch (err) {
-    error.value = err.response?.data?.message || err.message
+    error.value = err instanceof Error ? err.message : 'No pudimos procesar la solicitud. Inténtalo de nuevo.'
   } finally {
     loading.value = false
   }

@@ -62,6 +62,22 @@ class CustomerAuthController extends Controller
         return response()->json($request->user());
     }
 
+    /**
+     * Pedidos del cliente autenticado (por su email), solo campos públicos.
+     */
+    public function orders(Request $request)
+    {
+        $email = strtolower((string)$request->user()->email);
+
+        $orders = \App\Models\Order::query()
+            ->whereRaw('LOWER(customer_email) = ?', [$email])
+            ->orderByDesc('created_at')
+            ->get(['id', 'job_name', 'status', 'technology', 'material_name', 'estimated_weight_g', 'total_price', 'is_paid', 'created_at'])
+            ->map(fn ($o) => $o->toArray() + ['project_name' => $o->job_name]);
+
+        return response()->json(['data' => $orders]);
+    }
+
     public function logout(Request $request)
     {
         Auth::guard('customer')->logout();

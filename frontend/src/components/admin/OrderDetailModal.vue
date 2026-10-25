@@ -70,13 +70,15 @@
             <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
               <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 md:mb-4">Línea de Producción</h3>
               <div class="flex items-center gap-1">
-                <div v-for="(step, idx) in statusSteps" :key="step.id" class="flex-1 flex flex-col items-center">
+                <template v-for="(step, idx) in statusSteps" :key="step.id">
+                <div class="flex-1 flex flex-col items-center">
                   <div :class="['w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all', getStatusIndex(order.status) >= idx ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-gray-500']">
                     {{ getStatusIndex(order.status) >= idx ? '✓' : idx + 1 }}
                   </div>
                   <p :class="['text-[10px] font-bold mt-1 text-center', getStatusIndex(order.status) >= idx ? 'text-emerald-400' : 'text-gray-600']">{{ step.label }}</p>
                 </div>
-                <div v-if="idx < statusSteps.length - 1" :key="'line-' + idx" :class="['h-0.5 flex-1', getStatusIndex(order.status) > idx ? 'bg-emerald-600' : 'bg-gray-700']"></div>
+                <div v-if="idx < statusSteps.length - 1" :class="['h-0.5 flex-1', getStatusIndex(order.status) > idx ? 'bg-emerald-600' : 'bg-gray-700']"></div>
+                </template>
               </div>
             </div>
           </div>
@@ -111,10 +113,11 @@
               <div v-if="order.extra_items && order.extra_items.length" class="space-y-2 mb-4">
                 <div v-for="(item, idx) in order.extra_items" :key="idx" class="flex justify-between items-center text-sm bg-gray-800/50 rounded-xl px-4 py-2">
                   <span class="text-white">{{ item.name }}</span>
-                  <span class="text-emerald-400 font-bold">${{ (item.cost * item.qty).toLocaleString() }}</span>
+                  <span class="text-emerald-400 font-bold">${{ Number(item.cost || 0).toLocaleString() }}</span>
                 </div>
               </div>
               <p v-else class="text-sm text-gray-500">Sin extras registrados</p>
+              <p v-if="actionError" role="alert" class="mt-3 text-sm text-red-400">{{ actionError }}</p>
 
               <!-- Add Extra -->
               <div v-if="showAddForm" class="mt-4 space-y-3">
@@ -143,16 +146,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, type PropType } from 'vue'
 import { api } from '../../services/api'
 import { calcOrderDetailBreakdown } from '../../services/costCalculator'
 import logger from '../../utils/logger'
 
 const props = defineProps({
   order: { type: Object, default: null },
-  materials: { type: Array, default: () => [] },
+  materials: { type: Array as PropType<{ id: string; name: string; cost_per_kg?: number | string }[]>, default: () => [] },
   settings: { type: Object, default: () => ({ infra: {}, prep: {}, margin: {} }) },
 })
+
+const actionError = ref('')
 
 const emit = defineEmits(['close', 'updated', 'update-order'])
 
@@ -175,8 +180,8 @@ const statusSteps = [
   { id: 'shipped', label: 'Enviado', desc: 'En camino al cliente.' },
 ]
 
-const getStatusIndex = (status: any) => {
-  const mapping = { pending: 0, printing: 1, 'post-processing': 2, completed: 3, shipped: 4 }
+const getStatusIndex = (status: string) => {
+  const mapping: Record<string, number> = { pending: 0, printing: 1, 'post-processing': 2, completed: 3, shipped: 4 }
   return mapping[status] ?? -1
 }
 
@@ -220,25 +225,31 @@ const breakdown = computed(() => {
 
 const addExtra = async () => {
   if (!newExtra.value.material_id || newExtra.value.qty <= 0) return
+  actionError.value = ''
   try {
-    await api.post(`/admin/orders/${props.order.id}/extras`, newExtra.value, true)
+    await api.post(`/admin/orders/${props.order.id}/extras`, newExtra.value)
     emit('updated')
     showAddForm.value = false
     newExtra.value = { material_id: '', qty: 1 }
   } catch (err) {
     logger.error('Error adding extra:', err)
+    actionError.value = `No se pudo agregar el insumo: ${err instanceof Error ? err.message : 'error desconocido'}`
   }
 }
 
 const saveTracking = async () => {
+  actionError.value = ''
   try {
+    // El endpoint exige el estado: se reenvía el actual junto con la guía
     await api.patch(`/admin/orders/${props.order.id}/status`, {
+      status: props.order.status,
       tracking_guide: localGuide.value,
       tracking_carrier: localCarrier.value
-    }, true)
+    })
     emit('updated')
   } catch (err) {
     logger.error('Error saving tracking:', err)
+    actionError.value = `No se pudo guardar la guía: ${err instanceof Error ? err.message : 'error desconocido'}`
   }
 }
 </script>

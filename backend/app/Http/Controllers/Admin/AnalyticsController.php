@@ -144,15 +144,16 @@ class AnalyticsController extends Controller
         // Tendencia MoM
         $momGrowthPct = 0;
         if (!$startDate && !$endDate) {
-            $currentMonth = date('Y-m');
-            $lastMonth = date('Y-m', strtotime('-1 month'));
-            
+            // Rango por fechas (portable: pgsql, sqlite, mysql); NoOverflow evita saltar meses en días 29-31
+            $currentMonth = now()->startOfMonth();
+            $lastMonth = now()->startOfMonth()->subMonthNoOverflow();
+
             $currentMonthRevenue = Order::where('status', '!=', 'cancelled')
-                ->whereRaw("substring(created_at::text from 1 for 7) = ?", [$currentMonth])
+                ->whereBetween('created_at', [$currentMonth, $currentMonth->copy()->endOfMonth()])
                 ->sum('total_price');
 
             $lastMonthRevenue = Order::where('status', '!=', 'cancelled')
-                ->whereRaw("substring(created_at::text from 1 for 7) = ?", [$lastMonth])
+                ->whereBetween('created_at', [$lastMonth, $lastMonth->copy()->endOfMonth()])
                 ->sum('total_price');
 
             if ($lastMonthRevenue > 0) {

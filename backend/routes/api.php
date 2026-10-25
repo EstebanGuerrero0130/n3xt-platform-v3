@@ -41,6 +41,7 @@ Route::get('/materials', [MaterialController::class, 'index']);
 Route::middleware('throttle:5,1')->post('/maker-access/register', [CustomerAuthController::class, 'register']);
 Route::middleware('throttle:10,1')->post('/maker-access/login', [CustomerAuthController::class, 'login']);
 Route::middleware('auth:customer')->get('/customer/profile', [CustomerAuthController::class, 'profile']);
+Route::middleware('auth:customer')->get('/customer/orders', [CustomerAuthController::class, 'orders']);
 Route::middleware('auth:customer')->post('/customer/logout', [CustomerAuthController::class, 'logout']);
 
 // Sesión actual (admin o cliente) con rol explícito

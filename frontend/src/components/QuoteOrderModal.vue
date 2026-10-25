@@ -48,6 +48,8 @@ const step1Form = ref<HTMLFormElement | null>(null)
 const step2Form = ref<HTMLFormElement | null>(null)
 
 const handleClose = () => {
+  // Mientras se envía el pedido el modal no se cierra (el resultado quedaría fuera de contexto)
+  if (props.isSubmitting) return
   modalStep.value = 1
   emit('close')
 }

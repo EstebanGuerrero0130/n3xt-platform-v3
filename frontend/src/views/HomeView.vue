@@ -9,12 +9,10 @@ import WaveDivider from '../components/WaveDivider.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
-import { useSplitButton } from '../composables/useSplitButton'
 import { usePageMeta } from '../composables/usePageMeta'
 import { prefersReducedMotion } from '../composables/useMotion'
 
 const { applySplitTitle } = useSplitTitle()
-useSplitButton()
 
 usePageMeta({
   title: 'N3XT 3D | Impresión 3D en resina y filamento en Colombia',

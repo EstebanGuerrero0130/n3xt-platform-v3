@@ -17,12 +17,17 @@ const PrivacyView = () => import('../views/PrivacyView.vue')
 const TermsView = () => import('../views/TermsView.vue')
 const NotFoundView = () => import('../views/NotFoundView.vue')
 
+/** Debe coincidir con :duration.leave de la transición de página en App.vue */
+const PAGE_LEAVE_MS = 160
+
 const router = createRouter({
   history: createWebHistory(),
-  scrollBehavior(to, _from, savedPosition) {
-    if (savedPosition) return savedPosition
-    if (to.hash) return { el: to.hash, behavior: 'smooth' }
-    return { top: 0 }
+  // App.vue usa <transition mode="out-in"> (salida de 160 ms): se espera a que la vista
+  // nueva esté montada; si no, la posición guardada se recorta y la saliente salta.
+  scrollBehavior(to, from, savedPosition) {
+    const target = savedPosition ?? (to.hash ? { el: to.hash, behavior: 'smooth' as const } : { top: 0 })
+    if (to.path === from.path) return target
+    return new Promise(resolve => setTimeout(() => resolve(target), PAGE_LEAVE_MS + 20))
   },
   routes: [
     {

@@ -9,21 +9,24 @@ let STLLoader: any = null
 let OBJLoader: any = null
 let OrbitControls: any = null
 let TransformControls: any = null
+let mergeGeometries: any = null
 
 async function loadThree() {
   if (THREE) return
-  const [threeModule, stlModule, objModule, orbitModule, transformModule] = await Promise.all([
+  const [threeModule, stlModule, objModule, orbitModule, transformModule, utilsModule] = await Promise.all([
     import('three'),
     import('three/examples/jsm/loaders/STLLoader.js'),
     import('three/examples/jsm/loaders/OBJLoader.js'),
     import('three/examples/jsm/controls/OrbitControls.js'),
     import('three/examples/jsm/controls/TransformControls.js'),
+    import('three/examples/jsm/utils/BufferGeometryUtils.js'),
   ])
   THREE = threeModule
   STLLoader = stlModule.STLLoader
   OBJLoader = objModule.OBJLoader
   OrbitControls = orbitModule.OrbitControls
   TransformControls = transformModule.TransformControls
+  mergeGeometries = utilsModule.mergeGeometries
 }
 
 type ModelKey = number | string
@@ -219,6 +222,15 @@ const initThree = async () => {
   transformControls.addEventListener('dragging-changed', (event: { value: boolean }) => {
     orbitControls.enabled = !event.value
     if (!event.value && shownKey !== null) emitTransformation(shownKey)
+  })
+  // Escala siempre uniforme: el pedido envía un único scale_factor
+  transformControls.addEventListener('objectChange', () => {
+    if (transformControls.mode !== 'scale' || shownKey === null) return
+    const s = entries.get(shownKey)?.group.scale
+    if (!s || (s.x === s.y && s.y === s.z)) return
+    // Antes del arrastre los tres ejes eran iguales: el que cambió es el distinto
+    const v = s.x === s.y ? s.z : s.y === s.z ? s.x : s.y
+    s.setScalar(v)
   })
   scene.add(transformControls.getHelper())
 
@@ -489,8 +501,14 @@ const calculateSupportArea = (geometry: any) => {
   }
   return supportArea
 }
+// Contador: dragleave también salta al pasar sobre los hijos del área
+let dragDepth = 0
+const onDragEnter = () => { dragDepth++; isDragging.value = true }
+const onDragLeave = () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) isDragging.value = false }
+
 const handleDrop = (e: DragEvent) => {
   e.preventDefault()
+  dragDepth = 0
   isDragging.value = false
   const file = e.dataTransfer?.files[0]
   if (!file) return
@@ -511,7 +529,11 @@ const handleFileSelect = (e: Event) => {
 
 const processGeometry = (geometry: any, file: File, key: ModelKey) => {
   // Los cálculos por triángulo asumen geometría no indexada con normales
-  if (geometry.index) geometry = geometry.toNonIndexed()
+  if (geometry.index) {
+    const indexed = geometry
+    geometry = geometry.toNonIndexed()
+    indexed.dispose()
+  }
   if (!geometry.attributes.normal) geometry.computeVertexNormals()
   geometry.computeBoundingBox()
 
@@ -679,17 +701,22 @@ const loadFile = async (file: File) => {
         const object = new OBJLoader().parse(reader.result as string)
         object.updateMatrixWorld(true)
 
-        // Por simplicidad se usa la primera malla del OBJ
-        let mainGeometry: any = null
+        // Se fusionan todas las mallas del OBJ (el servidor también mide todas sus caras)
+        const parts: any[] = []
         object.traverse((child: any) => {
-          if (!mainGeometry && child.isMesh) {
-            mainGeometry = child.geometry.clone()
-            mainGeometry.applyMatrix4(child.matrixWorld)
-          }
+          if (!child.isMesh) return
+          let g = child.geometry.clone()
+          g.applyMatrix4(child.matrixWorld)
+          if (g.index) { const indexed = g; g = g.toNonIndexed(); indexed.dispose() }
+          // Solo posiciones: las normales se recalculan y así todas las partes son compatibles
+          for (const name of Object.keys(g.attributes)) if (name !== 'position') g.deleteAttribute(name)
+          parts.push(g)
         })
         object.traverse(disposeObject)
-        if (!mainGeometry) throw new Error('No meshes found in OBJ')
-        geometry = mainGeometry
+        if (!parts.length) throw new Error('No meshes found in OBJ')
+        geometry = parts.length === 1 ? parts[0] : mergeGeometries(parts, false)
+        if (parts.length > 1) parts.forEach(g => g.dispose())
+        if (!geometry) throw new Error('No se pudieron combinar las mallas del OBJ')
       }
 
       if (!geometry?.attributes?.position?.count) throw new Error('Empty geometry')
@@ -742,8 +769,9 @@ const loadFile = async (file: File) => {
     <!-- Lienzo 3D -->
     <div
       class="flex-1 w-full relative"
-      @dragover.prevent="isDragging = true"
-      @dragleave.prevent="isDragging = false"
+      @dragenter.prevent="onDragEnter"
+      @dragover.prevent
+      @dragleave.prevent="onDragLeave"
       @drop="handleDrop"
     >
       <div ref="container" class="w-full h-full outline-none"></div>

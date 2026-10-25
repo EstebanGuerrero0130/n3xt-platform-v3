@@ -1,17 +1,15 @@
 <script setup lang="ts">
 
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { parsePrice, formatCOP } from '../utils/format'
 import { api } from '../services/api'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
-import { useSplitButton } from '../composables/useSplitButton'
 import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
-const { applySplitBtn } = useSplitButton()
 
 usePageMeta({
   title: 'Catálogo de Piezas 3D | N3XT 3D',
@@ -140,7 +138,6 @@ const fetchSettings = async () => {
     loadError.value = true
   } finally {
     loading.value = false
-    nextTick(() => applySplitBtn())
   }
 }
 

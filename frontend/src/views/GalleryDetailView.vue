@@ -6,11 +6,9 @@ import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
-import { useSplitButton } from '../composables/useSplitButton'
 import { usePageMeta } from '../composables/usePageMeta'
 
 const { applySplitTitle } = useSplitTitle()
-const { applySplitBtn } = useSplitButton()
 
 usePageMeta({
   title: 'Detalle del Proyecto | N3XT 3D',
@@ -171,7 +169,6 @@ const fetchData = async () => {
       setupRelatedReveal()
       nextTick(() => {
         applySplitTitle()
-        applySplitBtn()
       })
     }, 300)
   }

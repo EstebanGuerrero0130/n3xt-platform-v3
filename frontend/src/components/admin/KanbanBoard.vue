@@ -43,7 +43,7 @@ const rebuildGroups = (ordersList: any) => {
   
   if (!ordersList) return
 
-  ordersList.forEach(o => {
+  ordersList.forEach((o: any) => {
     const rawStatus = o.status?.toLowerCase() || 'pending'
     let status = rawStatus
     
@@ -173,6 +173,8 @@ v-for="(col, idx) in columns" :key="col.id"
           drag-class="rotate-3 scale-105"
           @change="(evt: any) => onDragChange(evt, col.id)"
         >
+          <!-- vuedraggable no tipa sus slots -->
+          <!-- @vue-ignore -->
           <template #item="{ element }">
             <OrderCard 
               :order="element"

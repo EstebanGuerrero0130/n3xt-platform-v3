@@ -176,6 +176,22 @@ class OrderStoreTest extends TestCase
         $this->postJson('/api/quote/coupon', ['code' => 'FAKE'])->assertNotFound();
     }
 
+    public function test_customer_sees_only_own_orders(): void
+    {
+        $this->post('/api/orders', $this->payload(['customer_email' => 'Ana@Example.com']), ['Accept' => 'application/json'])->assertCreated();
+        $this->post('/api/orders', $this->payload(['customer_email' => 'otro@example.com']), ['Accept' => 'application/json'])->assertCreated();
+
+        $this->getJson('/api/customer/orders')->assertUnauthorized();
+
+        $customer = \App\Models\RecurrentCustomer::create(['name' => 'Ana', 'email' => 'ana@example.com', 'password' => bcrypt('secret123')]);
+        $this->actingAs($customer, 'customer');
+
+        $res = $this->getJson('/api/customer/orders')->assertOk();
+        $this->assertCount(1, $res->json('data'));
+        $this->assertArrayNotHasKey('customer_phone', $res->json('data.0'));
+        $this->assertArrayNotHasKey('cost_snapshot', $res->json('data.0'));
+    }
+
     public function test_admin_can_show_single_order(): void
     {
         $id = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->json('data.order_id');

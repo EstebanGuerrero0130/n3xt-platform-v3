@@ -74,7 +74,8 @@ export function openInNewWindow(htmlContent: string, title: string = 'N3XT 3D - 
  */
 export function printHtml(htmlContent: string): void {
   const iframe = getPdfFrame()
-  const printWindow = iframe.contentWindow || iframe.contentDocument.defaultView
+  const printWindow = iframe.contentWindow || iframe.contentDocument?.defaultView
+  if (!printWindow) return
   printWindow.document.open()
   printWindow.document.write(htmlContent)
   printWindow.document.close()

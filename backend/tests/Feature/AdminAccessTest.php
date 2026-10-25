@@ -42,6 +42,12 @@ class AdminAccessTest extends TestCase
         $this->getJson('/api/admin/orders')->assertOk();
     }
 
+    public function test_analytics_runs_on_sqlite(): void
+    {
+        $this->actingAs(User::factory()->create(), 'web');
+        $this->getJson('/api/admin/analytics')->assertOk();
+    }
+
     public function test_user_endpoint_reports_explicit_role(): void
     {
         $this->getJson('/api/user')->assertUnauthorized();

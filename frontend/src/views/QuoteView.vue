@@ -11,11 +11,9 @@ import QuoteSidebar from '../components/QuoteSidebar.vue'
 import QuoteOrderModal from '../components/QuoteOrderModal.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
-import { useSplitButton } from '../composables/useSplitButton'
 import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
-useSplitButton()
 
 interface Material {
   id: string
@@ -146,17 +144,6 @@ const fetchSettings = async () => {
 
 useRevealAnim({ delay: 200 })
 
-let resizeCleanup: (() => void) | null = null
-
-const setupResizeListener = () => {
-  const handler = () => {
-    const w = window.innerWidth
-    isDesktop.value = w >= 1024
-    if (w >= 1024) showSidebar.value = true
-  }
-  window.addEventListener('resize', handler)
-  resizeCleanup = () => window.removeEventListener('resize', handler)
-}
 
 onMounted(async () => {
   loadingQuote.value = true
@@ -165,8 +152,6 @@ onMounted(async () => {
   await fetchMaterials()
   loadingQuote.value = false
   calculatePrice()
-
-  setupResizeListener()
 })
 
 const selectedTechnology = ref('FDM')
@@ -338,11 +323,6 @@ const materialGuide = [
 const showModal = ref(false)
 const isSubmitting = ref(false)
 const previousTotal = ref(0)
-const showSidebar = ref(window.innerWidth >= 1024)
-const isDesktop = ref(window.innerWidth >= 1024)
-const modalStep = ref(1)
-
-const honeypot = ref('')
 const lastSubmitTime = ref(0)
 const emptyCustomerForm = (): CustomerForm => ({
   name: '',
@@ -461,8 +441,6 @@ watch(
 )
 
 const submitOrder = async () => {
-  if (honeypot.value) return;
-
   const now = Date.now();
   if (now - lastSubmitTime.value < 10000) {
     notify("Por favor espera unos segundos antes de enviar otra solicitud.", "warning");
@@ -698,7 +676,6 @@ const handleError = (msg: string) => {
 
 onUnmounted(() => {
   if (_timerNotif.value) clearTimeout(_timerNotif.value)
-  if (resizeCleanup) resizeCleanup()
 })
 
 </script>
@@ -859,7 +836,7 @@ onUnmounted(() => {
       :active-coupon="activeCoupon"
       :is-submitting="isSubmitting"
       :notification="notification"
-      @close="showModal = false; modalStep = 1"
+      @close="showModal = false"
       @submit="handleModalSubmit"
     />
     <AppFooter />

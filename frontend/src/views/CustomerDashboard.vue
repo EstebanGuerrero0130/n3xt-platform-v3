@@ -17,8 +17,17 @@ usePageMeta({
 
 useRevealAnim({ delay: 200 })
 
-const customer = ref(null)
-const orders = ref([])
+interface CustomerOrder {
+  id: number
+  project_name?: string | null
+  status: string
+  material_name?: string | null
+  estimated_weight_g?: number | null
+  total_price: number
+}
+
+const customer = ref<{ id: number; name: string; email: string } | null>(null)
+const orders = ref<CustomerOrder[]>([])
 const loading = ref(true)
 const router = useRouter()
 
@@ -35,10 +44,8 @@ const fetchProfile = async () => {
 
 const fetchOrders = async () => {
     try {
-        // En un sistema real, filtraríamos por email en el backend
-        // Por ahora usamos el endpoint de tracking o uno nuevo
-        const data = await api.get(`/orders/track?email=${customer.value.email}`)
-        orders.value = Array.isArray(data) ? data : [data]
+        const data = await api.get('/customer/orders')
+        orders.value = Array.isArray(data) ? data : []
     } catch (err) {
         logger.error('Error fetching orders:', err)
     } finally {
@@ -63,22 +70,26 @@ onUnmounted(() => {
   // @unhead/vue handles meta cleanup automatically
 })
 
-const getStatusColor = (status) => {
+const getStatusColor = (status: string) => {
     switch (status) {
         case 'pending': return 'bg-amber-500'
         case 'printing': return 'bg-primary'
+        case 'post-processing': return 'bg-sky-500'
         case 'completed': return 'bg-emerald-500'
-        case 'delivered': return 'bg-gray-900'
+        case 'shipped': return 'bg-gray-900'
+        case 'cancelled': return 'bg-red-500'
         default: return 'bg-gray-400'
     }
 }
 
-const getStatusLabel = (status) => {
+const getStatusLabel = (status: string) => {
     switch (status) {
         case 'pending': return 'Pendiente'
         case 'printing': return 'En Impresión'
+        case 'post-processing': return 'En acabado'
         case 'completed': return 'Terminado'
-        case 'delivered': return 'Entregado'
+        case 'shipped': return 'Enviado'
+        case 'cancelled': return 'Cancelado'
         default: return 'Desconocido'
     }
 }

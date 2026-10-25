@@ -5,7 +5,6 @@ import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
-import { useSplitButton } from '../composables/useSplitButton'
 import { usePageMeta } from '../composables/usePageMeta'
 
 useSplitTitle()
@@ -16,7 +15,6 @@ usePageMeta({
   image: '/assets/n3xt_og_gallery.png',
 })
 
-const { applySplitBtn } = useSplitButton()
 
 const loading = ref(true)
 const loadError = ref(false)
@@ -146,7 +144,6 @@ const fetchSettings = async () => {
     _timerLoad = setTimeout(() => {
       loading.value = false
       nextTick(() => {
-        applySplitBtn()
         observeCards()
       })
     }, 400)

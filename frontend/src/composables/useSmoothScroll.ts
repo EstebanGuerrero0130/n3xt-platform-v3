@@ -68,6 +68,8 @@ export function initSmoothScroll(router: Router) {
 
   // Corta la inercia al navegar para que el scrollBehavior del router mande
   router.beforeEach(() => {
-    lenis?.reset()
+    // stop/start corta la inercia sin usar el reset() privado de Lenis
+    lenis?.stop()
+    lenis?.start()
   })
 }

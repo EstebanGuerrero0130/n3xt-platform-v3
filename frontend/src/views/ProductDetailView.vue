@@ -8,11 +8,9 @@ import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
-import { useSplitButton } from '../composables/useSplitButton'
 import { usePageMeta } from '../composables/usePageMeta'
 
 const { applySplitTitle } = useSplitTitle()
-const { applySplitBtn } = useSplitButton()
 
 usePageMeta({
   title: 'Detalles del Producto | N3XT 3D Shop',
@@ -114,7 +112,6 @@ const fetchProduct = async () => {
     loading.value = false
     nextTick(() => {
       applySplitTitle()
-      applySplitBtn()
       // La sección .reveal aparece tras la carga asíncrona: volver a observarla
       observeReveal()
     })
