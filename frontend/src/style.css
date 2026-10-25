@@ -811,6 +811,53 @@ html.lenis.lenis-stopped {
   background: var(--btn-primary-mid);
   color: #ffffff;
 }
+@layer components {
+/* Campo de formulario estándar (mismo estilo que Rastreo) */
+.field {
+  width: 100%;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border-main);
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: 1rem;
+}
+.field::placeholder { color: color-mix(in srgb, var(--text-muted) 70%, transparent); }
+.field:focus { outline: none; border-color: var(--brand-text); }
+.field:focus-visible { outline: 2px solid var(--brand-text); outline-offset: 1px; }
+.field:disabled { opacity: 0.5; }
+}
+/* Texto legal (Privacidad, Términos): lectura cómoda, títulos con el mismo display */
+.legal {
+  max-width: 68ch;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.legal > section + section { margin-top: 3rem; }
+.legal h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1rem + 1vw, 1.625rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+  margin-bottom: 1rem;
+  scroll-margin-top: 6rem;
+}
+.legal p + p, .legal p + ul, .legal ul + p { margin-top: 0.875rem; }
+.legal ul { list-style: disc; padding-left: 1.5rem; }
+.legal li + li { margin-top: 0.5rem; }
+.legal li::marker { color: var(--brand-text); }
+.legal strong { color: var(--text-main); font-weight: 600; }
+.legal-card {
+  margin-top: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+}
+.legal-card p + p { margin-top: 0.5rem; }
 /* Escrim para texto sobre foto en tarjetas */
 .photo-scrim {
   background: linear-gradient(to top, rgba(10, 15, 13, 0.92), rgba(10, 15, 13, 0.35) 55%, rgba(10, 15, 13, 0) 80%);

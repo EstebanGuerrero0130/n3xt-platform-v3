@@ -15,90 +15,97 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white transition-colors duration-500 overflow-x-clip">
+  <div class="min-h-screen flex flex-col bg-canvas text-ink overflow-x-clip">
     <AppNavbar active-tab="" subtext="Privacidad" />
 
-    <main id="main" class="max-w-4xl mx-auto px-6 py-20 md:py-32">
-      <!-- Header -->
-      <div class="mb-16">
-        <div class="inline-flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 mb-6">
-          <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
-          <span class="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Legal</span>
+    <main id="main" class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+      <header class="mb-10 md:mb-14 grid lg:grid-cols-12 gap-6 lg:items-end">
+        <h1 class="section-title lg:col-span-8">Política de <span class="section-title-accent">privacidad</span></h1>
+        <p class="lg:col-span-4 text-sm text-muted">Última actualización: Junio 2026</p>
+      </header>
+
+      <div class="grid lg:grid-cols-12 gap-10 items-start">
+        <!-- Índice -->
+        <nav class="hidden lg:block lg:col-span-4 lg:sticky lg:top-24" aria-label="Contenido">
+          <p class="text-sm font-semibold text-ink mb-3">En esta página</p>
+          <ol>
+            <li><a href="#introduccion" class="block py-1.5 text-sm text-muted hover:text-ink transition-colors">1. Introducción</a></li>
+            <li><a href="#informacion-que-recopilamos" class="block py-1.5 text-sm text-muted hover:text-ink transition-colors">2. Información que Recopilamos</a></li>
+            <li><a href="#uso-de-la-informacion" class="block py-1.5 text-sm text-muted hover:text-ink transition-colors">3. Uso de la Información</a></li>
+            <li><a href="#proteccion-de-datos" class="block py-1.5 text-sm text-muted hover:text-ink transition-colors">4. Protección de Datos</a></li>
+            <li><a href="#archivos-3d-y-propiedad-intelectual" class="block py-1.5 text-sm text-muted hover:text-ink transition-colors">5. Archivos 3D y Propiedad Intelectual</a></li>
+            <li><a href="#tus-derechos" class="block py-1.5 text-sm text-muted hover:text-ink transition-colors">6. Tus Derechos</a></li>
+            <li><a href="#contacto" class="block py-1.5 text-sm text-muted hover:text-ink transition-colors">7. Contacto</a></li>
+          </ol>
+        </nav>
+
+        <!-- Contenido -->
+        <div class="legal lg:col-span-8">
+          <section aria-labelledby="introduccion">
+            <h2 id="introduccion">1. Introducción</h2>
+            <p>En N3XT 3D nos comprometemos a proteger tu privacidad. Esta política describe cómo recopilamos, usamos y protegemos tu información personal cuando utilizas nuestros servicios de manufactura digital y cotización de piezas 3D.</p>
+          </section>
+
+          <section aria-labelledby="informacion-que-recopilamos">
+            <h2 id="informacion-que-recopilamos">2. Información que Recopilamos</h2>
+            <p>Podemos recopilar los siguientes datos personales:</p>
+            <ul>
+              <li><strong>Datos de contacto:</strong> Nombre, correo electrónico, teléfono y dirección de envío.</li>
+              <li><strong>Datos de facturación:</strong> NIT, razón social y documentos de identificación cuando aplique.</li>
+              <li><strong>Datos técnicos:</strong> Archivos 3D (STL, OBJ, 3MF), parámetros de impresión y especificaciones de diseño.</li>
+              <li><strong>Datos de navegación:</strong> Información anónima sobre el uso del sitio web para mejorar nuestros servicios.</li>
+            </ul>
+          </section>
+
+          <section aria-labelledby="uso-de-la-informacion">
+            <h2 id="uso-de-la-informacion">3. Uso de la Información</h2>
+            <p>Utilizamos tu información para:</p>
+            <ul>
+              <li>Procesar cotizaciones y órdenes de fabricación 3D</li>
+              <li>Comunicarnos contigo sobre el estado de tus proyectos</li>
+              <li>Mejorar nuestro motor de cotización OrcaEngine</li>
+              <li>Cumplir con obligaciones fiscales y legales en Colombia</li>
+              <li>Enviar comunicaciones relacionadas con el servicio (no spam)</li>
+            </ul>
+          </section>
+
+          <section aria-labelledby="proteccion-de-datos">
+            <h2 id="proteccion-de-datos">4. Protección de Datos</h2>
+            <p>Implementamos medidas de seguridad técnicas y organizativas para proteger tu información, incluyendo:</p>
+            <ul>
+              <li>Cifrado SSL/TLS en todas las comunicaciones</li>
+              <li>Almacenamiento seguro con Supabase (PostgreSQL)</li>
+              <li>Control de acceso basado en tokens (Sanctum)</li>
+              <li>Límite de tamaño de archivos (50 MB) para prevenir abusos</li>
+            </ul>
+          </section>
+
+          <section aria-labelledby="archivos-3d-y-propiedad-intelectual">
+            <h2 id="archivos-3d-y-propiedad-intelectual">5. Archivos 3D y Propiedad Intelectual</h2>
+            <p>Los archivos 3D que subes a nuestra plataforma son de tu propiedad. No compartimos, distribuimos ni utilizamos tus diseños sin tu consentimiento explícito. Una vez completada tu orden, los archivos se eliminan de nuestros servidores dentro de los 30 días posteriores a la finalización del proyecto.</p>
+          </section>
+
+          <section aria-labelledby="tus-derechos">
+            <h2 id="tus-derechos">6. Tus Derechos</h2>
+            <p>Como titular de datos en Colombia (Ley 1581 de 2012), tienes derecho a:</p>
+            <ul>
+              <li>Conocer, actualizar y rectificar tus datos personales</li>
+              <li>Solicitar la eliminación de tus datos</li>
+              <li>Revocar la autorización para el tratamiento de datos</li>
+              <li>Presentar quejas ante la Superintendencia de Industria y Comercio</li>
+            </ul>
+          </section>
+
+          <section aria-labelledby="contacto">
+            <h2 id="contacto">7. Contacto</h2>
+            <p>Para ejercer tus derechos o resolver cualquier duda sobre esta política, contáctanos:</p>
+            <div class="legal-card">
+              <p><strong>Email:</strong> servicion3xt@gmail.com</p>
+              <p><strong>Teléfono:</strong> +57 311 879 6416</p>
+              <p><strong>WhatsApp:</strong> +57 311 879 6416</p>
+            </div>
+          </section>
         </div>
-        <h1 class="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.85] italic mb-6">
-          Política de <span class="text-primary">Privacidad</span>
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 font-bold text-sm uppercase tracking-widest">
-          Última actualización: Junio 2026
-        </p>
-      </div>
-
-      <!-- Content -->
-      <div class="space-y-10 text-gray-600 dark:text-gray-300 font-medium leading-relaxed text-sm md:text-base">
-        <section class="space-y-4">
-          <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">1. Introducción</h2>
-          <p>En N3XT 3D nos comprometemos a proteger tu privacidad. Esta política describe cómo recopilamos, usamos y protegemos tu información personal cuando utilizas nuestros servicios de manufactura digital y cotización de piezas 3D.</p>
-        </section>
-
-        <section class="space-y-4">
-          <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">2. Información que Recopilamos</h2>
-          <p>Podemos recopilar los siguientes datos personales:</p>
-          <ul class="list-disc pl-6 space-y-2">
-            <li><strong class="text-gray-900 dark:text-white">Datos de contacto:</strong> Nombre, correo electrónico, teléfono y dirección de envío.</li>
-            <li><strong class="text-gray-900 dark:text-white">Datos de facturación:</strong> NIT, razón social y documentos de identificación cuando aplique.</li>
-            <li><strong class="text-gray-900 dark:text-white">Datos técnicos:</strong> Archivos 3D (STL, OBJ, 3MF), parámetros de impresión y especificaciones de diseño.</li>
-            <li><strong class="text-gray-900 dark:text-white">Datos de navegación:</strong> Información anónima sobre el uso del sitio web para mejorar nuestros servicios.</li>
-          </ul>
-        </section>
-
-        <section class="space-y-4">
-          <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">3. Uso de la Información</h2>
-          <p>Utilizamos tu información para:</p>
-          <ul class="list-disc pl-6 space-y-2">
-            <li>Procesar cotizaciones y órdenes de fabricación 3D</li>
-            <li>Comunicarnos contigo sobre el estado de tus proyectos</li>
-            <li>Mejorar nuestro motor de cotización OrcaEngine</li>
-            <li>Cumplir con obligaciones fiscales y legales en Colombia</li>
-            <li>Enviar comunicaciones relacionadas con el servicio (no spam)</li>
-          </ul>
-        </section>
-
-        <section class="space-y-4">
-          <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">4. Protección de Datos</h2>
-          <p>Implementamos medidas de seguridad técnicas y organizativas para proteger tu información, incluyendo:</p>
-          <ul class="list-disc pl-6 space-y-2">
-            <li>Cifrado SSL/TLS en todas las comunicaciones</li>
-            <li>Almacenamiento seguro con Supabase (PostgreSQL)</li>
-            <li>Control de acceso basado en tokens (Sanctum)</li>
-            <li>Límite de tamaño de archivos (150MB) para prevenir abusos</li>
-          </ul>
-        </section>
-
-        <section class="space-y-4">
-          <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">5. Archivos 3D y Propiedad Intelectual</h2>
-          <p>Los archivos 3D que subes a nuestra plataforma son de tu propiedad. No compartimos, distribuimos ni utilizamos tus diseños sin tu consentimiento explícito. Una vez completada tu orden, los archivos se eliminan de nuestros servidores dentro de los 30 días posteriores a la finalización del proyecto.</p>
-        </section>
-
-        <section class="space-y-4">
-          <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">6. Tus Derechos</h2>
-          <p>Como titular de datos en Colombia (Ley 1581 de 2012), tienes derecho a:</p>
-          <ul class="list-disc pl-6 space-y-2">
-            <li>Conocer, actualizar y rectificar tus datos personales</li>
-            <li>Solicitar la eliminación de tus datos</li>
-            <li>Revocar la autorización para el tratamiento de datos</li>
-            <li>Presentar quejas ante la Superintendencia de Industria y Comercio</li>
-          </ul>
-        </section>
-
-        <section class="space-y-4">
-          <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">7. Contacto</h2>
-          <p>Para ejercer tus derechos o resolver cualquier duda sobre esta política, contáctanos:</p>
-          <div class="bg-white dark:bg-white/5 rounded-3xl p-6 border border-gray-100 dark:border-white/5 space-y-3 mt-4">
-            <p class="text-sm"><strong class="text-gray-900 dark:text-white">Email:</strong> servicion3xt@gmail.com</p>
-            <p class="text-sm"><strong class="text-gray-900 dark:text-white">Teléfono:</strong> +57 311 879 6416</p>
-            <p class="text-sm"><strong class="text-gray-900 dark:text-white">WhatsApp:</strong> +57 311 879 6416</p>
-          </div>
-        </section>
       </div>
     </main>
 
