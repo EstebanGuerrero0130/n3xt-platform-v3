@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import StlViewer from '../components/StlViewer.vue'
 import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
-import { calcProductionCost, calcFinalPrice, calcExtraCost } from '../services/costCalculator'
+import { calcQuoteEstimate, calcExtraCost } from '../services/costCalculator'
 import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
@@ -40,11 +40,11 @@ interface CuraFactors {
 interface QuoteModel {
   id: number
   file: File | null
+  /** Piezas de este modelo */
+  qty: number
   volume: number
   totalArea: number
   dimensions: { x: number; y: number; z: number }
-  infill: number
-  layerHeight: number
   supportArea: number
   currentScale: number
   hasModel: boolean
@@ -54,12 +54,24 @@ interface QuoteModel {
   name: string
   curaFactors: CuraFactors
 }
+interface ModelStats {
+  key: number | string
+  volume: number
+  totalArea?: number
+  dimensions: { x: number; y: number; z: number }
+  scale?: number
+  supportArea?: number
+}
 interface CustomerForm {
   name: string; company: string; document: string; email: string; phone: string
   city: string; address: string; use: string; comments: string
 }
+interface Coupon { code: string; discount_pct: number; label: string }
+
+const MAX_MODELS = 10
 
 const errMessage = (err: unknown): string => (err instanceof Error ? err.message : String(err))
+const formatCop = (n: number) => `$ ${Math.round(n).toLocaleString('es-CO')}`
 
 usePageMeta({
   title: 'Cotizador de impresión 3D | N3XT 3D',
@@ -86,7 +98,7 @@ const fetchMaterials = async () => {
     const data: Material[] = await api.get('/materials')
     materials.value = data.filter((m: Material) => m.type === 'material')
     utilities.value = data.filter((m: Material) => m.type !== 'material')
-    
+
     if (materials.value.length > 0 && !selectedMaterial.value) {
       selectedMaterial.value = materials.value[0].id
     }
@@ -111,17 +123,17 @@ const fetchSettings = async () => {
       i.mant_hr = Number(i.mant_hr) || 0
       i.etiquetas = Number(i.etiquetas) || 0
       i.load_factor = Number(i.load_factor) || 0.4
-      
+
       const p = appData.value.prep
       p.mano_obra_hr = Number(p.mano_obra_hr) || 0
       p.prep_time_pct = Number(p.prep_time_pct) || 10
-      
+
       const o = appData.value.oper
       o.transporte = Number(o.transporte) || 0
       o.ganancia = Number(o.ganancia) || 0
       o.marketing = Number(o.marketing) || 0
       o.fallos = Number(o.fallos) || 0
-      
+
       const m = appData.value.margin
       // ?? en lugar de || para permitir IVA 0%
       const ivaNum = m.iva === null || m.iva === undefined || String(m.iva) === '' ? NaN : Number(m.iva)
@@ -153,33 +165,76 @@ onMounted(async () => {
   await fetchMaterials()
   loadingQuote.value = false
   calculatePrice()
-  
+
   setupResizeListener()
 })
 
 const selectedTechnology = ref('FDM')
 const selectedMaterial = ref('')
-const qty = ref(1)
+// Parámetros FDM comunes a todo el pedido (el contrato los envía una sola vez)
+const infill = ref(15)
+const layerHeight = ref(0.2)
 
-// --- CURAENGINE INTEGRATION (MANUAL SINCRO) ---
-const isSlicing = ref(false)
-
-const runCuraEngineAnalysis = async () => {
-  const idx = activeModelIdx.value
-  const model = models.value[idx]
-  if (!model || !model.file) {
-      notify("Sube un modelo 3D primero", "error")
-      return
+// --- Multi-modelo ---
+let nextModelId = 0
+const newModel = (): QuoteModel => {
+  const id = nextModelId++
+  return {
+    id, file: null, qty: 1, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, supportArea: 0,
+    currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: `Modelo ${id + 1}`,
+    curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 },
   }
-  
-  isSlicing.value = true
-  
+}
+const models = ref<QuoteModel[]>([newModel()])
+const activeModelIdx = ref(0)
+const activeModel = computed(() => models.value[activeModelIdx.value])
+const viewerRef = ref<InstanceType<typeof StlViewer> | null>(null)
+
+/** Nombre visible: el del archivo si ya lo hay, si no "Modelo N" según su posición */
+const modelLabel = (m: QuoteModel, idx: number) => m.file?.name || `Modelo ${idx + 1}`
+
+const addModel = () => {
+  if (models.value.length >= MAX_MODELS) {
+    notify(`Puedes cotizar hasta ${MAX_MODELS} modelos por pedido.`, 'warning')
+    return
+  }
+  models.value.push(newModel())
+  activeModelIdx.value = models.value.length - 1
+}
+
+const removeModel = (idx: number) => {
+  const model = models.value[idx]
+  if (!model) return
+  viewerRef.value?.removeModel(model.id)
+  slicedSignatures.delete(model.id)
+  if (models.value.length === 1) {
+    // Siempre queda al menos una pestaña: se reemplaza por una vacía
+    models.value = [newModel()]
+    activeModelIdx.value = 0
+    return
+  }
+  models.value.splice(idx, 1)
+  if (activeModelIdx.value > idx || activeModelIdx.value >= models.value.length) {
+    activeModelIdx.value = Math.max(0, activeModelIdx.value - 1)
+  }
+}
+
+const findModel = (key: number | string) => models.value.find(m => m.id === key)
+
+// --- CURAENGINE INTEGRATION (laminado por modelo) ---
+const isSlicing = ref(false)
+const slicingProgress = ref({ current: 0, total: 0, label: '' })
+
+/** Lamina un modelo. Devuelve '' si salió bien o el mensaje de error. */
+const sliceModel = async (model: QuoteModel): Promise<string> => {
+  if (!model.file) return 'Falta el archivo.'
+  const sigAtStart = slicingSignature(model)
   try {
     const mat = materials.value.find(m => m.id === selectedMaterial.value)
     const formData = new FormData()
     formData.append('file', model.file)
-    formData.append('infill', String(model.infill || 15))
-    formData.append('layer_height', String(model.layerHeight || 0.2))
+    formData.append('infill', String(infill.value || 15))
+    formData.append('layer_height', String(layerHeight.value || 0.2))
     formData.append('total_area', String(model.totalArea || 0))
     formData.append('volume_mm3', String(model.volume || 0))
     formData.append('support_area', String(model.supportArea || 0))
@@ -187,39 +242,71 @@ const runCuraEngineAnalysis = async () => {
         formData.append('density', String(mat.density ?? ''))
         formData.append('material_id', mat.id)
     }
-    
+
     const res = await api.post('/process-stl', formData)
     const factors = res.data || res.factors || res;
-    
-    if (factors && (factors.shell_weight_g >= 0)) {
-        models.value[idx].curaFactors = factors
-        models.value[idx].hasSlicing = true
-        slicedSignatures.set(models.value[idx].id, slicingSignature(models.value[idx]))
-        // Store weight and duration from slicing
-        models.value[idx].weight = (Number(factors.shell_weight_g) || 0) 
-                                 + (Number(factors.internal_weight_g) || 0) 
-                                 + (Number(factors.support_weight_g) || 0) 
-                                 + (Number(factors.purge_weight_g) || 3.0)
-        models.value[idx].duration = (Number(factors.prep_time_h) || 0) 
-                                   + (Number(factors.print_time_h) || 0)
-        notify("Precio calculado. Revisa el resumen en el panel.", "success")
-        calculatePrice()
-    } else {
-        throw new Error("El motor devolvió datos incompletos.")
-    }
+
+    if (!(factors && (factors.shell_weight_g >= 0))) throw new Error('El motor devolvió datos incompletos.')
+
+    // El modelo pudo eliminarse o sus parámetros cambiar mientras se laminaba
+    const current = findModel(model.id)
+    if (!current || slicingSignature(current) !== sigAtStart) return ''
+
+    current.curaFactors = factors
+    current.hasSlicing = true
+    slicedSignatures.set(current.id, sigAtStart)
+    current.weight = (Number(factors.shell_weight_g) || 0)
+                   + (Number(factors.internal_weight_g) || 0)
+                   + (Number(factors.support_weight_g) || 0)
+                   + (Number(factors.purge_weight_g) || 3.0)
+    current.duration = (Number(factors.prep_time_h) || 0)
+                     + (Number(factors.print_time_h) || 0)
+    return ''
   } catch (err) {
     logger.error("CuraEngine Error:", err)
     const message = errMessage(err)
     const statusInfo = message.includes('(') ? ` [${message.split('(')[1].split(')')[0]}]` : '';
-    notify(`No pudimos calcular el precio${statusInfo}: ${message.split(' (')[0] || 'falló la conexión'}`, "error")
+    return `${statusInfo}: ${message.split(' (')[0] || 'falló la conexión'}`
+  }
+}
+
+/** "Calcular precio": lamina todos los modelos sin laminado vigente (o todos, si ya lo tenían). */
+const runCuraEngineAnalysis = async () => {
+  if (isSlicing.value) return
+  const loaded = models.value.filter(m => m.hasModel && m.file)
+  if (!loaded.length) {
+      notify("Sube un modelo 3D primero", "error")
+      return
+  }
+  const pending = loaded.filter(m => !m.hasSlicing)
+  const targets = pending.length ? pending : loaded
+
+  isSlicing.value = true
+  const failures: string[] = []
+  try {
+    for (let i = 0; i < targets.length; i++) {
+      const m = targets[i]
+      const idx = models.value.indexOf(m)
+      slicingProgress.value = { current: i + 1, total: targets.length, label: modelLabel(m, idx) }
+      const error = await sliceModel(m)
+      if (error) failures.push(`${modelLabel(m, idx)}${error}`)
+    }
   } finally {
     isSlicing.value = false
+  }
+  calculatePrice()
+  if (failures.length) {
+    notify(`No pudimos calcular el precio de ${failures.length === 1 ? 'un modelo' : failures.length + ' modelos'} (${failures.join('; ')})`, 'error')
+  } else {
+    notify("Precio estimado calculado. Revisa el resumen en el panel.", "success")
   }
 }
 
 const breakdown = ref({
-  weight: 0, duration: 0, matCost: 0, infraCost: 0, laborCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, ivaPct: 19, total: 0
+  pieces: 0, weight: 0, duration: 0, matCost: 0, infraCost: 0, laborCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, ivaPct: 19, total: 0
 })
+/** Total estimado (IVA incluido) atribuido a cada modelo, por id */
+const modelTotals = ref<Record<number, number>>({})
 
 const materialGuide = [
   { 
@@ -255,9 +342,6 @@ const showSidebar = ref(window.innerWidth >= 1024)
 const isDesktop = ref(window.innerWidth >= 1024)
 const modalStep = ref(1)
 
-// Multi-modelo support
-const models = ref<QuoteModel[]>([{ id: 0, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo 1', curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }])
-const activeModelIdx = ref(0)
 const honeypot = ref('')
 const lastSubmitTime = ref(0)
 const emptyCustomerForm = (): CustomerForm => ({
@@ -273,34 +357,61 @@ const emptyCustomerForm = (): CustomerForm => ({
 })
 const customerForm = ref<CustomerForm>(emptyCustomerForm())
 const turnstileToken = ref('')
+/** Último pedido creado: el total es el que calculó el servidor */
+const lastOrder = ref<{ id: number | string | null; total: number | null } | null>(null)
 
+// --- Cupones (validados por el servidor) ---
 const couponCode = ref('')
-const activeCoupon = ref<any>(null)
-const validCoupons = [
-    { code: 'N3XT10', discount: 0.10, label: 'Cupón Bienvenida' },
-    { code: 'MAKER5', discount: 0.05, label: 'Especial Maker' },
-    { code: 'FDM2026', discount: 0.15, label: 'Lanzamiento Industrial' }
-]
+const activeCoupon = ref<Coupon | null>(null)
+const couponError = ref('')
+const couponLoading = ref(false)
 
-const applyCoupon = () => {
-    const coupon = validCoupons.find(c => c.code.toUpperCase() === couponCode.value.toUpperCase())
-    if (coupon) {
-        activeCoupon.value = coupon
-        notify(`¡Cupón ${coupon.label} aplicado!`, 'success')
-        calculatePrice()
-    } else {
-        activeCoupon.value = null
-        notify('Cupón no válido', 'error')
-        calculatePrice()
-    }
+const couponErrorMessage = (err: unknown) => {
+  const msg = errMessage(err)
+  if (/\(404\)|no v[aá]lid|no existe|not found|inactiv/i.test(msg)) return 'Ese cupón no existe o ya no está activo.'
+  if (/\(429\)|too many|demasiad/i.test(msg)) return 'Hiciste muchos intentos seguidos. Espera un minuto y vuelve a probar.'
+  if (/\(422\)/.test(msg)) return 'Revisa el código: solo letras y números.'
+  return 'No pudimos validar el cupón en este momento. Inténtalo de nuevo.'
 }
+
+const applyCoupon = async () => {
+  const code = couponCode.value.trim().toUpperCase()
+  couponError.value = ''
+  if (!code) {
+    couponError.value = 'Escribe el código del cupón.'
+    return
+  }
+  if (couponLoading.value) return
+  couponLoading.value = true
+  try {
+    const data = await api.post('/quote/coupon', { code })
+    const pct = Number(data?.discount_pct)
+    if (!Number.isFinite(pct) || pct <= 0) throw new Error('Cupón no válido (404)')
+    activeCoupon.value = { code: String(data.code || code), discount_pct: pct, label: String(data.label || code) }
+    notify(`Cupón ${activeCoupon.value.label} aplicado.`, 'success')
+  } catch (err) {
+    activeCoupon.value = null
+    couponError.value = couponErrorMessage(err)
+  } finally {
+    couponLoading.value = false
+  }
+}
+
+const removeCoupon = () => {
+  activeCoupon.value = null
+  couponCode.value = ''
+  couponError.value = ''
+}
+
+// Si el usuario edita el código, el error anterior deja de aplicar
+watch(couponCode, () => { couponError.value = '' })
 
 const _timerNotif = ref<ReturnType<typeof setTimeout> | null>(null)
 const notification = ref({ show: false, message: '', type: 'info' })
-const notify = (msg: string, type = 'info') => {
+const notify = (msg: string, type = 'info', durationMs = 5000) => {
     if (_timerNotif.value) clearTimeout(_timerNotif.value)
     notification.value = { show: true, message: msg, type }
-    _timerNotif.value = setTimeout(() => { notification.value.show = false }, 5000)
+    _timerNotif.value = setTimeout(() => { notification.value.show = false }, durationMs)
   }
 
 const handleModalSubmit = (payload: { customerForm: CustomerForm; captchaVerified: boolean; turnstileToken: string }) => {
@@ -317,25 +428,28 @@ const openModal = () => {
   showModal.value = true
 }
 
-const handleFileReady = (file: File) => {
-  if (models.value[activeModelIdx.value]) {
-    models.value[activeModelIdx.value].file = file
-    models.value[activeModelIdx.value].hasSlicing = false
-    slicedSignatures.delete(models.value[activeModelIdx.value].id)
+const handleFileReady = (file: File, key: number | string) => {
+  const model = findModel(key)
+  if (model) {
+    model.file = file
+    model.hasSlicing = false
+    model.weight = 0
+    model.duration = 0
+    slicedSignatures.delete(model.id)
   }
 }
 
-// --- Invalidación del laminado FDM ---
-// El resultado de CuraEngine depende de estos parámetros; si cambian, hay que recalcular.
+// --- Invalidación del laminado FDM (por modelo) ---
+// El resultado de CuraEngine depende de estos parámetros; si cambian, hay que recalcular ese modelo.
 const slicedSignatures = new Map<number, string>()
 const slicingSignature = (m: QuoteModel) =>
-  [selectedMaterial.value, m.infill, m.layerHeight, m.currentScale, m.volume, m.supportArea].join('|')
+  [selectedMaterial.value, infill.value, layerHeight.value, m.currentScale, m.volume, m.supportArea].join('|')
 
 watch(
   () => models.value.map(m => [m.id, slicingSignature(m)] as const),
   (sigs) => {
     sigs.forEach(([id, sig]) => {
-      const model = models.value.find(m => m.id === id)
+      const model = findModel(id)
       if (model?.hasSlicing && slicedSignatures.get(id) !== sig) {
         model.hasSlicing = false
         model.weight = 0
@@ -354,12 +468,18 @@ const submitOrder = async () => {
     notify("Por favor espera unos segundos antes de enviar otra solicitud.", "warning");
     return;
   }
-  
+
+  const loaded = models.value.filter(m => m.hasModel && m.file)
+  if (!loaded.length) {
+    notify('Sube al menos un modelo 3D antes de enviar el pedido.', 'error')
+    return
+  }
+
   isSubmitting.value = true
   try {
     const mat = materials.value.find(m => m.id === selectedMaterial.value)
     const formData = new FormData()
-    
+
     // Datos del Cliente
     formData.append('customer_name', customerForm.value.name)
     formData.append('customer_company', customerForm.value.company)
@@ -370,28 +490,27 @@ const submitOrder = async () => {
     formData.append('shipping_city', customerForm.value.city)
     formData.append('comments', `USO: ${customerForm.value.use} | NOTAS: ${customerForm.value.comments}`)
     if (turnstileToken.value) formData.append('cf_turnstile_response', turnstileToken.value)
-    
-    // Datos Técnicos
+
+    // Parámetros comunes del pedido
     formData.append('technology', selectedTechnology.value)
     formData.append('material_id', selectedMaterial.value)
     formData.append('material_name', mat ? mat.name : '')
-    formData.append('volume_mm3', String(models.value.reduce((s, m) => s + (m.volume || 0), 0)))
-    formData.append('estimated_weight_g', String(breakdown.value.weight))
-    formData.append('estimated_duration_h', String(breakdown.value.duration))
-    formData.append('qty', String(qty.value))
-    formData.append('infill', String(Math.round(models.value[0]?.infill || 15)))
-    formData.append('total_price', String(breakdown.value.total))
+    formData.append('infill', String(Math.round(infill.value || 15)))
+    formData.append('layer_height', String(layerHeight.value || 0.2))
+    if (activeCoupon.value) formData.append('coupon_code', activeCoupon.value.code)
+    // Solo informativo: el servidor calcula el precio definitivo
+    if (breakdown.value.total > 0) formData.append('total_price', String(breakdown.value.total))
+    formData.append('job_name', loaded.length === 1 ? (loaded[0].file?.name || 'Modelo 1') : `${loaded.length} modelos`)
 
-    const mainModel = models.value[0]
-    if (mainModel?.hasModel) {
-      const d = mainModel.dimensions
-      formData.append('dimensions_mm', `${d.x.toFixed(1)}x${d.y.toFixed(1)}x${d.z.toFixed(1)}`)
-      formData.append('scale_factor', String(mainModel.currentScale || 1))
-    }
-    if (mainModel?.file) {
-      formData.append('file', mainModel.file)
-      formData.append('job_name', mainModel.file.name)
-    }
+    // Modelos
+    loaded.forEach((m, i) => {
+      const d = m.dimensions
+      formData.append(`models[${i}][file]`, m.file as File)
+      formData.append(`models[${i}][qty]`, String(Math.max(1, Math.floor(m.qty) || 1)))
+      formData.append(`models[${i}][scale_factor]`, String(m.currentScale || 1))
+      formData.append(`models[${i}][dimensions_mm]`, `${d.x.toFixed(1)} x ${d.y.toFixed(1)} x ${d.z.toFixed(1)}`)
+      formData.append(`models[${i}][support_area_mm2]`, String(Math.round((m.supportArea || 0) * 100) / 100))
+    })
 
     // Extras
     if (selectedExtras.value.length > 0) {
@@ -400,14 +519,21 @@ const submitOrder = async () => {
         formData.append(`extra_items[${index}][qty]`, String(extra.qty))
       })
     }
-    
+
     const res = await api.post('/orders', formData)
-    const orderId = res?.order_id
-    
+    const orderId = res?.order_id ?? null
+    const serverTotal = Number(res?.total_price ?? res?.breakdown?.total)
+    const total = Number.isFinite(serverTotal) && serverTotal > 0 ? serverTotal : null
+
     lastSubmitTime.value = Date.now()
+    lastOrder.value = { id: orderId, total }
     showModal.value = false
-    notify(`Recibimos tu pedido${orderId ? ` #${orderId}` : ''}. Te escribiremos por WhatsApp o email para confirmar.`, "success")
-    
+    notify(
+      `Recibimos tu pedido${orderId ? ` #${orderId}` : ''}${total !== null ? ` por ${formatCop(total)}` : ''}. Te escribiremos por WhatsApp o email para confirmar.`,
+      "success",
+      10000,
+    )
+
     // Reset form
     customerForm.value = emptyCustomerForm()
   } catch (err) {
@@ -425,7 +551,11 @@ const toggleExtra = (id: string) => {
     calculatePrice()
 }
 
-watch([selectedTechnology, selectedMaterial, qty, models], () => {
+const updateActiveQty = (q: number) => {
+  if (activeModel.value) activeModel.value.qty = Math.max(1, Math.floor(Number(q)) || 1)
+}
+
+watch([selectedTechnology, selectedMaterial, models, infill, layerHeight, activeCoupon], () => {
   const mat = materials.value.find(m => m.id === selectedMaterial.value)
   if (mat && mat.category !== selectedTechnology.value) {
     const firstAvailable = materials.value.find(m => m.category === selectedTechnology.value)
@@ -434,149 +564,130 @@ watch([selectedTechnology, selectedMaterial, qty, models], () => {
   calculatePrice()
 }, { deep: true })
 
+/** Peso y tiempo de UNA pieza del modelo, según la tecnología */
+const modelUnitStats = (model: QuoteModel, mat: Material) => {
+  if (selectedTechnology.value === 'FDM') {
+    if (!model.hasSlicing || !model.curaFactors) return { weightG: 0, hours: 0 }
+    const cf = model.curaFactors
+    return {
+      weightG: (Number(cf.shell_weight_g) || 0)
+             + (Number(cf.internal_weight_g) || 0)
+             + (Number(cf.support_weight_g) || 0)
+             + (Number(cf.purge_weight_g) || 3.0),
+      hours: (Number(cf.prep_time_h) || 0) + (Number(cf.print_time_h) || 0),
+    }
+  }
+  // SLA: volume viene en mm³, convertir a cm³
+  const volCm3 = (model.volume || 0) / 1000
+  const density = Number(mat.density) || 1.1
+  const heightMm = model.dimensions?.z || model.dimensions?.y || 0
+  return { weightG: volCm3 * density * 1.1, hours: Math.max(0.5, heightMm / 25) }
+}
+
+/** Precio ESTIMADO en el navegador: suma de todos los modelos (cada uno × su cantidad). */
 const calculatePrice = () => {
   if (loadingQuote.value) return
-  
+
   const mat = materials.value.find(m => m.id === selectedMaterial.value)
   if (!mat || !appData.value) {
     quoteMessage.value = 'Cargando datos de materiales...'
     return
   }
-  if (!models.value.length || !models.value[0]?.hasModel) {
+  const loaded = models.value.filter(m => m.hasModel)
+  if (!loaded.length) {
     quoteMessage.value = 'Sube un modelo 3D para ver el precio'
     // Mostrar breakdown en cero pero con mensaje
-    breakdown.value = { ...breakdown.value, weight: 0, duration: 0, total: 0, subtotal: 0, iva: 0 }
+    breakdown.value = { ...breakdown.value, pieces: 0, weight: 0, duration: 0, total: 0, subtotal: 0, iva: 0 }
+    modelTotals.value = {}
     return
   }
   quoteMessage.value = ''
-  
+
   const cfg = appData.value
-  let totalWeight = 0
-  let totalDuration = 0
-  
-  // Iterate over all models
-  for (const model of models.value) {
-    let mWeight = 0
-    let mDuration = 0
-    
-    if (selectedTechnology.value === 'FDM') {
-      if (model.hasSlicing && model.curaFactors) {
-        const cf = model.curaFactors
-        mWeight = (Number(cf.shell_weight_g) || 0) 
-                + (Number(cf.internal_weight_g) || 0) 
-                + (Number(cf.support_weight_g) || 0) 
-                + (Number(cf.purge_weight_g) || 3.0)
-        mDuration = (Number(cf.prep_time_h) || 0) 
-                  + (Number(cf.print_time_h) || 0)
-        // Store in model for display
-        model.weight = mWeight
-        model.duration = mDuration
-      }
-    } else {
-      // SLA: volume viene en mm³, convertir a cm³
-      const volCm3 = (model.volume || 0) / 1000 
-      const density = Number(mat.density) || 1.1
-      mWeight = volCm3 * density * 1.1 
-      const heightMm = model.dimensions?.z || model.dimensions?.y || 0
-      mDuration = Math.max(0.5, heightMm / 25)
-      model.weight = mWeight
-      model.duration = mDuration
-    }
-    
-    totalWeight += mWeight
-    totalDuration += mDuration
-  }
-  
-  // Apply quantity to totals
-  totalWeight *= qty.value
-  totalDuration *= qty.value
-  
-  // Costo de material
+  const quoteModels = loaded.map(m => ({ id: m.id, qty: m.qty, ...modelUnitStats(m, mat) }))
+  const pieces = quoteModels.reduce((s, m) => s + Math.max(1, Math.floor(m.qty) || 1), 0)
+
+  // Consumibles
   let utilityCost = 0
   autoExtras.value = []
   if (selectedTechnology.value === 'SLA') {
     const alcohol = utilities.value.find(u => u.id === 'Alco_ML_05')
     if (alcohol) {
-      utilityCost += calcExtraCost(Number(alcohol.cost_per_kg) || 0, alcohol.unit || 'ml', 50 * qty.value)
-      autoExtras.value.push({ id: alcohol.id, qty: 50 * qty.value, name: alcohol.name })
+      utilityCost += calcExtraCost(Number(alcohol.cost_per_kg) || 0, alcohol.unit || 'ml', 50 * pieces)
+      autoExtras.value.push({ id: alcohol.id, qty: 50 * pieces, name: alcohol.name })
     }
     const curado = utilities.value.find(u => u.id === 'Cicl_Serv_06')
     if (curado) {
-      utilityCost += calcExtraCost(Number(curado.cost_per_kg) || 0, curado.unit || 'servicio', qty.value)
-      autoExtras.value.push({ id: curado.id, qty: qty.value, name: curado.name })
+      utilityCost += calcExtraCost(Number(curado.cost_per_kg) || 0, curado.unit || 'servicio', pieces)
+      autoExtras.value.push({ id: curado.id, qty: pieces, name: curado.name })
     }
   }
-  
+
   selectedExtras.value.forEach(item => {
     const extra = utilities.value.find(u => u.id === item.id)
     if (extra) {
         utilityCost += calcExtraCost(Number(extra.cost_per_kg) || 0, extra.unit || 'g', item.qty)
     }
   })
-  
-  // Use shared services for calculations
-  const prod = calcProductionCost({
-    weightG: totalWeight,
-    totalHours: totalDuration,
+
+  const r = calcQuoteEstimate({
+    models: quoteModels,
     costPerKg: Number(mat.cost_per_kg) || 0,
     infra: cfg.infra,
     prep: cfg.prep,
-    extrasCost: utilityCost,
-  })
-  
-  const totalBaseCost = prod.total
-  const baseUnitCost = qty.value > 0 ? totalBaseCost / qty.value : 0
-  
-  // Margins on base unit cost, then apply qty
-  const pricePerUnit = calcFinalPrice({
-    productionCost: baseUnitCost,
     oper: cfg.oper,
     margin: cfg.margin,
+    extrasCost: utilityCost,
+    discountPct: activeCoupon.value?.discount_pct ?? 0,
   })
-  
-  const subtotal = pricePerUnit.subtotal * qty.value
-  
-  // Apply coupon discount separately (it's on total)
-  const discountAmount = activeCoupon.value ? (subtotal * activeCoupon.value.discount) : 0
-  const finalSubtotal = Math.round(subtotal - discountAmount)
-  const ivaPct = cfg.margin.iva ?? 19
-  const ivaRate = ivaPct / 100
-  const iva = Math.round(finalSubtotal * ivaRate)
-  const total = finalSubtotal + iva
-  
-  const newTotal = total
-  if (newTotal !== breakdown.value.total) {
+
+  if (r.total !== breakdown.value.total) {
     previousTotal.value = breakdown.value.total
   }
-  
-  const marginCost = (pricePerUnit.logistics + pricePerUnit.marketing + pricePerUnit.failures + pricePerUnit.profit) * qty.value
-  
+
+  modelTotals.value = Object.fromEntries(r.perModel.map(p => [p.id, p.total]))
   breakdown.value = {
-    weight: totalWeight,
-    duration: totalDuration,
-    matCost: prod.material,
-    infraCost: prod.luz + prod.depr + prod.mant,
-    laborCost: prod.labor,
-    utilityCost,
-    marginCost,
-    discount: Math.round(discountAmount),
-    subtotal: finalSubtotal,
-    iva,
-    ivaPct,
-    total,
+    pieces: r.pieces,
+    weight: r.weight,
+    duration: r.duration,
+    matCost: r.matCost,
+    infraCost: r.infraCost,
+    laborCost: r.laborCost,
+    utilityCost: r.utilityCost,
+    marginCost: r.marginCost,
+    discount: r.discount,
+    subtotal: r.subtotal,
+    iva: r.iva,
+    ivaPct: r.ivaPct,
+    total: r.total,
   }
 }
 
+/** Resumen de modelos para el modal y el panel */
+const modelSummaries = computed(() =>
+  models.value
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => m.hasModel)
+    .map(({ m, i }) => ({
+      id: m.id,
+      name: modelLabel(m, i),
+      qty: m.qty,
+      dimensions: m.dimensions,
+      scale: m.currentScale,
+      total: modelTotals.value[m.id] ?? 0,
+      priced: selectedTechnology.value === 'SLA' || m.hasSlicing,
+    }))
+)
 
-const handleModelLoaded = (data: { volume: number; totalArea?: number; dimensions: { x: number; y: number; z: number }; scale?: number; supportArea?: number }) => {
-  const idx = activeModelIdx.value
-  if (models.value[idx]) {
-    models.value[idx].volume = data.volume
-    models.value[idx].totalArea = data.totalArea || 0
-    models.value[idx].dimensions = { x: data.dimensions.x, y: data.dimensions.y, z: data.dimensions.z }
-    models.value[idx].currentScale = data.scale || 1.0
-    models.value[idx].supportArea = data.supportArea || 0
-    models.value[idx].hasModel = true
+const handleModelLoaded = (data: ModelStats) => {
+  const model = findModel(data.key)
+  if (model) {
+    model.volume = data.volume
+    model.totalArea = data.totalArea || 0
+    model.dimensions = { x: data.dimensions.x, y: data.dimensions.y, z: data.dimensions.z }
+    model.currentScale = data.scale || 1.0
+    model.supportArea = data.supportArea || 0
+    model.hasModel = true
   }
   if (selectedTechnology.value !== 'FDM') calculatePrice()
 }
@@ -602,27 +713,54 @@ onUnmounted(() => {
         <div class="w-full max-w-5xl mx-auto">
           <header class="mb-6">
             <h1 id="quote-title" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Cotiza tu pieza 3D</h1>
-            <p class="mt-2 text-[0.9375rem] md:text-base text-muted max-w-2xl">Sube tu archivo, elige material y parámetros y obtén un precio estimado. El taller lo revisa antes de imprimir.</p>
+            <p class="mt-2 text-[0.9375rem] md:text-base text-muted max-w-2xl">Sube uno o varios archivos, elige material y parámetros y obtén un precio estimado. El taller revisa el pedido y confirma el precio definitivo antes de imprimir.</p>
           </header>
 
           <!-- Modelos -->
-          <div class="flex flex-wrap items-center gap-2 mb-4" aria-label="Modelos de la cotización" role="group">
-            <button
-              v-for="(m, mi) in models" :key="m.id"
-              type="button"
-              :aria-pressed="activeModelIdx === mi"
-              :class="activeModelIdx === mi ? 'bg-ink text-canvas border-ink' : 'border-line text-muted hover:text-ink'"
-              class="h-9 px-4 rounded-full border text-sm font-medium inline-flex items-center gap-2 transition-colors"
-              @click="activeModelIdx = mi"
-            >
-              {{ m.name || 'Modelo ' + (mi + 1) }}
-              <svg v-if="m.hasModel" class="w-4 h-4" :class="activeModelIdx === mi ? '' : 'text-brand'" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-              <span v-if="m.hasModel" class="sr-only">(archivo cargado)</span>
-            </button>
-            <button type="button" class="btn-outlined btn-sm" @click="models.push({ id: models.length, file: null, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, infill: 15, layerHeight: 0.2, supportArea: 0, currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: 'Modelo ' + (models.length + 1), curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 } }); activeModelIdx = models.length - 1">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>
-              Añadir modelo
-            </button>
+          <div class="mb-4">
+            <div class="flex flex-wrap items-center gap-2" aria-label="Modelos de la cotización" role="group">
+              <div
+                v-for="(m, mi) in models" :key="m.id"
+                class="inline-flex items-center h-9 rounded-full border text-sm font-medium transition-colors max-w-full"
+                :class="activeModelIdx === mi ? 'bg-ink text-canvas border-ink' : 'border-line text-muted hover:text-ink'"
+              >
+                <button
+                  type="button"
+                  :aria-pressed="activeModelIdx === mi"
+                  :title="modelLabel(m, mi)"
+                  class="h-full pl-4 inline-flex items-center gap-2 min-w-0 rounded-l-full"
+                  :class="models.length > 1 || m.hasModel ? 'pr-1' : 'pr-4 rounded-r-full'"
+                  @click="activeModelIdx = mi"
+                >
+                  <span class="truncate max-w-[10rem] sm:max-w-[14rem]">{{ modelLabel(m, mi) }}</span>
+                  <span v-if="m.hasModel && m.qty > 1" class="tabular-nums" :class="activeModelIdx === mi ? '' : 'text-ink'">× {{ m.qty }}</span>
+                  <svg v-if="m.hasModel" class="w-4 h-4 shrink-0" :class="activeModelIdx === mi ? '' : 'text-brand'" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                  <span v-if="m.hasModel" class="sr-only">(archivo cargado)</span>
+                </button>
+                <button
+                  v-if="models.length > 1 || m.hasModel"
+                  type="button"
+                  class="h-full px-2.5 inline-flex items-center rounded-r-full opacity-80 hover:opacity-100"
+                  :aria-label="`Eliminar ${modelLabel(m, mi)}`"
+                  :title="`Eliminar ${modelLabel(m, mi)}`"
+                  :disabled="isSlicing"
+                  @click="removeModel(mi)"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <button
+                type="button"
+                class="btn-outlined btn-sm"
+                :disabled="models.length >= MAX_MODELS"
+                :aria-describedby="models.length >= MAX_MODELS ? 'quote-max-models' : undefined"
+                @click="addModel"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>
+                Añadir modelo
+              </button>
+            </div>
+            <p v-if="models.length >= MAX_MODELS" id="quote-max-models" class="mt-2 text-sm text-muted">Llegaste al máximo de {{ MAX_MODELS }} modelos por pedido.</p>
           </div>
 
           <!-- Estado de carga / mensaje -->
@@ -631,16 +769,26 @@ onUnmounted(() => {
             {{ quoteMessage }}
           </div>
 
-          <!-- Visor -->
-          <div class="relative h-[480px] sm:h-[540px] lg:h-[600px] bg-surface rounded-[var(--radius-panel)] border border-line overflow-hidden">
+          <!-- Visor (persistente: un solo StlViewer para todos los modelos) -->
+          <div class="surface-card relative h-[480px] sm:h-[540px] lg:h-[600px] bg-surface rounded-[var(--radius-panel)] border border-line overflow-hidden">
             <div class="technical-grid absolute inset-0 pointer-events-none" aria-hidden="true"></div>
-            <StlViewer :key="'viewer-' + activeModelIdx" @model-loaded="handleModelLoaded" @model-transformed="handleModelLoaded" @file-ready="handleFileReady" @error="handleError" />
+            <StlViewer
+              ref="viewerRef"
+              :active-key="activeModel?.id ?? 0"
+              @model-loaded="handleModelLoaded"
+              @model-transformed="handleModelLoaded"
+              @file-ready="handleFileReady"
+              @error="handleError"
+            />
             <transition enter-active-class="transition duration-200" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition duration-200" leave-from-class="opacity-100" leave-to-class="opacity-0">
               <div v-if="isSlicing" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-canvas/70 backdrop-blur-sm" role="status" aria-live="polite">
                 <div class="bg-surface border border-line rounded-[var(--radius-card)] shadow-xl px-6 py-5 flex items-center gap-4 max-w-sm">
                   <span class="w-8 h-8 shrink-0 border-[3px] border-primary border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
-                  <div>
-                    <p class="font-semibold text-ink">Calculando el precio del modelo {{ activeModelIdx + 1 }}</p>
+                  <div class="min-w-0">
+                    <p class="font-semibold text-ink">
+                      Calculando el precio<template v-if="slicingProgress.total > 1"> ({{ slicingProgress.current }} de {{ slicingProgress.total }})</template>
+                    </p>
+                    <p class="text-sm text-muted truncate">{{ slicingProgress.label }}</p>
                     <p class="text-sm text-muted">Estamos laminando el archivo. Puede tardar unos segundos.</p>
                   </div>
                 </div>
@@ -653,7 +801,7 @@ onUnmounted(() => {
             <h2 id="material-guide-title" class="text-xl md:text-2xl font-extrabold tracking-tight text-ink">¿Qué material elegir?</h2>
             <p class="mt-1 text-sm text-muted">Una guía rápida. Si tienes dudas, el taller te recomienda al revisar tu pedido.</p>
             <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              <div v-for="mat in materialGuide" :key="mat.name" class="bg-surface p-5 rounded-[var(--radius-card)] border border-line">
+              <div v-for="mat in materialGuide" :key="mat.name" class="surface-card bg-surface p-5 rounded-[var(--radius-card)] border border-line">
                 <div class="w-10 h-10 bg-primary/10 rounded-[var(--radius-control)] flex items-center justify-center mb-4" aria-hidden="true" :innerHTML="sanitizeSVG(mat.icon)"></div>
                 <h3 class="text-base font-semibold text-ink [font-stretch:100%] tracking-normal">{{ mat.name }}</h3>
                 <p class="mt-1 text-sm text-muted leading-relaxed">{{ mat.desc }}</p>
@@ -673,33 +821,40 @@ onUnmounted(() => {
           :utilities="utilities"
           :selected-technology="selectedTechnology"
           :selected-material="selectedMaterial"
-          :qty="qty"
+          :qty="activeModel?.qty ?? 1"
+          :infill="infill"
+          :layer-height="layerHeight"
           :selected-extras="selectedExtras"
           :active-coupon="activeCoupon"
           :coupon-code="couponCode"
+          :coupon-error="couponError"
+          :coupon-loading="couponLoading"
           :breakdown="breakdown"
+          :model-summaries="modelSummaries"
           :is-slicing="isSlicing"
           :previous-total="previousTotal"
+          :last-order="lastOrder"
           @update:selected-technology="selectedTechnology = $event"
           @update:selected-material="selectedMaterial = $event"
-          @update:qty="qty = $event"
+          @update:qty="updateActiveQty"
+          @update:infill="infill = $event"
+          @update:layer-height="layerHeight = $event"
           @update:coupon-code="couponCode = $event"
           @toggle-extra="toggleExtra"
           @apply-coupon="applyCoupon"
+          @remove-coupon="removeCoupon"
           @calculate="runCuraEngineAnalysis"
           @request-quote="openModal"
-          @update:models="models = $event"
         />
       </aside>
     </main>
 
     <QuoteOrderModal
       :show="showModal"
-      :models="models"
+      :models="modelSummaries"
       :materials="materials"
       :selected-technology="selectedTechnology"
       :selected-material="selectedMaterial"
-      :qty="qty"
       :breakdown="breakdown"
       :active-coupon="activeCoupon"
       :is-submitting="isSubmitting"

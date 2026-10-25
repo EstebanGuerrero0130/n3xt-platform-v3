@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import logger from '../utils/logger'
 import { useCaptcha } from '../composables/useCaptcha'
 
@@ -26,15 +26,47 @@ async function loadThree() {
   TransformControls = transformModule.TransformControls
 }
 
-const emit = defineEmits(['model-loaded', 'loading', 'error', 'model-transformed', 'file-ready'])
+type ModelKey = number | string
+
+/**
+ * Visor persistente para varios modelos: se monta UNA vez y muestra la pieza de `activeKey`.
+ * Cada modelo cargado se guarda en memoria (malla + transformación + cámara), así que al cambiar
+ * de pestaña no se vuelve a leer el archivo, ni se recrea WebGL, ni se pide de nuevo la verificación.
+ * Todos los eventos llevan la clave del modelo al que pertenecen.
+ */
+const props = defineProps({
+  activeKey: { type: [Number, String], default: 0 },
+})
+
+const emit = defineEmits<{
+  'model-loaded': [data: ModelStats]
+  'model-transformed': [data: ModelStats]
+  loading: [value: boolean]
+  error: [message: string]
+  'file-ready': [file: File, key: ModelKey]
+}>()
+
+interface ModelStats {
+  key: ModelKey
+  volume: number
+  dimensions: { x: number; y: number; z: number }
+  scale: number
+  totalArea: number
+  supportArea: number
+}
 
 const MAX_FILE_MB = 50 // Debe coincidir con StoreOrderRequest (file max:51200 KB)
 
 const container = ref<HTMLDivElement | null>(null)
 const isDragging = ref(false)
-const isLoading = ref(false)
-const hasModel = ref(false)
+/** Clave del modelo que se está leyendo (una carga a la vez) */
+const loadingKey = ref<ModelKey | null>(null)
+const isLoading = computed(() => loadingKey.value !== null && loadingKey.value === props.activeKey)
+/** Claves con malla en memoria (reactivo para la plantilla) */
+const loadedKeys = ref<ModelKey[]>([])
+const hasModel = computed(() => loadedKeys.value.includes(props.activeKey))
 const transformMode = ref('translate')
+// La verificación vive en el visor persistente: se resuelve una sola vez por sesión del cotizador
 const captchaUnlocked = ref(false)
 const captchaFailed = ref(false)
 const { challenge, answer, verify, isLocked } = useCaptcha()
@@ -55,13 +87,22 @@ let camera: any = null
 let renderer: any = null
 let orbitControls: any = null
 let transformControls: any = null
-let currentGroup: any = null
-let boxHelper: any = null
+
+interface ModelEntry {
+  group: any
+  boxHelper: any
+  baseVolume: number
+  camPos: [number, number, number]
+  camTarget: [number, number, number]
+  maxDistance: number
+}
+const entries = new Map<ModelKey, ModelEntry>()
+/** Clave del modelo que está ahora mismo en la escena */
+let shownKey: ModelKey | null = null
 
 let needsUpdate = true; // Bandera para renderizado por demanda
 
 let animationFrameId: number | null = null
-let baseVolume = 0
 let resizeObserver: ResizeObserver | null = null
 let loadingTimeout: ReturnType<typeof setTimeout> | null = null
 let isUnmounted = false
@@ -72,6 +113,11 @@ const disposeObject = (object: any) => {
     if (Array.isArray(object.material)) object.material.forEach((m: any) => m.dispose())
     else object.material.dispose()
   }
+}
+
+const disposeEntry = (entry: ModelEntry) => {
+  entry.group.traverse(disposeObject)
+  disposeObject(entry.boxHelper)
 }
 
 onMounted(async () => {
@@ -97,16 +143,19 @@ onBeforeUnmount(() => {
   }
   orbitControls?.dispose()
 
-  // Limpieza profunda de memoria
+  // Limpieza profunda de memoria: escena + modelos guardados que no estén en escena
   scene?.traverse(disposeObject)
   scene?.clear()
+  entries.forEach((entry, key) => { if (key !== shownKey) disposeEntry(entry) })
+  entries.clear()
+  shownKey = null
 
   if (renderer) {
     renderer.dispose()
     renderer.forceContextLoss()
     renderer.domElement.remove()
   }
-  scene = camera = renderer = orbitControls = transformControls = currentGroup = boxHelper = null
+  scene = camera = renderer = orbitControls = transformControls = null
 })
 
 const initThree = async () => {
@@ -115,7 +164,7 @@ const initThree = async () => {
 
   // Scene
   scene = new THREE.Scene()
-  
+
   // Camera
   const width = container.value.clientWidth
   const height = container.value.clientHeight
@@ -124,7 +173,7 @@ const initThree = async () => {
 
   // Renderer (Optimizado para modelos pesados)
   try {
-    renderer = new THREE.WebGLRenderer({ 
+    renderer = new THREE.WebGLRenderer({
       antialias: window.devicePixelRatio < 2,
       alpha: true,
       powerPreference: 'high-performance',
@@ -169,18 +218,21 @@ const initThree = async () => {
   transformControls.addEventListener('change', () => { needsUpdate = true })
   transformControls.addEventListener('dragging-changed', (event: { value: boolean }) => {
     orbitControls.enabled = !event.value
-    if (!event.value) emitTransformation()
+    if (!event.value && shownKey !== null) emitTransformation(shownKey)
   })
   scene.add(transformControls.getHelper())
+
+  // Si ya había un modelo activo con malla (no debería, pero por robustez)
+  showEntry(props.activeKey)
 
   animate()
 }
 
 const animate = () => {
   animationFrameId = requestAnimationFrame(animate)
-  
+
   const dampingActive = orbitControls && orbitControls.update()
-  
+
   // Solo renderizar si hay movimiento o cambios pendientes
   if (needsUpdate || dampingActive) {
     if (renderer && scene && camera) {
@@ -190,45 +242,115 @@ const animate = () => {
   }
 }
 
-const autoOrient = () => {
-    if (!currentGroup) return;
-    const mesh = currentGroup.children[0];
+// --- Cambio de modelo activo (sin remontar) ---
+
+/** Saca de la escena el modelo visible, guardando su vista de cámara. */
+const hideShown = () => {
+  if (shownKey === null || !scene) return
+  const entry = entries.get(shownKey)
+  if (entry) {
+    if (camera) entry.camPos = [camera.position.x, camera.position.y, camera.position.z]
+    if (orbitControls) entry.camTarget = [orbitControls.target.x, orbitControls.target.y, orbitControls.target.z]
+    transformControls?.detach()
+    scene.remove(entry.group)
+    scene.remove(entry.boxHelper)
+  }
+  shownKey = null
+  needsUpdate = true
+}
+
+/** Pone en escena el modelo `key` (si tiene malla) y restaura su vista. */
+const showEntry = (key: ModelKey) => {
+  if (!scene) return
+  if (shownKey !== null && shownKey !== key) hideShown()
+  const entry = entries.get(key)
+  if (!entry) { needsUpdate = true; return }
+  if (shownKey !== key) {
+    scene.add(entry.group)
+    scene.add(entry.boxHelper)
+    transformControls?.attach(entry.group)
+    shownKey = key
+  }
+  if (camera) camera.position.set(...entry.camPos)
+  if (orbitControls) {
+    orbitControls.target.set(...entry.camTarget)
+    orbitControls.minDistance = 10
+    orbitControls.maxDistance = entry.maxDistance
+    orbitControls.update()
+  } else if (camera) {
+    camera.lookAt(...entry.camTarget)
+  }
+  needsUpdate = true
+}
+
+watch(() => props.activeKey, (key) => {
+  isDragging.value = false
+  hideShown()
+  showEntry(key)
+})
+
+/** Elimina de memoria la malla de un modelo (al borrarlo o reemplazarlo). */
+const removeModel = (key: ModelKey) => {
+  // Una lectura en curso para este modelo se descarta al terminar (ver reader.onload)
+  if (loadingKey.value === key) {
+    loadingKey.value = null
+    if (loadingTimeout) clearTimeout(loadingTimeout)
+    emit('loading', false)
+  }
+  const entry = entries.get(key)
+  if (!entry) return
+  if (shownKey === key) hideShown()
+  disposeEntry(entry)
+  entries.delete(key)
+  loadedKeys.value = loadedKeys.value.filter(k => k !== key)
+  needsUpdate = true
+}
+
+defineExpose({ removeModel })
+
+const autoOrient = (key: ModelKey | null = shownKey) => {
+    if (key === null) return
+    const entry = entries.get(key)
+    if (!entry) return
+    const group = entry.group
+    const mesh = group.children[0];
     if (!mesh) return;
 
     // Reset rotation
-    currentGroup.rotation.set(0, 0, 0);
-    currentGroup.updateMatrixWorld();
+    group.rotation.set(0, 0, 0);
+    group.updateMatrixWorld();
 
-    const box = new THREE.Box3().setFromObject(currentGroup);
+    const box = new THREE.Box3().setFromObject(group);
     const size = new THREE.Vector3();
     box.getSize(size);
 
     // Si el eje Z es el más largo, probablemente deba estar acostado (Y up)
     // Buscamos que la dimensión menor sea la altura (Y)
     if (size.z > size.y && size.z > size.x) {
-        currentGroup.rotation.x = Math.PI / 2;
+        group.rotation.x = Math.PI / 2;
     } else if (size.x > size.y && size.x > size.z) {
-        currentGroup.rotation.z = Math.PI / 2;
+        group.rotation.z = Math.PI / 2;
     }
-    
-    currentGroup.updateMatrixWorld();
-    
+
+    group.updateMatrixWorld();
+
     // Reposicionar en el suelo
-    const newBox = new THREE.Box3().setFromObject(currentGroup);
+    const newBox = new THREE.Box3().setFromObject(group);
     const height = newBox.max.y - newBox.min.y;
-    currentGroup.position.y = height / 2;
-    
+    group.position.y = height / 2;
+    entry.boxHelper.update()
+
     needsUpdate = true;
-    emitTransformation();
+    emitTransformation(key);
     emit('loading', false); // Signal end of internal process
 };
 
 const setView = (view: 'top' | 'front' | 'iso') => {
   if (!camera || !orbitControls) return
-  
+
   const target = orbitControls.target
   const dist = 300
-  
+
   switch(view) {
     case 'top':
       camera.position.set(target.x, target.y + dist, target.z)
@@ -250,27 +372,32 @@ const setTransformMode = (mode: 'translate' | 'rotate' | 'scale') => {
   }
 }
 
-const emitTransformation = () => {
-  if (!currentGroup) return
+const emitTransformation = (key: ModelKey, event: 'model-transformed' | 'model-loaded' = 'model-transformed') => {
+  const entry = entries.get(key)
+  if (!entry) return
+  const group = entry.group
 
-  const boundingBox = new THREE.Box3().setFromObject(currentGroup)
+  const boundingBox = new THREE.Box3().setFromObject(group)
   const size = new THREE.Vector3()
   boundingBox.getSize(size)
 
-  const scale = currentGroup.scale
-  const currentVolume = baseVolume * Math.abs(scale.x * scale.y * scale.z)
+  const scale = group.scale
+  const currentVolume = entry.baseVolume * Math.abs(scale.x * scale.y * scale.z)
 
   // CALCULAR ÁREA TOTAL PARA CURAENGINE
-  const totalArea = calculateTotalArea(currentGroup.children[0].geometry)
-  const supportArea = calculateSupportArea(currentGroup.children[0].geometry)
-  
-  emit('model-transformed', {
+  const totalArea = calculateTotalArea(group.children[0].geometry)
+  const supportArea = calculateSupportArea(group.children[0].geometry)
+
+  const stats: ModelStats = {
+    key,
     volume: currentVolume,
     dimensions: { x: size.x, y: size.y, z: size.z },
     scale: scale.x,
     totalArea: totalArea * Math.abs(scale.x * scale.z), // Approximation for area scale
     supportArea: supportArea * Math.abs(scale.x * scale.z)
-  })
+  }
+  if (event === 'model-loaded') emit('model-loaded', stats)
+  else emit('model-transformed', stats)
 }
 
 // Vectores reutilizables para cálculos pesados (lazy init: THREE debe cargarse primero)
@@ -314,6 +441,7 @@ const handleResize = () => {
   camera.aspect = width / height
   camera.updateProjectionMatrix()
   renderer.setSize(width, height)
+  needsUpdate = true
 }
 
 const calculateVolume = (geometry: any) => {
@@ -333,22 +461,22 @@ const calculateVolume = (geometry: any) => {
     crossResult.crossVectors(p2, p3)
     sum += p1.dot(crossResult) / 6.0
   }
-  
+
   // Valor real en mm³ (la normalización metros→mm ya se aplica sobre la geometría en processGeometry)
   return Math.abs(sum);
 }
 
 const calculateSupportArea = (geometry: any) => {
   if (!geometry.attributes.position || !geometry.attributes.normal) return 0
-  
+
   const position = geometry.attributes.position
   const normal = geometry.attributes.normal
   let supportArea = 0
   const faceNormal = new THREE.Vector3()
-  
+
   for (let i = 0; i < position.count; i += 3) {
     faceNormal.fromBufferAttribute(normal, i)
-    
+
     // Threshold: Y < -0.5 (approx 120 degrees from up = overhang)
     if (faceNormal.y < -0.5) {
       _vA.fromBufferAttribute(position, i)
@@ -371,7 +499,6 @@ const handleDrop = (e: DragEvent) => {
     emit('error', 'Resuelve la operación de verificación antes de cargar un archivo.')
     return
   }
-  if (isLoading.value) return
   loadFile(file)
 }
 
@@ -382,60 +509,46 @@ const handleFileSelect = (e: Event) => {
   input.value = '' // permitir volver a seleccionar el mismo archivo
 }
 
-/** Elimina el modelo actual de la escena y libera su memoria GPU. */
-const clearCurrentModel = () => {
-  if (!currentGroup) return
-  transformControls?.detach()
-  scene.remove(currentGroup)
-  currentGroup.traverse(disposeObject)
-  currentGroup = null
-  if (boxHelper) {
-    scene.remove(boxHelper)
-    disposeObject(boxHelper)
-    boxHelper = null
-  }
-}
-
-const processGeometry = (geometry: any, file: File) => {
+const processGeometry = (geometry: any, file: File, key: ModelKey) => {
   // Los cálculos por triángulo asumen geometría no indexada con normales
   if (geometry.index) geometry = geometry.toNonIndexed()
   if (!geometry.attributes.normal) geometry.computeVertexNormals()
   geometry.computeBoundingBox()
-  
+
   // Scale Normalization Pre-Processing
   const size = new THREE.Vector3();
   geometry.boundingBox.getSize(size);
   const maxDim = Math.max(size.x, size.y, size.z);
-  
+
   // Si la dimensión máxima es < 1, es muy probable que esté en metros
   if (maxDim > 0 && maxDim < 1) {
       geometry.scale(1000, 1000, 1000);
       geometry.computeBoundingBox();
   }
-  
-  geometry.center() 
-  baseVolume = calculateVolume(geometry)
+
+  geometry.center()
+  const baseVolume = calculateVolume(geometry)
   if (baseVolume > 0 && baseVolume < 1) {
     logger.warn('N3XT: volumen muy pequeño', baseVolume)
     emit('error', 'El modelo tiene un volumen muy pequeño (< 1 mm³). Verifica que esté exportado en milímetros.')
   }
-  
-  const material = new THREE.MeshStandardMaterial({ 
+
+  const material = new THREE.MeshStandardMaterial({
     vertexColors: true,
     roughness: 0.3,
     metalness: 0.2,
     flatShading: false
   })
-  
+
   // Analizar voladizos y pintar de rojo (Vertex Colors)
   const position = geometry.attributes.position
   const normal = geometry.attributes.normal
   const colors = new Float32Array(position.count * 3)
-  
+
   const faceNormal = new THREE.Vector3()
   for (let i = 0; i < position.count; i += 3) {
     faceNormal.fromBufferAttribute(normal, i)
-    
+
     // Si es un voladizo crítico, pintar de rojo suave
     const isOverhang = faceNormal.y < -0.5
     for (let j = 0; j < 3; j++) {
@@ -452,7 +565,7 @@ const processGeometry = (geometry: any, file: File) => {
     }
   }
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-  
+
   const mesh = new THREE.Mesh(geometry, material)
   mesh.castShadow = true
   mesh.receiveShadow = true
@@ -460,68 +573,65 @@ const processGeometry = (geometry: any, file: File) => {
   // Create a group to handle transforms cleanly
   const group = new THREE.Group()
   group.add(mesh)
-  
+
   // Place on bed (Y = 0 + half height)
   geometry.computeBoundingBox()
   const height = geometry.boundingBox.max.y - geometry.boundingBox.min.y
   group.position.y = height / 2
 
-  scene.add(group)
-  currentGroup = group
+  const boxHelper = new THREE.BoxHelper(group, 0xff0000)
 
-  // Add BoxHelper
-  boxHelper = new THREE.BoxHelper(group, 0xff0000)
-  scene.add(boxHelper)
-
-  // Attach transform controls
-  transformControls.attach(group)
-
-  // Adjust camera
   // Ajustar cámara para que el modelo no ocupe todo el visor (evitar zoom manual)
   geometry.boundingBox.getSize(size)
   const cameraMaxDim = Math.max(size.x, size.y, size.z, 50)
-  
   // Posicionamos la cámara más lejos (multiplicador 3.5 vs 1.5) para dar "aire"
   const dist = cameraMaxDim * 3.5
-  camera.position.set(dist, dist, dist)
-  camera.lookAt(0, height / 2, 0)
-  
-  if (orbitControls) {
-    orbitControls.target.set(0, height / 2, 0)
-    // Limitamos el zoom para que no sea infinito
-    orbitControls.minDistance = 10
-    orbitControls.maxDistance = dist * 3
-    orbitControls.update()
-  }
 
-  hasModel.value = true
-  isLoading.value = false
+  // Reemplaza la malla anterior de este modelo (solo cuando la nueva se parseó bien)
+  removeModel(key)
+  entries.set(key, {
+    group,
+    boxHelper,
+    baseVolume,
+    camPos: [dist, dist, dist],
+    camTarget: [0, height / 2, 0],
+    maxDistance: dist * 3,
+  })
+  loadedKeys.value = [...loadedKeys.value, key]
+
+  // Solo se muestra si el usuario sigue en la pestaña de este modelo
+  if (key === props.activeKey) showEntry(key)
+
+  loadingKey.value = null
   if (loadingTimeout) clearTimeout(loadingTimeout)
   emit('loading', false)
-  
+
   // Auto-Orientación Inicial (Aplanar por defecto si es muy alto)
   const box = new THREE.Box3().setFromObject(group);
   box.getSize(size);
   if (size.y > size.x && size.y > size.z) {
-      autoOrient();
+      autoOrient(key);
   } else {
-      emitTransformation() // Emit initial stats
+      emitTransformation(key, 'model-loaded') // Emit initial stats
   }
-  
-  emit('file-ready', file)
+
+  emit('file-ready', file, key)
 }
 
 const loadFile = async (file: File) => {
-  await loadThree()
-  if (isUnmounted || !scene) return
+  if (loadingKey.value !== null) {
+    emit('error', 'Espera a que termine de cargar el archivo anterior.')
+    return
+  }
+  const key = props.activeKey
   const name = file.name.toLowerCase()
   const isStl = name.endsWith('.stl')
   const isObj = name.endsWith('.obj')
-  
+
   if (!isStl && !isObj) {
     const msg = name.endsWith('.3mf')
       ? 'Formato .3MF aún no soportado. Exporta tu modelo como .STL u .OBJ.'
-      : 'Seguridad N3XT: Formato no autorizado. Solo aceptamos .STL u .OBJ'
+      : 'Formato no admitido. Solo aceptamos archivos .STL u .OBJ.'
     emit('error', msg)
     return
   }
@@ -531,14 +641,17 @@ const loadFile = async (file: File) => {
     return
   }
 
-  isLoading.value = true
+  await loadThree()
+  if (isUnmounted || !scene) return
+
+  loadingKey.value = key
   emit('loading', true)
-  
+
   // N3XT Safety: Timeout para evitar estado de carga infinito
   if (loadingTimeout) clearTimeout(loadingTimeout)
   loadingTimeout = setTimeout(() => {
-    if (isLoading.value) {
-      isLoading.value = false
+    if (loadingKey.value === key) {
+      loadingKey.value = null
       emit('loading', false)
       emit('error', 'El procesamiento tardó demasiado. Intenta con un archivo más ligero o verifica tu conexión.')
     }
@@ -546,7 +659,7 @@ const loadFile = async (file: File) => {
 
   const failLoad = (err: unknown) => {
     logger.error(err)
-    isLoading.value = false
+    if (loadingKey.value === key) loadingKey.value = null
     if (loadingTimeout) clearTimeout(loadingTimeout)
     emit('loading', false)
     emit('error', 'Error al procesar el archivo 3D. Verifica que el formato sea correcto.')
@@ -556,6 +669,8 @@ const loadFile = async (file: File) => {
   reader.onerror = () => failLoad(reader.error)
   reader.onload = () => {
     if (isUnmounted || !scene) return
+    // Se agotó el tiempo de espera para esta carga: descartar el resultado tardío
+    if (loadingKey.value !== key) return
     try {
       let geometry: any
       if (isStl) {
@@ -579,9 +694,7 @@ const loadFile = async (file: File) => {
 
       if (!geometry?.attributes?.position?.count) throw new Error('Empty geometry')
 
-      // Solo se descarta el modelo anterior cuando el nuevo se parseó correctamente
-      clearCurrentModel()
-      processGeometry(geometry, file)
+      processGeometry(geometry, file, key)
     } catch (err) {
       failLoad(err)
     }
@@ -607,7 +720,7 @@ const loadFile = async (file: File) => {
 
         <span class="mx-1 h-6 w-px shrink-0 bg-line" aria-hidden="true"></span>
 
-        <button type="button" class="shrink-0 h-9 px-3 inline-flex items-center gap-1.5 rounded-[var(--radius-control)] text-sm font-medium text-ink hover:bg-surface-2 transition-colors" title="Apoyar la pieza sobre su cara más plana" @click="autoOrient">
+        <button type="button" class="shrink-0 h-9 px-3 inline-flex items-center gap-1.5 rounded-[var(--radius-control)] text-sm font-medium text-ink hover:bg-surface-2 transition-colors" title="Apoyar la pieza sobre su cara más plana" @click="autoOrient()">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7m14-8l-7 7-7-7" /></svg>
           Aplanar
         </button>

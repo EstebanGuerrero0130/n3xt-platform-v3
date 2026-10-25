@@ -1,5 +1,10 @@
+<script lang="ts">
+// Compartido entre instancias (cada vista monta su propia navbar)
+let lastIndicator: { x: number; w: number } | null = null
+</script>
+
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 
 // Dos nodos raíz (header + overlay móvil): evitamos warnings de atributos heredados
@@ -48,8 +53,47 @@ const onKeydown = (e: KeyboardEvent) => {
 
 const isAdmin = ref(false)
 
+// ─── Barra compacta al hacer scroll ───
+const scrolled = ref(false)
+let scrollRaf = 0
+const onScroll = () => {
+  if (scrollRaf) return
+  scrollRaf = requestAnimationFrame(() => {
+    scrollRaf = 0
+    scrolled.value = window.scrollY > 12
+  })
+}
+
+// ─── Indicador de pestaña activa que se desliza entre enlaces ───
+// La navbar se monta de nuevo en cada vista: guardamos la última posición a
+// nivel de módulo para que el indicador salga del enlace anterior y se deslice.
+const navRef = ref<HTMLElement | null>(null)
+const indicator = ref({ x: 0, w: 0, visible: false, animate: false })
+const updateIndicator = (animate = true) => {
+  const nav = navRef.value
+  const el = nav?.querySelector<HTMLElement>('[aria-current="page"]')
+  if (!nav || !el || el.offsetWidth === 0) {
+    indicator.value = { ...indicator.value, visible: false }
+    return
+  }
+  const pad = 12 // igual al px-3 de los enlaces
+  const next = { x: el.offsetLeft + pad, w: Math.max(el.offsetWidth - pad * 2, 0) }
+  indicator.value = { ...next, visible: true, animate }
+  lastIndicator = next
+}
+const onResize = () => updateIndicator(false)
+
+watch(currentTab, () => nextTick(() => updateIndicator(true)))
+
 onMounted(async () => {
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('scroll', onScroll, { passive: true })
+  window.addEventListener('resize', onResize, { passive: true })
+  scrolled.value = window.scrollY > 12
+  // Arranca donde estaba el indicador en la vista anterior y se desliza al actual
+  if (lastIndicator) indicator.value = { ...lastIndicator, visible: true, animate: false }
+  requestAnimationFrame(() => requestAnimationFrame(() => updateIndicator(!!lastIndicator)))
+  document.fonts?.ready.then(() => updateIndicator(false)).catch(() => {})
   try {
     const { api } = await import('../services/api')
     const auth = await api.checkAuth()
@@ -61,19 +105,22 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('scroll', onScroll)
+  window.removeEventListener('resize', onResize)
+  if (scrollRaf) cancelAnimationFrame(scrollRaf)
   document.body.classList.remove('overflow-hidden')
 })
 </script>
 
 <template>
-  <header v-bind="$attrs" role="banner" class="glass-panel !border-x-0 !border-t-0 sticky top-0 w-full z-[1000] transition-colors duration-500">
+  <header v-bind="$attrs" role="banner" :class="['app-navbar sticky top-0 w-full z-[1000]', { 'is-scrolled': scrolled }]">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
-      <router-link to="/" class="flex items-baseline gap-2 shrink-0" aria-label="N3XT 3D, ir al inicio">
+      <router-link to="/" class="navbar-brand flex items-baseline gap-2 shrink-0" aria-label="N3XT 3D, ir al inicio">
         <span class="font-display text-xl font-extrabold tracking-tight text-ink [font-stretch:118%]">N3XT<span class="text-brand">3D</span></span>
-        <span v-if="subtext" class="hidden lg:inline text-xs text-muted">{{ subtext }}</span>
+        <span v-if="subtext" class="navbar-subtext hidden lg:inline text-xs text-muted">{{ subtext }}</span>
       </router-link>
 
-      <nav role="navigation" aria-label="Navegación principal" class="hidden md:flex items-center gap-1 h-full">
+      <nav ref="navRef" role="navigation" aria-label="Navegación principal" class="relative hidden md:flex items-center gap-1 h-full">
         <router-link
           v-for="link in navLinks"
           :key="link.tab"
@@ -81,11 +128,15 @@ onUnmounted(() => {
           :aria-current="currentTab === link.tab ? 'page' : undefined"
           :class="[
             'relative h-full inline-flex items-center px-3 text-sm font-medium transition-colors',
-            currentTab === link.tab
-              ? 'text-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-primary'
-              : 'text-muted hover:text-ink'
+            currentTab === link.tab ? 'text-ink' : 'text-muted hover:text-ink'
           ]"
         >{{ link.label }}</router-link>
+        <span
+          class="nav-indicator"
+          :class="{ 'is-visible': indicator.visible, 'is-animated': indicator.animate }"
+          :style="{ transform: `translateX(${indicator.x}px) scaleX(${indicator.w})` }"
+          aria-hidden="true"
+        ></span>
       </nav>
 
       <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="hidden md:inline-flex btn-secondary btn-sm">
@@ -133,3 +184,53 @@ onUnmounted(() => {
     </nav>
   </transition>
 </template>
+
+<style scoped>
+/* Fondo/borde/sombra aparecen al hacer scroll. La altura no cambia (sin saltos
+   de layout); la "compactación" es visual: marca un poco más pequeña. */
+.app-navbar {
+  border-bottom: 1px solid transparent;
+  background-color: color-mix(in srgb, var(--bg-main) 72%, transparent);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  transition:
+    background-color 0.35s var(--ease-premium),
+    border-color 0.35s var(--ease-premium),
+    box-shadow 0.35s var(--ease-premium);
+}
+.app-navbar.is-scrolled {
+  background-color: var(--glass-bg);
+  border-bottom-color: var(--border-main);
+  box-shadow: 0 1px 0 var(--card-inset) inset, 0 10px 30px -18px rgba(0, 0, 0, 0.35);
+}
+.navbar-brand {
+  transform-origin: left center;
+  transition: transform 0.35s var(--ease-premium);
+}
+.is-scrolled .navbar-brand {
+  transform: scale(0.94);
+}
+
+/* Indicador: 1px de ancho escalado (solo transform → 60fps) */
+.nav-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  transform-origin: left center;
+  opacity: 0;
+  pointer-events: none;
+}
+.dark .nav-indicator {
+  background: var(--brand-text);
+}
+.nav-indicator.is-visible {
+  opacity: 1;
+}
+.nav-indicator.is-animated {
+  transition: transform 0.45s var(--ease-premium), opacity 0.2s ease;
+}
+</style>

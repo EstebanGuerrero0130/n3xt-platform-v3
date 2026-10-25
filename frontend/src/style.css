@@ -62,8 +62,32 @@
   --ease-elastic: cubic-bezier(0.68, -0.6, 0.32, 1.6);
   --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
   --ease-in-out-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Curva única para el movimiento "premium": arranque decidido, llegada suave */
+  --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
   --transition-main: 0.4s var(--ease-out-expo);
   --transition-fast: 0.2s var(--ease-out-expo);
+
+  /* Superficies premium: borde con degradado vertical + highlight interior + sombra en capas */
+  --edge-top: #dfe6e0;
+  --edge-bottom: #c9d3cc;
+  --card-inset: rgba(255, 255, 255, 0.9);
+  --shadow-card: 0 1px 2px rgba(16, 24, 20, 0.04), 0 3px 10px -4px rgba(16, 24, 20, 0.06);
+  --shadow-card-hover: 0 2px 4px rgba(16, 24, 20, 0.04), 0 22px 40px -18px rgba(16, 40, 24, 0.22);
+  --spot-color: rgba(8, 135, 43, 0.07);
+  --spot-edge: rgba(8, 135, 43, 0.55);
+
+  /* Botones */
+  --btn-primary-top: #0c9832;
+  --btn-primary-mid: #08872b;
+  --btn-primary-bottom: #077725;
+  --btn-primary-edge: #05621e;
+  --btn-primary-glow: rgba(8, 135, 43, 0.32);
+  --btn-primary-glow-hover: rgba(8, 135, 43, 0.42);
+  --btn-surface-top: #ffffff;
+  --btn-surface-bottom: #f5f8f5;
+  --btn-inset: rgba(255, 255, 255, 0.95);
+  --btn-shadow: 0 1px 2px rgba(16, 24, 20, 0.06);
+  --btn-shadow-hover: 0 1px 2px rgba(16, 24, 20, 0.05), 0 8px 18px -10px rgba(16, 40, 24, 0.28);
 
   color-scheme: light;
 }
@@ -79,6 +103,22 @@
   --resin: #f0a63c;
   --glass-bg: rgba(14, 21, 18, 0.78);
   --glass-border: rgba(238, 242, 239, 0.08);
+
+  --edge-top: #34443d;
+  --edge-bottom: #24312b;
+  --card-inset: rgba(255, 255, 255, 0.035);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.28), 0 4px 14px -6px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.3), 0 26px 48px -20px rgba(0, 0, 0, 0.75);
+  --spot-color: rgba(63, 207, 114, 0.08);
+  --spot-edge: rgba(63, 207, 114, 0.6);
+
+  --btn-primary-glow: rgba(16, 163, 58, 0.28);
+  --btn-primary-glow-hover: rgba(16, 163, 58, 0.42);
+  --btn-surface-top: #1a2520;
+  --btn-surface-bottom: #141d19;
+  --btn-inset: rgba(255, 255, 255, 0.05);
+  --btn-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --btn-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 22px -12px rgba(0, 0, 0, 0.7);
 
   color-scheme: dark;
 }
@@ -148,11 +188,51 @@ p {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .reveal {
+  .reveal,
+  [data-reveal] {
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
     visibility: visible !important;
   }
+}
+
+/* ─── v-reveal (src/directives/reveal.ts) ───
+   El estado oculto solo existe si la directiva lo "arma" (hay IO y se permite
+   movimiento). Sin JS o con movimiento reducido, todo está visible. */
+[data-reveal^="armed"] {
+  opacity: 0;
+  transform: translate3d(0, var(--reveal-y, 20px), 0);
+}
+[data-reveal="armed-blur"] {
+  filter: blur(6px);
+}
+[data-reveal="in"] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  transition:
+    opacity 0.7s var(--ease-premium) var(--reveal-delay, 0ms),
+    transform 0.9s var(--ease-premium) var(--reveal-delay, 0ms),
+    filter 0.7s var(--ease-premium) var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+/* ─── Lenis (src/composables/useSmoothScroll.ts) ───
+   Subconjunto de lenis.css; al detenerse usa hidden (no clip) para conservar
+   la posición de scroll bajo modales. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+html.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
 }
 
 /* Textura de capas: líneas finas horizontales, como las capas de una impresión FDM */
@@ -276,20 +356,18 @@ p {
   animation-fill-mode: both;
 }
 
+/* Legado (useRevealAnim): ya no oculta con visibility — antes, las vistas que
+   añadían .revealed (y no .visible) dejaban la sección invisible para siempre. */
 .reveal {
-  opacity: 0;
-  transform: translateY(40px) scale(0.95);
   transition:
-    opacity 0.8s var(--ease-out-expo),
-    transform 1s var(--ease-out-expo);
-  visibility: hidden;
-  will-change: transform, opacity;
+    opacity 0.7s var(--ease-premium),
+    transform 0.9s var(--ease-premium);
 }
 
-.reveal.visible {
+.reveal.visible,
+.reveal.revealed {
   opacity: 1;
-  transform: translateY(0) scale(1);
-  visibility: visible;
+  transform: none;
 }
 
 .fade-in {
@@ -327,12 +405,15 @@ p {
 @layer components {
 /* ─── Sistema de botones ───
    En @layer components para que utilidades como hidden/md:inline-flex/w-full
-   puedan ajustarlos. Variantes: .btn-lg, .btn-sm */
+   puedan ajustarlos. Variantes: .btn-lg, .btn-sm.
+   Movimiento: solo transform/opacity/filter/box-shadow, 200ms, --ease-premium. */
 .btn-primary,
 .btn-secondary,
 .btn-outlined,
 .btn-danger,
 .btn-pdf {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -349,47 +430,113 @@ p {
   text-transform: none;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  -webkit-user-select: none;
+  user-select: none;
+  transition:
+    transform 0.2s var(--ease-premium),
+    box-shadow 0.2s var(--ease-premium),
+    filter 0.2s var(--ease-premium),
+    background-color 0.2s var(--ease-premium),
+    border-color 0.2s var(--ease-premium),
+    color 0.2s var(--ease-premium);
 }
 
 .btn-lg { min-height: 52px; padding: 0.875rem 1.75rem; font-size: 1rem; }
 .btn-sm { min-height: 36px; padding: 0.375rem 0.875rem; font-size: 0.875rem; }
 
+/* Primario: degradado verde sutil (más claro arriba), borde más oscuro,
+   highlight interior y sombra coloreada que crece al hover. */
 .btn-primary {
-  background-color: var(--color-primary);
+  overflow: hidden;
   color: #ffffff;
+  background-color: var(--btn-primary-mid);
+  background-image: linear-gradient(180deg, var(--btn-primary-top) 0%, var(--btn-primary-mid) 55%, var(--btn-primary-bottom) 100%);
+  border-color: var(--btn-primary-edge);
+  text-shadow: 0 1px 0 rgba(0, 40, 12, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 2px rgba(4, 50, 18, 0.25),
+    0 4px 12px -4px var(--btn-primary-glow);
 }
-.btn-primary:hover { background-color: var(--color-primary-dark); }
+/* Brillo diagonal: cruza UNA vez al entrar el cursor; al salir vuelve sin transición (oculto) */
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.22) 48%, rgba(255, 255, 255, 0.05) 56%, transparent 70%);
+  transform: translateX(-110%);
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    filter: brightness(1.06) saturate(1.04);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 1px 2px rgba(4, 50, 18, 0.25),
+      0 10px 24px -8px var(--btn-primary-glow-hover);
+  }
+  .btn-primary:hover::after {
+    transform: translateX(110%);
+    transition: transform 0.75s var(--ease-premium);
+  }
+}
 
+/* Secundario: superficie con highlight interior y borde fino */
 .btn-secondary,
 .btn-pdf {
   background-color: var(--bg-surface);
+  background-image: linear-gradient(180deg, var(--btn-surface-top), var(--btn-surface-bottom));
   color: var(--text-main);
   border-color: var(--border-main);
+  box-shadow: inset 0 1px 0 var(--btn-inset), var(--btn-shadow);
 }
-.btn-secondary:hover,
-.btn-pdf:hover {
-  background-color: var(--bg-surface-2);
+@media (hover: hover) {
+  .btn-secondary:hover,
+  .btn-pdf:hover {
+    border-color: color-mix(in srgb, var(--brand-text) 45%, var(--border-main));
+    box-shadow: inset 0 1px 0 var(--btn-inset), var(--btn-shadow-hover);
+    transform: translateY(-1px);
+  }
 }
 
+/* Contorno: transparente; al hover gana tinte de marca */
 .btn-outlined {
   background-color: transparent;
   color: var(--text-main);
   border-color: var(--border-main);
 }
-.btn-outlined:hover {
-  border-color: var(--brand-text);
-  color: var(--brand-text);
+@media (hover: hover) {
+  .btn-outlined:hover {
+    border-color: var(--brand-text);
+    color: var(--brand-text);
+    background-color: color-mix(in srgb, var(--brand-text) 7%, transparent);
+  }
 }
 
 .btn-danger {
   background-color: #c9253f;
   color: #ffffff;
+  border-color: #a91d34;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .btn-danger:hover { background-color: #a91d34; }
 
+/* Press: se hunde un poco, respuesta inmediata */
 :is(.btn-primary, .btn-secondary, .btn-outlined, .btn-danger, .btn-pdf):active {
-  transform: translateY(1px);
+  transform: scale(0.98);
+  transition-duration: 0.08s;
+}
+
+/* Iconos de flecha dentro del botón/enlace: se desplazan 2px al hover */
+.btn-arrow {
+  flex-shrink: 0;
+  transition: transform 0.2s var(--ease-premium);
+}
+@media (hover: hover) {
+  :is(.btn-primary, .btn-secondary, .btn-outlined, .link-arrow, .surface-card-interactive):hover .btn-arrow {
+    transform: translateX(2px);
+  }
 }
 
 :is(.btn-primary, .btn-secondary, .btn-outlined, .btn-danger, .btn-pdf):disabled,
@@ -397,6 +544,103 @@ p {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+  filter: none;
+}
+.btn-primary:disabled::after,
+.btn-primary[aria-disabled="true"]::after {
+  display: none;
+}
+
+/* ─── Tarjetas premium ───
+   .surface-card: estática. .surface-card-interactive: clicable (hover con
+   elevación, borde con tinte de marca, spotlight que sigue al cursor vía
+   --mx/--my de v-spotlight y zoom lento de .card-media img).
+   El fondo se puede cambiar con [--card-bg:var(--bg-main)]. */
+.surface-card,
+.surface-card-interactive {
+  --card-bg: var(--bg-surface);
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+    linear-gradient(180deg, var(--edge-top), var(--edge-bottom)) border-box;
+  box-shadow: inset 0 1px 0 var(--card-inset), var(--shadow-card);
+}
+
+/* Contenedor de imagen: recorta la imagen con el radio interior de la tarjeta */
+.card-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
+}
+.card-media img {
+  transition: transform 1.1s var(--ease-premium), opacity 0.5s ease;
+}
+
+.surface-card-interactive {
+  isolation: isolate;
+  transition:
+    transform 0.45s var(--ease-premium),
+    box-shadow 0.45s var(--ease-premium);
+}
+.surface-card-interactive::before,
+.surface-card-interactive::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-premium);
+}
+/* Spotlight radial sobre la superficie */
+.surface-card-interactive::before {
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), var(--spot-color), transparent 65%);
+}
+/* Borde con tinte de marca, más intenso cerca del cursor */
+.surface-card-interactive::after {
+  inset: -1px;
+  z-index: 2;
+  padding: 1px;
+  background:
+    radial-gradient(240px circle at var(--mx, 50%) var(--my, 0%), var(--spot-edge), transparent 70%),
+    linear-gradient(color-mix(in srgb, var(--brand-text) 30%, transparent), color-mix(in srgb, var(--brand-text) 30%, transparent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+@media (hover: hover) {
+  .surface-card-interactive:hover {
+    transform: translateY(-3px);
+    box-shadow: inset 0 1px 0 var(--card-inset), var(--shadow-card-hover);
+  }
+  .surface-card-interactive:hover::before,
+  .surface-card-interactive:hover::after {
+    opacity: 1;
+  }
+  .surface-card-interactive:hover .card-media img {
+    transform: scale(1.04);
+  }
+}
+.surface-card-interactive:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: inset 0 1px 0 var(--card-inset), var(--shadow-card-hover);
+}
+.surface-card-interactive:focus-visible::after {
+  opacity: 1;
+}
+.surface-card-interactive:active {
+  transform: translateY(-1px) scale(0.995);
+  transition-duration: 0.12s;
+}
+/* Tarjeta-opción seleccionable (aria-pressed): el borde de marca queda fijo */
+.surface-card-interactive[aria-pressed="true"]::after {
+  opacity: 1;
+  background: linear-gradient(var(--color-primary), var(--color-primary));
 }
 
 /* Glass: panel translúcido para barras fijas (navbar, widget) */

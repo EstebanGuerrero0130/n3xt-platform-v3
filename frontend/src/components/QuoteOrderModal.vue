@@ -6,8 +6,10 @@ import { useTurnstile } from '../composables/useTurnstile'
 interface QuoteModelSummary {
   id: number
   name: string
-  hasModel: boolean
+  qty: number
   dimensions: { x: number; y: number; z: number }
+  /** Total estimado (IVA incluido) atribuido a este modelo */
+  total: number
 }
 interface MaterialOption { id: string; name: string }
 
@@ -22,9 +24,8 @@ const props = defineProps({
   materials: { type: Array as PropType<MaterialOption[]>, default: () => [] },
   selectedTechnology: { type: String, default: 'FDM' },
   selectedMaterial: { type: String, default: '' },
-  qty: { type: Number, default: 1 },
-  breakdown: { type: Object as PropType<{ total: number; discount: number; weight: number; duration: number }>, default: () => ({ total: 0, discount: 0, weight: 0, duration: 0 }) },
-  activeCoupon: { type: Object as PropType<{ label: string; discount: number } | null>, default: null },
+  breakdown: { type: Object as PropType<{ pieces?: number; total: number; discount: number; weight: number; duration: number }>, default: () => ({ pieces: 0, total: 0, discount: 0, weight: 0, duration: 0 }) },
+  activeCoupon: { type: Object as PropType<{ code: string; label: string; discount_pct: number } | null>, default: null },
   isSubmitting: { type: Boolean, default: false },
   notification: { type: Object, default: () => ({ show: false, message: '', type: 'info' }) }
 })
@@ -113,6 +114,10 @@ const getMaterialName = (id: string) => {
   const mat = props.materials.find(m => m.id === id)
   return mat ? mat.name : id
 }
+
+const pieces = () => props.breakdown.pieces || props.models.reduce((s, m) => s + (m.qty || 1), 0)
+const money = (n: number) => '$' + Math.round(n || 0).toLocaleString('es-CO')
+const dims = (d: { x: number; y: number; z: number }) => `${d.x.toFixed(0)} × ${d.y.toFixed(0)} × ${d.z.toFixed(0)} mm`
 
 const formatTime = (h: number) => {
   if (!h || h < 0) return '0m';
@@ -246,13 +251,19 @@ const formatTime = (h: number) => {
               <div><dt class="text-muted">Tecnología</dt><dd class="font-medium text-ink">{{ selectedTechnology === 'SLA' ? 'SLA (resina)' : 'FDM (filamento)' }}</dd></div>
               <div><dt class="text-muted">Material</dt><dd class="font-medium text-ink">{{ getMaterialName(selectedMaterial) }}</dd></div>
               <div><dt class="text-muted">Modelos</dt><dd class="font-medium text-ink tabular-nums">{{ models.length }} {{ models.length === 1 ? 'modelo' : 'modelos' }}</dd></div>
-              <div><dt class="text-muted">Cantidad</dt><dd class="font-medium text-ink tabular-nums">{{ qty }} {{ qty === 1 ? 'unidad' : 'unidades' }}</dd></div>
+              <div><dt class="text-muted">Piezas en total</dt><dd class="font-medium text-ink tabular-nums">{{ pieces() }} {{ pieces() === 1 ? 'unidad' : 'unidades' }}</dd></div>
             </dl>
 
-            <ul class="p-4 space-y-1.5 text-sm">
+            <ul class="p-4 space-y-3 text-sm" aria-label="Modelos del pedido">
               <li v-for="m in models" :key="m.id" class="flex justify-between gap-4">
-                <span class="text-ink">{{ m.name }}</span>
-                <span class="tabular-nums" :class="m.hasModel ? 'text-ink' : 'text-muted'">{{ m.hasModel ? m.dimensions.x.toFixed(0) + ' × ' + m.dimensions.y.toFixed(0) + ' × ' + m.dimensions.z.toFixed(0) + ' mm' : 'Sin archivo' }}</span>
+                <div class="min-w-0">
+                  <p class="font-medium text-ink truncate" :title="m.name">{{ m.name }}</p>
+                  <p class="text-muted tabular-nums">{{ m.qty }} {{ m.qty === 1 ? 'unidad' : 'unidades' }}, {{ dims(m.dimensions) }}</p>
+                </div>
+                <div class="shrink-0 text-right">
+                  <p class="tabular-nums font-medium text-ink">{{ money(m.total) }}</p>
+                  <p class="text-xs text-muted">estimado</p>
+                </div>
               </li>
             </ul>
 
@@ -264,12 +275,12 @@ const formatTime = (h: number) => {
             <dl class="p-4 space-y-2 text-sm">
               <div class="flex justify-between gap-4"><dt class="text-muted">Peso estimado</dt><dd class="tabular-nums text-ink">{{ (breakdown.weight || 0).toFixed(1) }} g</dd></div>
               <div class="flex justify-between gap-4"><dt class="text-muted">Tiempo estimado</dt><dd class="tabular-nums text-ink">{{ formatTime(breakdown.duration || 0) }}</dd></div>
-              <div v-if="activeCoupon" class="flex justify-between gap-4"><dt class="text-resin">Descuento ({{ activeCoupon.label }})</dt><dd class="tabular-nums text-resin">−${{ Math.round(breakdown.discount).toLocaleString('es-CO') }}</dd></div>
+              <div v-if="activeCoupon" class="flex justify-between gap-4"><dt class="text-resin">Descuento ({{ activeCoupon.label }})</dt><dd class="tabular-nums text-resin">−{{ money(breakdown.discount) }}</dd></div>
               <div class="flex items-baseline justify-between gap-4 pt-2 border-t border-line">
                 <dt class="font-medium text-ink">Total estimado</dt>
-                <dd class="text-2xl font-extrabold tracking-tight tabular-nums text-resin">${{ Math.round(breakdown.total).toLocaleString('es-CO') }}</dd>
+                <dd class="text-2xl font-extrabold tracking-tight tabular-nums text-resin">{{ money(breakdown.total) }}</dd>
               </div>
-              <p class="text-xs text-muted">Precio estimado con IVA, sujeto a revisión del taller.</p>
+              <p class="text-sm text-muted">Precio estimado con IVA. El precio definitivo lo calcula y confirma el taller al recibir tu pedido.</p>
             </dl>
           </div>
 

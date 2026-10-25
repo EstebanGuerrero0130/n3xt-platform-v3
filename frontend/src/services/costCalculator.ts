@@ -180,3 +180,116 @@ export function calcOrderDetailBreakdown(order: Record<string, any>, settings: R
     profit_margin_pct: Math.round(profitMarginPct * 10) / 10,
   }
 }
+
+export interface QuoteModelInput {
+  /** Identificador del modelo (para el desglose por modelo) */
+  id: number | string
+  /** Peso de UNA pieza en gramos */
+  weightG: number
+  /** Horas de impresión + preparación de UNA pieza */
+  hours: number
+  /** Cantidad de piezas de este modelo (entero >= 1) */
+  qty: number
+}
+
+export interface QuoteInput {
+  models: QuoteModelInput[]
+  costPerKg: number
+  infra?: ProductionInput['infra']
+  prep?: ProductionInput['prep']
+  oper?: PricingInput['oper']
+  margin?: PricingInput['margin']
+  /** Costo total de extras/consumibles del pedido */
+  extrasCost?: number
+  /** Descuento del cupón en porcentaje (10 = 10 %) */
+  discountPct?: number
+}
+
+export interface QuoteResult {
+  pieces: number
+  weight: number
+  duration: number
+  matCost: number
+  infraCost: number
+  laborCost: number
+  utilityCost: number
+  marginCost: number
+  discount: number
+  subtotal: number
+  iva: number
+  ivaPct: number
+  total: number
+  /** Total estimado (IVA incluido) atribuido a cada modelo; suma exactamente `total`. */
+  perModel: { id: number | string; total: number }[]
+}
+
+/**
+ * Precio estimado de un pedido con varios modelos (cada uno con su cantidad).
+ * Con un único modelo da exactamente el mismo resultado que el cálculo histórico
+ * del cotizador (peso × qty, márgenes sobre el costo unitario y luego × qty).
+ * Es solo un estimado: el precio definitivo lo calcula el servidor.
+ */
+export function calcQuoteEstimate(input: QuoteInput): QuoteResult {
+  const models = input.models.map(m => ({ ...m, qty: Math.max(1, Math.floor(Number(m.qty)) || 1) }))
+  const pieces = models.reduce((s, m) => s + m.qty, 0)
+  const weight = models.reduce((s, m) => s + (Number(m.weightG) || 0) * m.qty, 0)
+  const duration = models.reduce((s, m) => s + (Number(m.hours) || 0) * m.qty, 0)
+  const extrasCost = input.extrasCost ?? 0
+
+  const prod = calcProductionCost({
+    weightG: weight,
+    totalHours: duration,
+    costPerKg: input.costPerKg,
+    infra: input.infra,
+    prep: input.prep,
+    extrasCost,
+  })
+
+  const unitCost = pieces > 0 ? prod.total / pieces : 0
+  const perUnit = calcFinalPrice({ productionCost: unitCost, oper: input.oper, margin: input.margin })
+  const rawSubtotal = perUnit.subtotal * pieces
+
+  const discountAmount = input.discountPct ? rawSubtotal * (input.discountPct / 100) : 0
+  const subtotal = Math.round(rawSubtotal - discountAmount)
+  const ivaPct = input.margin?.iva ?? 19
+  const iva = Math.round(subtotal * (ivaPct / 100))
+  const total = subtotal + iva
+
+  // Reparto por modelo según su costo variable (material + máquina); el último absorbe el redondeo
+  const variable = models.map(m => {
+    const p = calcProductionCost({
+      weightG: (Number(m.weightG) || 0) * m.qty,
+      totalHours: (Number(m.hours) || 0) * m.qty,
+      costPerKg: input.costPerKg,
+      infra: { ...input.infra, etiquetas: 0 },
+      prep: input.prep,
+    })
+    return p.total
+  })
+  const variableSum = variable.reduce((s, v) => s + v, 0)
+  let assigned = 0
+  const perModel = models.map((m, i) => {
+    if (i === models.length - 1) return { id: m.id, total: total - assigned }
+    const share = variableSum > 0 ? variable[i] / variableSum : (pieces > 0 ? m.qty / pieces : 0)
+    const t = Math.round(total * share)
+    assigned += t
+    return { id: m.id, total: t }
+  })
+
+  return {
+    pieces,
+    weight,
+    duration,
+    matCost: prod.material,
+    infraCost: prod.luz + prod.depr + prod.mant,
+    laborCost: prod.labor,
+    utilityCost: extrasCost,
+    marginCost: (perUnit.logistics + perUnit.marketing + perUnit.failures + perUnit.profit) * pieces,
+    discount: Math.round(discountAmount),
+    subtotal,
+    iva,
+    ivaPct,
+    total,
+    perModel,
+  }
+}

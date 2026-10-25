@@ -11,6 +11,7 @@ import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { useSplitButton } from '../composables/useSplitButton'
 import { usePageMeta } from '../composables/usePageMeta'
+import { prefersReducedMotion } from '../composables/useMotion'
 
 const { applySplitTitle } = useSplitTitle()
 useSplitButton()
@@ -21,19 +22,69 @@ usePageMeta({
   image: '/assets/n3xt_og_home.png',
 })
 
-// Única entrada orquestada de la página: los bloques del hero aparecen en secuencia.
+// ─── Entrada firma del hero: "capa por capa" ───
+// El wordmark se construye por franjas horizontales de abajo hacia arriba, como
+// una impresora depositando capas; luego entran titular, texto, CTAs e imagen.
+// Solo transform/opacity/clip-path. Con reduced-motion no se arma nada.
 const heroRef = ref<HTMLElement | null>(null)
+const nozzleRef = ref<HTMLElement | null>(null)
+const WORDMARK_LAYERS = 9
+const layerClip = (i: number) => {
+  const step = 100 / WORDMARK_LAYERS
+  return `inset(${((i - 1) * step).toFixed(3)}% 0 ${(100 - i * step).toFixed(3)}% 0)`
+}
+const heroMotion = !prefersReducedMotion()
+// Mientras se construye, el wordmark real queda transparente (sigue en el árbol
+// de accesibilidad) y se ven las capas superpuestas (aria-hidden).
+const buildingWordmark = ref(heroMotion)
+let heroTl: gsap.core.Timeline | null = null
+let heroSafety: ReturnType<typeof setTimeout> | null = null
+
+const finishHero = () => {
+  buildingWordmark.value = false
+  if (heroSafety) clearTimeout(heroSafety)
+  heroSafety = null
+}
 
 onMounted(() => {
-  if (!heroRef.value) return
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-  gsap.from(heroRef.value.querySelectorAll('[data-hero-item]'), {
-    opacity: 0,
-    y: 24,
-    duration: 0.7,
-    stagger: 0.08,
-    ease: 'power3.out',
-  })
+  const root = heroRef.value
+  if (!root || !heroMotion) return finishHero()
+
+  const layers = Array.from(root.querySelectorAll<HTMLElement>('[data-wm-layer]')).reverse() // de abajo hacia arriba
+  const items = root.querySelectorAll<HTMLElement>('[data-hero-item]')
+  const media = root.querySelector<HTMLElement>('[data-hero-media]')
+  const mediaImg = media?.querySelector('img')
+  const nozzle = nozzleRef.value
+  const layerStep = 0.075
+  const buildStart = 0.15
+  const buildEnd = buildStart + layerStep * WORDMARK_LAYERS
+
+  heroTl = gsap.timeline({ defaults: { ease: 'power3.out' }, onComplete: finishHero })
+  heroTl
+    .from(root.querySelectorAll('[data-hero-intro]'), { opacity: 0, y: 10, duration: 0.6 }, 0)
+    .fromTo(layers, { opacity: 0, y: -12 }, { opacity: 1, y: 0, duration: 0.55, stagger: layerStep }, buildStart)
+  if (nozzle) {
+    heroTl
+      .fromTo(nozzle, { opacity: 0, y: 0 }, { opacity: 1, duration: 0.15, ease: 'none' }, buildStart - 0.05)
+      .to(nozzle, { y: () => -(nozzle.parentElement?.offsetHeight ?? 0), duration: buildEnd - buildStart, ease: 'none' }, buildStart)
+      .to(nozzle, { opacity: 0, duration: 0.35, ease: 'power2.out' }, buildEnd - 0.05)
+  }
+  heroTl.from(items, { opacity: 0, y: 20, duration: 0.8, stagger: 0.09 }, buildEnd - 0.2)
+  if (media) {
+    heroTl.fromTo(media,
+      { clipPath: 'inset(100% 0% 0% 0% round 22px)' },
+      { clipPath: 'inset(0% 0% 0% 0% round 22px)', duration: 1.1, ease: 'power4.out', clearProps: 'clipPath' },
+      buildEnd - 0.35)
+    if (mediaImg) heroTl.fromTo(mediaImg, { scale: 1.08 }, { scale: 1, duration: 1.5, ease: 'power3.out', clearProps: 'transform' }, '<')
+  }
+  // Red de seguridad: pase lo que pase, el wordmark real queda visible
+  heroSafety = setTimeout(() => { heroTl?.progress(1); finishHero() }, 4000)
+})
+
+onUnmounted(() => {
+  heroTl?.kill()
+  heroTl = null
+  if (heroSafety) clearTimeout(heroSafety)
 })
 
 // --- TypeScript interfaces ---
@@ -248,26 +299,59 @@ onMounted(() => {
     <AppNavbar active-tab="home" subtext="Impresión 3D en Colombia" />
 
     <!-- Hero -->
-    <section class="relative isolate overflow-hidden border-b border-line">
-      <div class="technical-grid absolute inset-0 -z-10 pointer-events-none" aria-hidden="true"></div>
+    <section class="hero relative isolate overflow-hidden border-b border-line">
+      <div class="hero-grid technical-grid absolute inset-0 -z-10 pointer-events-none" aria-hidden="true"></div>
+      <div class="hero-glow absolute inset-0 -z-10 pointer-events-none" aria-hidden="true"></div>
 
-      <div ref="heroRef" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 md:pt-16 md:pb-20 lg:pt-20">
-        <div class="grid gap-10 lg:grid-cols-12 lg:gap-12 lg:items-center">
-          <div class="lg:col-span-7">
-            <h1 data-hero-item class="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight leading-[0.95] text-ink [font-stretch:125%]">
-              Tu idea, impresa capa por capa.
-            </h1>
-            <p data-hero-item class="mt-6 max-w-2xl text-lg md:text-xl leading-relaxed text-muted">
-              En N3XT 3D imprimimos en resina y filamento desde Colombia: figuras coleccionables, prototipos y piezas a medida, con acabado a mano.
+      <div ref="heroRef" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16 md:pt-14 md:pb-20 lg:pt-16 lg:pb-24">
+        <p data-hero-intro class="flex items-center gap-2.5 text-sm font-medium text-muted">
+          <span class="hero-layers" aria-hidden="true"><span></span><span></span><span></span></span>
+          Estudio de impresión 3D en Colombia
+        </p>
+
+        <h1 class="mt-5 md:mt-6">
+          <span class="relative block">
+            <span class="wordmark block" :class="{ 'opacity-0': buildingWordmark }">N3XT<span class="wordmark-accent"> 3D</span></span>
+            <span v-if="buildingWordmark" class="absolute inset-0" aria-hidden="true">
+              <span
+                v-for="i in WORDMARK_LAYERS"
+                :key="i"
+                data-wm-layer
+                class="wordmark absolute inset-0 block"
+                :style="{ clipPath: layerClip(i) }"
+              >N3XT<span class="wordmark-accent"> 3D</span></span>
+              <span ref="nozzleRef" class="wm-nozzle"></span>
+            </span>
+          </span>
+          <span data-hero-item class="mt-4 md:mt-6 block max-w-4xl text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.05] text-ink">
+            Tu idea, impresa capa por capa.
+          </span>
+        </h1>
+
+        <div class="mt-10 md:mt-12 grid gap-10 lg:grid-cols-12 lg:gap-12 lg:items-end">
+          <div class="lg:col-span-5">
+            <p data-hero-item class="max-w-xl text-lg md:text-xl leading-relaxed text-muted">
+              Imprimimos en resina y filamento figuras coleccionables, prototipos y piezas a medida, con acabado a mano.
             </p>
             <div data-hero-item class="mt-8 flex flex-col sm:flex-row gap-3">
-              <router-link to="/quote" class="btn-primary btn-lg">Cotizar mi pieza</router-link>
+              <router-link to="/quote" class="btn-primary btn-lg">
+                Cotizar mi pieza
+                <svg class="btn-arrow w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+              </router-link>
               <router-link to="/galeria" class="btn-secondary btn-lg">Ver trabajos</router-link>
             </div>
+
+            <!-- Cifras -->
+            <dl data-hero-item class="mt-10 pt-6 border-t border-line grid grid-cols-3 gap-4 sm:gap-6">
+              <div v-for="stat in highlights" :key="stat.label" class="flex flex-col-reverse">
+                <dt class="mt-1 text-sm text-muted">{{ stat.label }}</dt>
+                <dd class="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink tabular-nums [font-stretch:112%]">{{ stat.val }}</dd>
+              </div>
+            </dl>
           </div>
 
-          <div data-hero-item class="lg:col-span-5">
-            <div class="aspect-[4/3] lg:aspect-[4/5] overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface-2">
+          <div class="lg:col-span-7">
+            <div data-hero-media class="hero-media relative aspect-[4/3] sm:aspect-[16/10] overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface-2">
               <img
                 src="/assets/n3xt_industrial_maker_figures_1778542131405.webp"
                 alt="Figuras coleccionables de anime y videojuegos fabricadas por N3XT 3D"
@@ -279,14 +363,6 @@ onMounted(() => {
             </div>
           </div>
         </div>
-
-        <!-- Cifras -->
-        <dl class="mt-14 md:mt-16 pt-8 border-t border-line grid grid-cols-3 gap-6 max-w-3xl">
-          <div v-for="stat in highlights" :key="stat.label" class="flex flex-col-reverse">
-            <dt class="mt-1 text-sm text-muted">{{ stat.label }}</dt>
-            <dd class="text-3xl font-extrabold tracking-tight text-ink tabular-nums">{{ stat.val }}</dd>
-          </div>
-        </dl>
       </div>
     </section>
 
