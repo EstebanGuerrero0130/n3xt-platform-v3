@@ -52,7 +52,7 @@ class UnifiedAuthController extends Controller
             return $this->error('Este correo está reservado para el Taller Industrial. Usa el apartado de Administrador.', 403);
         }
 
-        $customer = RecurrentCustomer::where('email', $email)->first();
+        $customer = RecurrentCustomer::whereRaw('LOWER(email) = ?', [$email])->first();
         if ($customer && Hash::check($request->password, $customer->password)) {
             // Sanctum SPA: use session auth instead of tokens
             Auth::guard('customer')->login($customer);
@@ -77,9 +77,16 @@ class UnifiedAuthController extends Controller
     {
         $request->validate([
             'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:recurrent_customers,email',
-            'password' => 'required|confirmed|min:6',
+            'email'    => 'required|email|max:255',
+            'password' => 'required|confirmed|min:8',
+        ], [
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
+
+        // Unicidad sin distinguir mayúsculas (PostgreSQL compara con mayúsculas)
+        if (RecurrentCustomer::whereRaw('LOWER(email) = ?', [strtolower($request->email)])->exists()) {
+            return $this->error('Ya existe una cuenta con este correo. Inicia sesión.', 422);
+        }
 
         $customer = RecurrentCustomer::create([
             'name'     => $request->name,

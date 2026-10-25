@@ -20,7 +20,7 @@ class CustomerAuthController extends Controller
 
         $customer = RecurrentCustomer::create([
             'name' => $request->name,
-            'email' => $request->email,
+            'email' => strtolower($request->email),
             'password' => Hash::make($request->password),
         ]);
 
@@ -40,7 +40,7 @@ class CustomerAuthController extends Controller
             'password' => 'required',
         ]);
 
-        $customer = RecurrentCustomer::where('email', $request->email)->first();
+        $customer = RecurrentCustomer::whereRaw('LOWER(email) = ?', [strtolower($request->email)])->first();
 
         if (! $customer || ! Hash::check($request->password, $customer->password)) {
             throw ValidationException::withMessages([
@@ -72,8 +72,32 @@ class CustomerAuthController extends Controller
         $orders = \App\Models\Order::query()
             ->whereRaw('LOWER(customer_email) = ?', [$email])
             ->orderByDesc('created_at')
-            ->get(['id', 'job_name', 'status', 'technology', 'material_name', 'estimated_weight_g', 'total_price', 'is_paid', 'created_at'])
-            ->map(fn ($o) => $o->toArray() + ['project_name' => $o->job_name]);
+            ->get(['id', 'job_name', 'status', 'technology', 'material_name', 'qty', 'infill', 'dimensions_mm',
+                'original_filename', 'models', 'extra_items', 'extras_cost', 'estimated_weight_g', 'estimated_duration_h',
+                'total_price', 'is_paid', 'tracking_guide', 'tracking_carrier', 'created_at'])
+            ->map(function ($o) {
+                // Piezas sin rutas internas de almacenamiento (`path` es privado del taller)
+                $models = collect($o->models ?? [])->map(fn ($m) => [
+                    'name'          => $m['original_filename'] ?? null,
+                    'qty'           => $m['qty'] ?? 1,
+                    'dimensions_mm' => $m['dimensions_mm'] ?? null,
+                    'weight_g'      => $m['weight_g'] ?? null,
+                ])->values();
+                if ($models->isEmpty() && $o->original_filename) {
+                    $models = collect([['name' => $o->original_filename, 'qty' => $o->qty, 'dimensions_mm' => $o->dimensions_mm, 'weight_g' => $o->estimated_weight_g]]);
+                }
+                $extras = collect($o->extra_items ?? [])->map(fn ($e) => [
+                    'name' => $e['name'] ?? $e['id'] ?? 'Extra',
+                    'qty'  => $e['qty'] ?? 1,
+                ])->values();
+
+                return array_merge($o->only(['id', 'status', 'technology', 'material_name', 'qty', 'infill', 'estimated_weight_g',
+                    'estimated_duration_h', 'extras_cost', 'total_price', 'is_paid', 'tracking_guide', 'tracking_carrier', 'created_at']), [
+                    'project_name' => $o->job_name,
+                    'models'       => $models,
+                    'extras'       => $extras,
+                ]);
+            });
 
         return response()->json(['data' => $orders]);
     }

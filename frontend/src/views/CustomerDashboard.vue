@@ -22,6 +22,15 @@ interface CustomerOrder {
   total_price: number
   is_paid?: boolean
   created_at?: string
+  technology?: string | null
+  qty?: number | null
+  infill?: number | null
+  estimated_duration_h?: number | null
+  extras_cost?: number | null
+  tracking_guide?: string | null
+  tracking_carrier?: string | null
+  models?: { name: string | null; qty: number; dimensions_mm?: string | null; weight_g?: number | null }[]
+  extras?: { name: string; qty: number }[]
 }
 
 const customer = ref<{ id: number; name: string; email: string } | null>(null)
@@ -71,6 +80,15 @@ const doneCount = computed(() => orders.value.filter(o => o.status === 'complete
 const totalSpent = computed(() => orders.value
   .filter(o => o.status !== 'cancelled')
   .reduce((sum, o) => sum + Number(o.total_price || 0), 0))
+
+// Pedido desplegado (uno a la vez)
+const openId = ref<number | null>(null)
+const toggle = (id: number) => { openId.value = openId.value === id ? null : id }
+const hours = (h?: number | null) => {
+  if (!h) return ''
+  const total = Math.round(h * 60)
+  return total < 60 ? `${total} min` : `${Math.floor(total / 60)} h ${total % 60 ? (total % 60) + ' min' : ''}`.trim()
+}
 
 const money = (n: number) => '$' + Math.round(n).toLocaleString('es-CO')
 const orderDate = (iso?: string) => iso
@@ -156,8 +174,14 @@ const getStatusLabel = (status: string) => {
           </div>
 
           <ul v-else class="mt-6 space-y-3">
-            <li v-for="order in orders" :key="order.id">
-              <router-link :to="trackLink(order)" class="group flex flex-col sm:flex-row sm:items-center gap-4 p-5 bg-surface rounded-[var(--radius-card)] hover:bg-surface-2 transition-colors">
+            <li v-for="order in orders" :key="order.id" class="bg-surface rounded-[var(--radius-card)] overflow-hidden">
+              <button
+                type="button"
+                class="w-full text-left flex flex-col sm:flex-row sm:items-center gap-4 p-5 hover:bg-surface-2 transition-colors"
+                :aria-expanded="openId === order.id"
+                :aria-controls="`order-detail-${order.id}`"
+                @click="toggle(order.id)"
+              >
                 <div class="min-w-0 flex-1">
                   <p class="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span class="font-semibold text-ink truncate">{{ order.project_name || 'Pedido de impresión 3D' }}</span>
@@ -172,9 +196,44 @@ const getStatusLabel = (status: string) => {
                 <div class="flex items-center justify-between sm:justify-end gap-4 sm:gap-6">
                   <span class="inline-flex items-center h-8 px-3.5 rounded-full text-sm font-semibold" :class="getStatusClass(order.status)">{{ getStatusLabel(order.status) }}</span>
                   <span class="font-extrabold tabular-nums">{{ money(Number(order.total_price)) }}</span>
-                  <svg class="w-5 h-5 text-muted group-hover:text-ink group-hover:translate-x-0.5 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <svg class="w-5 h-5 text-muted transition-transform" :class="openId === order.id ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </div>
-              </router-link>
+              </button>
+
+              <!-- Detalle de la pieza -->
+              <div v-if="openId === order.id" :id="`order-detail-${order.id}`" class="px-5 pb-5">
+                <div v-if="order.models?.length" class="rounded-[var(--radius-control)] bg-canvas p-4">
+                  <p class="text-sm font-semibold mb-3">{{ order.models.length === 1 ? 'Pieza' : `Piezas (${order.models.length})` }}</p>
+                  <ul class="space-y-3">
+                    <li v-for="(m, mi) in order.models" :key="mi" class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <span class="min-w-0 font-medium break-all">{{ m.name || `Modelo ${mi + 1}` }} <span class="text-muted tabular-nums">× {{ m.qty }}</span></span>
+                      <span class="text-sm text-muted tabular-nums">
+                        <template v-if="m.dimensions_mm">{{ m.dimensions_mm }} mm</template>
+                        <template v-if="m.dimensions_mm && m.weight_g"> · </template>
+                        <template v-if="m.weight_g">{{ Math.round(m.weight_g) }} g</template>
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+
+                <dl class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 text-sm">
+                  <div v-if="order.technology"><dt class="text-muted">Tecnología</dt><dd class="mt-0.5 font-medium">{{ order.technology }}</dd></div>
+                  <div v-if="order.material_name"><dt class="text-muted">Material</dt><dd class="mt-0.5 font-medium">{{ order.material_name }}</dd></div>
+                  <div v-if="order.infill"><dt class="text-muted">Relleno</dt><dd class="mt-0.5 font-medium tabular-nums">{{ order.infill }} %</dd></div>
+                  <div v-if="order.qty"><dt class="text-muted">Unidades</dt><dd class="mt-0.5 font-medium tabular-nums">{{ order.qty }}</dd></div>
+                  <div v-if="order.estimated_weight_g"><dt class="text-muted">Peso estimado</dt><dd class="mt-0.5 font-medium tabular-nums">{{ Math.round(order.estimated_weight_g) }} g</dd></div>
+                  <div v-if="order.estimated_duration_h"><dt class="text-muted">Tiempo de impresión</dt><dd class="mt-0.5 font-medium tabular-nums">{{ hours(order.estimated_duration_h) }}</dd></div>
+                  <div><dt class="text-muted">Pago</dt><dd class="mt-0.5 font-medium" :class="order.is_paid ? 'text-success' : 'text-warning'">{{ order.is_paid ? 'Completo' : 'Pendiente' }}</dd></div>
+                  <div v-if="order.tracking_guide"><dt class="text-muted">Guía de envío</dt><dd class="mt-0.5 font-medium tabular-nums break-words">{{ order.tracking_carrier ? order.tracking_carrier + ' · ' : '' }}{{ order.tracking_guide }}</dd></div>
+                </dl>
+
+                <p v-if="order.extras?.length" class="mt-4 text-sm"><span class="text-muted">Extras:</span> {{ order.extras.map(e => e.qty > 1 ? `${e.name} × ${e.qty}` : e.name).join(', ') }}</p>
+
+                <router-link :to="trackLink(order)" class="mt-5 btn-outlined">
+                  Ver seguimiento
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </router-link>
+              </div>
             </li>
           </ul>
         </section>
