@@ -1,32 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 
+// Logos locales a 80 px de alto (antes se cargaba un PNG remoto de 9785 px: ~128 MB decodificado por copia)
 const brands = [
-  {
-    name: 'Bambu Lab',
-    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/BambuLab_logo.svg/1280px-BambuLab_logo.svg.png'
-  },
-  {
-    name: 'Creality',
-    url: 'https://upload.wikimedia.org/wikipedia/commons/6/6d/CREALITY_LOGO.png'
-  },
-  {
-    name: 'Flashforge',
-    url: 'https://simpleicons.org/icons/flashforge.svg'
-  },
-  {
-    name: 'Anycubic',
-    url: 'https://cdn.jsdelivr.net/npm/simple-icons@v14/icons/anycubic.svg'
-  },
-  {
-    name: 'Shopify',
-    url: 'https://cdn.shopify.com/s/files/1/0296/9026/5648/files/20210607104540_b3ea9d7e-d0d2-4e24-b42b-e5fe43c837ed.png?v=1623035698'
-  }
+  { name: 'Bambu Lab', url: '/assets/brands/equipos/bambu-lab.webp' },
+  { name: 'Creality', url: '/assets/brands/equipos/creality.webp' },
+  { name: 'Flashforge', url: '/assets/brands/equipos/flashforge.svg' },
+  { name: 'Anycubic', url: '/assets/brands/equipos/anycubic.svg' },
+  { name: 'Elegoo', url: '/assets/brands/equipos/elegoo.webp' },
 ]
 
 const props = withDefaults(defineProps<{ visible?: boolean }>(), { visible: true })
 
-interface TickerItem { id: string; name: string; url: string }
+interface TickerItem { id: string; name: string; url: string; copy: boolean }
 
 const tickerItems = computed<TickerItem[]>(() => {
   const items: TickerItem[] = []
@@ -35,12 +21,25 @@ const tickerItems = computed<TickerItem[]>(() => {
       items.push({
         id: `${i}-${idx}`,
         name: brand.name,
-        url: brand.url
+        url: brand.url,
+        // Solo la primera vuelta se anuncia; las demás existen para el bucle visual
+        copy: i > 0
       })
     })
   }
   return items
 })
+
+// La animación solo corre mientras el carrusel está en pantalla
+const root = ref<HTMLElement | null>(null)
+const onScreen = ref(true)
+let io: IntersectionObserver | null = null
+onMounted(() => {
+  if (!('IntersectionObserver' in window) || !root.value) return
+  io = new IntersectionObserver(([e]) => { onScreen.value = e.isIntersecting }, { rootMargin: '100px' })
+  io.observe(root.value)
+})
+onUnmounted(() => io?.disconnect())
 
 const hideImg = (e: Event) => {
   (e.target as HTMLImageElement).style.display = 'none'
@@ -48,9 +47,9 @@ const hideImg = (e: Event) => {
 </script>
 
 <template>
-  <section class="w-full py-12 md:py-16 overflow-hidden" aria-labelledby="brand-ticker-title">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-      <p id="brand-ticker-title" class="text-sm text-muted text-center">Trabajamos con equipos y plataformas de confianza</p>
+  <section ref="root" class="w-full overflow-hidden" aria-labelledby="brand-ticker-title">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 md:mb-16">
+      <h2 id="brand-ticker-title" class="section-title">Equipos y plataformas <span class="section-title-accent">de confianza</span></h2>
     </div>
 
     <div class="relative">
@@ -59,16 +58,19 @@ const hideImg = (e: Event) => {
       <div class="absolute inset-y-0 right-0 w-12 md:w-32 z-10 pointer-events-none bg-gradient-to-l from-canvas to-transparent" aria-hidden="true"></div>
 
       <div class="relative w-full overflow-hidden ticker-wrap">
-        <ul class="ticker-track flex" :class="{ 'is-paused': !props.visible }">
+        <ul class="ticker-track flex" :class="{ 'is-paused': !props.visible || !onScreen }">
           <li
             v-for="item in tickerItems"
             :key="item.id"
-            class="ticker-item flex items-center justify-center shrink-0 h-8 md:h-10 mr-12 md:mr-16 text-muted"
+            class="ticker-item flex items-center justify-center shrink-0 h-10 md:h-14 mr-14 md:mr-24 text-muted"
+            :aria-hidden="item.copy ? 'true' : undefined"
           >
             <span class="relative h-full inline-block">
               <img
                 :src="item.url"
-                :alt="item.name"
+                :alt="item.copy ? '' : item.name"
+                width="160" height="56"
+                decoding="async"
                 class="h-full w-auto opacity-0 pointer-events-none"
                 loading="lazy"
                 @error="hideImg"

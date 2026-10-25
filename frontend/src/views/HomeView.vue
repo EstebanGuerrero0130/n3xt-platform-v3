@@ -7,11 +7,12 @@ import AppNavbar from '../components/AppNavbar.vue'
 import BrandTicker from '../components/BrandTicker.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
+import { srcsetFor } from '../utils/images'
 import { usePageMeta } from '../composables/usePageMeta'
 import { prefersReducedMotion } from '../composables/useMotion'
 
 // LCP: la imagen del hero se precarga solo en Home (antes se precargaba en todas las rutas)
-useHead({ link: [{ rel: 'preload', as: 'image', type: 'image/webp', href: '/assets/hero/n3xt_hero_voronoi.webp', media: '(min-width: 768px)' }, { rel: 'preload', as: 'image', type: 'image/webp', href: '/assets/hero/n3xt_hero_voronoi_1200.webp', media: '(max-width: 767px)' }] })
+useHead({ link: [{ rel: 'preload', as: 'image', type: 'image/webp', href: '/assets/hero/n3xt_hero_voronoi_1600.webp', imagesrcset: '/assets/hero/n3xt_hero_voronoi_1600.webp 1600w, /assets/hero/n3xt_hero_voronoi.webp 2400w', imagesizes: '100vw', media: '(min-width: 768px)' }, { rel: 'preload', as: 'image', type: 'image/webp', href: '/assets/hero/n3xt_hero_voronoi_1200.webp', media: '(max-width: 767px)' }] })
 
 usePageMeta({
   title: 'N3XT 3D | Impresión 3D en resina y filamento en Colombia',
@@ -363,7 +364,7 @@ onMounted(() => {
     <section ref="heroRef" class="hero relative isolate overflow-hidden">
       <picture data-hero-media class="hero-media absolute inset-0 -z-10" aria-hidden="true">
         <source media="(max-width: 767px)" srcset="/assets/hero/n3xt_hero_voronoi_1200.webp" />
-        <img src="/assets/hero/n3xt_hero_voronoi.webp" alt="" width="2400" height="1500" fetchpriority="high" decoding="async" class="h-full w-full object-cover" />
+        <img src="/assets/hero/n3xt_hero_voronoi.webp" srcset="/assets/hero/n3xt_hero_voronoi_1600.webp 1600w, /assets/hero/n3xt_hero_voronoi.webp 2400w" sizes="100vw" alt="" width="2400" height="1500" fetchpriority="high" decoding="async" class="h-full w-full object-cover" />
       </picture>
       <div class="hero-scrim absolute inset-0 -z-10" aria-hidden="true"></div>
 
@@ -428,7 +429,7 @@ onMounted(() => {
             :class="li === printLines.length - 1 ? 'md:col-span-2 lg:col-span-1' : ''"
           >
             <img
-              :src="line.i" :alt="line.alt"
+              :src="line.i" :srcset="srcsetFor(line.i)" sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" :alt="line.alt"
               width="1024" height="1024" loading="lazy" decoding="async"
               class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
             />
@@ -472,7 +473,7 @@ onMounted(() => {
     </section>
 
     <!-- Marcas -->
-    <section v-intersection="'brandticker'" class="py-16 min-h-[200px]" aria-label="Marcas y universos que imprimimos">
+    <section v-intersection="'brandticker'" class="py-24 md:py-36 min-h-[200px]">
       <transition name="smooth-reveal">
         <BrandTicker v-if="visibleSections['brandticker']" :visible="visibleSections['brandticker']" />
       </transition>
@@ -484,6 +485,8 @@ onMounted(() => {
         <div class="overflow-hidden rounded-[var(--radius-panel)] bg-surface-2 lg:col-span-6">
           <img
             src="/assets/n3xt_airbrush_process_hq_1778542148509.webp"
+            :srcset="srcsetFor('/assets/n3xt_airbrush_process_hq_1778542148509.webp')"
+            sizes="(min-width: 1024px) 50vw, 100vw"
             alt="Pintor dando acabado con aerógrafo a una figura impresa en 3D"
             width="1024" height="1024" loading="lazy" decoding="async"
             class="aspect-square w-full object-cover"
@@ -521,7 +524,7 @@ onMounted(() => {
             :class="cidx === 0 ? 'min-h-[26rem] md:col-span-2 lg:col-span-2 lg:row-span-2 lg:min-h-[40rem]' : 'min-h-[20rem]'"
           >
             <img
-              :src="ecosystemImage(card, cidx)" alt=""
+              :src="ecosystemImage(card, cidx)" :srcset="srcsetFor(ecosystemImage(card, cidx))" :sizes="cidx === 0 ? '(min-width: 1024px) 66vw, 100vw' : '(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw'" alt=""
               width="1024" height="1024" loading="lazy" decoding="async"
               class="absolute inset-0 -z-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
               @error="(e: any) => e.target.style.display='none'"
@@ -559,7 +562,7 @@ onMounted(() => {
           >
             <img
               v-if="!brokenGalleryImgs[idx]"
-              :src="getOptimizedImage(work.image, idx === 0 ? 1200 : 600)" :alt="work.title"
+              :src="getOptimizedImage(work.image, idx === 0 ? 1200 : 600)" :srcset="srcsetFor(work.image)" :sizes="idx === 0 ? '(min-width: 640px) 50vw, 100vw' : '(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw'" :alt="work.title"
               loading="lazy" decoding="async"
               class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
               @error="brokenGalleryImgs[idx] = true"
@@ -585,7 +588,7 @@ onMounted(() => {
         <div v-if="webSettings.news.length" class="mt-16 grid gap-10 lg:grid-cols-12 lg:gap-12">
           <article v-reveal class="lg:col-span-7">
             <div class="overflow-hidden rounded-[var(--radius-panel)] bg-surface-2">
-              <img :src="webSettings.news[0].i" :alt="webSettings.news[0].t" width="1024" height="1024" loading="lazy" decoding="async" class="aspect-[16/10] w-full object-cover" @error="(e: any) => e.target.style.display='none'" />
+              <img :src="webSettings.news[0].i" :srcset="srcsetFor(webSettings.news[0].i)" sizes="(min-width: 1024px) 58vw, 100vw" :alt="webSettings.news[0].t" width="1024" height="1024" loading="lazy" decoding="async" class="aspect-[16/10] w-full object-cover" @error="(e: any) => e.target.style.display='none'" />
             </div>
             <p v-if="webSettings.news[0].tag" class="mt-6 text-base font-semibold text-brand">{{ webSettings.news[0].tag }}</p>
             <h3 class="mt-2 text-3xl md:text-4xl font-black tracking-tight leading-tight">{{ webSettings.news[0].t }}</h3>
@@ -596,7 +599,7 @@ onMounted(() => {
           <ul v-reveal.stagger class="space-y-8 lg:col-span-5">
             <li v-for="item in webSettings.news.slice(1, 4)" :key="item.t" class="grid grid-cols-[7rem_1fr] gap-5 sm:grid-cols-[9rem_1fr]">
               <div class="overflow-hidden rounded-[var(--radius-card)] bg-surface-2">
-                <img :src="item.i" alt="" width="1024" height="1024" loading="lazy" decoding="async" class="aspect-square w-full object-cover" @error="(e: any) => e.target.style.display='none'" />
+                <img :src="item.i" :srcset="srcsetFor(item.i)" sizes="10rem" alt="" width="1024" height="1024" loading="lazy" decoding="async" class="aspect-square w-full object-cover" @error="(e: any) => e.target.style.display='none'" />
               </div>
               <div>
                 <p v-if="item.tag" class="text-sm font-semibold text-brand">{{ item.tag }}</p>
@@ -634,7 +637,7 @@ onMounted(() => {
         <div v-if="webSettings.posts.length" v-reveal.stagger class="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <article v-for="post in webSettings.posts.slice(0, 4)" :key="post.t" class="group flex flex-col">
             <div class="relative overflow-hidden rounded-[var(--radius-card)] bg-surface-2">
-              <img :src="post.i" :alt="post.t" width="1024" height="1024" loading="lazy" decoding="async" class="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" @error="(e: any) => e.target.style.display='none'" />
+              <img :src="post.i" :srcset="srcsetFor(post.i)" sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" :alt="post.t" width="1024" height="1024" loading="lazy" decoding="async" class="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" @error="(e: any) => e.target.style.display='none'" />
               <span class="absolute left-3 top-3 rounded-full bg-canvas px-3 py-1 text-sm font-semibold text-ink">{{ post.tag || webSettings.company_name }}</span>
             </div>
             <h3 class="mt-5 text-xl font-black tracking-tight leading-snug">{{ post.t }}</h3>
