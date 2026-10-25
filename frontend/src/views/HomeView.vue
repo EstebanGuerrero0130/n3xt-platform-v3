@@ -295,17 +295,41 @@ const fetchSettings = async () => {
 
       // Merge inteligente: Priorizamos datos de la DB si existen.
       // Si la DB está vacía (como en instalaciones nuevas), conservamos los valores por defecto.
+      // El panel (WebManager) guarda las noticias como { t, st, body, image, category, status };
+      // la Home las muestra como { t, d, tag, i, url }. Los borradores no se publican.
+      const news = (Array.isArray(dbWeb.news) ? dbWeb.news : [])
+        .filter((n: any) => n && n.t && (!n.status || n.status === 'published'))
+        .map((n: any) => ({
+          t: n.t,
+          d: n.d || n.st || String(n.body || '').slice(0, 200),
+          tag: n.tag || n.category || '',
+          i: n.i || n.image || '',
+          url: n.url || '',
+        }))
+      const posts = (Array.isArray(dbWeb.posts) ? dbWeb.posts : [])
+        .filter((p: any) => p && p.t && (!p.status || p.status === 'published'))
+        .map((p: any) => ({ t: p.t, d: p.d || '', l: p.l || '', i: p.i || p.image || '', tag: p.tag || '', url: p.url || '' }))
+      // "ecosystem" en el panel (pestaña Social) son las plataformas sociales { platform, url };
+      // las tarjetas de la Home son { t1, t2, d, i }. Se separan para que no se pisen.
+      const ecoRaw: any[] = Array.isArray(dbWeb.ecosystem) ? dbWeb.ecosystem : []
+      const ecosystemCards = ecoRaw.filter(c => c && (c.t1 || c.t2))
+      const social = { ...webSettings.value.social, ...(dbWeb.social || {}) }
+      for (const pl of ecoRaw.filter(c => c && c.platform && isRealUrl(c.url))) {
+        const k = pl.platform as keyof typeof social
+        if (k in social && !isRealUrl(social[k])) social[k] = pl.url
+      }
+
       webSettings.value = {
         ...webSettings.value,
-        social: dbWeb.social || webSettings.value.social,
+        social,
         workshop_status: dbWeb.workshop_status || webSettings.value.workshop_status,
-        news: (dbWeb.news && dbWeb.news.length > 0) ? dbWeb.news : webSettings.value.news,
-        posts: (dbWeb.posts && dbWeb.posts.length > 0) ? dbWeb.posts : webSettings.value.posts,
+        news: news.length > 0 ? news : webSettings.value.news,
+        posts: posts.length > 0 ? posts : webSettings.value.posts,
         catalog: dbWeb.catalog || webSettings.value.catalog,
         pdf_catalog_url: dbWeb.pdf_catalog_url || webSettings.value.pdf_catalog_url,
         privacy_policy: dbWeb.privacy_policy || '',
         terms_conditions: dbWeb.terms_conditions || '',
-        ecosystem: (dbWeb.ecosystem && dbWeb.ecosystem.length > 0) ? dbWeb.ecosystem : webSettings.value.ecosystem,
+        ecosystem: ecosystemCards.length > 0 ? ecosystemCards : webSettings.value.ecosystem,
         gallery: (dbWeb.gallery && dbWeb.gallery.length > 0)
           ? dbWeb.gallery
               .map((item: any, idx: number) =>

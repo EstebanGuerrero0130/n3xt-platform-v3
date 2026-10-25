@@ -98,6 +98,17 @@ const groupedCatalog = computed(() => {
   return groups
 })
 
+// ─── Posts de redes ("Novedades en tiempo real" en la Home) ───
+const addPost = () => {
+  if (!props.settings.web.posts) props.settings.web.posts = []
+  props.settings.web.posts.push({ t: '', d: '', i: '', tag: '', url: '', status: 'published' })
+}
+const movePost = (from: number, to: number) => {
+  const list = props.settings.web.posts
+  if (!list || to < 0 || to >= list.length) return
+  ;[list[from], list[to]] = [list[to], list[from]]
+}
+
 const newGalleryUrl = ref('')
 
 const addGalleryUrl = () => {
@@ -287,6 +298,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
             {id: 'gallery', n: 'Galería', i: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'},
             {id: 'catalog', n: 'Catálogo', i: 'M4 6h16M4 10h16M4 14h16M4 18h16'},
             {id: 'news', n: 'Noticias', i: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2zM7 8h5M7 12h8M7 16h8'}, 
+            {id: 'posts', n: 'En redes', i: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v10a1 1 0 01-1 1H9l-5 4V5z'},
             {id: 'social', n: 'Social', i: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'}
           ]" 
           :key="st.id"
@@ -871,6 +883,60 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
       <button class="px-6 py-4 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="settings.web.news.push({ t: '', st: '', image: '', body: '', date: new Date().toISOString().split('T')[0], status: 'draft', category: '', slug: '' })">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
         Nueva Noticia
+      </button>
+    </div>
+
+    <!-- ===== TAB: EN REDES (posts → "Novedades en tiempo real" en la Home) ===== -->
+    <div v-if="webSubTab === 'posts'" class="bg-white dark:bg-gray-900/70 backdrop-blur-xl p-10 rounded-[3rem] border border-gray-100 dark:border-white/5 shadow-lg">
+      <div class="mb-10">
+        <h3 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Novedades en tiempo real</h3>
+        <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{{ settings?.web?.posts?.length || 0 }} publicaciones · la Home muestra las 4 primeras publicadas</p>
+      </div>
+
+      <div v-for="(post, idx) in settings?.web?.posts || []" :key="idx" class="p-6 bg-gray-50 dark:bg-white/5 rounded-[2rem] mb-5 border border-gray-100 dark:border-white/5">
+        <div class="flex items-start gap-4 mb-5">
+          <div class="w-20 h-24 rounded-2xl overflow-hidden bg-gray-200 dark:bg-gray-800 shrink-0">
+            <img v-if="post.i" :src="post.i" alt="" class="w-full h-full object-cover" @error="(e) => { const t = e.target as HTMLImageElement; if (t) t.style.display = 'none' }" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5" :for="'post-t-' + idx">Título</label>
+            <input :id="'post-t-' + idx" v-model="post.t" placeholder="Ej: Sung Jinwoo, de Solo Leveling" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 mt-3" :for="'post-d-' + idx">Descripción corta</label>
+            <textarea :id="'post-d-' + idx" v-model="post.d" rows="2" placeholder="Una o dos frases sobre la publicación" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-y"></textarea>
+          </div>
+          <button class="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all shrink-0" title="Eliminar publicación" aria-label="Eliminar publicación" @click="settings.web.posts.splice(idx, 1)">
+            <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+        <div class="grid grid-cols-12 gap-4">
+          <div class="col-span-12 sm:col-span-5">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5" :for="'post-i-' + idx">URL de imagen (vertical 4:5 ideal)</label>
+            <input :id="'post-i-' + idx" v-model="post.i" placeholder="https://res.cloudinary.com/..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+          </div>
+          <div class="col-span-12 sm:col-span-4">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5" :for="'post-url-' + idx">Enlace a la publicación</label>
+            <input :id="'post-url-' + idx" v-model="post.url" placeholder="https://www.tiktok.com/@..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+          </div>
+          <div class="col-span-6 sm:col-span-2">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5" :for="'post-tag-' + idx">Etiqueta</label>
+            <input :id="'post-tag-' + idx" v-model="post.tag" placeholder="TikTok" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+          </div>
+          <div class="col-span-6 sm:col-span-1 flex items-end gap-1">
+            <button v-if="Number(idx) > 0" class="flex-1 px-2 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-500" title="Subir" aria-label="Subir" @click="movePost(Number(idx), Number(idx) - 1)">↑</button>
+            <button v-if="Number(idx) < (settings?.web?.posts?.length || 1) - 1" class="flex-1 px-2 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-500" title="Bajar" aria-label="Bajar" @click="movePost(Number(idx), Number(idx) + 1)">↓</button>
+          </div>
+        </div>
+        <label class="mt-4 inline-flex items-center gap-2 text-xs font-bold text-gray-500">
+          <input type="checkbox" :checked="post.status !== 'draft'" @change="post.status = ($event.target as HTMLInputElement).checked ? 'published' : 'draft'" />
+          Publicada
+        </label>
+      </div>
+
+      <p v-if="!settings?.web?.posts?.length" class="text-sm text-gray-500 mb-6">Sin publicaciones: la Home muestra contenido de ejemplo hasta que agregues las tuyas.</p>
+
+      <button class="px-6 py-4 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="addPost">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        Nueva publicación
       </button>
     </div>
 
