@@ -396,21 +396,29 @@ onMounted(() => {
           <p class="section-lead lg:col-span-5">Piezas únicas o pequeñas series. Tú traes la idea; nosotros elegimos el material y la tecnología que mejor le sirven.</p>
         </div>
 
-        <div class="mt-16 space-y-20 md:mt-24 md:space-y-28">
-          <article
-            v-for="(line, idx) in printLines" :key="line.t"
-            v-reveal.stagger
-            class="grid gap-8 md:grid-cols-12 md:items-center md:gap-12"
+        <div v-reveal.stagger class="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <router-link
+            v-for="(line, li) in printLines" :key="line.t"
+            to="/quote"
+            class="print-card group relative flex min-h-[30rem] flex-col justify-end overflow-hidden rounded-[var(--radius-panel)] bg-canvas p-6 md:min-h-[36rem] md:p-8"
+            :class="li === printLines.length - 1 ? 'md:col-span-2 lg:col-span-1' : ''"
           >
-            <div class="overflow-hidden rounded-[var(--radius-panel)] bg-surface-2 md:col-span-7" :class="idx % 2 ? 'md:order-2' : ''">
-              <img :src="line.i" :alt="line.alt" width="1024" height="1024" loading="lazy" decoding="async" class="aspect-[4/3] w-full object-cover transition-transform duration-700 hover:scale-[1.03]" />
+            <img
+              :src="line.i" :alt="line.alt"
+              width="1024" height="1024" loading="lazy" decoding="async"
+              class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+            />
+            <span class="eco-scrim absolute inset-0" aria-hidden="true"></span>
+            <div class="relative">
+              <span class="block text-sm font-semibold text-[#3fcf72]">{{ line.tags.join(' · ') }}</span>
+              <h3 class="print-card-title mt-3 font-black uppercase tracking-tight leading-[0.95] text-white">{{ line.t }}</h3>
+              <span class="mt-4 block text-base leading-relaxed text-white/85">{{ line.d }}</span>
+              <span class="mt-6 inline-flex items-center gap-2 text-base font-semibold text-white">
+                Cotizar {{ line.t.toLowerCase() }}
+                <svg class="btn-arrow w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+              </span>
             </div>
-            <div class="md:col-span-5">
-              <h3 class="text-3xl md:text-5xl font-black uppercase tracking-tight leading-[0.95] [font-stretch:115%]">{{ line.t }}</h3>
-              <p class="mt-5 text-lg leading-relaxed text-ink/80">{{ line.d }}</p>
-              <p class="mt-6 text-base font-semibold text-brand">{{ line.tags.join(' · ') }}</p>
-            </div>
-          </article>
+          </router-link>
         </div>
       </div>
     </section>
@@ -729,6 +737,14 @@ onMounted(() => {
 }
 
 /* ─── Tarjetas con foto ─── */
+/* El título escala con el ancho de la tarjeta: "COLECCIONABLES" cabe entero sin partirse */
+.print-card {
+  container-type: inline-size;
+}
+.print-card-title {
+  font-size: clamp(1.5rem, 8.4cqi, 2.75rem);
+  font-stretch: 112%;
+}
 .eco-scrim {
   background: linear-gradient(to top, rgba(10, 15, 13, 0.92), rgba(10, 15, 13, 0.35) 55%, rgba(10, 15, 13, 0) 80%);
 }
