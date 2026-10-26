@@ -171,6 +171,27 @@ class OrderStoreTest extends TestCase
         $this->assertSame(42000.0, (float)Order::findOrFail($res->json('data.order_id'))->total_price);
     }
 
+    public function test_admin_manual_order_with_3d_file(): void
+    {
+        $this->actingAs(User::factory()->create(), 'web');
+
+        $res = $this->post('/api/orders', [
+            'customer_name' => 'Taller',
+            'technology' => 'FDM',
+            'material_id' => 'PLA_BLACK',
+            'volume_mm3' => 1000,
+            'estimated_weight_g' => 15,
+            'total_price' => 42000,
+            'file' => UploadedFile::fake()->createWithContent('soporte.3mf', 'PK-fake-3mf'),
+        ], ['Accept' => 'application/json'])->assertCreated();
+
+        $order = Order::findOrFail($res->json('data.order_id'));
+        $this->assertSame(42000.0, (float) $order->total_price);
+        $this->assertSame('soporte.3mf', $order->original_filename);
+        Storage::disk('local')->assertExists($order->file_path);
+        $this->get("/api/admin/orders/{$order->id}/download")->assertOk();
+    }
+
     public function test_coupon_endpoint(): void
     {
         $this->postJson('/api/quote/coupon', ['code' => 'n3xt10'])->assertOk()

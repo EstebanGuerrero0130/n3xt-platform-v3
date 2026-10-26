@@ -44,6 +44,11 @@
           <div><label for="mo-hours" class="admin-label mb-2">Horas</label><input id="mo-hours" v-model.number="form.duration_h" type="number" min="0" step="0.5" class="field tabular-nums"></div>
         </div>
         <div><label for="mo-price" class="admin-label mb-2">Precio final ($)</label><input id="mo-price" v-model.number="form.total_price" type="number" min="0" class="field tabular-nums text-lg font-semibold"></div>
+        <div>
+          <label for="mo-file" class="admin-label mb-2">Archivo 3D <span class="opacity-70">(opcional · STL, OBJ o 3MF)</span></label>
+          <input id="mo-file" ref="fileInput" type="file" accept=".stl,.obj,.3mf" class="field !h-auto py-2 file:mr-3 file:rounded-full file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-sm file:font-semibold" @change="pickFile">
+          <p v-if="fileError" role="alert" class="mt-1 text-sm text-danger">{{ fileError }}</p>
+        </div>
         <div><label for="mo-comments" class="admin-label mb-2">Notas</label><textarea id="mo-comments" v-model="form.comments" rows="2" class="field !h-auto py-2.5"></textarea></div>
       </section>
     </form>
@@ -79,6 +84,22 @@ const emit = defineEmits(['close', 'created'])
 
 const submitting = ref(false)
 const submitError = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
+const file = ref<File | null>(null)
+const fileError = ref('')
+const MAX_FILE_MB = 50
+
+const pickFile = (e: Event) => {
+  const picked = (e.target as HTMLInputElement).files?.[0] || null
+  fileError.value = ''
+  if (picked && !/\.(stl|obj|3mf)$/i.test(picked.name)) {
+    fileError.value = 'Solo archivos STL, OBJ o 3MF.'
+  } else if (picked && picked.size > MAX_FILE_MB * 1024 * 1024) {
+    fileError.value = `El archivo pesa más de ${MAX_FILE_MB} MB.`
+  }
+  file.value = fileError.value ? null : picked
+  if (fileError.value && fileInput.value) fileInput.value.value = ''
+}
 
 const form = reactive({
   customer_id: '' as number | string, customer_name: '', customer_company: '', customer_id_document: '',
@@ -111,14 +132,19 @@ const submit = async () => {
   submitting.value = true
   submitError.value = ''
   try {
-    await api.post('/orders', {
+    const payload: Record<string, any> = {
       ...form, estimated_weight_g: form.weight_g, estimated_duration_h: form.duration_h,
       volume_mm3: (form.weight_g / 1.25) * 1000,
-      cost_snapshot: {
-        settings: JSON.parse(JSON.stringify(props.settings)),
-        material_cost_per_kg: props.materials.find(m => m.id === form.material_id)?.cost_per_kg || 0,
-      }
-    })
+    }
+    if (file.value) {
+      // Con archivo va como formulario; el servidor guarda la foto de costos
+      const fd = new FormData()
+      Object.entries(payload).forEach(([k, v]) => { if (v !== '' && v !== null) fd.append(k, String(v)) })
+      fd.append('file', file.value)
+      await api.post('/orders', fd)
+    } else {
+      await api.post('/orders', payload)
+    }
     emit('created')
     reset()
   } catch (err) {
@@ -136,5 +162,8 @@ const reset = () => {
     material_id: '', weight_g: 0, duration_h: 0, total_price: 0, qty: 1,
     technology: 'FDM', comments: '', job_name: '',
   })
+  file.value = null
+  fileError.value = ''
+  if (fileInput.value) fileInput.value.value = ''
 }
 </script>
