@@ -2,6 +2,7 @@
 /* eslint-disable vue/no-mutating-props -- `settings` es el objeto compartido del panel:
    aquí se edita en sitio y AdminDashboard lo publica entero con save-settings. */
 import { localDateISO } from '../../utils/format'
+import { HERO_PILL, DEFAULT_HIGHLIGHTS, DEFAULT_PROCESS_STEPS, DEFAULT_PRINT_LINES, DEFAULT_FINISHING_STEPS } from '../../data/homeDefaults'
 import { ref, computed } from 'vue'
 import logger from '../../utils/logger'
 import { api } from '../../services/api'
@@ -127,8 +128,26 @@ const normalizeSocial = (key: string) => {
 }
 const isUrl = (v: any) => /^https?:\/\//i.test(String(v || '').trim())
 
+// ─── Textos de la Home (web.home). Se crean desde los textos actuales al abrir la pestaña ───
+const defaultHome = () => ({
+  hero_pill: HERO_PILL,
+  hero_sub: '',
+  highlights: DEFAULT_HIGHLIGHTS.map(h => ({ ...h })),
+  print_lines: DEFAULT_PRINT_LINES.map(l => ({ t: l.t, d: l.d, tags: l.tags.join(', '), i: l.i })),
+  process_steps: DEFAULT_PROCESS_STEPS.map(x => ({ ...x })),
+  finishing_steps: DEFAULT_FINISHING_STEPS.map(x => ({ ...x })),
+})
+const home = computed(() => props.settings.web.home)
+const ensureHome = () => {
+  if (!props.settings.web.home || typeof props.settings.web.home !== 'object') props.settings.web.home = defaultHome()
+}
+const resetHome = () => {
+  if (!confirm('¿Volver a los textos originales de la Home? Se aplica al publicar.')) return
+  props.settings.web.home = defaultHome()
+}
+
 const SUBTABS = [
-  { id: 'dashboard', n: 'Resumen' }, { id: 'general', n: 'General' }, { id: 'catalog', n: 'Catálogo' },
+  { id: 'dashboard', n: 'Resumen' }, { id: 'home', n: 'Inicio' }, { id: 'general', n: 'General' }, { id: 'catalog', n: 'Catálogo' },
   { id: 'gallery', n: 'Galería' }, { id: 'news', n: 'Noticias' }, { id: 'posts', n: 'En redes' }, { id: 'social', n: 'Plataformas' },
 ]
 const money = (v: any) => {
@@ -313,7 +332,7 @@ const handleCatalogImageUpload = (e: Event, item: any, isMain = false) => handle
     </header>
 
     <nav class="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1" aria-label="Secciones del sitio">
-      <button v-for="st in SUBTABS" :key="st.id" type="button" class="chip shrink-0" :aria-pressed="webSubTab === st.id" @click="webSubTab = st.id">{{ st.n }}</button>
+      <button v-for="st in SUBTABS" :key="st.id" type="button" class="chip shrink-0" :aria-pressed="webSubTab === st.id" @click="st.id === 'home' && ensureHome(); webSubTab = st.id">{{ st.n }}</button>
     </nav>
 
     <!-- ===== Resumen ===== -->
@@ -345,6 +364,80 @@ v-for="(item, idx) in [
           </li>
         </ul>
       </section>
+    </div>
+
+    <!-- ===== Inicio (textos de la Home) ===== -->
+    <div v-if="webSubTab === 'home' && home" class="space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-muted">Los títulos grandes de cada sección se mantienen; aquí cambias los textos y las fotos.</p>
+        <button type="button" class="btn-outlined btn-sm" @click="resetHome">Volver a los textos originales</button>
+      </div>
+
+      <section class="admin-card" aria-labelledby="home-hero">
+        <h2 id="home-hero" class="admin-h2">Portada</h2>
+        <div class="mt-4 grid gap-4">
+          <div><label for="home-pill" class="admin-label mb-2">Etiqueta sobre el logo</label><input id="home-pill" v-model="home.hero_pill" maxlength="60" class="field"></div>
+          <div>
+            <label for="home-sub" class="admin-label mb-2">Frase bajo el logo</label>
+            <textarea id="home-sub" v-model="home.hero_sub" rows="2" maxlength="240" placeholder="Especialistas en fabricación digital: miniaturas, figuras y piezas de colección con precisión industrial y el espíritu de Colombia." class="field !h-auto py-2.5"></textarea>
+            <p class="mt-1.5 text-sm text-muted">Vacío deja la frase original, con las palabras resaltadas en verde.</p>
+          </div>
+          <fieldset>
+            <legend class="admin-label mb-2">Cifras</legend>
+            <div class="grid gap-3 sm:grid-cols-3">
+              <div v-for="(h, i) in home.highlights" :key="i" class="grid grid-cols-[5rem_1fr] gap-2">
+                <label :for="`home-hl-v-${i}`" class="sr-only">Cifra {{ Number(i) + 1 }}</label>
+                <input :id="`home-hl-v-${i}`" v-model="h.val" maxlength="12" class="field font-bold tabular-nums" placeholder="8K">
+                <label :for="`home-hl-l-${i}`" class="sr-only">Texto de la cifra {{ Number(i) + 1 }}</label>
+                <input :id="`home-hl-l-${i}`" v-model="h.label" maxlength="40" class="field" placeholder="Resolución en resina">
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <section aria-labelledby="home-prints">
+        <h2 id="home-prints" class="admin-h2 mb-3">Lo que imprimimos</h2>
+        <div class="grid gap-4 lg:grid-cols-3">
+          <article v-for="(l, i) in home.print_lines" :key="i" class="admin-card space-y-3">
+            <div class="aspect-[4/3] rounded-[var(--radius-control)] bg-surface-2 overflow-hidden relative">
+              <img v-if="l.i" :src="l.i" alt="" class="w-full h-full object-cover">
+              <label class="absolute inset-x-0 bottom-0 py-1.5 text-center text-sm font-semibold bg-black/60 text-white cursor-pointer hover:bg-black/75">
+                Cambiar foto
+                <input type="file" accept="image/*" class="sr-only" @change="(e: any) => handleGalleryImageUpload(e, { get image() { return l.i }, set image(v: string) { l.i = v } }, true)">
+              </label>
+            </div>
+            <div><label :for="`home-pl-t-${i}`" class="admin-label mb-1">Título</label><input :id="`home-pl-t-${i}`" v-model="l.t" maxlength="60" class="field h-10 font-semibold"></div>
+            <div><label :for="`home-pl-d-${i}`" class="admin-label mb-1">Texto</label><textarea :id="`home-pl-d-${i}`" v-model="l.d" rows="3" maxlength="240" class="field !h-auto py-2.5"></textarea></div>
+            <div><label :for="`home-pl-tags-${i}`" class="admin-label mb-1">Etiquetas <span class="opacity-70">(separadas por comas)</span></label><input :id="`home-pl-tags-${i}`" v-model="l.tags" class="field h-10"></div>
+          </article>
+        </div>
+      </section>
+
+      <div class="grid gap-6 xl:grid-cols-2">
+        <section class="admin-card" aria-labelledby="home-steps">
+          <h2 id="home-steps" class="admin-h2">Cómo trabajamos</h2>
+          <ol class="mt-4 space-y-4">
+            <li v-for="(st, i) in home.process_steps" :key="i" class="grid gap-2">
+              <label :for="`home-ps-t-${i}`" class="admin-label">Paso {{ Number(i) + 1 }}</label>
+              <input :id="`home-ps-t-${i}`" v-model="st.t" maxlength="60" class="field h-10 font-semibold">
+              <label :for="`home-ps-d-${i}`" class="sr-only">Descripción del paso {{ Number(i) + 1 }}</label>
+              <textarea :id="`home-ps-d-${i}`" v-model="st.d" rows="2" maxlength="240" class="field !h-auto py-2.5"></textarea>
+            </li>
+          </ol>
+        </section>
+        <section class="admin-card" aria-labelledby="home-finish">
+          <h2 id="home-finish" class="admin-h2">Acabado a mano</h2>
+          <ol class="mt-4 space-y-4">
+            <li v-for="(st, i) in home.finishing_steps" :key="i" class="grid gap-2">
+              <label :for="`home-fs-n-${i}`" class="admin-label">Etapa {{ Number(i) + 1 }}</label>
+              <input :id="`home-fs-n-${i}`" v-model="st.n" maxlength="40" class="field h-10 font-semibold">
+              <label :for="`home-fs-d-${i}`" class="sr-only">Descripción de la etapa {{ Number(i) + 1 }}</label>
+              <textarea :id="`home-fs-d-${i}`" v-model="st.d" rows="2" maxlength="240" class="field !h-auto py-2.5"></textarea>
+            </li>
+          </ol>
+        </section>
+      </div>
     </div>
 
     <!-- ===== General ===== -->

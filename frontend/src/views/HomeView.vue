@@ -9,6 +9,10 @@ import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { srcsetFor } from '../utils/images'
 import { sampleGallery } from '../data/sampleGallery'
+import {
+  HERO_PILL, DEFAULT_HIGHLIGHTS, DEFAULT_PROCESS_STEPS, DEFAULT_PRINT_LINES, DEFAULT_FINISHING_STEPS,
+  type HomeHighlight, type HomeStep, type HomePrintLine, type HomeFinishing,
+} from '../data/homeDefaults'
 import { usePageMeta } from '../composables/usePageMeta'
 import { prefersReducedMotion } from '../composables/useMotion'
 
@@ -137,33 +141,45 @@ const vIntersection = {
     }
 }
 
-// Contenido estático de las secciones informativas
-const highlights = [
-  { val: '8K', label: 'Resolución en resina' },
-  { val: '24 h', label: 'Prototipado rápido' },
-  { val: '100 %', label: 'Acabado a mano' },
-]
+// Textos de las secciones informativas: valores por defecto, reemplazables desde el admin
+const highlights = ref<HomeHighlight[]>(DEFAULT_HIGHLIGHTS)
+const processSteps = ref<HomeStep[]>(DEFAULT_PROCESS_STEPS)
+const printLines = ref<HomePrintLine[]>(DEFAULT_PRINT_LINES)
+const finishingSteps = ref<HomeFinishing[]>(DEFAULT_FINISHING_STEPS)
+const heroPill = ref(HERO_PILL)
+// null = subtítulo por defecto (con los acentos en verde)
+const heroSub = ref<string | null>(null)
 
-const processSteps = [
-  { t: 'Envíanos tu idea', d: 'Una imagen, un boceto o un archivo 3D. Si aún no tienes el diseño, te ayudamos a desarrollarlo.' },
-  { t: 'Te asesoramos', d: 'Revisamos el proyecto y te recomendamos material, tamaño y tecnología para tu pieza.' },
-  { t: 'Recibe tu cotización', d: 'Un precio claro según complejidad, material, acabado y tiempo de fabricación.' },
-  { t: 'Fabricamos y entregamos', d: 'Imprimimos con equipos profesionales, damos el acabado y te enviamos la pieza.' },
-]
-
-const printLines = [
-  { t: 'Figuras coleccionables', d: 'Personajes y miniaturas en resina de alta resolución, listos para exhibir o pintados a mano.', tags: ['Resina SLA', 'Aerografía', 'Detalle 8K'], i: '/assets/img/hero_maker.webp', alt: 'Figura recién impresa en una impresora de resina' },
-  { t: 'Impresión multimaterial', d: 'Una granja de impresoras de resina y filamento: elegimos la máquina y el material según lo que tu pieza necesita.', tags: ['Bambu Lab', 'Elegoo', 'Creality', 'Anycubic'], i: '/assets/n3xt_social_bambu_fleet_1778543135730.webp', alt: 'Granja de impresoras 3D de filamento trabajando en paralelo' },
-  { t: 'Prototipos funcionales', d: 'Carcasas, engranajes, soportes y repuestos para probar un diseño antes de producirlo en serie.', tags: ['Ingeniería', 'Nylon / PETG', 'Pruebas de resistencia'], i: '/assets/n3xt_social_eco_material_1778543149399.webp', alt: 'Mecanismo de engranajes impreso en filamento verde' },
-]
-
-const finishingSteps = [
-  { n: 'Curado UV', d: 'La resina termina de endurecer bajo luz ultravioleta: la pieza gana resistencia y pierde el tacto pegajoso.' },
-  { n: 'Lijado fino', d: 'Retiramos soportes y marcas de capa a mano, de grano grueso a fino, hasta dejar la superficie lisa.' },
-  { n: 'Imprimación', d: 'Una base uniforme que revela los últimos defectos y deja la pieza lista para pintar.' },
-  { n: 'Aerografía', d: 'Color, sombras y luces a mano, capa por capa, como en la referencia que nos envíes.' },
-]
-
+const str = (v: any, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
+/** Aplica web.home del panel; cada bloque solo se reemplaza si trae contenido. */
+const applyHomeTexts = (home: any) => {
+  if (!home || typeof home !== 'object') return
+  if (str(home.hero_pill, 60)) heroPill.value = str(home.hero_pill, 60)
+  heroSub.value = str(home.hero_sub, 240) || null
+  const hl = (Array.isArray(home.highlights) ? home.highlights : [])
+    .map((h: any) => ({ val: str(h?.val, 12), label: str(h?.label, 40) })).filter((h: HomeHighlight) => h.val && h.label)
+  if (hl.length) highlights.value = hl.slice(0, 3)
+  const steps = (Array.isArray(home.process_steps) ? home.process_steps : [])
+    .map((x: any) => ({ t: str(x?.t, 60), d: str(x?.d, 240) })).filter((x: HomeStep) => x.t)
+  if (steps.length) processSteps.value = steps.slice(0, 4)
+  const fin = (Array.isArray(home.finishing_steps) ? home.finishing_steps : [])
+    .map((x: any) => ({ n: str(x?.n, 40), d: str(x?.d, 240) })).filter((x: HomeFinishing) => x.n)
+  if (fin.length) finishingSteps.value = fin.slice(0, 4)
+  const lines = (Array.isArray(home.print_lines) ? home.print_lines : [])
+    .map((x: any, idx: number) => {
+      const base = DEFAULT_PRINT_LINES[idx] ?? DEFAULT_PRINT_LINES[0]
+      const tags = Array.isArray(x?.tags) ? x.tags : String(x?.tags || '').split(',')
+      return {
+        t: str(x?.t, 60),
+        d: str(x?.d, 240),
+        tags: tags.map((t: any) => str(t, 30)).filter(Boolean).slice(0, 4),
+        i: isRealUrl(x?.i) || String(x?.i || '').startsWith('/') ? String(x.i) : base.i,
+        alt: str(x?.alt, 120) || str(x?.t, 60),
+      }
+    })
+    .filter((x: HomePrintLine) => x.t)
+  if (lines.length) printLines.value = lines.slice(0, 3)
+}
 
 const webSettings = ref<WebSettings>({
   social: { tiktok: '#', instagram: '#', facebook: '#', whatsapp: '#', youtube: '#' },
@@ -312,6 +328,8 @@ const fetchSettings = async () => {
         if (k in social && !isRealUrl(social[k])) social[k] = pl.url
       }
 
+      applyHomeTexts(dbWeb.home)
+
       webSettings.value = {
         ...webSettings.value,
         social,
@@ -363,7 +381,7 @@ onMounted(() => {
       <div class="mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
         <p data-hero-intro class="hero-pill">
           <span class="hero-pill-dot" aria-hidden="true"></span>
-          Estudio de manufactura digital
+          {{ heroPill }}
         </p>
 
         <h1 class="hero-title mt-8 md:mt-10">
@@ -383,7 +401,8 @@ onMounted(() => {
           <span class="sr-only">: estudio de impresión 3D en Colombia</span>
         </h1>
 
-        <p data-hero-item class="hero-sub mt-8 md:mt-10">
+        <p v-if="heroSub" data-hero-item class="hero-sub mt-8 md:mt-10">{{ heroSub }}</p>
+        <p v-else data-hero-item class="hero-sub mt-8 md:mt-10">
           Especialistas en <span class="text-brand font-semibold">fabricación digital</span>: miniaturas, figuras y piezas de colección
           con precisión industrial y el <span class="text-brand font-semibold italic">espíritu de Colombia</span>.
         </p>
