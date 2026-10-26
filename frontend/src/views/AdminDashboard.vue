@@ -18,6 +18,7 @@ import NewMaterialModal from '../components/admin/NewMaterialModal.vue'
 import NewPrinterModal from '../components/admin/NewPrinterModal.vue'
 import EditPrinterModal from '../components/admin/EditPrinterModal.vue'
 import ShippingModal from '../components/admin/ShippingModal.vue'
+import PrinterAssignModal from '../components/admin/PrinterAssignModal.vue'
 import OrderDetailModal from '../components/admin/OrderDetailModal.vue'
 import WebManager from '../components/admin/WebManager.vue'
 import SettingsPanel from '../components/admin/SettingsPanel.vue'
@@ -472,6 +473,8 @@ const orderToShip = ref(null)
 const trackingGuide = ref('')
 const trackingCarrier = ref('')
 
+const STATUS_NAMES = { pending: 'por revisar', printing: 'en impresión', 'post-processing': 'en acabado', completed: 'listo', shipped: 'enviado', cancelled: 'cancelado' }
+
 const handleStatusUpdate = async ({ orderId, status, tracking_guide, tracking_carrier }) => {
   logger.info(`[ACTION] Actualizando estado: Orden ${orderId} -> ${status}`);
   if (status === 'shipped' && !tracking_guide) {
@@ -498,7 +501,7 @@ const handleStatusUpdate = async ({ orderId, status, tracking_guide, tracking_ca
         await api.patch(`/admin/printers/${order.printer_id}`, { status: 'idle' });
     }
     
-    showNotify('Estado actualizado: ' + status.toUpperCase(), 'success');
+    showNotify('Pedido #' + orderId + ': ' + (STATUS_NAMES[status] || status), 'success');
     syncAll(true);
   } catch (err) {
     showNotify('Error al actualizar estado: ' + err.message, 'error')
@@ -753,27 +756,32 @@ const handleAssignment = (order) => {
   modalState.printerStatus = true
 }
 
+const assigning = ref(false)
+// El servidor marca la máquina como ocupada al pasar el pedido a impresión
 const confirmAssignment = async (printerId) => {
+  if (assigning.value) return
+  assigning.value = true
   try {
-    const orderId = selectedOrderForPrinter.value.id;
-    
-    // 1. Actualizar Pedido
-    await api.patch(`/admin/orders/${orderId}/status`, { 
+    const order = selectedOrderForPrinter.value
+    await api.patch(`/admin/orders/${order.id}/status`, {
       status: 'printing',
       printer_id: printerId
     }, true)
-
-    // 2. Actualizar Impresora a OCUPADA
-    await api.patch(`/admin/printers/${printerId}`, { 
-      status: 'printing'
-    }, true)
-
     modalState.printerStatus = false
-    await syncAll(true) 
-    showNotify('Produccion Iniciada: Pedido asignado a maquina', 'success')
+    await syncAll(true)
+    const printer = printers.value.find(p => p.id === printerId)
+    showNotify(`Pedido #${order.id} en impresión${printer ? ' en ' + printer.name : ''}`, 'success')
   } catch (err) {
-    showNotify('Fallo en asignacion: ' + err.message, 'error')
+    showNotify('No se pudo pasar a impresión: ' + err.message, 'error')
+  } finally {
+    assigning.value = false
   }
+}
+
+// Cerrar sin asignar: el tablero vuelve a mostrar el pedido donde estaba
+const cancelAssignment = () => {
+  modalState.printerStatus = false
+  fetchOrders()
 }
 
 
@@ -856,7 +864,7 @@ const handleLogoUpload = async (event) => {
   formData.append('logo', file)
 
   uploadingLogo.value = true
-  showNotify('SISTEMA N3XT: Actualizando identidad visual...', 'success')
+  showNotify('Subiendo el logo…', 'success')
 
   try {
     const res = await api.post('/admin/settings/logo', formData, true)
@@ -864,7 +872,7 @@ const handleLogoUpload = async (event) => {
     // Actualizamos el logo en el estado reactivo con la ruta relativa
     if (res && res.logo_path) {
       settings.value.company_logo = res.logo_path
-      showNotify('IDENTIDAD ACTUALIZADA: Marca sincronizada con éxito', 'success')
+      showNotify('Logo actualizado', 'success')
     } else if (res && res.logo_url) {
       // Fallback: extraer la ruta relativa de la URL completa
       const urlParts = res.logo_url.split('/storage/');
@@ -874,11 +882,11 @@ const handleLogoUpload = async (event) => {
       } else {
         settings.value.company_logo = res.logo_url;
       }
-      showNotify('IDENTIDAD ACTUALIZADA: Marca sincronizada con éxito', 'success')
+      showNotify('Logo actualizado', 'success')
     }
   } catch (err) {
     logger.error('Error Logo Upload:', err)
-    showNotify('FALLO DE IDENTIDAD: ' + err.message, 'error')
+    showNotify('No se pudo subir el logo: ' + err.message, 'error')
   } finally {
     uploadingLogo.value = false
     // Limpiar input para permitir subir el mismo archivo si es necesario
@@ -1561,13 +1569,13 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
 
 const handlePurgeAll = () => {
   askConfirm(
-    'PELIGRO: PURGA DE PRODUCCIÓN',
-    'Esta acción eliminará de forma irreversible todos los pedidos, materiales, inventarios, clientes y maquinaria del sistema. Volverá el estado a CERO. ¿Estás seguro?',
+    'Borrar todos los datos',
+    'Se eliminarán para siempre todos los pedidos, materiales, inventario, clientes y máquinas. ¿Seguro que quieres borrar todo?',
     'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
     async () => {
       try {
         await api.post('/admin/purge-all', { confirm_purge: 'PURGE_ALL_CONFIRMED' });
-        showNotify('SISTEMA PURGADO EXITOSAMENTE. ENTORNO CERO INICIADO.', 'success');
+        showNotify('Se borraron todos los datos.', 'success');
         orders.value = [];
         inventoryData.value = [];
         printers.value = [];
@@ -1575,7 +1583,7 @@ const handlePurgeAll = () => {
         contacts.suppliers = [];
         syncAll(true);
       } catch (err) {
-        showNotify('Error al purgar el sistema: ' + err.message, 'error');
+        showNotify('No se pudieron borrar los datos: ' + err.message, 'error');
       }
     }
   );
@@ -1814,6 +1822,16 @@ const handlePurgeAll = () => {
       @maintenance-complete="handleMaintenanceComplete"
       @reset-printer="handleResetPrinter"
       @delete-printer="handleDeletePrinter"
+    />
+
+    <!-- Modal: Asignar impresora -->
+    <PrinterAssignModal
+      :show="modalState.printerStatus"
+      :order="selectedOrderForPrinter"
+      :printers="printers"
+      :busy="assigning"
+      @close="cancelAssignment"
+      @confirm="confirmAssignment"
     />
 
     <!-- Modal: Envío (ShippingModal.vue) -->
