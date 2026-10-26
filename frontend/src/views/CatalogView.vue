@@ -214,7 +214,8 @@ onMounted(() => {
 
       <!-- Condiciones de compra -->
       <ul class="mt-12 grid gap-4 sm:grid-cols-3" aria-label="Condiciones de compra">
-        <li v-for="c in [
+        <li
+v-for="c in [
           { t: 'Envíos a todo Colombia', d: 'Empaque protegido para piezas delicadas.' },
           { t: 'Garantía de 6 meses', d: 'Si algo falla por fabricación, lo reponemos.' },
           { t: 'Asesoría por WhatsApp', d: 'Te ayudamos a elegir tamaño, color y acabado.' },

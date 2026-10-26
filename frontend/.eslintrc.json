@@ -16,15 +16,31 @@
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
-  "plugins": ["vue", "@typescript-eslint"],
+  "plugins": [
+    "vue",
+    "@typescript-eslint"
+  ],
   "rules": {
     "vue/multi-word-component-names": "off",
     "vue/no-v-html": "warn",
     "vue/require-default-prop": "off",
     "@typescript-eslint/no-explicit-any": "off",
     "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "no-console": [
+      "warn",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
     "no-useless-escape": "off",
     "prefer-const": "warn",
     "no-var": "error"
@@ -32,5 +48,21 @@
   "globals": {
     "Vue": "readonly"
   },
-  "ignorePatterns": ["dist/", "node_modules/", "*.config.js"]
+  "ignorePatterns": [
+    "dist/",
+    "node_modules/",
+    "*.config.js",
+    "test-results/",
+    "scratch/"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "scripts/**/*.mjs"
+      ],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
 }

@@ -42,7 +42,7 @@ const store: CacheStore = {
         expiresAt: Date.now() + ttlMs,
       }
       localStorage.setItem('n3xt_' + key, JSON.stringify(entry))
-    } catch (_e: unknown) {
+    } catch {
       // localStorage full or unavailable — silently fail
     }
   },
@@ -63,7 +63,7 @@ const store: CacheStore = {
         return null
       }
       return entry.data
-    } catch (_e: unknown) {
+    } catch {
       return null
     }
   },
@@ -72,7 +72,7 @@ const store: CacheStore = {
    * Remove a single cache entry.
    */
   remove(key: string): void {
-    try { localStorage.removeItem('n3xt_' + key) } catch (_e: unknown) {/* Silently ignore */}
+    try { localStorage.removeItem('n3xt_' + key) } catch {/* Silently ignore */}
   },
 
   /**
@@ -82,7 +82,7 @@ const store: CacheStore = {
     try {
       const keys: string[] = Object.keys(localStorage)
       keys.filter(k => k.startsWith('n3xt_')).forEach(k => localStorage.removeItem(k))
-    } catch (_e: unknown) {/* Silently ignore */}
+    } catch {/* Silently ignore */}
   },
 
   /**
@@ -98,7 +98,7 @@ const store: CacheStore = {
         expiresAt: entry.expiresAt,
         remainingMs: Math.max(0, entry.expiresAt - Date.now()),
       }
-    } catch (_e: unknown) { return null }
+    } catch { return null }
   }
 }
 

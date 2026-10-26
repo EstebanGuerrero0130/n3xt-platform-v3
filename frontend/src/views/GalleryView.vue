@@ -78,9 +78,6 @@ const stopParallax = () => {
   }
 }
 
-const normalizeTags = (tags: any): string[] =>
-  Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [])
-
 const webSettings = ref<GallerySettings>({ gallery: [], cloudinary_name: '' })
 const activeFilter = ref('Todos')
 const activeTech = ref('Todos')

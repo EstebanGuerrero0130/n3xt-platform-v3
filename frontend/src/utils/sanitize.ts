@@ -34,6 +34,8 @@ export function sanitizePrintDocument(html: string): string {
       const name = attr.name.toLowerCase()
       if (name.startsWith('on')) {
         el.removeAttribute(attr.name)
+      // Los caracteres de control se quitan a propósito: los navegadores los ignoran en "java\x00script:"
+      // eslint-disable-next-line no-control-regex
       } else if (URL_ATTRS.includes(name) && /^\s*(javascript|vbscript|data:text\/html)/i.test(attr.value.replace(/[\s\u0000-\u001f]/g, ''))) {
         el.removeAttribute(attr.name)
       }
