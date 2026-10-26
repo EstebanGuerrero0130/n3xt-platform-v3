@@ -631,6 +631,13 @@ class OrderController extends Controller
             $inventory->save();
         }
 
+        // Catálogo: unidades vendidas de cada producto vinculado a un ítem de stock
+        foreach ($order->technology === 'CATALOGO' ? ($order->models ?? []) : [] as $line) {
+            if (!empty($line['stock_item'])) {
+                Inventory::where('material_id', $line['stock_item'])->decrement('stock_available', (int) ($line['qty'] ?? 1));
+            }
+        }
+
         // 2. Deduct Extra Items (Utilities)
         $extras = $order->extra_items;
         if (is_string($extras)) $extras = json_decode($extras, true);

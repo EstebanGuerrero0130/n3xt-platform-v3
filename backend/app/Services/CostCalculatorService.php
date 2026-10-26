@@ -41,6 +41,19 @@ class CostCalculatorService
         $labor = $orderHours * $prepTimePct * (float)($s['prep']['mano_obra_hr'] ?? 0);
         $etiquetas = (float)($s['infra']['etiquetas'] ?? 0);
 
+        // Productos del catálogo: el costo es el de cada producto (guardado al comprar)
+        if ($order->technology === 'CATALOGO') {
+            $productCost = collect($order->models ?? [])->sum(fn ($m) => (float) ($m['unit_cost'] ?? 0) * (int) ($m['qty'] ?? 1));
+            $total = $productCost + $etiquetas;
+            return [
+                'material' => round($productCost, 2), 'luz' => 0.0, 'labor' => 0.0, 'depr' => 0.0, 'mant' => 0.0,
+                'etiquetas' => round($etiquetas, 2), 'extras' => 0.0,
+                'total_cost' => round($total, 2),
+                'margin' => round((float) $order->total_price - $total, 2),
+                'total_hours' => 0.0, 'mat_cost_per_kg' => 0.0,
+            ];
+        }
+
         // Material cost
         $matCostPerKg = $materialCostPerKg;
         if ($matCostPerKg === null) {

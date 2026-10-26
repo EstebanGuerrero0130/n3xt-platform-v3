@@ -31,7 +31,7 @@ const editingCatalogItemIndex = ref<number | null>(null)
 const handleCreateCatalogProduct = () => {
   const newProduct = {
     id: Date.now(), name: '', category: 'General', subcategory: '', price: '0',
-    original_price: '0', image: '', images: [], description: '', status: 'active'
+    original_price: '0', cost: '0', stock_item: null, image: '', images: [], description: '', status: 'active'
   }
   props.settings.web.catalog.unshift(newProduct)
   editingCatalogItemIndex.value = 0
@@ -531,6 +531,20 @@ v-for="(item, idx) in [
                 </select>
               </div>
             </div>
+            <div class="mt-2 grid grid-cols-3 gap-2">
+              <div>
+                <label :for="`cat-cost-${index}`" class="admin-label mb-1">Costo ($)</label>
+                <input :id="`cat-cost-${index}`" v-model="item.cost" inputmode="numeric" placeholder="0" class="field h-10 tabular-nums">
+              </div>
+              <div class="col-span-2">
+                <label :for="`cat-stock-${index}`" class="admin-label mb-1">Descontar del inventario</label>
+                <select :id="`cat-stock-${index}`" v-model="item.stock_item" class="field h-10">
+                  <option :value="null">No descontar</option>
+                  <option v-for="mat in (inventoryData || [])" :key="mat.id" :value="mat.id">{{ mat.name }}</option>
+                </select>
+              </div>
+            </div>
+            <p class="mt-1 text-sm text-muted">El costo es lo que te cuesta producirlo (para el margen real). Al confirmar el pago se descuentan las unidades del ítem elegido.</p>
             <p v-if="isDiscounted(item)" class="mt-2 text-sm text-success font-semibold">{{ discountPct(item) }} % de descuento · se ve {{ money(item.price) }} en lugar de {{ money(item.original_price) }}</p>
 
             <div class="mt-4">

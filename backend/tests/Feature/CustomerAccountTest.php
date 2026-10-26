@@ -199,4 +199,33 @@ class CustomerAccountTest extends TestCase
 
         $this->postJson('/api/customer/catalog-orders', ['items' => [['product' => '99', 'qty' => 1]]])->assertStatus(422);
     }
+
+    public function test_catalog_product_cost_margin_and_stock_deduction(): void
+    {
+        \App\Models\Material::create(['id' => 'FIG_STOCK', 'name' => 'Figuras listas', 'category' => 'FDM', 'type' => 'utility', 'unit' => 'pieza', 'cost_per_kg' => 0]);
+        \App\Models\Inventory::create(['material_id' => 'FIG_STOCK', 'stock_available' => 10]);
+        Setting::updateOrCreate(['key' => 'web'], ['value' => ['catalog' => [
+            ['id' => 1, 'name' => 'Figura', 'price' => 100000, 'cost' => '$30.000', 'stock_item' => 'FIG_STOCK', 'status' => 'active'],
+        ]]]);
+
+        // El público no ve el costo ni el ítem de inventario
+        $public = $this->getJson('/api/settings')->json('web.catalog.0');
+        $this->assertArrayNotHasKey('cost', $public);
+        $this->assertArrayNotHasKey('stock_item', $public);
+
+        $customer = RecurrentCustomer::create(['name' => 'Cliente', 'email' => 'cliente@example.com', 'password' => bcrypt('secret123')]);
+        $customer->forceFill(['email_verified_at' => now()])->save();
+        $this->actingAs($customer, 'customer');
+        Mail::fake();
+        $this->postJson('/api/customer/catalog-orders', ['items' => [['product' => '1', 'qty' => 3]]])->assertCreated();
+
+        $order = Order::first();
+        $breakdown = app(\App\Services\CostCalculatorService::class)->calculateOrderBreakdown($order, []);
+        $this->assertEquals(90000, $breakdown['material']);
+        $this->assertEquals(300000 - 90000, $breakdown['margin']);
+
+        $this->actingAs(\App\Models\User::factory()->create(), 'web');
+        $this->postJson("/api/admin/orders/{$order->id}/toggle-paid")->assertOk();
+        $this->assertEquals(7, \App\Models\Inventory::where('material_id', 'FIG_STOCK')->value('stock_available'));
+    }
 }

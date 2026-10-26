@@ -19,6 +19,12 @@ class SettingController extends Controller
         $settings = Setting::all()->pluck('value', 'key');
         if (!EnsureAdmin::check()) {
             $settings = $settings->except(self::PRIVATE_KEYS);
+            // El costo de cada producto y su ítem de inventario son internos
+            $web = $settings->get('web');
+            if (is_array($web) && is_array($web['catalog'] ?? null)) {
+                $web['catalog'] = array_map(fn ($p) => is_array($p) ? collect($p)->except(['cost', 'stock_item'])->all() : $p, $web['catalog']);
+                $settings->put('web', $web);
+            }
         }
         return response()->json($settings);
     }

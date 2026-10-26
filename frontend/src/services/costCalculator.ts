@@ -146,7 +146,11 @@ export function calcOrderDetailBreakdown(order: Record<string, any>, settings: R
   const loadFactor = infra.load_factor ?? 0.4
   const prepTimePct = (prep.prep_time_pct ?? 10) / 100
 
-  const material = (weightG / 1000) * matCostPerKg
+  // Productos del catálogo: costo de cada producto guardado al comprar
+  const isCatalog = order.technology === 'CATALOGO'
+  const material = isCatalog
+    ? (Array.isArray(order.models) ? order.models : []).reduce((sum: number, m: any) => sum + (Number(m.unit_cost) || 0) * (Number(m.qty) || 1), 0)
+    : (weightG / 1000) * matCostPerKg
   const luz = totalHours * loadFactor * (infra.luz_hr || 0)
   const labor = (totalHours * prepTimePct) * (prep.mano_obra_hr || 0)
   const depr = totalHours * (infra.depr_hr || 0)

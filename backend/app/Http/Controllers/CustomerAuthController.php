@@ -151,6 +151,9 @@ class CustomerAuthController extends Controller
                 'qty' => (int) $item['qty'],
                 'unit_price' => $price,
                 'subtotal' => round($price * (int) $item['qty'], 2),
+                // Foto del costo y del ítem de stock al momento de la compra
+                'unit_cost' => self::price($product['cost'] ?? 0),
+                'stock_item' => $product['stock_item'] ?? null,
             ];
         }
         $lines = array_values($lines);
