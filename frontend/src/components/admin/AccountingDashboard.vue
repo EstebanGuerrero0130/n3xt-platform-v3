@@ -55,7 +55,8 @@ const lineChartOption = computed(() => {
   const isD = isDark.value
 
   return {
-    color: ['#8dd6ff', '#ff7b72', '#08872b'],
+    backgroundColor: 'transparent',
+    color: ['#3fcf72', '#f97066', '#8dd6ff'],
     tooltip: {
       trigger: 'axis',
       backgroundColor: isD ? 'rgba(13,17,23,0.95)' : 'rgba(255,255,255,0.95)',
@@ -81,7 +82,7 @@ const lineChartOption = computed(() => {
       }
     },
     legend: {
-      data: ['Ventas (Ingresos)', 'Gastos Operativos', 'Utilidad Neta'],
+      data: ['Ventas', 'Gastos', 'Ganancia'],
       top: 0,
       right: 0,
       icon: 'circle',
@@ -135,7 +136,7 @@ const lineChartOption = computed(() => {
     },
     series: [
       {
-        name: 'Ventas (Ingresos)',
+        name: 'Ventas',
         type: 'line',
         smooth: true,
         symbol: 'circle',
@@ -156,7 +157,7 @@ const lineChartOption = computed(() => {
         animationEasing: 'cubicOut'
       },
       {
-        name: 'Gastos Operativos',
+        name: 'Gastos',
         type: 'line',
         smooth: true,
         symbol: 'diamond',
@@ -177,7 +178,7 @@ const lineChartOption = computed(() => {
         animationEasing: 'cubicOut'
       },
       {
-        name: 'Utilidad Neta',
+        name: 'Ganancia',
         type: 'line',
         smooth: true,
         symbol: 'circle',
@@ -216,7 +217,8 @@ const techChartOption = computed(() => {
   const total = counts.reduce((s: any, c: any) => s + c.count, 0)
 
   return {
-    color: ['#08872b', '#8dd6ff', '#58a6ff', '#bc8cff', '#ff7b72', '#fbbf24'],
+    backgroundColor: 'transparent',
+    color: ['#3fcf72', '#8dd6ff', '#58a6ff', '#bc8cff', '#f97066', '#fbbf24'],
     tooltip: {
       trigger: 'item',
       backgroundColor: isD ? 'rgba(13,17,23,0.95)' : 'rgba(255,255,255,0.95)',
@@ -286,7 +288,7 @@ const techChartOption = computed(() => {
         labelLine: {
           show: false
         },
-        data: counts.map((c: any) => ({ name: c.technology, value: c.count })),
+        data: counts.map((c: any) => ({ name: c.technology === 'CATALOGO' ? 'Catálogo' : c.technology, value: c.count })),
         animationDuration: 1200,
         animationEasing: 'cubicOut'
       }
@@ -294,10 +296,29 @@ const techChartOption = computed(() => {
   }
 })
 const formatPrice = (val: any) => {
-  const num = Number(val || 0)
-  if (num < 0) return `-$${Math.abs(num).toLocaleString()}`
-  return `$${num.toLocaleString()}`
+  const num = Math.round(Number(val || 0))
+  if (num < 0) return `-$${Math.abs(num).toLocaleString('es-CO')}`
+  return `$${num.toLocaleString('es-CO')}`
 }
+const marginWidth = computed(() => Math.max(0, Math.min(100, Number(displaySummary.value?.profit_margin_pct) || 0)))
+
+const COST_ROWS = [
+  { key: 'mat', label: 'Material' },
+  { key: 'luz', label: 'Electricidad' },
+  { key: 'labor', label: 'Mano de obra' },
+  { key: 'mant', label: 'Mantenimiento' },
+  { key: 'depr', label: 'Depreciación' },
+  { key: 'etiquetas', label: 'Empaque y etiquetas' },
+  { key: 'extras', label: 'Insumos extra' },
+  { key: 'setup', label: 'Arranque' },
+]
+const costValue = (key: string) => {
+  const bd: any = displayBreakdown.value || {}
+  if (key === 'mat') return bd.mat ?? ((bd.mat_fdm || 0) + (bd.mat_sla || 0))
+  return bd[key] || 0
+}
+const costRows = computed(() => COST_ROWS.filter(r => r.key !== 'setup' || costValue('setup') > 0))
+const costTotal = computed(() => costRows.value.reduce((s, r) => s + Number(costValue(r.key) || 0), 0))
 
 const selectedOrderId = ref<any>(null)
 
@@ -334,401 +355,144 @@ const selectOrder = (id: any) => {
 </script>
 
 <template>
-  <div v-if="analytics || loading" class="animate-fade-in">
-    <!-- Header Strategy -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 md:mb-16 px-8 lg:px-10">
+  <div class="space-y-8">
+    <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
       <div>
-        <h2 class="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-2">Métricas N3XT</h2>
-        <div class="flex items-center gap-3">
-          <div class="w-2 h-2 rounded-full bg-[#1e3a34] dark:bg-primary animate-pulse"></div>
-          <p class="text-gray-400 dark:text-gray-300 font-bold uppercase tracking-widest text-[10px] md:text-[10px]">Business Intelligence y Análisis</p>
-        </div>
+        <h1 class="admin-title">Contabilidad <span class="text-brand">del taller</span></h1>
+        <p class="admin-lead">Ventas sin pedidos cancelados. Los costos se cuentan solo en pedidos pagados.</p>
       </div>
-      <button class="btn-pdf shadow-2xl shadow-gray-200/50 active:scale-95" @click="$emit('export')">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-        <span>Exportar Data</span>
+      <button type="button" class="btn-outlined btn-lg" @click="$emit('export')">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Exportar CSV
       </button>
+    </header>
+
+    <!-- Carga -->
+    <div v-if="loading" class="grid grid-cols-2 lg:grid-cols-5 gap-4" aria-hidden="true">
+      <div v-for="i in 5" :key="i" class="h-28 admin-card animate-pulse"></div>
+    </div>
+    <p v-if="loading" class="sr-only" role="status">Cargando cifras…</p>
+
+    <!-- Sin datos -->
+    <div v-else-if="!analytics" class="admin-card py-14 text-center">
+      <p class="font-semibold">No se pudieron cargar las cifras.</p>
+      <p class="mt-1 text-muted">Pulsa «Actualizar» arriba para intentarlo de nuevo.</p>
     </div>
 
-    <!-- Skeleton Loading: muestra la estructura real mientras carga -->
-    <div v-if="loading" class="space-y-16 lg:space-y-20 animate-pulse">
-      <!-- Summary Cards Skeleton -->
-      <div class="grid grid-cols-2 lg:grid-cols-5 gap-5 lg:gap-8 px-4 lg:px-8">
-        <div v-for="i in 5" :key="'sum-'+i" class="rounded-[24px] p-6 lg:p-10 bg-gray-100 dark:bg-[#1a1f2e] border border-gray-200 dark:border-[#252b3a]">
-          <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full w-16 mb-4"></div>
-          <div class="h-8 bg-gray-200 dark:bg-[#2a3040] rounded-full w-28 mb-6"></div>
-          <div class="h-2 bg-gray-200 dark:bg-[#2a3040] rounded-full w-12"></div>
+    <template v-else>
+      <!-- Resumen (de un pedido si está seleccionado) -->
+      <div>
+        <div v-if="selectedOrderId" class="mb-3 flex items-center gap-3">
+          <span class="badge bg-primary/10 text-brand">Viendo el pedido #{{ selectedOrderId }}</span>
+          <button type="button" class="text-sm font-semibold text-brand hover:underline" @click="selectedOrderId = null">Ver todo</button>
         </div>
+        <dl class="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+          <div class="admin-card"><dt class="admin-label">Cobrado</dt><dd class="mt-2 admin-kpi text-success">{{ formatPrice(displaySummary?.collected_revenue) }}</dd></div>
+          <div class="admin-card"><dt class="admin-label">Por cobrar</dt><dd class="mt-2 admin-kpi text-warning">{{ formatPrice(displaySummary?.pending_revenue) }}</dd></div>
+          <div class="admin-card"><dt class="admin-label">Costos</dt><dd class="mt-2 admin-kpi">{{ formatPrice(displaySummary?.total_expenses) }}</dd></div>
+          <div class="admin-card"><dt class="admin-label">Ganancia neta</dt><dd class="mt-2 admin-kpi" :class="Number(displaySummary?.net_profit) < 0 ? 'text-danger' : ''">{{ formatPrice(displaySummary?.net_profit) }}</dd></div>
+          <div class="admin-card col-span-2 lg:col-span-1">
+            <dt class="admin-label">Margen sobre lo cobrado</dt>
+            <dd class="mt-2 admin-kpi">{{ displaySummary?.profit_margin_pct || 0 }} %</dd>
+            <dd class="mt-3 h-2 rounded-full bg-surface-2 overflow-hidden" aria-hidden="true"><div class="h-full rounded-full bg-primary" :style="{ width: marginWidth + '%' }"></div></dd>
+          </div>
+        </dl>
       </div>
 
-      <!-- Secondary Stats Skeleton -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-5 lg:gap-8 px-6 lg:px-8 opacity-90">
-        <div v-for="i in 7" :key="'sec-'+i" class="rounded-[24px] p-5 lg:p-8 bg-gray-100 dark:bg-[#1a1f2e] border border-gray-200 dark:border-[#252b3a] flex items-center gap-3 md:gap-5">
-          <div class="w-10 h-10 md:w-12 md:h-12 bg-gray-200 dark:bg-[#2a3040] rounded-2xl flex-shrink-0"></div>
-          <div class="flex-1">
-            <div class="h-2 bg-gray-200 dark:bg-[#2a3040] rounded-full w-16 mb-2"></div>
-            <div class="h-5 bg-gray-200 dark:bg-[#2a3040] rounded-full w-20"></div>
-          </div>
-        </div>
-      </div>
+      <!-- Producción -->
+      <dl class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+        <div class="admin-card !p-4"><dt class="admin-label">Pedidos</dt><dd class="mt-1 text-xl font-bold tabular-nums">{{ analytics.summary?.orders_count || 0 }}</dd></div>
+        <div class="admin-card !p-4"><dt class="admin-label">Enviados</dt><dd class="mt-1 text-xl font-bold tabular-nums">{{ analytics.summary?.completed_count || 0 }}</dd></div>
+        <div class="admin-card !p-4"><dt class="admin-label">Horas de máquina</dt><dd class="mt-1 text-xl font-bold tabular-nums">{{ analytics.summary?.total_hours || 0 }} h</dd></div>
+        <div class="admin-card !p-4"><dt class="admin-label">Filamento</dt><dd class="mt-1 text-xl font-bold tabular-nums">{{ analytics.summary?.total_weight_kg || 0 }} kg</dd></div>
+        <div class="admin-card !p-4"><dt class="admin-label">Resina</dt><dd class="mt-1 text-xl font-bold tabular-nums">{{ analytics.summary?.total_resin_ml || 0 }} ml</dd></div>
+        <div class="admin-card !p-4"><dt class="admin-label">Insumos extra</dt><dd class="mt-1 text-xl font-bold tabular-nums">{{ formatPrice(analytics.summary?.total_extras_cost) }}</dd></div>
+        <div class="admin-card !p-4"><dt class="admin-label">Material perdido</dt><dd class="mt-1 text-xl font-bold tabular-nums" :class="analytics.summary?.waste_weight_g > 0 ? 'text-danger' : ''">{{ analytics.summary?.waste_weight_g || 0 }} g</dd></div>
+      </dl>
 
-      <!-- Audit Table Skeleton -->
-      <div class="px-6 lg:px-8">
-        <div class="rounded-[24px] p-8 lg:p-10 bg-gray-100 dark:bg-[#1a1f2e] border border-gray-200 dark:border-[#252b3a]">
-          <div class="flex items-center justify-between mb-8">
-            <div class="h-4 bg-gray-200 dark:bg-[#2a3040] rounded-full w-48"></div>
-            <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full w-12"></div>
-          </div>
-          <div class="space-y-4">
-            <div v-for="i in 5" :key="'row-'+i" class="h-10 bg-gray-200 dark:bg-[#2a3040] rounded-xl"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Cost Breakdown Skeleton -->
-      <div class="px-8 lg:px-10">
-        <div class="h-4 bg-gray-200 dark:bg-[#2a3040] rounded-full w-64 mb-6"></div>
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-5">
-          <div v-for="i in 8" :key="'cost-'+i" class="rounded-[24px] p-6 bg-gray-100 dark:bg-[#1a1f2e] border border-gray-200 dark:border-[#252b3a]">
-            <div class="h-5 bg-gray-200 dark:bg-[#2a3040] rounded-full w-8 mx-auto mb-3"></div>
-            <div class="h-2 bg-gray-200 dark:bg-[#2a3040] rounded-full w-16 mx-auto mb-2"></div>
-            <div class="h-4 bg-gray-200 dark:bg-[#2a3040] rounded-full w-12 mx-auto"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts Skeleton -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 px-8 lg:px-10">
-        <div v-for="i in 2" :key="'chart-'+i" class="rounded-[24px] p-8 lg:p-10 bg-gray-100 dark:bg-[#1a1f2e] border border-gray-200 dark:border-[#252b3a]">
-          <div class="h-4 bg-gray-200 dark:bg-[#2a3040] rounded-full w-40 mb-2"></div>
-          <div class="h-2 bg-gray-200 dark:bg-[#2a3040] rounded-full w-24 mb-8"></div>
-          <div class="h-[250px] bg-gray-200 dark:bg-[#2a3040] rounded-2xl"></div>
-        </div>
-      </div>
-
-      <!-- Top Customers Skeleton -->
-      <div class="px-8 lg:px-10 pb-24">
-        <div class="rounded-[24px] p-8 lg:p-10 bg-gray-100 dark:bg-[#1a1f2e] border border-gray-200 dark:border-[#252b3a]">
-          <div class="flex items-center gap-4 mb-8">
-            <div class="h-5 bg-gray-200 dark:bg-[#2a3040] rounded-full w-48"></div>
-            <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full w-16"></div>
-          </div>
-          <div class="space-y-4">
-            <div v-for="i in 4" :key="'client-'+i" class="h-12 bg-gray-200 dark:bg-[#2a3040] rounded-xl"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div v-else-if="analytics" class="space-y-16 lg:space-y-20">
-      <!-- Summary Cards: Premium Grid -->
-      <div class="grid grid-cols-2 lg:grid-cols-5 gap-5 lg:gap-8 px-4 lg:px-8">
-        <!-- Ingresos Cobrados (Verde) -->
-        <div class="bg-gradient-to-br from-[#08872b]/15 to-[#08872b]/5 dark:bg-[#151a22] border border-[#08872b]/30 dark:border-[#08872b]/20 shadow-lg shadow-[#08872b]/5 rounded-[24px] p-6 lg:p-10 relative overflow-hidden group hover:border-[#08872b]/50 transition-all duration-300 animate-slide-up animate-stagger-1">
-          <div class="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform"></div>
-          <p class="text-[10px] font-black text-emerald-600 dark:text-[#8dd6ff] uppercase tracking-widest mb-4">Cobrados</p>
-          <h3 class="text-2xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">{{ formatPrice(displaySummary?.collected_revenue) }}</h3>
-          <div class="mt-6 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-[#08872b] dark:bg-white animate-pulse"></span>
-            <span class="text-[8px] font-bold text-gray-500 dark:text-white/60 uppercase">Liquidez Activa</span>
-          </div>
-        </div>
-
-        <!-- Pendiente de Cobro (Amarillo) -->
-        <div class="bg-gradient-to-br from-amber-400/15 to-amber-600/5 dark:bg-[#151a22] border border-amber-500/30 dark:border-amber-500/20 shadow-lg shadow-amber-500/5 rounded-[24px] p-6 lg:p-10 relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300 animate-slide-up animate-stagger-2">
-          <div class="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform"></div>
-          <p class="text-[10px] font-black text-amber-600 dark:text-amber-300 uppercase tracking-widest mb-4">Cartera</p>
-          <h3 class="text-2xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">{{ formatPrice(displaySummary?.pending_revenue) }}</h3>
-          <div class="mt-6 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-amber-500 dark:bg-white/40"></span>
-            <span class="text-[8px] font-bold text-gray-500 dark:text-white/60 uppercase">Por Recaudar</span>
-          </div>
-        </div>
-
-        <!-- Utilidad Neta -->
-        <div class="bg-gradient-to-br from-[#08872b]/20 to-[#08872b]/5 dark:bg-[#151a22] border border-[#08872b]/40 dark:border-[#08872b]/30 shadow-lg shadow-[#08872b]/10 rounded-[24px] p-6 lg:p-10 relative overflow-hidden group hover:border-[#08872b]/60 transition-all duration-300 animate-slide-up animate-stagger-3">
-          <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
-          <p class="text-[10px] font-black text-[#08872b] dark:text-[#8dd6ff] uppercase tracking-widest mb-4">Beneficio Neto</p>
-          <h3 class="text-2xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">{{ formatPrice(displaySummary?.net_profit) }}</h3>
-          <div class="mt-6 flex items-center gap-2 text-primary">
-             <span class="text-lg font-black text-primary">$</span>
-             <span class="text-[8px] font-black uppercase text-gray-500 dark:text-white/60">Rentabilidad Real</span>
-          </div>
-        </div>
-
-        <!-- Margen de Beneficio -->
-        <div class="bg-white dark:bg-[#151a22] p-6 lg:p-10 rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-xl dark:shadow-none relative overflow-hidden group hover:border-primary/30 transition-all duration-300 animate-slide-up animate-stagger-4">
-          <p class="text-[10px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-widest mb-4">Margen Operativo</p>
-          <h3 class="text-3xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">{{ displaySummary?.profit_margin_pct || 0 }}<span class="text-primary text-xl">%</span></h3>
-          <div class="mt-6 w-full h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
-              <div class="h-full bg-primary" :style="{width: (displaySummary?.profit_margin_pct || 0) + '%'}"></div>
-          </div>
-        </div>
-
-        <!-- Costos Totales -->
-        <div class="bg-gradient-to-br from-rose-500/15 to-rose-700/5 dark:bg-[#151a22] border border-[#ff7b72]/30 dark:border-[#ff7b72]/20 shadow-lg shadow-[#ff7b72]/5 rounded-[24px] p-6 lg:p-10 relative overflow-hidden group hover:border-[#ff7b72]/40 transition-all duration-300">
-          <p class="text-[10px] font-black text-rose-600 dark:text-[#ff7b72] uppercase tracking-widest mb-4">Egresos / Costos</p>
-          <h3 class="text-2xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">{{ formatPrice(displaySummary?.total_expenses) }}</h3>
-          <div class="mt-6 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-rose-500 dark:bg-white/30"></span>
-            <span class="text-[8px] font-bold text-gray-500 dark:text-white/60 uppercase">Operación de Planta</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Secondary Stats Row -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-5 lg:gap-8 px-6 lg:px-8 opacity-90">
-        <div class="bg-white dark:bg-[#151a22] p-5 lg:p-8 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex items-center gap-3 md:gap-5 hover:border-primary/30 transition-all">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center text-xs font-black text-indigo-500">M</div>
-            <div>
-                <p class="text-[8px] md:text-[10px] font-black text-indigo-400 uppercase">Utilidades</p>
-                <p class="text-sm md:text-xl font-black text-indigo-900 dark:text-indigo-100 tracking-tighter">{{ formatPrice(analytics.summary?.total_extras_cost) }}</p>
-            </div>
-        </div>
-        <div class="bg-white dark:bg-[#151a22] p-5 lg:p-8 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex items-center gap-3 md:gap-5 hover:border-primary/30 transition-all">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center justify-center text-xs font-black text-gray-500">S</div>
-            <div>
-                <p class="text-[8px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase">Ordenes</p>
-                <p class="text-sm md:text-xl font-black text-gray-900 dark:text-white tracking-tighter">{{ analytics.summary?.orders_count || 0 }}</p>
-            </div>
-        </div>
-        <div class="bg-white dark:bg-[#151a22] p-5 lg:p-8 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex items-center gap-3 md:gap-5 hover:border-primary/30 transition-all">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-50 dark:bg-[#08872b]/10 rounded-2xl flex items-center justify-center text-xs font-black text-[#08872b]">P</div>
-            <div>
-                <p class="text-[8px] md:text-[10px] font-black text-gray-400 dark:text-[#8dd6ff] uppercase">Despachos</p>
-                <p class="text-sm md:text-xl font-black text-gray-900 dark:text-white tracking-tighter">{{ analytics.summary?.completed_count || 0 }}</p>
-            </div>
-        </div>
-        <div class="bg-white dark:bg-[#151a22] p-5 lg:p-8 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex items-center gap-3 md:gap-5 hover:border-primary/30 transition-all">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center text-lg md:text-xl">⏱️</div>
-            <div>
-                <p class="text-[8px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase">Horas</p>
-                <p class="text-sm md:text-xl font-black text-gray-900 dark:text-white tracking-tighter">{{ analytics.summary?.total_hours || 0 }}h</p>
-            </div>
-        </div>
-        <div class="bg-white dark:bg-[#151a22] p-5 lg:p-8 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex items-center gap-3 md:gap-5 hover:border-primary/30 transition-all">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-amber-50 dark:bg-amber-500/10 rounded-2xl flex items-center justify-center text-xs font-black text-amber-500">F</div>
-            <div>
-                <p class="text-[8px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase">Filamento</p>
-                <p class="text-sm md:text-xl font-black text-gray-900 dark:text-white tracking-tighter">{{ analytics.summary?.total_weight_kg || 0 }} kg</p>
-            </div>
-        </div>
-        <div class="bg-white dark:bg-[#151a22] p-5 lg:p-8 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex items-center gap-3 md:gap-5 hover:border-primary/30 transition-all">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center text-xs font-black text-blue-500">R</div>
-            <div>
-                <p class="text-[8px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase">Resina</p>
-                <p class="text-sm md:text-xl font-black text-gray-900 dark:text-white tracking-tighter">{{ analytics.summary?.total_resin_ml || 0 }} ml</p>
-            </div>
-        </div>
-        <div class="bg-white dark:bg-[#151a22] p-5 lg:p-8 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex items-center gap-3 md:gap-5 hover:border-primary/30 transition-all">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-rose-50 dark:bg-rose-500/10 rounded-2xl flex items-center justify-center text-xs font-black text-rose-500">D</div>
-            <div>
-                <p class="text-[8px] md:text-[10px] font-black text-rose-400 uppercase">Desperdicio</p>
-                <p class="text-sm md:text-xl font-black text-rose-600 dark:text-rose-400 tracking-tighter">{{ analytics.summary?.waste_weight_g || 0 }}g</p>
-            </div>
-        </div>
-      </div>
-
-      <!-- Master Audit Table: Deep Dive -->
-      <div class="px-6 lg:px-8">
-        <div class="bg-white dark:bg-[#151a22] p-8 lg:p-10 rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm dark:shadow-none">
-          <div class="flex items-center justify-between mb-10">
-            <h4 class="text-[10px] md:text-xs font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] pl-4 border-l-4 border-primary">Auditoría de Pedidos</h4>
-            <div class="flex items-center gap-2">
-              <span v-if="selectedOrderId" class="text-[8px] md:text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase">#{{ selectedOrderId }}</span>
-              <button v-if="selectedOrderId" class="text-[8px] md:text-[10px] font-black text-rose-500 hover:underline uppercase" @click="selectedOrderId = null">X</button>
-            </div>
-          </div>
-          <div class="overflow-x-auto no-scrollbar">
-            <table class="w-full text-left border-collapse min-w-[600px]">
-              <thead>
-                <tr class="border-b border-gray-50 dark:border-white/5">
-                  <th class="py-3 px-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">ID</th>
-                  <th class="py-3 px-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Cliente</th>
-                  <th class="py-3 px-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Total</th>
-                  <th class="py-3 px-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Utilidad</th>
-                  <th class="py-3 px-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-center">Pago</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-50 dark:divide-white/5">
-                <tr
-v-for="order in analytics.detailed_orders" :key="order.id" 
-                     :class="selectedOrderId === order.id ? 'bg-primary/5 dark:bg-primary/10' : 'hover:bg-gray-50 dark:hover:bg-white/5'"
-                     class="transition-colors group cursor-pointer border-b border-gray-50 dark:border-white/5"
-                     @click="selectOrder(order.id)">
-                  <td class="py-4 px-4 text-[10px] font-black text-gray-900 dark:text-white">#{{ order.id }}</td>
-                  <td class="py-4 px-4">
-                    <div class="flex flex-col">
-                      <span class="text-[10px] font-black text-gray-900 dark:text-white">{{ order.customer }}</span>
-                      <span class="text-[8px] font-bold text-gray-400 dark:text-gray-300 uppercase truncate max-w-[120px]">{{ order.file }}</span>
-                    </div>
-                  </td>
-                  <td class="py-4 px-4 text-[10px] font-black text-gray-900 dark:text-white">{{ formatPrice(order.total_price) }}</td>
-                  <td class="py-4 px-4 text-[10px] font-black text-emerald-600 dark:text-[#08872b]">{{ formatPrice(order.profit) }}</td>
-                  <td class="py-4 px-4 text-center">
-                    <span
-:class="order.is_paid ? 'bg-emerald-100 dark:bg-[#08872b]/20 text-emerald-600 dark:text-[#08872b]' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'"
-                          class="text-[8px] font-black uppercase px-2 py-1 rounded-full">
-                      {{ order.is_paid ? 'SÍ' : 'NO' }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Desglose de Costos Industriales -->
-      <div class="px-8 lg:px-10">
-        <h4 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] mb-8 pl-2 border-l-4 border-primary">
-          {{ selectedOrderId ? `Desglose de Costos: Pedido #${selectedOrderId}` : 'Desglose de Costos de Producción (Totales)' }}
-        </h4>
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-5">
-          <!-- Electricidad -->
-          <div class="bg-white dark:bg-[#151a22] p-6 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex flex-col justify-center items-center text-center">
-            <span class="text-lg font-black text-amber-500">E</span>
-            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Electricidad</span>
-            <span class="text-sm font-black text-gray-900 dark:text-white">{{ formatPrice(displayBreakdown?.luz) }}</span>
-          </div>
-          <!-- Mano de Obra -->
-          <div class="bg-white dark:bg-[#151a22] p-6 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex flex-col justify-center items-center text-center">
-            <span class="text-lg font-black text-blue-500">T</span>
-            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Mano de Obra</span>
-            <span class="text-sm font-black text-gray-900 dark:text-white">{{ formatPrice(displayBreakdown?.labor) }}</span>
-          </div>
-          <!-- Mantenimiento -->
-          <div class="bg-white dark:bg-[#151a22] p-6 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex flex-col justify-center items-center text-center">
-            <span class="text-lg font-black text-indigo-500">I</span>
-            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Mantenimiento</span>
-            <span class="text-sm font-black text-gray-900 dark:text-white">{{ formatPrice(displayBreakdown?.mant) }}</span>
-          </div>
-          <!-- Depreciación -->
-          <div class="bg-white dark:bg-[#151a22] p-6 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex flex-col justify-center items-center text-center">
-            <span class="text-lg font-black text-[#ff7b72]">D</span>
-            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Depreciación</span>
-            <span class="text-sm font-black text-gray-900 dark:text-white">{{ formatPrice(displayBreakdown?.depr) }}</span>
-          </div>
-          <!-- Material -->
-          <div class="bg-white dark:bg-[#151a22] p-6 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex flex-col justify-center items-center text-center border-b-2 border-b-[#08872b]/50">
-            <span class="text-lg font-black text-[#8dd6ff]">F</span>
-            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Material Base</span>
-            <span class="text-sm font-black text-gray-900 dark:text-white">{{ formatPrice(displayBreakdown?.mat || ((displayBreakdown?.mat_fdm || 0) + (displayBreakdown?.mat_sla || 0))) }}</span>
-          </div>
-          <!-- Arranque -->
-          <div v-if="displayBreakdown?.setup > 0" class="bg-white dark:bg-[#151a22] p-6 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex flex-col justify-center items-center text-center">
-            <span class="text-lg font-black text-[#08872b]">G</span>
-            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Arranque</span>
-            <span class="text-sm font-black text-gray-900 dark:text-white">{{ formatPrice(displayBreakdown?.setup) }}</span>
-          </div>
-          <!-- Etiquetas -->
-          <div class="bg-white dark:bg-[#151a22] p-6 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex flex-col justify-center items-center text-center">
-            <span class="text-lg font-black text-gray-500">X</span>
-            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Prep/Etiquetas</span>
-            <span class="text-sm font-black text-gray-900 dark:text-white">{{ formatPrice(displayBreakdown?.etiquetas) }}</span>
-          </div>
-          <!-- Extras -->
-          <div class="bg-white dark:bg-[#151a22] p-6 rounded-[24px] border border-gray-100 dark:border-[#21262d] flex flex-col justify-center items-center text-center border-b-2 border-b-[#8dd6ff]/50">
-            <span class="text-lg font-black text-primary">+</span>
-            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Extras/Util</span>
-            <span class="text-sm font-black text-gray-900 dark:text-white">{{ formatPrice(displayBreakdown?.extras) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts Section: High Contrast -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 px-8 lg:px-10 pb-12">
-        <div class="bg-white dark:bg-[#151a22] p-8 lg:p-10 rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm dark:shadow-none">
-          <div class="flex items-center justify-between mb-10">
-            <div>
-              <h4 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] mb-1">Flujo de Ingresos</h4>
-              <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase">Histórico Mensual</p>
-            </div>
-          </div>
-          <div class="h-[300px]">
-            <VChart :option="lineChartOption" :theme="chartTheme" autoresize style="width:100%;height:100%" />
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-[#151a22] p-8 lg:p-10 rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm dark:shadow-none">
-           <div class="flex items-center justify-between mb-10">
-            <div>
-              <h4 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] mb-1">Carga por Tecnología</h4>
-              <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase">Distribución de Pedidos</p>
-            </div>
-          </div>
-          <div class="h-[300px]">
-            <VChart :option="techChartOption" :theme="chartTheme" autoresize style="width:100%;height:100%" />
-          </div>
-        </div>
-      </div>
-      <!-- LTV Top Customers -->
-      <div class="px-8 lg:px-10 pb-24">
-        <div class="bg-white dark:bg-[#151a22] p-8 lg:p-10 rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm dark:shadow-none">
-          <div class="flex items-center gap-4 mb-12 border-l-4 border-primary pl-6">
-            <h4 class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Top Clientes (LTV)</h4>
-            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest bg-gray-100 dark:bg-white/5 px-3 py-1 rounded-full">Lifetime Value</span>
-          </div>
-          
-          <div class="no-scrollbar">
-            <table class="w-full text-left border-collapse table-fixed">
-              <colgroup>
-                <col class="w-[50px]">
-                <col class="w-[18%]">
-                <col class="w-[35%]">
-                <col class="w-[12%]">
-                <col class="w-[20%]">
-              </colgroup>
-              <thead>
-                <tr class="border-b-2 border-gray-100 dark:border-[#21262d]">
-                  <th class="text-left py-4 px-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">#</th>
-                  <th class="text-left py-4 px-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Cliente</th>
-                  <th class="text-left py-4 px-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Último Trabajo</th>
-                  <th class="text-left py-4 px-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-center">Pedidos</th>
-                  <th class="text-right py-4 px-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Total Invertido</th>
-                </tr>
-              </thead>
+      <div class="grid gap-6 xl:grid-cols-12 items-start">
+        <!-- Pedidos -->
+        <section class="admin-card xl:col-span-8" aria-labelledby="audit-title">
+          <h2 id="audit-title" class="admin-h2">Pedidos</h2>
+          <p class="mt-1 text-sm text-muted">Toca un pedido para ver su resumen y sus costos.</p>
+          <div class="mt-4 overflow-auto max-h-[28rem] -mx-1 px-1">
+            <table class="admin-table min-w-[36rem]">
+              <thead class="sticky top-0 bg-surface"><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Ganancia</th><th>Pago</th></tr></thead>
               <tbody>
-                <tr v-for="(client, index) in analytics.top_customers || []" :key="index" :class="index === 0 ? 'bg-primary/5 dark:bg-primary/10' : 'hover:bg-gray-50/50 dark:hover:bg-white/5'" class="border-b border-gray-50 dark:border-[#21262d] transition-colors group">
-                  <td class="py-5 pl-6">
-                    <div
-:class="[
-                        'w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black transition-all',
-                        index === 0 ? 'bg-primary text-white scale-125' : 'bg-gray-100 dark:bg-white/5 text-gray-500'
-                    ]">
-                      {{ Number(index) + 1 }}
-                    </div>
+                <tr
+                  v-for="order in analytics.detailed_orders"
+                  :key="order.id"
+                  :class="['cursor-pointer hover:bg-surface-2', selectedOrderId === order.id ? 'bg-primary/5' : '']"
+                  :aria-selected="selectedOrderId === order.id"
+                  tabindex="0"
+                  @click="selectOrder(order.id)"
+                  @keydown.enter="selectOrder(order.id)"
+                >
+                  <td class="tabular-nums font-semibold">#{{ order.id }}</td>
+                  <td>
+                    <span class="block font-medium truncate max-w-[14rem]">{{ order.customer || 'Sin nombre' }}</span>
+                    <span v-if="order.file" class="block text-sm text-muted truncate max-w-[14rem]">{{ order.file }}</span>
                   </td>
-                  <td class="py-5 px-6">
-                    <div class="flex flex-col">
-                        <span class="font-black text-sm text-gray-800 dark:text-white flex items-center gap-2 whitespace-nowrap">
-                            {{ client.customer_name }}
-                            <span v-if="index === 0" class="text-[8px] bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-tighter flex-shrink-0">Top VIP</span>
-                            <span v-else-if="Number(index) < 3" class="text-[8px] bg-gray-900 dark:bg-white text-white dark:text-gray-950 px-2 py-0.5 rounded-full uppercase tracking-tighter flex-shrink-0">Platinum</span>
-                        </span>
-                    </div>
-                  </td>
-                  <td class="py-6 px-6">
-                    <div class="flex flex-col">
-                      <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">{{ new Date(client.last_order_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}) }}</span>
-                      <span class="text-[10px] font-bold text-gray-700 dark:text-gray-300">#{{ client.last_order_id }} - {{ client.last_order_file }}</span>
-                    </div>
-                  </td>
-                  <td class="py-5 text-center">
-                    <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-full">
-                        <span class="text-[10px] font-black text-gray-900 dark:text-white">{{ client.orders_count }}</span>
-                        <span class="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">Proyectos</span>
-                    </div>
-                  </td>
-                  <td class="py-5 text-right font-black text-xl text-[#08872b] dark:text-[#8dd6ff] tracking-tighter pr-8 whitespace-nowrap">{{ formatPrice(client.total_spent) }}</td>
+                  <td class="tabular-nums">{{ formatPrice(order.total_price) }}</td>
+                  <td class="tabular-nums" :class="order.profit < 0 ? 'text-danger' : ''">{{ formatPrice(order.profit) }}</td>
+                  <td><span :class="['badge', order.is_paid ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning']">{{ order.is_paid ? 'Pagado' : 'Pendiente' }}</span></td>
                 </tr>
-                <tr v-if="!analytics.top_customers || analytics.top_customers.length === 0">
-                    <td colspan="5" class="text-center py-10 text-gray-400 font-black text-xs uppercase tracking-widest">Sin datos de clientes</td>
-                </tr>
+                <tr v-if="!analytics.detailed_orders?.length"><td colspan="5" class="py-10 text-center text-muted">Aún no hay pedidos en este periodo.</td></tr>
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
+
+        <!-- Costos -->
+        <section class="admin-card xl:col-span-4" aria-labelledby="costs-title">
+          <h2 id="costs-title" class="admin-h2">{{ selectedOrderId ? `Costos del pedido #${selectedOrderId}` : 'Costos de producción' }}</h2>
+          <dl class="mt-4">
+            <div v-for="row in costRows" :key="row.key" class="flex items-center justify-between gap-4 py-2.5 border-t border-line first:border-t-0">
+              <dt class="text-muted">{{ row.label }}</dt>
+              <dd class="font-semibold tabular-nums">{{ formatPrice(costValue(row.key)) }}</dd>
+            </div>
+            <div class="flex items-center justify-between gap-4 pt-3 mt-1 border-t-2 border-line">
+              <dt class="font-semibold">Total</dt>
+              <dd class="font-extrabold tabular-nums">{{ formatPrice(costTotal) }}</dd>
+            </div>
+          </dl>
+        </section>
       </div>
-    </div>
+
+      <!-- Gráficas -->
+      <div class="grid gap-6 xl:grid-cols-12">
+        <section class="admin-card xl:col-span-8" aria-labelledby="flow-title">
+          <h2 id="flow-title" class="admin-h2">Ventas, gastos y ganancia por mes</h2>
+          <div class="mt-4 h-72 md:h-80"><VChart :option="lineChartOption" :theme="chartTheme" autoresize style="width:100%;height:100%" /></div>
+        </section>
+        <section class="admin-card xl:col-span-4" aria-labelledby="tech-title">
+          <h2 id="tech-title" class="admin-h2">Pedidos por tecnología</h2>
+          <div class="mt-4 h-72 md:h-80"><VChart :option="techChartOption" :theme="chartTheme" autoresize style="width:100%;height:100%" /></div>
+        </section>
+      </div>
+
+      <!-- Mejores clientes -->
+      <section class="admin-card" aria-labelledby="clients-title">
+        <h2 id="clients-title" class="admin-h2">Clientes que más compran</h2>
+        <div class="mt-4 overflow-x-auto -mx-1 px-1">
+          <table class="admin-table min-w-[40rem]">
+            <thead><tr><th class="w-10">#</th><th>Cliente</th><th>Último pedido</th><th>Pedidos</th><th>Total comprado</th></tr></thead>
+            <tbody>
+              <tr v-for="(client, index) in analytics.top_customers || []" :key="index">
+                <td class="tabular-nums text-muted">{{ Number(index) + 1 }}</td>
+                <td class="font-semibold">{{ client.customer_name || 'Sin nombre' }}</td>
+                <td>
+                  <span class="block tabular-nums">{{ client.last_order_date ? new Date(client.last_order_date).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' }}</span>
+                  <span class="block text-sm text-muted truncate max-w-[16rem]">#{{ client.last_order_id }} · {{ client.last_order_file }}</span>
+                </td>
+                <td class="tabular-nums">{{ client.orders_count }}</td>
+                <td class="tabular-nums font-semibold">{{ formatPrice(client.total_spent) }}</td>
+              </tr>
+              <tr v-if="!analytics.top_customers?.length"><td colspan="5" class="py-10 text-center text-muted">Aún no hay clientes con pedidos.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
