@@ -7,26 +7,39 @@ const props = defineProps({
   loading: { type: Boolean, default: false }
 })
 
-defineEmits(['sync', 'add-printer', 'update-printer-status', 'maintenance-complete', 'edit-printer', 'delete-printer'])
+const emit = defineEmits(['sync', 'add-printer', 'update-printer-status', 'maintenance-complete', 'edit-printer', 'delete-printer'])
+
+const STATUSES = [
+  { id: 'idle', label: 'Libre' },
+  { id: 'printing', label: 'Imprimiendo' },
+  { id: 'maintenance', label: 'Mantenimiento' },
+  { id: 'offline', label: 'Apagada' },
+]
+
+// Reinicia el contador de horas: se confirma porque no se puede deshacer
+const completeMaintenance = (printer: any) => {
+  if (!confirm(`¿Registrar el mantenimiento de ${printer.name}? El contador de ${Math.round(printer.total_hours_run || 0)} h vuelve a cero.`)) return
+  emit('maintenance-complete', printer.id)
+}
 
 const getStatusLabel = (status: any) => {
   const labels: Record<string, string> = {
-    'idle': 'Libre / Lista',
-    'printing': 'OCUPADA',
+    'idle': 'Libre',
+    'printing': 'Imprimiendo',
     'maintenance': 'Mantenimiento',
-    'offline': 'Desconectada'
+    'offline': 'Apagada'
   }
   return labels[status] || status
 }
 
 const getStatusColor = (status: any) => {
   const colors: Record<string, string> = {
-    'idle': 'bg-emerald-500',
-    'printing': 'bg-amber-500',
-    'maintenance': 'bg-rose-500',
-    'offline': 'bg-slate-400'
+    'idle': 'bg-success/10 text-success',
+    'printing': 'bg-primary text-white',
+    'maintenance': 'bg-warning/10 text-warning',
+    'offline': 'bg-surface-2 text-muted'
   }
-  return colors[status] || 'bg-gray-400'
+  return colors[status] || 'bg-surface-2 text-muted'
 }
 
 const getMaintenanceProgress = (printer: any) => {
@@ -53,220 +66,77 @@ const overduePrintersCount = computed(() => {
 </script>
 
 <template>
-  <div class="animate-fade-in">
-    <!-- Main Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-6 mb-8 md:mb-12 lg:mb-20 px-4 md:px-8 lg:px-10">
+  <div class="space-y-8">
+    <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
       <div>
-        <h2 class="text-2xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-1 md:mb-2">Monitor de Granja</h2>
-        <div class="flex items-center gap-2 md:gap-3">
-          <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <p class="text-gray-400 dark:text-gray-300 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">Base de Datos Unificada</p>
-        </div>
+        <h1 class="admin-title">Maquinaria <span class="text-brand">del taller</span></h1>
+        <p class="admin-lead">Estado de cada impresora y horas hasta el próximo mantenimiento. Las horas se suman al sacar un pedido de impresión.</p>
       </div>
-      <div class="flex gap-3 md:gap-4 w-full md:w-auto">
-        <button :disabled="loading" class="p-3 md:p-5 bg-white dark:bg-[#151a22] rounded-2xl md:rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-xl text-gray-400 dark:text-gray-300" @click="$emit('sync')">
-          <svg xmlns="http://www.w3.org/2000/svg" :class="`h-4 md:h-6 w-4 md:w-6 ${loading ? 'animate-spin' : ''}`" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-        </button>
-        <button class="btn-primary flex-1 md:flex-none px-4 md:px-10 py-3 md:py-5" @click="$emit('add-printer')">
-          <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> <span class="hidden sm:inline">Registrar Maquinaria</span><span class="sm:hidden">Añadir</span>
-        </button>
-      </div>
-    </div>
-    
-    <!-- Emergency Maintenance Alert -->
-    <div
-v-if="overduePrintersCount > 0" 
-         class="mx-4 md:mx-8 lg:mx-10 mb-8 md:mb-16 p-4 md:p-8 bg-rose-50 dark:bg-rose-500/10 border-2 border-rose-100 dark:border-rose-500/20 rounded-[20px] md:rounded-[24px] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 animate-zoom-in">            <div class="flex items-center gap-4 md:gap-8">
-                <div class="w-10 h-10 md:w-12 md:h-12 bg-rose-500 text-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            </div>
-            <div>
-                <h3 class="text-lg md:text-2xl font-black text-rose-900 dark:text-rose-100 uppercase tracking-tighter mb-1">Alerta de Mantenimiento</h3>
-                <p class="text-[9px] md:text-[10px] font-black text-rose-400 dark:text-rose-300/60 uppercase tracking-[0.2em]">Hay {{ overduePrintersCount }} impresoras que requieren revisión.</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-3">
-            <div class="flex -space-x-4">
-                <div
-v-for="p in printers.filter(isMaintenanceOverdue).slice(0, 3)" :key="p.id" 
-                     class="w-12 h-12 rounded-full border-4 border-white dark:border-gray-900 bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-xs font-black text-rose-500">
-                    {{ p.name.substring(0,2) }}
-                </div>
-            </div>
-            <p v-if="overduePrintersCount > 3" class="text-[10px] font-black text-rose-300 uppercase pl-2">+{{ overduePrintersCount - 3 }} más</p>
-        </div>
+      <button type="button" class="btn-primary btn-lg" @click="$emit('add-printer')">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>
+        Nueva impresora
+      </button>
+    </header>
+
+    <div v-if="overduePrintersCount > 0" role="alert" class="admin-card border border-warning/40 flex flex-col sm:flex-row sm:items-center gap-3">
+      <span class="badge bg-warning/10 text-warning self-start">Mantenimiento vencido</span>
+      <p class="text-ink">{{ overduePrintersCount === 1 ? 'Una impresora tiene' : `${overduePrintersCount} impresoras tienen` }} la fecha de mantenimiento vencida: {{ printers.filter(isMaintenanceOverdue).map(p => p.name).join(', ') }}.</p>
     </div>
 
-    <!-- Skeleton Loading: mientras carga maquinaria -->
-    <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 px-6 lg:px-8 pb-16 animate-pulse">
-      <div v-for="i in 6" :key="'skel-'+i" class="bg-gray-100 dark:bg-[#1a1f2e] p-8 lg:p-12 rounded-[24px] border border-gray-200 dark:border-[#252b3a] flex flex-col">
-        <div class="flex items-start justify-between mb-8 w-full">
-          <div class="flex gap-6">
-            <div class="w-20 h-20 md:w-28 md:h-28 bg-gray-200 dark:bg-[#2a3040] rounded-[2.5rem] md:rounded-[3.5rem]"></div>
-            <div>
-              <div class="h-5 bg-gray-200 dark:bg-[#2a3040] rounded-full w-24 mb-2"></div>
-              <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full w-16"></div>
-            </div>
-          </div>
-          <div class="h-8 bg-gray-200 dark:bg-[#2a3040] rounded-2xl w-24"></div>
-        </div>
-        <div class="flex-1 space-y-4 mb-6">
-          <div class="bg-gray-200/50 dark:bg-[#2a3040]/30 p-6 md:p-8 rounded-[24px] space-y-4">
-            <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full w-32"></div>
-            <div class="h-3 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-            <div class="h-8 bg-gray-200 dark:bg-[#2a3040] rounded-xl"></div>
-          </div>
-        </div>
-        <div class="h-12 bg-gray-200 dark:bg-[#2a3040] rounded-2xl mb-3"></div>
-        <div class="flex gap-3">
-          <div class="flex-1 h-12 bg-gray-200 dark:bg-[#2a3040] rounded-2xl"></div>
-          <div class="w-12 h-12 bg-gray-200 dark:bg-[#2a3040] rounded-2xl"></div>
-        </div>
-      </div>
+    <div v-if="loading" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
+      <div v-for="i in 3" :key="i" class="h-64 admin-card animate-pulse"></div>
     </div>
 
-    <!-- Machines Grid -->
-    <div v-if="!loading && printers.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-12 px-4 md:px-6 lg:px-8 pb-16">
-      <div
-v-for="(printer, index) in printers" :key="printer.id" 
-        :class="['bg-white dark:bg-[#151a22] p-4 md:p-8 lg:p-12 rounded-[20px] md:rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm group relative overflow-hidden flex flex-col w-full animate-slide-up transition-all hover:shadow-2xl hover:border-primary/30 dark:hover:border-primary/20', 'animate-stagger-' + (index % 4 + 1)]"
-      >
-        <!-- Maintenance Alert Pulse -->
-        <div v-if="isMaintenanceNear(printer)" class="absolute top-0 left-0 w-full h-1.5 bg-rose-500 animate-pulse z-10"></div>
-        
-        <!-- Header Section -->          <div class="flex items-start justify-between mb-8 md:mb-10 w-full">
-          <div class="flex gap-6">
-            <div :class="['w-20 h-20 md:w-28 md:h-28 rounded-[2.5rem] md:rounded-[3.5rem] flex items-center justify-center shadow-2xl relative overflow-hidden', printer.technology === 'FDM' ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-500/20' : 'bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-indigo-500/20']">
-              <svg v-if="printer.technology === 'FDM'" class="w-10 h-10 md:w-16 md:h-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <svg v-else class="w-10 h-10 md:w-16 md:h-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.618.309a6 6 0 01-3.86.517l-2.387-.477a2 2 0 00-1.022.547l-1.16 1.16a2 2 0 00.442 3.102l1.644.822a6 6 0 005.366 0l1.644-.822a2 2 0 00.442-3.102l-1.16-1.16zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tighter leading-none mb-1">{{ printer.name }}</h3>
-              <p class="text-[10px] md:text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">{{ printer.model }}</p>
-              <div v-if="isMaintenanceNear(printer)" class="inline-flex items-center gap-2 px-3 py-1.5 bg-rose-500 text-white rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest animate-pulse shadow-lg shadow-rose-500/20">
-                Revision Urgente
-              </div>
-            </div>
+    <div v-else-if="printers.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <article v-for="printer in printers" :key="printer.id" class="admin-card flex flex-col" :aria-label="printer.name">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h2 class="admin-h2 truncate">{{ printer.name }}</h2>
+            <p class="text-sm text-muted">{{ printer.model || 'Sin modelo' }} · {{ printer.technology }}</p>
           </div>
-          <div class="flex flex-col items-end shrink-0">
-            <span :class="['px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-2xl transition-all duration-500', getStatusColor(printer.status), printer.status === 'printing' ? 'animate-pulse' : '']">
-              {{ getStatusLabel(printer.status) }}
-            </span>
-          </div>
+          <span :class="['badge shrink-0', getStatusColor(printer.status)]">{{ getStatusLabel(printer.status) }}</span>
         </div>
 
-        <!-- Middle Section: Glassmorphism Info -->          <div class="flex-1 space-y-4 md:space-y-6 mb-4 md:mb-10 min-h-0">
-          <div class="bg-gray-50/80 dark:bg-[#0d1117]/60 backdrop-blur-sm p-4 md:p-8 rounded-[20px] md:rounded-[24px] border border-gray-100/50 dark:border-[#21262d] space-y-4 md:space-y-6">
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center px-1">
-                        <span class="text-[10px] font-black text-gray-400 dark:text-gray-300 uppercase tracking-widest">Vida Útil: {{ Math.round(printer.total_hours_run || 0) }}h</span>
-                        <span :class="isMaintenanceNear(printer) ? 'text-rose-500 animate-pulse' : 'text-emerald-500'" class="text-xs font-black uppercase">
-                            {{ Math.round(getMaintenanceProgress(printer)) }}%
-                        </span>
-                    </div>
-                    <div class="h-3 bg-white dark:bg-[#0d1117] rounded-full overflow-hidden shadow-inner p-0.5 border border-gray-100 dark:border-[#21262d] relative">
-                        <div
-:class="[
-                            getMaintenanceProgress(printer) >= 100 ? 'bg-rose-600' : 
-                            getMaintenanceProgress(printer) >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
-                        ]" class="h-full rounded-full" :style="{ width: getMaintenanceProgress(printer) + '%' }"></div>
-                    </div>
-                    <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase text-right tracking-widest mt-1 italic">Calendario: {{ printer.next_maintenance || 'Sin fecha' }}</p>
-                </div>
-
-            <!-- Manual Control Panel -->
-            <div class="pt-4 space-y-4">
-                <p class="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-center">Protocolo Operativo Manual</p>                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 bg-white dark:bg-[#0d1117] rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-[#21262d]">
-                    <button 
-                        :class="[printer.status === 'idle' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-400 dark:text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400']"
-                        class="py-3 md:py-3 rounded-2xl text-[9px] md:text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
-                        @click="$emit('update-printer-status', { id: printer.id, status: 'idle' })"
-                    >
-                        Libre
-                    </button>
-                    <button 
-                        :class="[printer.status === 'printing' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'text-gray-400 dark:text-gray-300 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400']"
-                        class="py-3 md:py-3 rounded-2xl text-[9px] md:text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
-                        @click="$emit('update-printer-status', { id: printer.id, status: 'printing' })"
-                    >
-                        Ocupada
-                    </button>
-                    <button 
-                        :class="[printer.status === 'maintenance' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'text-gray-400 dark:text-gray-300 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400']"
-                        class="py-3 md:py-3 rounded-2xl text-[9px] md:text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
-                        @click="$emit('update-printer-status', { id: printer.id, status: 'maintenance' })"
-                    >
-                        MANT.
-                    </button>
-                    <button 
-                        :class="[printer.status === 'offline' ? 'bg-slate-400 text-white shadow-lg shadow-slate-400/30' : 'text-gray-400 dark:text-gray-300 hover:bg-slate-400/10 hover:text-slate-600 dark:hover:text-slate-400']"
-                        class="py-3 md:py-3 rounded-2xl text-[9px] md:text-[8px] font-black uppercase tracking-widest transition-all duration-300 ease-out"
-                        @click="$emit('update-printer-status', { id: printer.id, status: 'offline' })"
-                    >
-                        OFF
-                    </button>
-                </div>
-            </div>
+        <!-- Horas hasta mantenimiento -->
+        <div class="mt-5">
+          <div class="flex items-baseline justify-between text-sm">
+            <span class="text-muted">Horas desde el último mantenimiento</span>
+            <span class="font-semibold tabular-nums" :class="getMaintenanceProgress(printer) >= 100 ? 'text-danger' : isMaintenanceNear(printer) ? 'text-warning' : ''">{{ Math.round(printer.total_hours_run || 0) }} / {{ printer.maintenance_interval_h || 200 }} h</span>
           </div>
+          <div class="mt-2 h-2 rounded-full bg-surface-2 overflow-hidden" role="progressbar" :aria-valuenow="Math.round(getMaintenanceProgress(printer))" aria-valuemin="0" aria-valuemax="100" :aria-label="`Uso hasta mantenimiento de ${printer.name}`">
+            <div class="h-full rounded-full" :class="getMaintenanceProgress(printer) >= 100 ? 'bg-danger' : isMaintenanceNear(printer) ? 'bg-warning' : 'bg-primary'" :style="{ width: getMaintenanceProgress(printer) + '%' }"></div>
+          </div>
+          <p class="mt-2 text-sm text-muted">Próxima revisión: <span :class="isMaintenanceOverdue(printer) ? 'text-danger font-semibold' : 'text-ink'">{{ printer.next_maintenance || 'sin fecha' }}</span></p>
         </div>
 
-        <!-- Footer Actions -->
-        <div class="flex flex-col gap-3 pt-6 border-t border-gray-50 dark:border-[#21262d] mt-auto">
-          <button 
-            class="w-full py-4 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2 group" 
-            @click="$emit('maintenance-complete', printer.id)"
-          >
-            <svg class="w-4 h-4 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Resetear Ciclo Vida
+        <!-- Estado manual -->
+        <fieldset class="mt-5">
+          <legend class="admin-label mb-2">Cambiar estado</legend>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="st in STATUSES" :key="st.id"
+              type="button"
+              class="chip !min-h-9 !px-3 text-sm"
+              :aria-pressed="printer.status === st.id"
+              @click="printer.status !== st.id && $emit('update-printer-status', { id: printer.id, status: st.id })"
+            >{{ st.label }}</button>
+          </div>
+        </fieldset>
+
+        <div class="mt-auto pt-5 flex flex-wrap items-center gap-2">
+          <button type="button" class="btn-outlined btn-sm" @click="completeMaintenance(printer)">Registrar mantenimiento</button>
+          <button type="button" class="btn-outlined btn-sm" @click="$emit('edit-printer', printer)">Editar</button>
+          <button type="button" class="icon-btn ml-auto text-muted hover:text-danger hover:bg-danger/10" :aria-label="`Eliminar ${printer.name}`" title="Eliminar" @click="$emit('delete-printer', printer.id)">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>
-          
-          <div class="flex gap-3">
-            <button class="btn-primary flex-1 py-4" @click="$emit('edit-printer', printer)">
-              Configurar
-            </button>
-            <button class="icon-btn icon-btn-danger w-12 h-12" @click="$emit('delete-printer', printer.id)">
-               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
-          </div>
         </div>
-      </div>
+      </article>
     </div>
 
-    <!-- Empty State -->
-    <div v-else class="flex flex-col items-center justify-center py-20 md:py-32 px-6 animate-zoom-in">
-        <div class="w-24 h-24 md:w-32 md:h-32 bg-gray-100 dark:bg-[#151a22] rounded-[24px] flex items-center justify-center text-5xl md:text-6xl mb-8 md:mb-10 shadow-inner">
-            <svg class="w-12 h-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        </div>
-        <h3 class="text-3xl md:text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4 text-center">Taller sin maquinaria</h3>
-        <p class="text-[10px] md:text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] text-center max-w-md leading-relaxed mb-10">
-            No hay impresoras 3D registradas en el sistema. Inicia tu granja de producción agregando tu primera máquina FDM o Resina.
-        </p>
-        <button class="btn-primary px-12 py-5 shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all" @click="$emit('add-printer')">
-            Registrar Primera Máquina
-        </button>
+    <div v-else class="admin-card py-14 text-center">
+      <p class="font-semibold">Aún no hay impresoras registradas.</p>
+      <p class="mt-1 text-muted">Agrega tu primera máquina FDM o de resina para asignarle pedidos.</p>
+      <button type="button" class="mt-6 btn-primary" @click="$emit('add-printer')">Agregar impresora</button>
     </div>
   </div>
 </template>
-
-<style scoped>
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-.animate-shimmer {
-  position: relative;
-  overflow: hidden;
-}
-.animate-shimmer::after {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-  animation: shimmer 2s infinite;
-}
-</style>
-
-
