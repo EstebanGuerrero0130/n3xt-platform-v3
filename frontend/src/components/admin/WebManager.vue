@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localDateISO } from '../../utils/format'
 import { ref, computed, watch } from 'vue'
 import logger from '../../utils/logger'
 import { api } from '../../services/api'
@@ -146,7 +147,7 @@ const handleCreateGalleryProject = () => {
     images: [],
     tags: '',
     description: '',
-    date: new Date().toISOString().split('T')[0]
+    date: localDateISO()
   })
   props.showNotify('Proyecto creado. Recuerda guardar cambios.', 'success')
 }
@@ -192,6 +193,7 @@ const processFiles = async (files: FileList | File[]) => {
     props.settings.web.gallery = []
   }
 
+  let uploaded = 0
   for (const file of files) {
     try {
       const formData = new FormData()
@@ -208,6 +210,7 @@ const processFiles = async (files: FileList | File[]) => {
           technology: 'SLA',
           featured: false
         })
+        uploaded++
       }
     } catch (err) {
       logger.error('Error subiendo imagen:', err)
@@ -215,7 +218,7 @@ const processFiles = async (files: FileList | File[]) => {
     }
   }
   
-  props.showNotify?.(`${files.length} imagen(es) subida(s) correctamente`, 'success')
+  if (uploaded) props.showNotify?.(`${uploaded} de ${files.length} imagen(es) subida(s)`, uploaded === files.length ? 'success' : 'warning')
 
   uploadingGallery.value = false
 }
@@ -880,7 +883,7 @@ const handleCatalogImageUpload = (e: Event, item: any) => {
         <p class="text-xs text-gray-500 mt-1">Agrega artículos para mostrar en la landing page</p>
       </div>
 
-      <button class="px-6 py-4 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="settings.web.news.push({ t: '', st: '', image: '', body: '', date: new Date().toISOString().split('T')[0], status: 'draft', category: '', slug: '' })">
+      <button class="px-6 py-4 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2" @click="settings.web.news.push({ t: '', st: '', image: '', body: '', date: localDateISO(), status: 'draft', category: '', slug: '' })">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
         Nueva Noticia
       </button>

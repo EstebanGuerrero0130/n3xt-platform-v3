@@ -246,4 +246,45 @@ class OrderStoreTest extends TestCase
         $this->patchJson("/api/admin/orders/{$id}/status", ['status' => 'printing'])->assertOk();
         Mail::assertSent(CustomerMail::class, 2);
     }
+
+    public function test_coupon_max_uses_and_hyphen_codes(): void
+    {
+        Setting::updateOrCreate(['key' => 'coupons'], ['value' => [
+            ['code' => 'N3XT-AB12', 'discount_pct' => 15, 'label' => 'Feria', 'active' => true, 'max_uses' => 1],
+        ]]);
+
+        $this->postJson('/api/quote/coupon', ['code' => 'n3xt-ab12'])->assertOk()->assertJsonPath('data.discount_pct', 15);
+        $this->post('/api/orders', $this->payload(['coupon_code' => 'N3XT-AB12']), ['Accept' => 'application/json'])
+            ->assertCreated()->assertJsonPath('data.breakdown.coupon.code', 'N3XT-AB12');
+
+        // Agotado tras el primer uso
+        $this->assertSame(['N3XT-AB12' => 1], Setting::where('key', 'coupon_uses')->first()->value);
+        $this->postJson('/api/quote/coupon', ['code' => 'N3XT-AB12'])->assertNotFound();
+    }
+
+    public function test_admin_cannot_overwrite_coupon_uses_and_coupons_stay_private(): void
+    {
+        Setting::updateOrCreate(['key' => 'coupon_uses'], ['value' => ['N3XT10' => 7]]);
+        $this->getJson('/api/settings')->assertJsonMissingPath('coupons')->assertJsonMissingPath('coupon_uses');
+
+        $this->actingAs(User::factory()->create(), 'web');
+        $this->postJson('/api/admin/settings', ['settings' => ['coupon_uses' => ['N3XT10' => 0]]])->assertOk();
+        $this->assertSame(['N3XT10' => 7], Setting::where('key', 'coupon_uses')->first()->value);
+    }
+
+    public function test_legacy_admin_discounts_are_merged_into_coupons(): void
+    {
+        Setting::updateOrCreate(['key' => 'discounts'], ['value' => [
+            ['code' => 'N3XT-OLD1', 'type' => 'percentage', 'value' => 20, 'status' => 'active', 'max_uses' => 5],
+            ['code' => 'FIJO', 'type' => 'fixed', 'value' => 5000, 'status' => 'active'],
+            ['code' => 'n3xt10', 'type' => 'percentage', 'value' => 50, 'status' => 'active'],
+        ]]);
+
+        (require database_path('migrations/2026_10_26_000002_merge_admin_discounts_into_coupons.php'))->up();
+
+        $codes = collect(Setting::where('key', 'coupons')->first()->value)->pluck('discount_pct', 'code');
+        $this->assertSame(20.0, (float) $codes['N3XT-OLD1']);
+        $this->assertArrayNotHasKey('FIJO', $codes->all());
+        $this->assertSame(10.0, (float) $codes['N3XT10']); // el existente no se pisa
+    }
 }

@@ -10,7 +10,9 @@ use App\Http\Middleware\EnsureAdmin;
 class SettingController extends Controller
 {
     /** Claves que solo ve el admin (p. ej. códigos de cupón). */
-    private const PRIVATE_KEYS = ['coupons', 'security'];
+    private const PRIVATE_KEYS = ['coupons', 'coupon_uses', 'discounts', 'security'];
+    /** Solo los escribe el servidor (el admin guardaría una copia vieja encima). */
+    private const SERVER_KEYS = ['coupon_uses'];
 
     public function index()
     {
@@ -30,6 +32,9 @@ class SettingController extends Controller
             ]);
 
             foreach ($data['settings'] as $key => $value) {
+                if (in_array($key, self::SERVER_KEYS, true)) {
+                    continue;
+                }
                 Setting::updateOrCreate(['key' => $key], ['value' => $value]);
             }
 

@@ -4,6 +4,7 @@
  */
 import { type Ref } from 'vue'
 import { api } from '../services/api'
+import { writePrintDocument } from '../services/pdfPrint'
 
 interface UsePDFOptions {
   settings: Ref<Record<string, any>>
@@ -139,9 +140,7 @@ ${(order.extra_items || []).map((extra: any) => `<tr><td>${extra.name} (Adiciona
     const iframe = getIframe()
     const printWindow = iframe.contentWindow || iframe.contentDocument?.defaultView
     if (!printWindow) return
-    printWindow.document.open()
-    printWindow.document.write(content)
-    printWindow.document.close()
+    writePrintDocument(printWindow.document, content)
     printIframe(iframe)
   }
 
@@ -196,9 +195,7 @@ body { font-family: 'Outfit', sans-serif; padding: 0; color: #0f172a; background
     const iframe = getIframe()
     const printWindow = iframe.contentWindow || iframe.contentDocument?.defaultView
     if (!printWindow) return
-    printWindow.document.open()
-    printWindow.document.write(content)
-    printWindow.document.close()
+    writePrintDocument(printWindow.document, content)
     printIframe(iframe)
   }
 
@@ -236,9 +233,7 @@ body { font-family: 'Outfit', sans-serif; padding: 25px; text-transform: upperca
     const iframe = getIframe()
     const printWindow = iframe.contentWindow || iframe.contentDocument?.defaultView
     if (!printWindow) return
-    printWindow.document.open()
-    printWindow.document.write(content)
-    printWindow.document.close()
+    writePrintDocument(printWindow.document, content)
     printIframe(iframe)
   }
 

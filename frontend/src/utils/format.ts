@@ -41,3 +41,12 @@ export function formatCOP(value: unknown, fallback = 'Consultar'): string {
   if (n === null || n <= 0) return fallback
   return copFormatter.format(n)
 }
+
+/**
+ * Fecha local YYYY-MM-DD. `toISOString()` da la fecha UTC: en Colombia (UTC-5),
+ * después de las 7 p. m. ya marca el día siguiente.
+ */
+export function localDateISO(d: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}

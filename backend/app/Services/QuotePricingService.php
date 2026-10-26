@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Material;
 use App\Models\Setting;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Cotizador del servidor.
@@ -335,7 +336,10 @@ class QuotePricingService
      *
      * @return array{code: string, discount_pct: float, label: string|null}|null
      */
-    public static function findCoupon(?string $code, array $coupons): ?array
+    /**
+     * @param array $uses Usos por código (setting `coupon_uses`, solo lo escribe el servidor)
+     */
+    public static function findCoupon(?string $code, array $coupons, array $uses = []): ?array
     {
         $code = strtoupper(trim((string)$code));
         if ($code === '') {
@@ -347,6 +351,8 @@ class QuotePricingService
             if (array_key_exists('active', $c) && !filter_var($c['active'], FILTER_VALIDATE_BOOLEAN)) continue;
             $pct = self::jsNumber($c['discount_pct'] ?? null);
             if (is_nan($pct) || $pct <= 0 || $pct > 100) continue;
+            $max = (int) ($c['max_uses'] ?? 0);
+            if ($max > 0 && (int) ($uses[$code] ?? 0) >= $max) continue;
             return [
                 'code' => strtoupper(trim((string)$c['code'])),
                 'discount_pct' => $pct,
@@ -369,7 +375,20 @@ class QuotePricingService
     {
         $settings ??= $this->loadSettings();
         $coupons = $settings['coupons'] ?? [];
-        return self::findCoupon($code, is_array($coupons) ? $coupons : []);
+        $uses = $settings['coupon_uses'] ?? [];
+        return self::findCoupon($code, is_array($coupons) ? $coupons : [], is_array($uses) ? $uses : []);
+    }
+
+    /** Suma un uso al cupón (fila bloqueada: dos pedidos a la vez no pisan el contador). */
+    public function recordCouponUse(string $code): void
+    {
+        $code = strtoupper(trim($code));
+        DB::transaction(function () use ($code) {
+            $row = Setting::where('key', 'coupon_uses')->lockForUpdate()->first();
+            $uses = $row && is_array($row->value) ? $row->value : [];
+            $uses[$code] = (int) ($uses[$code] ?? 0) + 1;
+            Setting::updateOrCreate(['key' => 'coupon_uses'], ['value' => $uses]);
+        });
     }
 
     /**

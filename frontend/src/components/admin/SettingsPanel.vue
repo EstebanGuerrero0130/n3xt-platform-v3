@@ -329,7 +329,8 @@ const applyDefaults = (target: any) => {
   Object.keys(suggestedDefaults).forEach(category => {
     if (!target[category]) return
     Object.keys(suggestedDefaults[category]).forEach(key => {
-      if (target[category][key] === 0 || target[category][key] === null || target[category][key] === undefined || target[category][key] === '') {
+      // 0 es un valor válido (IVA 0 %, sin marketing): solo se rellenan campos vacíos
+      if (target[category][key] === null || target[category][key] === undefined || target[category][key] === '') {
         target[category][key] = suggestedDefaults[category][key]
       }
     })

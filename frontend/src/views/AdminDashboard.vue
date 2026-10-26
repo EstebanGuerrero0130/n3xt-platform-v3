@@ -21,6 +21,7 @@ import ShippingModal from '../components/admin/ShippingModal.vue'
 import OrderDetailModal from '../components/admin/OrderDetailModal.vue'
 import WebManager from '../components/admin/WebManager.vue'
 import SettingsPanel from '../components/admin/SettingsPanel.vue'
+import { writePrintDocument } from '../services/pdfPrint'
 /**
  * ADMIN DASHBOARD — N3XT 3D Industrial OS
  *
@@ -157,8 +158,11 @@ const settings = ref({
     pdf_catalog_desc: '',
     cloudinary_name: ''
   },
-  discounts: []
+  coupons: [],
+  welcome_coupon_pct: 10
 })
+// Usos por cupón: solo lo escribe el servidor, nunca se reenvía al guardar
+const couponUses = ref({})
 
 // --- Composables ---
 const { simulator, simulatedResult } = useSimulator({
@@ -305,12 +309,13 @@ const syncAll = async (silent = false) => {
   const isSilent = typeof silent === 'boolean' ? silent : false
   if (!isSilent) loading.value = true
   
-  // Ejecución paralela pero resiliente
+  // Ejecución paralela pero resiliente. El sync silencioso (cada 5 min y tras cada
+  // acción) no recarga Ajustes: pisaba lo que el admin estaba editando sin publicar.
   const tasks = [
     { name: 'Pedidos', fn: fetchOrders },
     { name: 'Inventario', fn: fetchInventory },
     { name: 'Maquinaria', fn: fetchPrinters },
-    { name: 'Ajustes', fn: fetchSettings },
+    ...(isSilent ? [] : [{ name: 'Ajustes', fn: fetchSettings }]),
     { name: 'Analíticas', fn: fetchAnalytics },
     { name: 'Contactos', fn: fetchContacts }
   ]
@@ -383,7 +388,9 @@ const fetchSettings = async () => {
         }
       }
       if (data.company_logo) settings.value.company_logo = data.company_logo
-      if (data.discounts) settings.value.discounts = data.discounts
+      if (Array.isArray(data.coupons)) settings.value.coupons = data.coupons
+      couponUses.value = data.coupon_uses && typeof data.coupon_uses === 'object' ? data.coupon_uses : {}
+      if (data.welcome_coupon_pct != null) settings.value.welcome_coupon_pct = Number(data.welcome_coupon_pct)
     }
     
     // Ensure company info exists
@@ -598,6 +605,10 @@ const downloadFile = async (order) => {
       credentials: 'include',
       headers: { 'Accept': 'application/json' }
     })
+    if (!res.ok) {
+      showNotify(res.status === 404 ? 'Este pedido no tiene archivo 3D guardado.' : 'No se pudo descargar el archivo.', 'warning')
+      return
+    }
     const blob = await res.blob()
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -765,6 +776,22 @@ const confirmAssignment = async (printerId) => {
   }
 }
 
+
+/** Guarda solo los cupones (y el % de bienvenida): no reenvía el resto de ajustes. */
+const saveCoupons = async ({ coupons, welcomePct }) => {
+  if (savingSettings.value) return
+  savingSettings.value = true
+  try {
+    await api.post('/admin/settings', { settings: { coupons, welcome_coupon_pct: welcomePct } }, true)
+    settings.value.coupons = coupons
+    settings.value.welcome_coupon_pct = welcomePct
+    showNotify('Cupones guardados', 'success')
+  } catch (err) {
+    showNotify('No se pudieron guardar los cupones: ' + err.message, 'error')
+  } finally {
+    savingSettings.value = false
+  }
+}
 
 /* saveMaterial removed — addMaterial handles creation */
 const saveSettings = (silent = false, updatedData = null) => {
@@ -950,7 +977,8 @@ const handleConvertSimulationToOrder = async (formData) => {
     const materialId = formData?.material_id || simulator.material_id
     const material = inventoryData.value.find(m => m.id === materialId)
     const density = material?.density || 1.25
-    const estimatedVolume = (simulator.weight_g / density) * 1000
+    const weightG = formData?.weight_g != null ? formData.weight_g : (simulator.weight_g || 0)
+    const estimatedVolume = (weightG / density) * 1000
 
     const qty = Math.max(1, formData?.pieces_per_batch || simulator.pieces_per_batch || 1)
     const timeStr = formData?.time_str || simulator.time_str || '0:00'
@@ -1043,12 +1071,6 @@ onMounted(async () => {
         }
       }
     }, 1000)
-  }
-  
-  try {
-    await syncAll()
-  } catch (err) {
-    logger.error('Error inicial de carga:', err)
   }
 })
 
@@ -1170,7 +1192,7 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
               /* Hero Metrics Cards */
               .hero-grid { 
                 display: grid; 
-                grid-template-cols: repeat(4, 1fr); 
+                grid-template-columns: repeat(4, 1fr); 
                 gap: 15px; 
                 margin-bottom: 30px; 
               }
@@ -1197,7 +1219,7 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
               /* Main Content Grid */
               .content-grid { 
                 display: grid; 
-                grid-template-cols: 1fr 1.6fr; 
+                grid-template-columns: 1fr 1.6fr; 
                 gap: 30px; 
               }
 
@@ -1498,9 +1520,7 @@ const handleExportReport = async ({ type, start, end, filteredOrders }) => {
     }
     
     const printWindow = iframe.contentWindow || iframe.contentDocument.defaultView;
-    printWindow.document.open();
-    printWindow.document.write(content);
-    printWindow.document.close();
+    writePrintDocument(printWindow.document, content);
     const imgs = printWindow.document.images;
     let loaded = 0;
     const print = () => { printWindow.focus(); printWindow.print(); };
@@ -1739,9 +1759,12 @@ const handlePurgeAll = () => {
 
         <!-- Módulo: Códigos y Descuentos -->
         <div v-if="activeTab === 'discounts'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1400px] mx-auto">
-          <DiscountManager 
-            :discounts="settings.discounts"
-            @update-discounts="(newDiscounts) => { settings.discounts = newDiscounts; saveSettings(true) }"
+          <DiscountManager
+            :coupons="settings.coupons"
+            :uses="couponUses"
+            :welcome-pct="settings.welcome_coupon_pct"
+            :saving="savingSettings"
+            @save="saveCoupons"
           />
         </div>
 
@@ -1880,16 +1903,14 @@ const handlePurgeAll = () => {
         </div>
     </main>
 
-    </div>
-
     <NotificationSystem
       :notification="notification"
       :confirm-dialog="confirmDialog"
       :is-dark="isDark"
       @close="confirmDialog.show = false; notification.show = false"
     />
-
-    </template>
+  </div>
+</template>
 
 <style scoped>
 .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }

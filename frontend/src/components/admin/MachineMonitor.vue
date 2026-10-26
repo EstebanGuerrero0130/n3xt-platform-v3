@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localDateISO } from '../../utils/format'
 import { computed, type PropType } from 'vue'
 
 const props = defineProps({
@@ -42,7 +43,7 @@ const isMaintenanceNear = (printer: any) => {
 
 const isMaintenanceOverdue = (printer: any) => {
   if (!printer.next_maintenance) return false
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateISO()
   return printer.next_maintenance <= today
 }
 

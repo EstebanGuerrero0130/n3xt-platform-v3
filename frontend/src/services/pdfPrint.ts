@@ -3,8 +3,16 @@
  * Función reusable para imprimir/descargar documentos HTML en iframe.
  */
 import logger from '../utils/logger'
+import { sanitizePrintDocument } from '../utils/sanitize'
 
 let pdfFrame: HTMLIFrameElement | null = null
+
+/** Única forma de escribir un documento de impresión: siempre pasa por el saneado. */
+export function writePrintDocument(target: Document, html: string): void {
+  target.open()
+  target.write(sanitizePrintDocument(html))
+  target.close()
+}
 
 function getPdfFrame(): HTMLIFrameElement {
   if (!pdfFrame || !document.getElementById('pdf-print-frame')) {
@@ -64,8 +72,7 @@ export function openInNewWindow(htmlContent: string, title: string = 'N3XT 3D - 
     printHtml(htmlContent)
     return
   }
-  newWindow.document.write(htmlContent)
-  newWindow.document.close()
+  writePrintDocument(newWindow.document, htmlContent)
   newWindow.document.title = title
 }
 
@@ -76,9 +83,7 @@ export function printHtml(htmlContent: string): void {
   const iframe = getPdfFrame()
   const printWindow = iframe.contentWindow || iframe.contentDocument?.defaultView
   if (!printWindow) return
-  printWindow.document.open()
-  printWindow.document.write(htmlContent)
-  printWindow.document.close()
+  writePrintDocument(printWindow.document, htmlContent)
 
   // Limpiar iframe DESPUÉS de que se cierre el diálogo de impresión
   const cleanup = () => {

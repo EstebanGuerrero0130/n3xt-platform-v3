@@ -246,6 +246,9 @@ class OrderController extends Controller
             Storage::disk('local')->delete($stored);
             return $this->error('Este cupón de bienvenida ya fue usado.', 422);
         }
+        if ($coupon && !$welcomeOwner) {
+            $this->pricing->recordCouponUse($coupon['code']);
+        }
         $this->mailer->received($order);
 
         return $this->success([
@@ -326,7 +329,7 @@ class OrderController extends Controller
      */
     public function validateCoupon(Request $request)
     {
-        $data = $request->validate(['code' => 'required|string|max:50|alpha_num']);
+        $data = $request->validate(['code' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9-]+$/']]);
         $coupon = $this->pricing->findActiveCoupon($data['code']);
         if (!$coupon && ($owner = $this->accounts->welcomeCouponOwner($data['code']))) {
             $coupon = $this->accounts->welcomeCoupon($owner);

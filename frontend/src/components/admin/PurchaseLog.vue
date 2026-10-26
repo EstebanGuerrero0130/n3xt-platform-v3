@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { localDateISO } from '../../utils/format'
 import { ref, computed, onMounted, onUnmounted, watch, type PropType } from 'vue'
 import { api } from '../../services/api'
 import { inject } from 'vue'
 import logger from '../../utils/logger'
+import { writePrintDocument } from '../../services/pdfPrint'
 
 const showNotify: any = inject('showNotify')
 
@@ -22,14 +24,14 @@ const _timers: any[] = []
 
 // Filtros de fecha
 const dateFilter = ref({
-  start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().substr(0, 10),
-  end: new Date().toISOString().substr(0, 10)
+  start: localDateISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+  end: localDateISO()
 })
 
 const newPurchase = ref({
   item_name: '', category: 'maintenance', material_id: '',
   units: 1, unit_amount: 1000, total_cost: 0,
-  supplier: '', notes: '', purchase_date: new Date().toISOString().substr(0, 10),
+  supplier: '', notes: '', purchase_date: localDateISO(),
   is_new_item: false,
   material_data: { id: '', name: '', category: 'FDM', type: 'material', unit: 'g', cost_per_kg: 0, color: '#000000' }
 })
@@ -133,8 +135,8 @@ const handleAddPurchase = async () => {
     isNewMaterial.value = false
     newPurchase.value = {
       item_name: '', category: 'maintenance', material_id: '',
-      units: 1, unit_amount: 1, total_cost: 0,
-      supplier: '', notes: '', purchase_date: new Date().toISOString().substr(0, 10),
+      units: 1, unit_amount: 1000, total_cost: 0,
+      supplier: '', notes: '', purchase_date: localDateISO(),
       is_new_item: false,
       material_data: { id: '', name: '', category: 'FDM', type: 'material', unit: 'g', cost_per_kg: 0, color: '#000000' }
     }
@@ -230,7 +232,7 @@ const handleDeletePurchase = async (id: any) => {
           .report-label { font-size: 9px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 6px; }
           .report-range { font-size: 14px; font-weight: 900; color: #0f172a; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; }
 
-          .summary-grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 35px; }
+          .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 35px; }
           .summary-card { padding: 25px; border-radius: 24px; background: #f8fafc; border: 1px solid #e2e8f0; position: relative; overflow: hidden; }
           .summary-card.dark { background: #0f172a; color: white; border: none; }
           .card-label { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #64748b; margin-bottom: 8px; display: block; }
@@ -353,9 +355,7 @@ const handleDeletePurchase = async (id: any) => {
   
   const doc = iframe.contentWindow?.document;
   if (!doc) { document.body.removeChild(iframe); return; }
-  doc.open();
-  doc.write(content);
-  doc.close();
+  writePrintDocument(doc, content);
 
   const timer1 = setTimeout(() => {
     const imgs = iframe.contentWindow?.document?.images || [];

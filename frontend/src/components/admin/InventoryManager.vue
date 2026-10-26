@@ -38,7 +38,8 @@ const filteredInventory = computed(() => {
     } else if (activeMainTab.value === 'Productos') {
         filtered = filtered.filter((m: any) => m.type === 'product' || m.category === 'PROD')
     } else {
-        filtered = []
+        // Postprocesado: insumos y servicios (cajas, pintura, lijas…)
+        filtered = filtered.filter((m: any) => m.type === 'utility' || m.type === 'service' || m.category === 'UTIL')
     }
 
     return filtered;

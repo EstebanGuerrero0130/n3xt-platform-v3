@@ -1,198 +1,191 @@
 <script setup lang="ts">
-import { ref, type PropType } from 'vue'
+/**
+ * Cupones de descuento. Se guardan en el setting `coupons` con el formato que lee
+ * el cotizador (QuotePricingService::findCoupon): { code, discount_pct, label,
+ * active, max_uses }. Los usos los cuenta el servidor (`coupon_uses`).
+ */
+import { ref, computed, watch, type PropType } from 'vue'
+
+interface Coupon {
+  code: string
+  discount_pct: number
+  label?: string
+  active: boolean
+  max_uses?: number | null
+}
 
 const props = defineProps({
-  discounts: {
-    type: Array as PropType<any[]>,
-    default: () => []
-  }
+  coupons: { type: Array as PropType<Coupon[]>, default: () => [] },
+  uses: { type: Object as PropType<Record<string, number>>, default: () => ({}) },
+  welcomePct: { type: Number, default: 10 },
+  saving: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update-discounts'])
+const emit = defineEmits<{ (e: 'save', payload: { coupons: Coupon[]; welcomePct: number }): void }>()
 
-const isAdding = ref(false)
-const newDiscount = ref({
-  code: '',
-  type: 'percentage',
-  value: 0,
-  max_uses: null,
-  status: 'active',
-  uses: 0
-})
+const CODE_RE = /^[A-Z0-9-]{3,32}$/
+const emptyForm = (): Coupon => ({ code: '', discount_pct: 10, label: '', active: true, max_uses: null })
+
+const showForm = ref(false)
+const form = ref<Coupon>(emptyForm())
+const formError = ref('')
+const welcome = ref(props.welcomePct)
+watch(() => props.welcomePct, v => { welcome.value = v })
+
+const usesOf = (code: string) => props.uses[code.toUpperCase()] ?? 0
+const exhausted = (c: Coupon) => !!c.max_uses && usesOf(c.code) >= c.max_uses
+const activeCount = computed(() => props.coupons.filter(c => c.active && !exhausted(c)).length)
 
 const generateCode = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let code = 'N3XT-'
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  form.value.code = 'N3XT-' + Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
+
+const emitSave = (coupons: Coupon[]) => emit('save', { coupons, welcomePct: welcome.value })
+
+const addCoupon = () => {
+  formError.value = ''
+  const code = form.value.code.toUpperCase().trim()
+  const pct = Number(form.value.discount_pct)
+  if (!CODE_RE.test(code)) {
+    formError.value = 'El código lleva de 3 a 32 letras, números o guiones (sin espacios).'
+    return
   }
-  newDiscount.value.code = code
+  if (!(pct > 0 && pct <= 100)) {
+    formError.value = 'El descuento va de 1 a 100 %.'
+    return
+  }
+  if (code.startsWith('BIENVENIDA')) {
+    formError.value = 'Los códigos BIENVENIDA… están reservados para los cupones de bienvenida.'
+    return
+  }
+  if (props.coupons.some(c => c.code.toUpperCase() === code)) {
+    formError.value = 'Ya existe un cupón con ese código.'
+    return
+  }
+  const max = Number(form.value.max_uses)
+  emitSave([...props.coupons, {
+    code,
+    discount_pct: pct,
+    label: (form.value.label || '').trim(),
+    active: true,
+    max_uses: max > 0 ? Math.floor(max) : null,
+  }])
+  form.value = emptyForm()
+  showForm.value = false
 }
 
-const addDiscount = () => {
-  if (!newDiscount.value.code || newDiscount.value.value <= 0) return
-
-  const updatedDiscounts: any[] = [...(props.discounts || []) as any[]]
-  updatedDiscounts.push({ 
-    ...newDiscount.value, 
-    code: newDiscount.value.code.toUpperCase().trim(),
-    created_at: new Date().toISOString()
-  })
-  
-  emit('update-discounts', updatedDiscounts)
-  
-  newDiscount.value = { code: '', type: 'percentage', value: 0, max_uses: null, status: 'active', uses: 0 }
-  isAdding.value = false
+const toggleActive = (idx: number) => {
+  emitSave(props.coupons.map((c, i) => i === idx ? { ...c, active: !c.active } : c))
 }
 
-const toggleStatus = (index: any) => {
-  const updatedDiscounts: any[] = [...(props.discounts || []) as any[]]
-  updatedDiscounts[index].status = updatedDiscounts[index].status === 'active' ? 'inactive' : 'active'
-  emit('update-discounts', updatedDiscounts)
+const removeCoupon = (idx: number) => {
+  if (!confirm(`¿Eliminar el cupón ${props.coupons[idx].code}? Los pedidos que ya lo usaron no cambian.`)) return
+  emitSave(props.coupons.filter((_, i) => i !== idx))
 }
 
-const deleteDiscount = (index: any) => {
-  if (!confirm('¿Estás seguro de eliminar este código de descuento?')) return
-  const updatedDiscounts: any[] = [...(props.discounts || []) as any[]]
-  updatedDiscounts.splice(index, 1)
-  emit('update-discounts', updatedDiscounts)
+const saveWelcome = () => {
+  const pct = Number(welcome.value)
+  if (!(pct > 0 && pct <= 50)) {
+    welcome.value = props.welcomePct
+    return
+  }
+  emitSave(props.coupons)
 }
-
 </script>
 
 <template>
   <div class="space-y-8">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row items-center justify-between gap-6 bg-white/40 dark:bg-[#151a22]/60 backdrop-blur-md p-8 md:p-10 rounded-[24px] border border-white/60 dark:border-[#21262d] shadow-2xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden group">
-      <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-1000 pointer-events-none"></div>
-      
-      <div class="relative z-10 text-center md:text-left">
-        <h2 class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter uppercase leading-none">
-          Gestión de <span class="text-primary">Descuentos</span>
-        </h2>
-        <p class="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-[0.4em] mt-4 flex items-center justify-center md:justify-start gap-3">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
-          Control de Promociones
-        </p>
+    <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+      <div>
+        <h1 class="admin-title">Cupones <span class="text-brand">de descuento</span></h1>
+        <p class="admin-lead">Códigos que el cliente escribe en el cotizador. El descuento se calcula en el servidor.</p>
       </div>
-
-      <button class="btn-primary py-4 px-8 !rounded-2xl relative z-10 w-full md:w-auto" @click="isAdding = true">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        <span>Nuevo Código</span>
+      <button type="button" class="btn-primary btn-lg" :disabled="saving" @click="showForm = !showForm; generateCode()">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>
+        Nuevo cupón
       </button>
-    </div>
+    </header>
 
-    <!-- Formulario Agregar Nuevo -->
-    <div v-if="isAdding" class="bg-white dark:bg-[#151a22] p-8 rounded-[24px] border border-gray-100 dark:border-[#21262d] shadow-sm animate-slide-up">
-      <div class="flex items-center justify-between mb-6 border-b border-gray-100 dark:border-[#21262d] pb-4">
-        <h3 class="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Crear Código Promocional</h3>
-        <button class="text-gray-400 hover:text-red-500 transition-colors" @click="isAdding = false">
-          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+    <!-- Nuevo cupón -->
+    <form v-if="showForm" class="admin-card grid gap-5 md:grid-cols-12 md:items-end" novalidate @submit.prevent="addCoupon">
+      <div class="md:col-span-4">
+        <label for="coupon-code" class="admin-label mb-2">Código</label>
+        <div class="flex gap-2">
+          <input id="coupon-code" v-model="form.code" type="text" class="field uppercase font-mono tracking-wide" maxlength="32" autocomplete="off" required>
+          <button type="button" class="btn-outlined shrink-0" title="Generar otro código" @click="generateCode">Generar</button>
+        </div>
       </div>
+      <div class="md:col-span-2">
+        <label for="coupon-pct" class="admin-label mb-2">Descuento (%)</label>
+        <input id="coupon-pct" v-model.number="form.discount_pct" type="number" min="1" max="100" class="field tabular-nums" required>
+      </div>
+      <div class="md:col-span-2">
+        <label for="coupon-max" class="admin-label mb-2">Máximo de usos</label>
+        <input id="coupon-max" v-model.number="form.max_uses" type="number" min="1" placeholder="Sin límite" class="field tabular-nums">
+      </div>
+      <div class="md:col-span-4">
+        <label for="coupon-label" class="admin-label mb-2">Nombre interno <span class="opacity-70">(opcional)</span></label>
+        <input id="coupon-label" v-model="form.label" type="text" maxlength="60" placeholder="Ej. Feria Bogotá" class="field">
+      </div>
+      <p v-if="formError" role="alert" class="md:col-span-12 text-sm text-danger">{{ formError }}</p>
+      <div class="md:col-span-12 flex flex-wrap gap-3">
+        <button type="submit" class="btn-primary" :disabled="saving">{{ saving ? 'Guardando…' : 'Crear cupón' }}</button>
+        <button type="button" class="btn-outlined" @click="showForm = false; formError = ''">Cancelar</button>
+      </div>
+    </form>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Código -->
-        <div>
-          <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Código</label>
+    <div class="grid gap-6 lg:grid-cols-12 items-start">
+      <!-- Lista -->
+      <section class="admin-card lg:col-span-8" aria-labelledby="coupons-title">
+        <div class="flex items-baseline justify-between gap-4 mb-4">
+          <h2 id="coupons-title" class="admin-h2">Cupones</h2>
+          <p class="text-sm text-muted">{{ activeCount }} activos de {{ coupons.length }}</p>
+        </div>
+
+        <p v-if="!coupons.length" class="py-8 text-center text-muted">Aún no hay cupones. Crea el primero con «Nuevo cupón».</p>
+
+        <div v-else class="overflow-x-auto -mx-1 px-1">
+          <table class="admin-table min-w-[36rem]">
+            <thead>
+              <tr><th>Código</th><th>Descuento</th><th>Usos</th><th>Estado</th><th class="sr-only">Acciones</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(c, idx) in coupons" :key="c.code">
+                <td>
+                  <span class="font-mono font-semibold">{{ c.code }}</span>
+                  <span v-if="c.label" class="block text-sm text-muted">{{ c.label }}</span>
+                </td>
+                <td class="tabular-nums font-semibold">{{ c.discount_pct }} %</td>
+                <td class="tabular-nums">{{ usesOf(c.code) }}<span v-if="c.max_uses" class="text-muted"> / {{ c.max_uses }}</span></td>
+                <td>
+                  <span v-if="exhausted(c)" class="badge bg-surface-2 text-muted">Agotado</span>
+                  <span v-else-if="c.active" class="badge bg-success/10 text-success">Activo</span>
+                  <span v-else class="badge bg-surface-2 text-muted">Pausado</span>
+                </td>
+                <td class="text-right whitespace-nowrap">
+                  <button type="button" class="btn-outlined btn-sm" :disabled="saving" @click="toggleActive(idx)">{{ c.active ? 'Pausar' : 'Activar' }}</button>
+                  <button type="button" class="ml-2 btn-sm inline-flex items-center rounded-full px-3 text-danger hover:bg-danger/10" :disabled="saving" :aria-label="`Eliminar ${c.code}`" @click="removeCoupon(idx)">Eliminar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Cupón de bienvenida -->
+      <section class="admin-card lg:col-span-4" aria-labelledby="welcome-title">
+        <h2 id="welcome-title" class="admin-h2">Cupón de bienvenida</h2>
+        <p class="mt-2 text-sm text-muted">Cada cliente que verifica su correo recibe un código personal (BIENVENIDA…) de un solo uso, válido solo con su correo.</p>
+        <form class="mt-5" @submit.prevent="saveWelcome">
+          <label for="welcome-pct" class="admin-label mb-2">Descuento (%)</label>
           <div class="flex gap-2">
-            <input v-model="newDiscount.code" type="text" class="n3xt-input uppercase font-mono" placeholder="EJ: VIP10">
-            <button class="bg-primary/10 text-primary p-3 rounded-xl hover:bg-primary hover:text-white transition-colors" title="Generar Aleatorio" @click="generateCode">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            </button>
+            <input id="welcome-pct" v-model.number="welcome" type="number" min="1" max="50" class="field tabular-nums max-w-[8rem]">
+            <button type="submit" class="btn-primary" :disabled="saving || welcome === welcomePct">Guardar</button>
           </div>
-        </div>
-
-        <!-- Tipo -->
-        <div>
-          <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tipo de Descuento</label>
-          <select v-model="newDiscount.type" class="n3xt-input">
-            <option value="percentage">Porcentaje (%)</option>
-            <option value="fixed">Monto Fijo ($)</option>
-          </select>
-        </div>
-
-        <!-- Valor -->
-        <div>
-          <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Valor</label>
-          <div class="relative">
-            <div v-if="newDiscount.type === 'fixed'" class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <span class="text-gray-500 font-bold">$</span>
-            </div>
-            <input v-model.number="newDiscount.value" type="number" min="0" :class="['n3xt-input font-bold', newDiscount.type === 'fixed' ? 'pl-8' : '']" placeholder="0">
-            <div v-if="newDiscount.type === 'percentage'" class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-              <span class="text-gray-500 font-bold">%</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Límite de Usos -->
-        <div>
-          <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Límite de Usos (Opcional)</label>
-          <input v-model.number="newDiscount.max_uses" type="number" min="1" class="n3xt-input" placeholder="Ilimitado">
-        </div>
-      </div>
-
-      <div class="mt-8 flex justify-end">
-        <button class="bg-gray-900 dark:bg-primary text-white px-8 py-3 rounded-xl font-bold text-sm tracking-widest uppercase hover:scale-105 active:scale-95 transition-all shadow-xl" @click="addDiscount">
-          Guardar Código
-        </button>
-      </div>
+          <p class="mt-2 text-sm text-muted">Entre 1 y 50 %. Aplica a todos los cupones de bienvenida que aún no se han usado.</p>
+        </form>
+      </section>
     </div>
-
-    <!-- Lista de Códigos -->
-    <div v-if="(discounts as any[])?.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div 
-        v-for="(discount, index) in discounts" 
-        :key="index"
-        class="bg-white dark:bg-[#151a22] p-6 rounded-[24px] border relative overflow-hidden group transition-all"
-        :class="discount.status === 'active' ? 'border-primary/20 dark:border-[#21262d] shadow-lg' : 'border-gray-200 dark:border-[#21262d] opacity-60 grayscale'"
-      >
-        <div class="flex justify-between items-start mb-4 relative z-10">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-xl font-black font-mono text-gray-900 dark:text-white tracking-widest">{{ discount.code }}</span>
-              <span v-if="discount.status === 'active'" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            </div>
-            <span class="text-[10px] font-bold uppercase tracking-widest" :class="discount.type === 'percentage' ? 'text-primary' : 'text-blue-500'">
-              {{ discount.type === 'percentage' ? `${discount.value}% DE DESCUENTO` : `$${discount.value} DE DESCUENTO` }}
-            </span>
-          </div>
-          
-          <!-- Acciones -->
-          <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors" :class="discount.status === 'active' ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'" :title="discount.status === 'active' ? 'Desactivar' : 'Activar'" @click="toggleStatus(index)">
-              <svg v-if="discount.status === 'active'" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </button>
-            <button class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 transition-colors" title="Eliminar" @click="deleteDiscount(index)">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest relative z-10 border-t border-gray-100 dark:border-[#21262d] pt-4 mt-4">
-          <div class="flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-            <span>Usos: {{ discount.uses || 0 }} {{ discount.max_uses ? `/ ${discount.max_uses}` : '(Ilimitado)' }}</span>
-          </div>
-          <span :class="discount.status === 'active' ? 'text-emerald-500' : 'text-gray-500'">{{ discount.status === 'active' ? 'ACTIVO' : 'INACTIVO' }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else class="flex flex-col items-center justify-center p-12 bg-white/50 dark:bg-[#151a22]/50 rounded-[24px] border-2 border-dashed border-gray-200 dark:border-[#21262d] text-center">
-      <div class="w-20 h-20 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-6">
-        <svg class="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-        </svg>
-      </div>
-      <h3 class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-2">No hay códigos activos</h3>
-      <p class="text-xs text-gray-500 font-medium max-w-sm">Crea códigos de descuento para impulsar tus ventas. Los códigos se aplican en la pasarela de pagos.</p>
-    </div>
-
   </div>
 </template>

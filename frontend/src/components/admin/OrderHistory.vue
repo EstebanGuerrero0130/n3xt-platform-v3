@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localDateISO } from '../../utils/format'
 import { ref, computed, type PropType } from 'vue'
 
 const props = defineProps({
@@ -20,8 +21,8 @@ const setQuickMonth = (offset: number) => {
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth() + offset, 1)
   const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0)
-  dateRange.value.start = start.toISOString().split('T')[0]
-  dateRange.value.end = end.toISOString().split('T')[0]
+  dateRange.value.start = localDateISO(start)
+  dateRange.value.end = localDateISO(end)
 }
 
 const filteredOrders = computed(() => {
@@ -50,10 +51,13 @@ const filteredOrders = computed(() => {
   }).sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()) // Más recientes primero
 })
 
+// Los cancelados no suman ventas ni material (igual que Contabilidad)
+const billableOrders = computed(() => filteredOrders.value.filter(o => o.status !== 'cancelled'))
+
 const metricsSummary = computed(() => {
-  const total = filteredOrders.value.reduce((acc, o) => acc + (parseFloat(o.total_price) || 0), 0)
-  const weight = filteredOrders.value.reduce((acc, o) => acc + (parseFloat(o.estimated_weight_g) || 0), 0)
-  const count = filteredOrders.value.length
+  const total = billableOrders.value.reduce((acc, o) => acc + (parseFloat(o.total_price) || 0), 0)
+  const weight = billableOrders.value.reduce((acc, o) => acc + (parseFloat(o.estimated_weight_g) || 0), 0)
+  const count = billableOrders.value.length
   return {
     total,
     weight: (weight / 1000).toFixed(2), // Convert to KG
@@ -64,7 +68,7 @@ const metricsSummary = computed(() => {
 
 const topCustomers = computed(() => {
   const map: Record<string, { name: string; total: number; count: number }> = {}
-  filteredOrders.value.forEach(o => {
+  billableOrders.value.forEach(o => {
     if (!map[o.customer_name]) map[o.customer_name] = { name: o.customer_name, total: 0, count: 0 }
     map[o.customer_name].total += parseFloat(o.total_price) || 0
     map[o.customer_name].count++
@@ -89,7 +93,8 @@ const getStatusLabel = (status: any) => {
     printing: 'En Máquina',
     'post-processing': 'Post-Proceso',
     completed: 'Terminado',
-    shipped: 'Entregado'
+    shipped: 'Enviado',
+    cancelled: 'Cancelado'
   }
   return map[status] || status
 }
