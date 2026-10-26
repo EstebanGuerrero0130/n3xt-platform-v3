@@ -14,6 +14,7 @@ import NotificationSystem from '../components/admin/NotificationSystem.vue'
 import PriceSimulator from '../components/admin/PriceSimulator.vue'
 import ManualOrderForm from '../components/admin/ManualOrderForm.vue'
 import ProductionCalendar from '../components/admin/ProductionCalendar.vue'
+import TeamManager from '../components/admin/TeamManager.vue'
 import EditMaterialModal from '../components/admin/EditMaterialModal.vue'
 import NewMaterialModal from '../components/admin/NewMaterialModal.vue'
 import NewPrinterModal from '../components/admin/NewPrinterModal.vue'
@@ -80,7 +81,17 @@ const analyticsData = ref(null)
 const loading = ref(true)
 const loadingAnalytics = ref(false)
 const activeTab = ref('kanban')
-const productionView = ref<'board' | 'calendar'>('board')
+const productionView = ref('board') // 'board' | 'calendar'
+
+// Permisos del equipo: secciones que ve este usuario (el dueño, todas)
+const sections = ref([])
+// Un sync en curso al salir del panel no debe redirigir la página nueva
+let unmounted = false
+const can = (...ids) => ids.some(id => sections.value.includes(id))
+const applyAuth = (user) => {
+  sections.value = Array.isArray(user?.sections) ? user.sections : []
+  if (!can(activeTab.value) && sections.value.length) activeTab.value = sections.value[0]
+}
 const isSidebarOpen = ref(false)
 const isDark = ref(localStorage.getItem('n3xt_theme') !== 'light')
 const updateTheme = () => {
@@ -314,13 +325,14 @@ const syncAll = async (silent = false) => {
   
   // Ejecución paralela pero resiliente. El sync silencioso (cada 5 min y tras cada
   // acción) no recarga Ajustes: pisaba lo que el admin estaba editando sin publicar.
+  // Solo lo que este usuario puede ver (el servidor también lo exige)
   const tasks = [
-    { name: 'Pedidos', fn: fetchOrders },
+    ...(can('kanban', 'history', 'accounting') ? [{ name: 'Pedidos', fn: fetchOrders }] : []),
     { name: 'Inventario', fn: fetchInventory },
-    { name: 'Maquinaria', fn: fetchPrinters },
+    ...(can('machines', 'kanban') ? [{ name: 'Maquinaria', fn: fetchPrinters }] : []),
     ...(isSilent ? [] : [{ name: 'Ajustes', fn: fetchSettings }]),
-    { name: 'Analíticas', fn: fetchAnalytics },
-    { name: 'Contactos', fn: fetchContacts }
+    ...(can('accounting') ? [{ name: 'Analíticas', fn: fetchAnalytics }] : []),
+    ...(can('contacts', 'kanban') ? [{ name: 'Contactos', fn: fetchContacts }] : []),
   ]
 
   try {
@@ -334,9 +346,12 @@ const syncAll = async (silent = false) => {
     }))
     // Cada fetch atrapa sus errores: la sesión expirada se detecta aquí
     const auth = await api.checkAuth(true)
+    if (unmounted) return
     if (!auth.authenticated || auth.role !== 'admin') {
       showNotify('Sesión expirada. Por favor ingresa de nuevo.', 'warning')
       logout()
+    } else {
+      applyAuth(auth.user)
     }
   } finally {
     if (!isSilent) {
@@ -459,7 +474,7 @@ const fetchContacts = async () => {
   try {
     const [cData, sData] = await Promise.all([
       api.get('/admin/contacts/customers', true),
-      api.get('/admin/contacts/suppliers', true)
+      can('contacts') ? api.get('/admin/contacts/suppliers', true) : Promise.resolve([])
     ])
     contacts.customers = cData
     contacts.suppliers = sData
@@ -1061,8 +1076,17 @@ const handleConvertSimulationToOrder = async (formData) => {
 onMounted(async () => {
   document.body.style.overflow = 'hidden'
   updateTheme()
+  // Primero la sesión: define qué secciones cargar
+  const authStatus = await api.checkAuth(true)
+  if (unmounted) return
+  if (!authStatus.authenticated || authStatus.role !== 'admin') {
+    router.push('/admin/login')
+    return
+  }
+  applyAuth(authStatus.user)
   await syncAll()
-  
+  if (unmounted) return
+
   // Motor de Sincronización Proactiva: Cada 5 min intenta un silent sync si hay conexión
   syncInterval = setInterval(async () => {
     try {
@@ -1073,13 +1097,6 @@ onMounted(async () => {
     }
   }, 1000 * 60 * 5)
   
-  // Verificar sesión activa via Sanctum SPA (session cookie)
-  // No usamos localStorage token — la auth es via cookie httpOnly
-  const authStatus = await api.checkAuth()
-  if (!authStatus.authenticated || authStatus.role !== 'admin') {
-    router.push('/admin/login')
-    return
-  }
 
   // --- Auto-Open Order from URL (Admin Bridge) ---
   if (route.query.open_order) {
@@ -1101,6 +1118,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  unmounted = true
   document.body.style.overflow = ''
   if (typeof syncInterval !== 'undefined') {
     clearInterval(syncInterval)
@@ -1116,7 +1134,8 @@ watch(activeTab, (tab) => {
 
 const logout = async () => {
   try {
-    await api.post('/logout')    } catch (e) {
+    await api.post('/logout')
+  } catch (e) {
     // Silent — session may already be invalid
     logger.debug('Logout silent error:', e)
   }
@@ -1609,6 +1628,7 @@ const handlePurgeAll = () => {
       :is-open="isSidebarOpen"
       :active-tab="activeTab === 'accounting' ? 'accounting' : activeTab"
       :pending-orders-count="orders.filter(o => o.status === 'pending').length"
+      :sections="sections"
       @update:active-tab="(tab) => { activeTab = tab === 'analytics' ? 'accounting' : tab; isSidebarOpen = false }"
       @close="isSidebarOpen = false"
       @logout="logout"
@@ -1882,6 +1902,13 @@ const handlePurgeAll = () => {
           @save-settings="saveSettings"
           @seo-optimize="globalSeoOptimizer"
         />
+
+    <!-- Módulo: Equipo (solo el dueño) -->
+    <TeamManager
+      v-if="activeTab === 'team'"
+      :show-notify="showNotify"
+      :ask-confirm="askConfirm"
+    />
 
     <!-- Módulo: Parámetros (SettingsPanel.vue) -->
     <SettingsPanel

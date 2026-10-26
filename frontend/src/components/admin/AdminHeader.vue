@@ -20,7 +20,7 @@ const emit = defineEmits<{
 const TAB_TITLES: Record<string, string> = {
   kanban: 'Producción', inventory: 'Inventario', accounting: 'Contabilidad', machines: 'Maquinaria',
   history: 'Historial', purchases: 'Compras', contacts: 'Contactos', discounts: 'Descuentos',
-  settings: 'Parámetros', web: 'Sitio web',
+  settings: 'Parámetros', web: 'Sitio web', team: 'Equipo',
 }
 const title = computed(() => TAB_TITLES[props.activeTab] ?? 'Panel')
 </script>

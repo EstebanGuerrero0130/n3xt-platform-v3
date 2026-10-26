@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { apiCall, loginAdmin, openAdminTab, registerVerifiedCustomer, seedCatalog } from './helpers'
+import { apiCall, loginAdmin, openAdminTab, registerVerifiedCustomer, seedCatalog, signOut } from './helpers'
 
 test('reseña: el cliente califica, el admin publica y se ve en el sitio', async ({ page }) => {
   test.setTimeout(120_000)
@@ -13,12 +13,12 @@ test('reseña: el cliente califica, el admin publica y se ve en el sitio', async
   const orderId = order.json.data.order_id
 
   // El taller lo despacha
-  await page.context().clearCookies()
+  await signOut(page)
   await loginAdmin(page)
   expect((await apiCall(page, 'PATCH', `/admin/orders/${orderId}/status`, { status: 'shipped', tracking_carrier: 'Recoge en el taller', tracking_guide: 'Recoge en el taller' })).status).toBe(200)
 
   // El cliente califica
-  await page.context().clearCookies()
+  await signOut(page)
   await page.goto('/admin/login')
   await page.locator('#login-email').fill(email)
   await page.locator('#login-password').fill('Resena_2026')
@@ -36,7 +36,7 @@ test('reseña: el cliente califica, el admin publica y se ve en el sitio', async
   await expect(page.getByText(comment)).toHaveCount(0)
 
   // El admin la publica
-  await page.context().clearCookies()
+  await signOut(page)
   await loginAdmin(page)
   await openAdminTab(page, 'Sitio web')
   await page.getByRole('navigation', { name: 'Secciones del sitio' }).getByRole('button', { name: 'Reseñas' }).click()

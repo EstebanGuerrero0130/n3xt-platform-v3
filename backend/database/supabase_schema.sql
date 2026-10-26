@@ -20,8 +20,9 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     email_verified_at TIMESTAMP NULL,
     password VARCHAR(255) NOT NULL,
-    pin_code VARCHAR(4) NULL,
     remember_token VARCHAR(100) NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'owner',             -- owner (todo) o staff
+    permissions JSON NULL,                                 -- secciones del panel (staff)
     created_at TIMESTAMP NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL DEFAULT NOW()
 );

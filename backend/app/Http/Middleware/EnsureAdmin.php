@@ -26,4 +26,11 @@ class EnsureAdmin
     {
         return auth('sanctum')->user() instanceof User;
     }
+
+    /** Admin con alguna de esas secciones (el dueño siempre). */
+    public static function can(string ...$sections): bool
+    {
+        $user = auth('sanctum')->user();
+        return $user instanceof User && $user->canAccess(...$sections);
+    }
 }

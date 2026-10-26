@@ -19,7 +19,7 @@ Route::any('/login', function() {
 // --- PROTOCOLO DE ACCESO UNIFICADO N3XT ---
 Route::any('/ping', function() { return response()->json(['status' => 'online', 'timestamp' => now()]); });
 Route::middleware('throttle:10,1')->post('/auth-master-industrial-access', [UnifiedAuthController::class, 'login']);
-Route::middleware('throttle:' . config('auth.register_per_minute') . ',1')->post('/auth/unified-register', [UnifiedAuthController::class, 'register']);
+Route::middleware('throttle:5,1')->post('/auth/unified-register', [UnifiedAuthController::class, 'register']);
 Route::middleware('throttle:3,1')->post('/auth/password/forgot', [UnifiedAuthController::class, 'forgotPassword']);
 Route::middleware('throttle:10,1')->post('/auth/password/reset', [UnifiedAuthController::class, 'resetPassword']);
 
@@ -61,7 +61,11 @@ Route::middleware('auth:customer')->group(function () {
 // Sesión actual (admin o cliente) con rol explícito
 Route::get('/user', function (Request $request) {
     if ($admin = auth('web')->user()) {
-        return response()->json(array_merge($admin->only(['id', 'name', 'email']), ['role' => 'admin']));
+        return response()->json(array_merge($admin->only(['id', 'name', 'email']), [
+            'role' => 'admin',
+            'team_role' => $admin->isOwner() ? 'owner' : 'staff',
+            'sections' => $admin->sections(),
+        ]));
     }
     if ($customer = auth('customer')->user()) {
         return response()->json(array_merge($customer->only(['id', 'name', 'email']), ['role' => 'customer', 'email_verified' => $customer->isVerified()]));
@@ -70,64 +74,85 @@ Route::get('/user', function (Request $request) {
     return response()->json(['role' => null]);
 });
 
-// Rutas protegidas para Administrador
+// Rutas protegidas para Administrador. Cada bloque pide su sección (permisos del
+// equipo, ver EnsureSection); el dueño entra a todo.
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
-    // Analytics & Accounting
-    Route::get('/admin/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index']);
-    Route::get('/admin/export-csv', [\App\Http\Controllers\Admin\AnalyticsController::class, 'exportCsv']);
-
-    // Backup & Sync
-    Route::get('/admin/backup/export', [\App\Http\Controllers\Admin\BackupController::class, 'exportAll']);
-    Route::post('/admin/backup/import', [\App\Http\Controllers\Admin\BackupController::class, 'importAll']);
-
     Route::post('/logout', [AuthController::class, 'logout']);
-    
-    // Panel de control
-    Route::get('/admin/orders', [OrderController::class, 'index']);
-    Route::get('/admin/orders/{id}', [OrderController::class, 'show']);
-    Route::patch('/admin/orders/{id}/status', [OrderController::class, 'updateStatus']);
-    Route::post('/admin/orders/{id}/toggle-paid', [OrderController::class, 'togglePaid']);
-    Route::delete('/admin/orders/{id}', [OrderController::class, 'destroy']);
-    Route::get('/admin/reviews', [\App\Http\Controllers\ReviewController::class, 'adminIndex']);
-    Route::patch('/admin/reviews/{id}', [\App\Http\Controllers\ReviewController::class, 'moderate'])->whereNumber('id');
-    Route::delete('/admin/reviews/{id}', [\App\Http\Controllers\ReviewController::class, 'destroy'])->whereNumber('id');
-    Route::get('/admin/orders/{id}/download', [OrderController::class, 'download']);
-    Route::post('/admin/purge-all', [OrderController::class, 'purgeAll']);
-    Route::post('/admin/orders/{id}/extras', [OrderController::class, 'addExtra']);
+
+    // Solo el dueño: respaldo, borrado masivo y equipo
+    Route::middleware('section:owner')->group(function () {
+        Route::get('/admin/backup/export', [\App\Http\Controllers\Admin\BackupController::class, 'exportAll']);
+        Route::post('/admin/backup/import', [\App\Http\Controllers\Admin\BackupController::class, 'importAll']);
+        Route::post('/admin/purge-all', [OrderController::class, 'purgeAll']);
+        Route::get('/admin/team', [\App\Http\Controllers\Admin\TeamController::class, 'index']);
+        Route::post('/admin/team', [\App\Http\Controllers\Admin\TeamController::class, 'store']);
+        Route::patch('/admin/team/{id}', [\App\Http\Controllers\Admin\TeamController::class, 'update'])->whereNumber('id');
+        Route::delete('/admin/team/{id}', [\App\Http\Controllers\Admin\TeamController::class, 'destroy'])->whereNumber('id');
+    });
+
+    // Contabilidad
+    Route::middleware('section:accounting')->group(function () {
+        Route::get('/admin/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index']);
+        Route::get('/admin/export-csv', [\App\Http\Controllers\Admin\AnalyticsController::class, 'exportCsv']);
+    });
+
+    // Pedidos: verlos (producción, historial, contabilidad) y moverlos (producción)
+    Route::middleware('section:kanban,history,accounting')->group(function () {
+        Route::get('/admin/orders', [OrderController::class, 'index']);
+        Route::get('/admin/orders/{id}', [OrderController::class, 'show']);
+        Route::get('/admin/orders/{id}/download', [OrderController::class, 'download']);
+    });
+    Route::middleware('section:kanban,accounting')->post('/admin/orders/{id}/toggle-paid', [OrderController::class, 'togglePaid']);
+    Route::middleware('section:kanban')->group(function () {
+        Route::patch('/admin/orders/{id}/status', [OrderController::class, 'updateStatus']);
+        Route::delete('/admin/orders/{id}', [OrderController::class, 'destroy']);
+        Route::post('/admin/orders/{id}/extras', [OrderController::class, 'addExtra']);
+    });
+
+    // Sitio web: reseñas e imágenes (los ajustes revisan cada clave en el controlador)
+    Route::middleware('section:web')->group(function () {
+        Route::get('/admin/reviews', [\App\Http\Controllers\ReviewController::class, 'adminIndex']);
+        Route::patch('/admin/reviews/{id}', [\App\Http\Controllers\ReviewController::class, 'moderate'])->whereNumber('id');
+        Route::delete('/admin/reviews/{id}', [\App\Http\Controllers\ReviewController::class, 'destroy'])->whereNumber('id');
+        Route::post('/admin/upload-image', [SettingController::class, 'uploadImage']);
+    });
+    Route::middleware('section:settings,web,discounts')->post('/admin/settings', [SettingController::class, 'update']);
+    Route::middleware('section:settings')->post('/admin/settings/logo', [SettingController::class, 'uploadLogo']);
 
     // Compras & Gastos
-    Route::get('/admin/purchases', [\App\Http\Controllers\PurchaseController::class, 'index']);
-    Route::post('/admin/purchases', [\App\Http\Controllers\PurchaseController::class, 'store']);
-    Route::delete('/admin/purchases/{id}', [\App\Http\Controllers\PurchaseController::class, 'destroy']);
-
-    // Configuración
-    Route::post('/admin/settings', [SettingController::class, 'update']);
-    Route::post('/admin/settings/logo', [SettingController::class, 'uploadLogo']);
-    Route::post('/admin/upload-image', [SettingController::class, 'uploadImage']);
-
+    Route::middleware('section:purchases')->group(function () {
+        Route::get('/admin/purchases', [\App\Http\Controllers\PurchaseController::class, 'index']);
+        Route::post('/admin/purchases', [\App\Http\Controllers\PurchaseController::class, 'store']);
+        Route::delete('/admin/purchases/{id}', [\App\Http\Controllers\PurchaseController::class, 'destroy']);
+    });
 
     // Inventario
-    Route::post('/materials', [MaterialController::class, 'store']);
-    Route::patch('/materials/{id}', [MaterialController::class, 'update']);
-    Route::post('/materials/{id}/stock', [MaterialController::class, 'updateStock']);
-    Route::delete('/materials/{id}', [MaterialController::class, 'destroy']);
+    Route::middleware('section:inventory')->group(function () {
+        Route::post('/materials', [MaterialController::class, 'store']);
+        Route::patch('/materials/{id}', [MaterialController::class, 'update']);
+        Route::post('/materials/{id}/stock', [MaterialController::class, 'updateStock']);
+        Route::delete('/materials/{id}', [MaterialController::class, 'destroy']);
+    });
 
-    // Maquinaria (Granja)
-    Route::get('/admin/printers', [\App\Http\Controllers\PrinterController::class, 'index']);
-    Route::post('/admin/printers', [\App\Http\Controllers\PrinterController::class, 'store']);
-    Route::patch('/admin/printers/{id}', [\App\Http\Controllers\PrinterController::class, 'update']);
-    Route::post('/admin/printers/{id}/reset', [\App\Http\Controllers\PrinterController::class, 'reset']);
-    Route::post('/admin/printers/{id}/maintenance-complete', [\App\Http\Controllers\PrinterController::class, 'maintenanceComplete']);
-    Route::delete('/admin/printers/{id}', [\App\Http\Controllers\PrinterController::class, 'destroy']);
+    // Maquinaria (producción las lee para asignar y para el calendario)
+    Route::middleware('section:machines,kanban')->get('/admin/printers', [\App\Http\Controllers\PrinterController::class, 'index']);
+    Route::middleware('section:machines')->group(function () {
+        Route::post('/admin/printers', [\App\Http\Controllers\PrinterController::class, 'store']);
+        Route::patch('/admin/printers/{id}', [\App\Http\Controllers\PrinterController::class, 'update']);
+        Route::post('/admin/printers/{id}/reset', [\App\Http\Controllers\PrinterController::class, 'reset']);
+        Route::post('/admin/printers/{id}/maintenance-complete', [\App\Http\Controllers\PrinterController::class, 'maintenanceComplete']);
+        Route::delete('/admin/printers/{id}', [\App\Http\Controllers\PrinterController::class, 'destroy']);
+    });
 
-    // Contactos (Clientes y Proveedores)
-    Route::get('/admin/contacts/customers', [\App\Http\Controllers\Admin\ContactController::class, 'getCustomers']);
-    Route::post('/admin/contacts/customers', [\App\Http\Controllers\Admin\ContactController::class, 'storeCustomer']);
-    Route::patch('/admin/contacts/customers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'updateCustomer']);
-    Route::delete('/admin/contacts/customers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'deleteCustomer']);
-
-    Route::get('/admin/contacts/suppliers', [\App\Http\Controllers\Admin\ContactController::class, 'getSuppliers']);
-    Route::post('/admin/contacts/suppliers', [\App\Http\Controllers\Admin\ContactController::class, 'storeSupplier']);
-    Route::patch('/admin/contacts/suppliers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'updateSupplier']);
-    Route::delete('/admin/contacts/suppliers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'deleteSupplier']);
+    // Contactos (producción lee clientes para el pedido manual)
+    Route::middleware('section:contacts,kanban')->get('/admin/contacts/customers', [\App\Http\Controllers\Admin\ContactController::class, 'getCustomers']);
+    Route::middleware('section:contacts')->group(function () {
+        Route::post('/admin/contacts/customers', [\App\Http\Controllers\Admin\ContactController::class, 'storeCustomer']);
+        Route::patch('/admin/contacts/customers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'updateCustomer']);
+        Route::delete('/admin/contacts/customers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'deleteCustomer']);
+        Route::get('/admin/contacts/suppliers', [\App\Http\Controllers\Admin\ContactController::class, 'getSuppliers']);
+        Route::post('/admin/contacts/suppliers', [\App\Http\Controllers\Admin\ContactController::class, 'storeSupplier']);
+        Route::patch('/admin/contacts/suppliers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'updateSupplier']);
+        Route::delete('/admin/contacts/suppliers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'deleteSupplier']);
+    });
 });

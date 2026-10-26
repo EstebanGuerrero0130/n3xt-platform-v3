@@ -58,6 +58,15 @@ export async function apiCall(page: Page, method: string, path: string, body?: u
   }, { method, path, body })
 }
 
+/**
+ * Cierra la sesión del navegador. Primero sale de la página: una petición del
+ * panel aún en vuelo volvería a dejar la cookie de sesión después de borrarla.
+ */
+export async function signOut(page: Page) {
+  await page.goto('about:blank')
+  await page.context().clearCookies()
+}
+
 /** Publica productos de prueba en el catálogo (como admin). */
 export async function seedCatalog(page: Page, catalog: unknown[]) {
   await loginAdmin(page)
@@ -65,7 +74,7 @@ export async function seedCatalog(page: Page, catalog: unknown[]) {
   const web = { ...(current.json?.web || {}), catalog }
   const res = await apiCall(page, 'POST', '/admin/settings', { settings: { web } })
   expect(res.status).toBe(200)
-  await page.context().clearCookies()
+  await signOut(page)
 }
 
 /** Resuelve una operación de captcha "¿Cuánto es A op B?" en un campo. */

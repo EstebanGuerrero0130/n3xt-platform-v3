@@ -58,6 +58,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
+            'section' => \App\Http\Middleware\EnsureSection::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) use ($isVercel): void {

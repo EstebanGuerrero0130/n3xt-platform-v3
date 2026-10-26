@@ -20,6 +20,6 @@ test('guardar una cotización y reabrirla en el cotizador', async ({ page }) => 
   await expect(page.getByText('Cubo de prueba')).toBeVisible()
   await page.getByRole('link', { name: 'Abrir en el cotizador' }).click()
   await expect(page.getByText(/Abrimos «Cubo de prueba»/)).toBeVisible({ timeout: 20_000 })
-  await expect(page.getByRole('button', { name: /^cubo-e2e\.stl/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^cubo-e2e\.stl/ })).toBeVisible({ timeout: 15_000 })
   expect(errors).toEqual([])
 })

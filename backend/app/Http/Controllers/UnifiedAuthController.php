@@ -44,7 +44,9 @@ class UnifiedAuthController extends Controller
                     'role'  => 'admin',
                     'user'  => [
                         'name'  => $admin->name,
-                        'email' => $admin->email
+                        'email' => $admin->email,
+                        'team_role' => $admin->isOwner() ? 'owner' : 'staff',
+                        'sections' => $admin->sections(),
                     ]
                 ], 'Acceso Administrativo Concedido.');
             }

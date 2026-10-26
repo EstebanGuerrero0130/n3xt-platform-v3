@@ -11,22 +11,37 @@ class SettingController extends Controller
 {
     /** Claves que solo ve el admin (p. ej. códigos de cupón). */
     private const PRIVATE_KEYS = ['coupons', 'coupon_uses', 'discounts', 'security'];
+    /** Sección del panel que edita cada clave; el resto es de Parámetros. */
+    private const KEY_SECTIONS = ['web' => 'web', 'coupons' => 'discounts', 'coupon_uses' => 'discounts', 'discounts' => 'discounts', 'welcome_coupon_pct' => 'discounts'];
     /** Solo los escribe el servidor (el admin guardaría una copia vieja encima). */
     private const SERVER_KEYS = ['coupon_uses'];
 
     public function index()
     {
+        return response()->json($this->visible());
+    }
+
+    private static function sectionOf(string $key): string
+    {
+        return self::KEY_SECTIONS[$key] ?? 'settings';
+    }
+
+    /** Ajustes que puede ver quien pregunta (cupones solo con su sección). */
+    private function visible()
+    {
         $settings = Setting::all()->pluck('value', 'key');
-        if (!EnsureAdmin::check()) {
-            $settings = $settings->except(self::PRIVATE_KEYS);
-            // El costo de cada producto y su ítem de inventario son internos
-            $web = $settings->get('web');
-            if (is_array($web) && is_array($web['catalog'] ?? null)) {
-                $web['catalog'] = array_map(fn ($p) => is_array($p) ? collect($p)->except(['cost', 'stock_item'])->all() : $p, $web['catalog']);
-                $settings->put('web', $web);
-            }
+        if (EnsureAdmin::check()) {
+            return $settings->filter(fn ($v, $key) => !in_array($key, self::PRIVATE_KEYS, true) || EnsureAdmin::can(self::sectionOf($key)));
         }
-        return response()->json($settings);
+
+        $settings = $settings->except(self::PRIVATE_KEYS);
+        // El costo de cada producto y su ítem de inventario son internos
+        $web = $settings->get('web');
+        if (is_array($web) && is_array($web['catalog'] ?? null)) {
+            $web['catalog'] = array_map(fn ($p) => is_array($p) ? collect($p)->except(['cost', 'stock_item'])->all() : $p, $web['catalog']);
+            $settings->put('web', $web);
+        }
+        return $settings;
     }
 
     public function update(Request $request)
@@ -38,18 +53,18 @@ class SettingController extends Controller
             ]);
 
             foreach ($data['settings'] as $key => $value) {
-                if (in_array($key, self::SERVER_KEYS, true)) {
+                // El panel manda todo junto: se ignora lo que este usuario no puede editar
+                if (in_array($key, self::SERVER_KEYS, true) || !EnsureAdmin::can(self::sectionOf($key))) {
                     continue;
                 }
                 Setting::updateOrCreate(['key' => $key], ['value' => $value]);
             }
 
             // Retornamos los ajustes actuales para sincronizar el frontend sin recargar
-            $allSettings = Setting::all()->pluck('value', 'key');
             return response()->json([
                 'message' => 'Settings updated successfully',
                 'success' => true,
-                'settings' => $allSettings
+                'settings' => $this->visible(),
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error interno al guardar', 'error' => $e->getMessage()], 500);

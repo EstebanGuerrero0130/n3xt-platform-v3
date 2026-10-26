@@ -17,7 +17,8 @@ class StoreOrderRequest extends FormRequest
 
     public function rules(): array
     {
-        $isAdmin = EnsureAdmin::check();
+        // Precio y métricas manuales: solo quien maneja producción
+        $isAdmin = EnsureAdmin::can('kanban');
 
         // Pedido público: solo STL/OBJ (el servidor debe poder medir la malla).
         // Admin: mantiene .3mf en el `file` único (pedido manual con precio propio).

@@ -77,7 +77,8 @@ class OrderController extends Controller
      */
     public function store(StoreOrderRequest $request)
     {
-        $isAdmin = EnsureAdmin::check();
+        // Precio y métricas manuales: solo quien maneja producción
+        $isAdmin = EnsureAdmin::can('kanban');
 
         // 1. Bot Protection (Turnstile)
         if (!$isAdmin) {
