@@ -1,109 +1,65 @@
 <template>
-  <Teleport to="body">
-    <div v-if="visible" class="fixed inset-0 z-[9996] flex items-center justify-center p-4" @click.self="$emit('close')">
-      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-      <div class="relative bg-gray-900 border border-gray-700 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <!-- Header -->
-        <div class="sticky top-0 bg-gray-900 z-10 p-4 md:p-6 pb-3 md:pb-4 border-b border-gray-800 flex justify-between items-start gap-3">
-          <div class="min-w-0">
-            <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">ORDEN MANUAL</h2>
-            <p class="text-xs md:text-sm text-gray-500 mt-1 font-semibold">Registro directo de fabricación</p>
-          </div>
-          <button class="p-2 hover:bg-gray-800 rounded-xl transition-colors shrink-0" @click="$emit('close')">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
+  <AdminModal :show="visible" title="Nuevo pedido manual" description="Para pedidos que llegan por WhatsApp o en el taller. El precio lo pones tú." size="xl" :busy="submitting" @close="$emit('close')">
+    <form id="manual-order-form" class="grid gap-6 lg:grid-cols-2" novalidate @submit.prevent="canSubmit && submit()">
+      <section class="space-y-4" aria-labelledby="mo-customer">
+        <h3 id="mo-customer" class="admin-h2 text-base">Cliente</h3>
+        <div v-if="contacts.length">
+          <label for="mo-contact" class="admin-label mb-2">Cliente guardado <span class="opacity-70">(opcional)</span></label>
+          <select id="mo-contact" class="field" @change="selectCustomer">
+            <option value="">Elegir de Contactos…</option>
+            <option v-for="c in contacts" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
         </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2"><label for="mo-name" class="admin-label mb-2">Nombre</label><input id="mo-name" v-model="form.customer_name" type="text" required class="field" data-autofocus></div>
+          <div><label for="mo-email" class="admin-label mb-2">Correo <span class="opacity-70">(para los avisos)</span></label><input id="mo-email" v-model="form.customer_email" type="email" class="field"></div>
+          <div><label for="mo-phone" class="admin-label mb-2">WhatsApp</label><input id="mo-phone" v-model="form.customer_phone" type="tel" class="field"></div>
+          <div><label for="mo-doc" class="admin-label mb-2">CC / NIT</label><input id="mo-doc" v-model="form.customer_id_document" type="text" class="field"></div>
+          <div><label for="mo-city" class="admin-label mb-2">Ciudad</label><input id="mo-city" v-model="form.shipping_city" type="text" class="field"></div>
+          <div class="sm:col-span-2"><label for="mo-address" class="admin-label mb-2">Dirección de envío</label><input id="mo-address" v-model="form.shipping_address" type="text" class="field"></div>
+        </div>
+      </section>
 
-        <div class="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          <!-- Left: Client Data -->
-          <div class="space-y-4">
-            <h3 class="text-sm font-black text-gray-300 uppercase tracking-wider">Datos del Cliente</h3>
-            <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cliente Existente</label>
-              <select class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all" @change="selectCustomer">
-                <option value="">Seleccionar...</option>
-                <option v-for="c in contacts" :key="c.id" :value="c.id">{{ c.name }}</option>
-              </select>
+      <section class="space-y-4" aria-labelledby="mo-job">
+        <h3 id="mo-job" class="admin-h2 text-base">Trabajo</h3>
+        <div><label for="mo-jobname" class="admin-label mb-2">Nombre del trabajo</label><input id="mo-jobname" v-model="form.job_name" type="text" placeholder="Ej. Llaveros evento" class="field"></div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <fieldset>
+            <legend class="admin-label mb-2">Tecnología</legend>
+            <div class="flex gap-2">
+              <button v-for="t in ['FDM', 'SLA']" :key="t" type="button" class="chip" :aria-pressed="form.technology === t" @click="form.technology = t; form.material_id = ''">{{ t }}</button>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nombre</label>
-                <input v-model="form.customer_name" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">WhatsApp</label>
-                <input v-model="form.customer_phone" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold outline-none">
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Documento ID</label>
-              <input v-model="form.customer_id_document" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold outline-none">
-            </div>
-          </div>
-
-          <!-- Right: Job Data -->
-          <div class="space-y-4">
-            <h3 class="text-sm font-black text-gray-300 uppercase tracking-wider">Datos del Trabajo</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Tecnología</label>
-                <select v-model="form.technology" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-semibold text-sm outline-none">
-                  <option value="FDM">FDM</option>
-                  <option value="SLA">SLA</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Material</label>
-                <select v-model="form.material_id" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-semibold text-sm outline-none">
-                  <option value="">Seleccionar...</option>
-                  <option v-for="m in filteredMaterials" :key="m.id" :value="m.id">{{ m.name }}</option>
-                </select>
-              </div>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Peso (g)</label>
-                <input v-model.number="form.weight_g" type="number" min="0" step="0.1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white text-sm font-semibold outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cantidad</label>
-                <input v-model.number="form.qty" type="number" min="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white text-sm font-semibold outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Horas</label>
-                <input v-model.number="form.duration_h" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white text-sm font-semibold outline-none">
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Precio Final</label>
-              <div class="relative">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
-                <input v-model.number="form.total_price" type="number" min="0" class="w-full bg-gray-800 border border-gray-700 rounded-xl pl-8 pr-4 py-3 text-white font-bold text-lg outline-none">
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Comentarios</label>
-              <textarea v-model="form.comments" rows="2" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"></textarea>
-            </div>
+          </fieldset>
+          <div>
+            <label for="mo-material" class="admin-label mb-2">Material</label>
+            <select id="mo-material" v-model="form.material_id" class="field" required>
+              <option value="">Elegir…</option>
+              <option v-for="m in filteredMaterials" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
           </div>
         </div>
-
-        <div class="p-4 md:p-6 border-t border-gray-800 flex flex-col sm:flex-row justify-end gap-3 md:gap-4">
-          <button class="w-full sm:w-auto px-6 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold transition-all text-sm" @click="$emit('close')">Descartar</button>
-          <p v-if="submitError" role="alert" class="text-sm text-red-400 sm:mr-auto self-center">{{ submitError }}</p>
-          <button :disabled="submitting" class="w-full sm:w-auto px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black transition-all text-sm" @click="submit">
-            {{ submitting ? 'Creando...' : 'CREAR ORDEN' }}
-          </button>
+        <div class="grid grid-cols-3 gap-3">
+          <div><label for="mo-weight" class="admin-label mb-2">Peso (g)</label><input id="mo-weight" v-model.number="form.weight_g" type="number" min="0" step="0.1" class="field tabular-nums"></div>
+          <div><label for="mo-qty" class="admin-label mb-2">Unidades</label><input id="mo-qty" v-model.number="form.qty" type="number" min="1" class="field tabular-nums"></div>
+          <div><label for="mo-hours" class="admin-label mb-2">Horas</label><input id="mo-hours" v-model.number="form.duration_h" type="number" min="0" step="0.5" class="field tabular-nums"></div>
         </div>
-      </div>
-    </div>
-  </Teleport>
+        <div><label for="mo-price" class="admin-label mb-2">Precio final ($)</label><input id="mo-price" v-model.number="form.total_price" type="number" min="0" class="field tabular-nums text-lg font-semibold"></div>
+        <div><label for="mo-comments" class="admin-label mb-2">Notas</label><textarea id="mo-comments" v-model="form.comments" rows="2" class="field !h-auto py-2.5"></textarea></div>
+      </section>
+    </form>
+    <template #footer>
+      <p v-if="submitError" role="alert" class="mr-auto self-center text-sm text-danger">{{ submitError }}</p>
+      <button type="button" class="btn-outlined" :disabled="submitting" @click="$emit('close')">Cancelar</button>
+      <button type="submit" form="manual-order-form" class="btn-primary" :disabled="submitting || !canSubmit">{{ submitting ? 'Creando…' : 'Crear pedido' }}</button>
+    </template>
+  </AdminModal>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, type PropType } from 'vue'
 import { api } from '../../services/api'
 import logger from '../../utils/logger'
+import AdminModal from './AdminModal.vue'
 
 interface MaterialOption { id: string; name: string; category?: string; cost_per_kg?: number | string }
 interface ContactOption {
@@ -129,8 +85,9 @@ const form = reactive({
   customer_email: '', customer_phone: '', shipping_address: '', shipping_city: '',
   shipping_zip: '', shipping_reference: '',
   material_id: '', weight_g: 0, duration_h: 0, total_price: 0,
-  qty: 1, technology: 'FDM', comments: '',
+  qty: 1, technology: 'FDM', comments: '', job_name: '',
 })
+const canSubmit = computed(() => !!form.customer_name.trim() && !!form.material_id && Number(form.total_price) > 0)
 
 const filteredMaterials = computed(() =>
   props.materials.filter(m => m.category === form.technology || m.category === 'General')
@@ -174,9 +131,10 @@ const submit = async () => {
 
 const reset = () => {
   Object.assign(form, {
-    customer_id: '', customer_name: '', customer_id_document: '', customer_email: '',
-    customer_phone: '', material_id: '', weight_g: 0, duration_h: 0, total_price: 0,
-    technology: 'FDM', comments: '',
+    customer_id: '', customer_name: '', customer_company: '', customer_id_document: '', customer_email: '',
+    customer_phone: '', shipping_address: '', shipping_city: '', shipping_zip: '', shipping_reference: '',
+    material_id: '', weight_g: 0, duration_h: 0, total_price: 0, qty: 1,
+    technology: 'FDM', comments: '', job_name: '',
   })
 }
 </script>

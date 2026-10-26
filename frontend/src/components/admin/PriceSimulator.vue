@@ -1,215 +1,125 @@
 <template>
-  <Teleport to="body">
-    <div v-if="visible" class="fixed inset-0 z-[9997] flex items-center justify-center p-4" @click.self="$emit('close')">
-      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-      <div class="relative bg-gray-900 border border-gray-700 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-        <!-- Header -->
-        <div class="sticky top-0 bg-gray-900 z-10 p-6 pb-4 border-b border-gray-800 flex justify-between items-start">
-          <div>
-            <h2 class="text-2xl font-black text-white tracking-tight">SIMULADOR DE COSTOS</h2>
-            <p class="text-sm text-gray-500 mt-1 font-semibold">Motor de costos N3XT • Manufactura Digital</p>
+  <AdminModal :show="visible" title="Simulador de precios" description="Calcula el precio con los valores de Parámetros. Puedes descargar la cotización o convertirla en pedido." size="xl" @close="$emit('close')">
+    <div class="grid gap-6 lg:grid-cols-12">
+      <!-- Datos -->
+      <form class="lg:col-span-7 space-y-6" novalidate @submit.prevent>
+        <section class="grid gap-4 sm:grid-cols-2" aria-labelledby="sim-client">
+          <h3 id="sim-client" class="sm:col-span-2 admin-h2 text-base">Proyecto y cliente</h3>
+          <div><label for="sim-job" class="admin-label mb-2">Nombre del proyecto</label><input id="sim-job" v-model="form.job_name" placeholder="Ej. Engranaje de hélice" class="field" data-autofocus></div>
+          <div v-if="contacts.length">
+            <label for="sim-contact" class="admin-label mb-2">Cliente guardado</label>
+            <select id="sim-contact" class="field" @change="selectCustomer"><option value="">Elegir…</option><option v-for="c in contacts" :key="c.id" :value="c.id">{{ c.name }}</option></select>
           </div>
-          <button class="p-2 hover:bg-gray-800 rounded-xl transition-colors" @click="$emit('close')">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
+          <div><label for="sim-name" class="admin-label mb-2">Nombre del cliente</label><input id="sim-name" v-model="form.customer_name" class="field"></div>
+          <div><label for="sim-phone" class="admin-label mb-2">WhatsApp</label><input id="sim-phone" v-model="form.customer_phone" type="tel" class="field"></div>
+          <div class="sm:col-span-2"><label for="sim-email" class="admin-label mb-2">Correo</label><input id="sim-email" v-model="form.customer_email" type="email" class="field"></div>
+        </section>
 
-        <div class="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
-          <!-- Left: Inputs -->
-          <div class="lg:col-span-3 space-y-4 md:space-y-5">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nombre del Proyecto</label>
-                <input v-model="form.job_name" placeholder="Ej: Engranaje Hélice" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-semibold text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cliente</label>
-                <select class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all" @change="selectCustomer">
-                  <option value="">Seleccionar cliente</option>
-                  <option v-for="c in contacts" :key="c.id" :value="c.id">{{ c.name }}</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nombre</label>
-                <input v-model="form.customer_name" placeholder="Cliente" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">WhatsApp</label>
-                <input v-model="form.customer_phone" placeholder="+57" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Correo</label>
-                <input v-model="form.customer_email" placeholder="email@ejemplo.com" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Material Base</label>
-                <select v-model="form.material_id" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-                  <option value="">Seleccionar...</option>
-                  <option v-for="m in materials" :key="m.id" :value="m.id">{{ m.name }} (${{ m.cost_per_kg }}/kg)</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Peso (gramos)</label>
-                <input v-model.number="form.weight_g" type="number" min="0" step="0.1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Tiempo (HH:MM)</label>
-                <input v-model="form.time_str" placeholder="2:30" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 md:gap-4">
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Piezas por Lote</label>
-                <input v-model.number="form.pieces_per_batch" type="number" min="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">% Descuento</label>
-                <input v-model.number="form.discount_pct" type="number" min="0" max="100" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-            </div>
-
-            <!-- Extras -->
-            <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Insumos / Extras</label>
-              <select class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all" @change="addExtra">
-                <option value="">Agregar insumo adicional...</option>
-                <option v-for="m in extraMaterials" :key="m.id" :value="m.id">{{ m.name }} (${{ m.cost_per_kg }}/{{ m.unit || 'unidad' }})</option>
-              </select>
-              <div v-for="(item, idx) in form.extra_items" :key="idx" class="flex items-center gap-3 mt-3 bg-gray-800/50 rounded-xl px-4 py-3">
-                <span class="flex-1 text-white text-sm font-semibold">{{ item.name }}</span>
-                <div class="flex items-center gap-2">
-                  <button class="w-8 h-8 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors" @click="item.qty = Math.max(1, item.qty - 1)">-</button>
-                  <span class="text-white font-bold w-8 text-center">{{ item.qty }}</span>
-                  <button class="w-8 h-8 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors" @click="item.qty++">+</button>
-                </div>
-                <span class="text-emerald-400 font-bold w-24 text-right">${{ (item.cost * item.qty).toLocaleString() }}</span>
-                <button class="p-1 hover:bg-red-900/50 rounded-lg transition-colors" @click="removeExtra(idx)">
-                  <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Notas Internas</label>
-              <textarea v-model="form.comments" rows="3" placeholder="Notas para el taller..." class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all resize-none"></textarea>
-            </div>
+        <section class="grid gap-4 sm:grid-cols-3" aria-labelledby="sim-print">
+          <h3 id="sim-print" class="sm:col-span-3 admin-h2 text-base">Impresión</h3>
+          <div class="sm:col-span-3">
+            <label for="sim-material" class="admin-label mb-2">Material</label>
+            <select id="sim-material" v-model="form.material_id" class="field">
+              <option value="">Elegir…</option>
+              <option v-for="m in baseMaterials" :key="m.id" :value="m.id">{{ m.name }} · {{ money(m.cost_per_kg) }}/{{ m.unit === 'ml' ? 'L' : 'kg' }}</option>
+            </select>
           </div>
+          <div><label for="sim-weight" class="admin-label mb-2">Peso total (g)</label><input id="sim-weight" v-model.number="form.weight_g" type="number" min="0" step="0.1" class="field tabular-nums"></div>
+          <div><label for="sim-time" class="admin-label mb-2">Tiempo (h:mm)</label><input id="sim-time" v-model="form.time_str" placeholder="2:30" inputmode="numeric" class="field tabular-nums"></div>
+          <div><label for="sim-pieces" class="admin-label mb-2">Piezas</label><input id="sim-pieces" v-model.number="form.pieces_per_batch" type="number" min="1" class="field tabular-nums"></div>
+        </section>
 
-          <!-- Right: Results -->
-          <div class="lg:col-span-2 space-y-3 md:space-y-4">
-            <div class="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
-              <div class="flex justify-between items-start mb-4">
-                <div>
-                  <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Proyectado</p>
-                  <p class="text-3xl font-black text-emerald-400 mt-1">${{ result.total.toLocaleString() }}</p>
-                </div>
-                <div class="flex gap-2">
-                  <button class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold text-white transition-colors" @click="emitFormData('download-pdf')">PDF</button>
-                </div>
-              </div>
+        <section aria-labelledby="sim-extras">
+          <h3 id="sim-extras" class="admin-h2 text-base">Insumos extra</h3>
+          <label for="sim-extra" class="sr-only">Agregar insumo</label>
+          <select id="sim-extra" class="mt-3 field" @change="addExtra">
+            <option value="">Agregar insumo…</option>
+            <option v-for="m in extraMaterials" :key="m.id" :value="m.id">{{ m.name }} · {{ money(m.cost_per_kg) }}/{{ m.unit || 'unidad' }}</option>
+          </select>
+          <ul v-if="form.extra_items.length" class="mt-3 divide-y divide-line rounded-[var(--radius-control)] bg-surface">
+            <li v-for="(item, idx) in form.extra_items" :key="idx" class="flex items-center gap-3 px-3 py-2">
+              <span class="flex-1 min-w-0 truncate">{{ item.name }}</span>
+              <span class="inline-flex items-center rounded-full border border-line">
+                <button type="button" class="w-9 h-9" :aria-label="`Menos ${item.name}`" @click="item.qty = Math.max(1, item.qty - 1)">−</button>
+                <span class="w-6 text-center tabular-nums">{{ item.qty }}</span>
+                <button type="button" class="w-9 h-9" :aria-label="`Más ${item.name}`" @click="item.qty++">+</button>
+              </span>
+              <span class="w-24 text-right tabular-nums">{{ money(item.cost * item.qty) }}</span>
+              <button type="button" class="icon-btn text-muted hover:text-danger hover:bg-danger/10" :aria-label="`Quitar ${item.name}`" @click="removeExtra(idx)">✕</button>
+            </li>
+          </ul>
+        </section>
 
-              <!-- Metrics Cards -->
-              <div class="grid grid-cols-2 gap-2 mb-4">
-                <div class="bg-gray-900/80 rounded-xl p-3 border border-gray-700/30">
-                  <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Precio Unitario</p>
-                  <p class="text-lg font-black text-white mt-0.5">${{ result.unit_price.toLocaleString() }}</p>
-                </div>
-                <div class="bg-gray-900/80 rounded-xl p-3 border border-gray-700/30">
-                  <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Margen de Ganancia</p>
-                  <p class="text-lg font-black" :class="result.profit_margin_pct >= 20 ? 'text-emerald-400' : result.profit_margin_pct >= 10 ? 'text-amber-400' : 'text-red-400'">{{ result.profit_margin_pct.toFixed(1) }}%</p>
-                </div>
-                <div class="bg-gray-900/80 rounded-xl p-3 border border-gray-700/30">
-                  <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Costo / Hora</p>
-                  <p class="text-lg font-black text-white mt-0.5">${{ (result.production / (result.total_hours || 1)).toLocaleString(undefined, {maximumFractionDigits: 0}) }}</p>
-                </div>
-                <div class="bg-gray-900/80 rounded-xl p-3 border border-gray-700/30">
-                  <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Piezas por Lote</p>
-                  <p class="text-lg font-black text-white mt-0.5">{{ form.pieces_per_batch || 1 }}</p>
-                </div>
-              </div>
+        <section class="grid gap-4 grid-cols-2 sm:grid-cols-3" aria-labelledby="sim-margins">
+          <h3 id="sim-margins" class="col-span-2 sm:col-span-3 admin-h2 text-base">Márgenes de esta cotización <span class="text-sm font-normal text-muted">(%)</span></h3>
+          <div><label for="sim-profit" class="admin-label mb-1">Ganancia</label><input id="sim-profit" v-model.number="form.profit_pct" type="number" min="0" class="field h-10 tabular-nums"></div>
+          <div><label for="sim-fail" class="admin-label mb-1">Fallos</label><input id="sim-fail" v-model.number="form.fallos_pct" type="number" min="0" step="0.5" class="field h-10 tabular-nums"></div>
+          <div><label for="sim-log" class="admin-label mb-1">Logística</label><input id="sim-log" v-model.number="form.transporte_pct" type="number" min="0" step="0.5" class="field h-10 tabular-nums"></div>
+          <div><label for="sim-mkt" class="admin-label mb-1">Marketing</label><input id="sim-mkt" v-model.number="form.marketing_pct" type="number" min="0" step="0.5" class="field h-10 tabular-nums"></div>
+          <div><label for="sim-iva" class="admin-label mb-1">IVA</label><input id="sim-iva" v-model.number="form.iva_pct" type="number" min="0" max="100" step="0.5" class="field h-10 tabular-nums"></div>
+          <div><label for="sim-disc" class="admin-label mb-1">Descuento</label><input id="sim-disc" v-model.number="form.discount_pct" type="number" min="0" max="100" class="field h-10 tabular-nums"></div>
+        </section>
 
-              <!-- Cost distribution bar -->
-              <div class="h-3 rounded-full bg-gray-700 flex overflow-hidden mb-4">
-                <div :style="{ width: (result.material / (result.total || 1) * 100) + '%' }" class="h-full bg-blue-500 transition-all min-w-[2px]" :title="'Material: ' + ((result.material / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
-                <div :style="{ width: ((result.luz + result.labor + result.depr + result.mant + result.etiquetas) / (result.total || 1) * 100) + '%' }" class="h-full bg-amber-500 transition-all min-w-[2px]" :title="'Infraestructura: ' + (((result.luz + result.labor + result.depr + result.mant + result.etiquetas) / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
-                <div :style="{ width: (result.extras / (result.total || 1) * 100) + '%' }" class="h-full bg-violet-500 transition-all min-w-[2px]" :title="'Extras: ' + ((result.extras / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
-                <div :style="{ width: (result.logistics / (result.total || 1) * 100) + '%' }" class="h-full bg-cyan-500 transition-all min-w-[2px]" :title="'Logística: ' + ((result.logistics / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
-                <div :style="{ width: (result.marketing / (result.total || 1) * 100) + '%' }" class="h-full bg-pink-500 transition-all min-w-[2px]" :title="'Marketing: ' + ((result.marketing / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
-                <div :style="{ width: (result.failures / (result.total || 1) * 100) + '%' }" class="h-full bg-red-500 transition-all min-w-[2px]" :title="'Fallos: ' + ((result.failures / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
-                <div :style="{ width: (result.profit / (result.total || 1) * 100) + '%' }" class="h-full bg-emerald-500 transition-all min-w-[2px]" :title="'Ganancia: ' + ((result.profit / (result.total || 1) * 100).toFixed(1)) + '%'"></div>
-              </div>
+        <div><label for="sim-notes" class="admin-label mb-2">Notas internas</label><textarea id="sim-notes" v-model="form.comments" rows="2" class="field !h-auto py-2.5"></textarea></div>
+      </form>
 
-              <!-- Breakdown -->
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between text-gray-400"><span>Material</span><span class="text-white font-bold">${{ result.material.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Energía <span class="text-[9px] text-gray-600">(carga: {{ ((settings.infra?.load_factor ?? 0.4) * 100).toFixed(0) }}%)</span></span><span class="text-white font-bold">${{ result.luz.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Mano de Obra <span class="text-[9px] text-gray-600">(prep: {{ settings.prep?.prep_time_pct ?? 10 }}%)</span></span><span class="text-white font-bold">${{ result.labor.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Depreciación</span><span class="text-white font-bold">${{ result.depr.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Mantenimiento</span><span class="text-white font-bold">${{ result.mant.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Etiquetas</span><span class="text-white font-bold">${{ result.etiquetas.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Extras</span><span class="text-white font-bold">${{ result.extras.toLocaleString() }}</span></div>
-                <div class="border-t border-gray-700/50 pt-2 mt-2">
-                  <div class="flex justify-between text-gray-400"><span class="font-bold text-gray-500 uppercase text-[10px] tracking-wider">Costos Operativos</span></div>
-                  <div class="flex justify-between text-gray-400 mt-1"><span class="pl-3">Logística ({{ form.transporte_pct }}%)</span><span class="text-white font-bold">${{ result.logistics.toLocaleString() }}</span></div>
-                  <div class="flex justify-between text-gray-400"><span class="pl-3">Marketing ({{ form.marketing_pct }}%)</span><span class="text-white font-bold">${{ result.marketing.toLocaleString() }}</span></div>
-                  <div class="flex justify-between text-gray-400"><span class="pl-3">Fallos ({{ form.fallos_pct }}%)</span><span class="text-white font-bold">${{ result.failures.toLocaleString() }}</span></div>
-                  <div class="flex justify-between text-emerald-400/80"><span class="pl-3">Ganancia ({{ form.profit_pct }}%)</span><span class="text-emerald-400 font-bold">${{ result.profit.toLocaleString() }}</span></div>
-                </div>
-                <div v-if="result.discount > 0" class="flex justify-between text-red-400"><span>Descuento (-{{ form.discount_pct }}%)</span><span class="text-red-400 font-bold">-${{ result.discount.toLocaleString() }}</span></div>
-                <div class="border-t border-gray-700 pt-2 mt-2">
-                  <div class="flex justify-between text-gray-300"><span class="font-semibold">Subtotal</span><span class="text-white font-bold">${{ result.subtotal.toLocaleString() }}</span></div>
-                  <div class="flex justify-between text-gray-400"><span>IVA ({{ form.iva_pct }}%)</span><span class="text-white font-bold">${{ result.iva.toLocaleString() }}</span></div>
-                  <div class="flex justify-between text-emerald-400 text-base font-bold mt-2 pt-2 border-t border-gray-700/50"><span>TOTAL PROYECTADO</span><span>${{ result.total.toLocaleString() }}</span></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Controls -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
-              <div>
-                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% Logística</label>
-                <input v-model.number="form.transporte_pct" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-              <div>
-                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% Marketing</label>
-                <input v-model.number="form.marketing_pct" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-              <div>
-                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% Fallos</label>
-                <input v-model.number="form.fallos_pct" type="number" min="0" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-              <div>
-                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% Ganancia (Obj)</label>
-                <input v-model.number="form.profit_pct" type="number" min="0" step="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-              <div>
-                <label class="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 md:mb-2">% IVA</label>
-                <input v-model.number="form.iva_pct" type="number" min="0" max="100" step="0.5" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-              </div>
-            </div>
-
-            <button
-              class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-black text-white text-lg tracking-tight transition-all hover:shadow-lg hover:shadow-emerald-600/30"
-              @click="emitFormData('create-order')"
-            >
-              CONVERTIR A ORDEN REAL
-            </button>
+      <!-- Resultado -->
+      <aside class="lg:col-span-5 space-y-4 lg:sticky lg:top-0 self-start" aria-live="polite">
+        <section class="admin-card">
+          <p class="admin-label">Total</p>
+          <p class="mt-1 text-4xl font-extrabold tabular-nums">{{ money(result.total) }}</p>
+          <dl class="mt-4 grid grid-cols-3 gap-3 text-sm">
+            <div><dt class="text-muted">Por pieza</dt><dd class="font-semibold tabular-nums">{{ money(result.unit_price) }}</dd></div>
+            <div><dt class="text-muted">Margen</dt><dd class="font-semibold tabular-nums">{{ result.profit_margin_pct.toFixed(1) }} %</dd></div>
+            <div><dt class="text-muted">Costo / hora</dt><dd class="font-semibold tabular-nums">{{ money(result.production / (result.total_hours || 1)) }}</dd></div>
+          </dl>
+          <div v-if="result.total > 0" class="mt-4 flex h-2.5 rounded-full overflow-hidden bg-surface-2" aria-hidden="true">
+            <div class="bg-[#3fcf72]" :style="{ width: pct(result.material) + '%' }"></div>
+            <div class="bg-[#8dd6ff]" :style="{ width: pct(result.luz + result.labor + result.depr + result.mant + result.etiquetas + result.extras) + '%' }"></div>
+            <div class="bg-[#fbbf24]" :style="{ width: pct(result.logistics + result.marketing + result.failures) + '%' }"></div>
+            <div class="bg-[#08872b]" :style="{ width: pct(result.profit) + '%' }"></div>
           </div>
-        </div>
-      </div>
+          <p v-if="result.total > 0" class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+            <span><span class="inline-block w-2 h-2 rounded-full bg-[#3fcf72] mr-1"></span>Material</span>
+            <span><span class="inline-block w-2 h-2 rounded-full bg-[#8dd6ff] mr-1"></span>Producción</span>
+            <span><span class="inline-block w-2 h-2 rounded-full bg-[#fbbf24] mr-1"></span>Operación</span>
+            <span><span class="inline-block w-2 h-2 rounded-full bg-[#08872b] mr-1"></span>Ganancia</span>
+          </p>
+        </section>
+
+        <section class="admin-card text-sm" aria-label="Desglose">
+          <dl class="space-y-1.5">
+            <div class="flex justify-between"><dt class="text-muted">Material</dt><dd class="tabular-nums">{{ money(result.material) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">Energía <span class="opacity-70">(carga {{ ((settings.infra?.load_factor ?? 0.4) * 100).toFixed(0) }} %)</span></dt><dd class="tabular-nums">{{ money(result.luz) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">Mano de obra</dt><dd class="tabular-nums">{{ money(result.labor) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">Depreciación</dt><dd class="tabular-nums">{{ money(result.depr) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">Mantenimiento</dt><dd class="tabular-nums">{{ money(result.mant) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">Empaque</dt><dd class="tabular-nums">{{ money(result.etiquetas) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">Insumos extra</dt><dd class="tabular-nums">{{ money(result.extras) }}</dd></div>
+            <div class="flex justify-between pt-2 border-t border-line"><dt class="text-muted">Logística ({{ form.transporte_pct }} %)</dt><dd class="tabular-nums">{{ money(result.logistics) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">Marketing ({{ form.marketing_pct }} %)</dt><dd class="tabular-nums">{{ money(result.marketing) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">Fallos ({{ form.fallos_pct }} %)</dt><dd class="tabular-nums">{{ money(result.failures) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">Ganancia ({{ form.profit_pct }} %)</dt><dd class="tabular-nums">{{ money(result.profit) }}</dd></div>
+            <div v-if="result.discount > 0" class="flex justify-between text-success"><dt>Descuento ({{ form.discount_pct }} %)</dt><dd class="tabular-nums">−{{ money(result.discount) }}</dd></div>
+            <div class="flex justify-between pt-2 border-t border-line"><dt class="text-muted">Subtotal</dt><dd class="tabular-nums">{{ money(result.subtotal) }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted">IVA ({{ form.iva_pct }} %)</dt><dd class="tabular-nums">{{ money(result.iva) }}</dd></div>
+            <div class="flex justify-between pt-2 border-t border-line font-semibold text-base"><dt>Total</dt><dd class="tabular-nums">{{ money(result.total) }}</dd></div>
+          </dl>
+          <p v-if="form.discount_pct >= 100" role="alert" class="mt-3 text-danger font-semibold">Un descuento del 100 % deja el pedido en $0.</p>
+        </section>
+      </aside>
     </div>
-  </Teleport>
+    <template #footer>
+      <button type="button" class="btn-outlined" @click="$emit('close')">Cerrar</button>
+      <button type="button" class="btn-outlined" :disabled="!form.material_id" @click="emitFormData('download-pdf')">Descargar cotización</button>
+      <button type="button" class="btn-primary" :disabled="!canConvert" :title="canConvert ? '' : 'Falta material, precio o nombre del cliente'" @click="emitFormData('create-order')">Convertir en pedido</button>
+    </template>
+  </AdminModal>
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { reactive, computed, watch } from 'vue'
+import AdminModal from './AdminModal.vue'
 import { calcProductionCost, calcFinalPrice } from '../../services/costCalculator'
 
 const props = withDefaults(defineProps<{
@@ -243,6 +153,22 @@ const form = reactive({
 const extraMaterials = computed(() =>
   props.materials.filter(m => m.type !== 'material')
 )
+// Material base: solo filamentos y resinas (antes listaba también insumos)
+const baseMaterials = computed(() => props.materials.filter(m => !m.type || m.type === 'material'))
+
+// Los % por defecto se leían una sola vez, a veces antes de cargar los ajustes:
+// se toman de Parámetros cada vez que se abre
+watch(() => props.visible, (open) => {
+  if (!open) return
+  form.profit_pct = props.settings?.oper?.ganancia ?? 20
+  form.transporte_pct = props.settings?.oper?.transporte ?? 5
+  form.marketing_pct = props.settings?.oper?.marketing ?? 10
+  form.fallos_pct = props.settings?.oper?.fallos ?? 5
+  form.iva_pct = props.settings?.margin?.iva ?? 19
+})
+const money = (n: any) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CO')
+const pct = (part: number) => result.value.total > 0 ? Math.max(0, (part / result.value.total) * 100) : 0
+const canConvert = computed(() => !!form.material_id && result.value.total > 0 && !!form.customer_name.trim())
 
 const result = computed(() => {
   const mat = props.materials.find(m => m.id === form.material_id)
@@ -302,7 +228,6 @@ const emitFormData = (action: 'download-pdf' | 'create-order') => {
   const [hours, minutes] = form.time_str.split(':').map(Number)
   const totalHours = (hours || 0) + ((minutes || 0) / 60)
   const extrasCost = form.extra_items.reduce((acc, item) => acc + item.cost * item.qty, 0)
-  const mat = props.materials.find(m => m.id === form.material_id)
   
   const payload = {
     job_name: form.job_name,
