@@ -25,15 +25,19 @@ class CustomerAccountService
     /** Genera un código nuevo (invalida el anterior) y lo envía por correo. */
     public function sendVerificationCode(RecurrentCustomer $customer): void
     {
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        $customer->forceFill([
-            'verification_code_hash' => Hash::make($code),
-            'verification_expires_at' => now()->addMinutes(self::CODE_TTL_MINUTES),
-            'verification_attempts' => 0,
-        ])->save();
-
+        $code = $this->newCode($customer);
         $this->deliver($customer->email, new CustomerMail('Tu código de verificación N3XT 3D', 'mail.verification-code', [
+            'name' => $this->firstName($customer),
+            'code' => $code,
+            'minutes' => self::CODE_TTL_MINUTES,
+        ]));
+    }
+
+    /** Código para cambiar la contraseña (mismo mecanismo: prueba que el correo es suyo). */
+    public function sendPasswordResetCode(RecurrentCustomer $customer): void
+    {
+        $code = $this->newCode($customer);
+        $this->deliver($customer->email, new CustomerMail('Cambia tu contraseña de N3XT 3D', 'mail.password-reset-code', [
             'name' => $this->firstName($customer),
             'code' => $code,
             'minutes' => self::CODE_TTL_MINUTES,
@@ -48,6 +52,40 @@ class CustomerAccountService
         if ($customer->isVerified()) {
             return null;
         }
+        if ($error = $this->checkCode($customer, $code)) {
+            return $error;
+        }
+        $this->markVerified($customer);
+
+        return null;
+    }
+
+    /** Cambia la contraseña con el código del correo; también deja la cuenta verificada. */
+    public function resetPassword(RecurrentCustomer $customer, string $code, string $password): ?string
+    {
+        if ($error = $this->checkCode($customer, $code)) {
+            return $error;
+        }
+        $customer->forceFill(['password' => Hash::make($password)])->save();
+        $this->markVerified($customer);
+
+        return null;
+    }
+
+    private function newCode(RecurrentCustomer $customer): string
+    {
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $customer->forceFill([
+            'verification_code_hash' => Hash::make($code),
+            'verification_expires_at' => now()->addMinutes(self::CODE_TTL_MINUTES),
+            'verification_attempts' => 0,
+        ])->save();
+
+        return $code;
+    }
+
+    private function checkCode(RecurrentCustomer $customer, string $code): ?string
+    {
         if (!$customer->verification_code_hash || !$customer->verification_expires_at || $customer->verification_expires_at->isPast()) {
             return 'El código venció. Pide uno nuevo.';
         }
@@ -59,16 +97,21 @@ class CustomerAccountService
             return 'El código no es correcto.';
         }
 
+        return null;
+    }
+
+    private function markVerified(RecurrentCustomer $customer): void
+    {
+        $wasVerified = $customer->isVerified();
         $customer->forceFill([
-            'email_verified_at' => now(),
+            'email_verified_at' => $customer->email_verified_at ?? now(),
             'verification_code_hash' => null,
             'verification_expires_at' => null,
             'verification_attempts' => 0,
         ])->save();
-
-        $this->issueWelcomeCoupon($customer);
-
-        return null;
+        if (!$wasVerified) {
+            $this->issueWelcomeCoupon($customer);
+        }
     }
 
     /** Crea el cupón de bienvenida (una sola vez por cliente) y lo envía. */

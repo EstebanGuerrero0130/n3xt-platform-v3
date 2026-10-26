@@ -20,6 +20,8 @@ Route::any('/login', function() {
 Route::any('/ping', function() { return response()->json(['status' => 'online', 'timestamp' => now()]); });
 Route::middleware('throttle:10,1')->post('/auth-master-industrial-access', [UnifiedAuthController::class, 'login']);
 Route::middleware('throttle:5,1')->post('/auth/unified-register', [UnifiedAuthController::class, 'register']);
+Route::middleware('throttle:3,1')->post('/auth/password/forgot', [UnifiedAuthController::class, 'forgotPassword']);
+Route::middleware('throttle:10,1')->post('/auth/password/reset', [UnifiedAuthController::class, 'resetPassword']);
 
 // Ruta de Diagnóstico para el Lanzador N3XT
 Route::get('/health-check', function() { return response()->json(['status' => 'online', 'version' => '3.5.0']); });

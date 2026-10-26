@@ -36,6 +36,12 @@ interface RequestOptions {
   body?: BodyInit | null
 }
 
+/** Token CSRF de la cookie XSRF-TOKEN (Laravel la cifra; el valor va tal cual en el header) */
+const xsrfToken = (): string => {
+  const match = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='))
+  return match ? decodeURIComponent(match.slice('XSRF-TOKEN='.length)) : ''
+}
+
 /** Build base fetch options for Sanctum SPA */
 const baseOptions = (method: string, body?: any, isFormData?: boolean): RequestOptions => {
   const opts: RequestOptions = {
@@ -46,6 +52,11 @@ const baseOptions = (method: string, body?: any, isFormData?: boolean): RequestO
       'X-N3XT-SECURE-NONCE': btoa(`${Date.now()}_${Math.random()}`),
     },
   }
+  // Sin este header el backend rechaza POST/PATCH/DELETE (ValidateCsrfToken)
+  if (method !== 'GET') {
+    const token = xsrfToken()
+    if (token) opts.headers['X-XSRF-TOKEN'] = token
+  }
   if (isFormData) {
     opts.body = body as BodyInit
   } else if (body !== undefined) {
@@ -53,6 +64,20 @@ const baseOptions = (method: string, body?: any, isFormData?: boolean): RequestO
     opts.body = JSON.stringify(body)
   }
   return opts
+}
+
+/**
+ * POST/PATCH/DELETE con token CSRF. Si el token venció (419: sesión renovada,
+ * pestaña abierta mucho tiempo), pide uno nuevo y reintenta una sola vez.
+ */
+const mutate = async (method: string, endpoint: string, body?: any, isFormData = false): Promise<Response> => {
+  if (!xsrfToken()) await ensureCsrf()
+  let res = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions(method, body, isFormData))
+  if (res.status === 419) {
+    await ensureCsrf()
+    res = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions(method, body, isFormData))
+  }
+  return res
 }
 
 /**
@@ -160,8 +185,7 @@ export const api = {
     // Auto-detect FormData — no manual isFormData flag needed
     const isFormData: boolean = body instanceof FormData
     // Mutating requests need CSRF protection
-    await ensureCsrf()
-    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('POST', body, isFormData))
+    const res: Response = await mutate('POST', endpoint, body, isFormData)
     const data = await this.handleResponse(res, endpoint)
     // POST muta datos → limpiar cache
     invalidateDataCache()
@@ -170,8 +194,7 @@ export const api = {
   },
 
   async patch(endpoint: string, body?: any): Promise<any> {
-    await ensureCsrf()
-    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('PATCH', body))
+    const res: Response = await mutate('PATCH', endpoint, body)
     const data = await this.handleResponse(res, endpoint)
     // PATCH muta datos → limpiar cache
     invalidateDataCache()
@@ -179,8 +202,7 @@ export const api = {
   },
 
   async delete(endpoint: string): Promise<any> {
-    await ensureCsrf()
-    const res: Response = await fetch(`${API_BASE_URL}${endpoint}`, baseOptions('DELETE'))
+    const res: Response = await mutate('DELETE', endpoint)
     const data = await this.handleResponse(res, endpoint)
     // DELETE muta datos → limpiar cache
     invalidateDataCache()

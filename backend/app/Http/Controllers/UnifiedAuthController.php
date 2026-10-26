@@ -122,4 +122,51 @@ class UnifiedAuthController extends Controller
             ]
         ], 'Te enviamos un código a tu correo para verificar la cuenta.', 201);
     }
+
+    /**
+     * Pide un código para cambiar la contraseña. Responde lo mismo exista o no la
+     * cuenta, para no revelar qué correos están registrados.
+     */
+    public function forgotPassword(Request $request, CustomerAccountService $accounts)
+    {
+        $request->validate(['email' => 'required|email|max:255']);
+        $email = strtolower($request->email);
+
+        $customer = in_array($email, self::ADMIN_EMAILS, true)
+            ? null
+            : RecurrentCustomer::whereRaw('LOWER(email) = ?', [$email])->whereNotNull('password')->first();
+        if ($customer) {
+            $accounts->sendPasswordResetCode($customer);
+        }
+
+        return $this->success(null, 'Si el correo tiene una cuenta, te enviamos un código para cambiar la contraseña.');
+    }
+
+    /** Cambia la contraseña con el código del correo e inicia la sesión. */
+    public function resetPassword(Request $request, CustomerAccountService $accounts)
+    {
+        $request->validate([
+            'email'    => 'required|email|max:255',
+            'code'     => 'required|digits:6',
+            'password' => 'required|confirmed|min:8',
+        ], [
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+        ]);
+
+        $customer = RecurrentCustomer::whereRaw('LOWER(email) = ?', [strtolower($request->email)])->whereNotNull('password')->first();
+        $error = $customer
+            ? $accounts->resetPassword($customer, $request->code, $request->password)
+            : 'El código no es correcto.';
+        if ($error) {
+            return $this->error($error, 422);
+        }
+
+        Auth::guard('customer')->login($customer);
+        $request->session()->regenerate();
+
+        return $this->success([
+            'role' => 'customer',
+            'user' => ['id' => $customer->id, 'name' => $customer->name, 'email' => $customer->email, 'email_verified' => true],
+        ], 'Contraseña actualizada.');
+    }
 }

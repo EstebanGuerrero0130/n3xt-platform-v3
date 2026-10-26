@@ -149,4 +149,31 @@ class CustomerAccountTest extends TestCase
         $this->getJson('/api/customer/orders')->assertJsonCount(1, 'data')->assertJsonPath('data.0.project_name', 'Catálogo: Figura');
         Mail::assertSent(CustomerMail::class, 1);
     }
+
+    public function test_password_reset_with_emailed_code(): void
+    {
+        RecurrentCustomer::create(['name' => 'Cliente', 'email' => 'cliente@example.com', 'password' => bcrypt('vieja_clave1')]);
+        Mail::fake();
+
+        // Mismo mensaje exista o no la cuenta
+        $this->postJson('/api/auth/password/forgot', ['email' => 'nadie@example.com'])->assertOk();
+        Mail::assertNothingSent();
+        $this->postJson('/api/auth/password/forgot', ['email' => 'Cliente@example.com'])->assertOk();
+
+        $code = null;
+        Mail::assertSent(CustomerMail::class, function ($m) use (&$code) {
+            if ($m->mailView !== 'mail.password-reset-code') return false;
+            $code = $m->data['code'];
+            return true;
+        });
+
+        $this->postJson('/api/auth/password/reset', ['email' => 'cliente@example.com', 'code' => $code === '000000' ? '111111' : '000000', 'password' => 'nueva_clave1', 'password_confirmation' => 'nueva_clave1'])->assertStatus(422);
+        $this->postJson('/api/auth/password/reset', ['email' => 'cliente@example.com', 'code' => $code, 'password' => 'nueva_clave1', 'password_confirmation' => 'nueva_clave1'])->assertOk();
+
+        // Quedó con sesión, verificado y la clave nueva sirve
+        $this->getJson('/api/customer/profile')->assertOk()->assertJsonPath('email_verified', true);
+        $this->postJson('/api/auth-master-industrial-access', ['email' => 'cliente@example.com', 'password' => 'nueva_clave1'])->assertOk();
+        // El código no se puede reusar
+        $this->postJson('/api/auth/password/reset', ['email' => 'cliente@example.com', 'code' => $code, 'password' => 'otra_clave12', 'password_confirmation' => 'otra_clave12'])->assertStatus(422);
+    }
 }

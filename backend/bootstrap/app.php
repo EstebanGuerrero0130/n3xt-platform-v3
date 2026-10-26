@@ -51,6 +51,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
+            // La API usa la sesión (cookies): sin esto otra página podía hacer
+            // POST/PATCH/DELETE en nombre de quien tuviera la sesión abierta
+            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
         ]);
 
         $middleware->alias([

@@ -17,7 +17,14 @@ usePageMeta({
 // ─── SEO via @unhead/vue (usePageMeta at setup) ───
 
 // ?registro=1 abre directo el formulario de registro (enlaces de catálogo y cotizador)
-const mode = ref(new URLSearchParams(window.location.search).has('registro') ? 'register' : 'password') // 'password' or 'register'
+type LoginMode = 'password' | 'register' | 'forgot' | 'reset'
+const mode = ref<LoginMode>(new URLSearchParams(window.location.search).has('registro') ? 'register' : 'password')
+const TITLES: Record<LoginMode, [string, string, string]> = {
+  password: ['Acceso', 'N3XT', 'Ingresa con tu correo y contraseña.'],
+  register: ['Crea tu', 'cuenta', 'Sigue tus pedidos, recibe avisos por correo y un cupón de bienvenida para tu primer pedido.'],
+  forgot: ['Recupera tu', 'acceso', 'Te enviamos un código a tu correo para crear una contraseña nueva.'],
+  reset: ['Nueva', 'contraseña', 'Escribe el código que te llegó y tu contraseña nueva.'],
+}
 
 // --- CAPTCHA PROTOCOL ---
 const { challenge, answer, verify, reset, isLocked } = useCaptcha()
@@ -99,6 +106,53 @@ const login = async () => {
   }
 }
 
+// --- Recuperar contraseña: pedir código → código + contraseña nueva ---
+const resetCode = ref('')
+const notice = ref('')
+
+const forgotPassword = async () => {
+  error.value = ''
+  notice.value = ''
+  if (!email.value.trim()) {
+    error.value = 'Escribe el correo de tu cuenta.'
+    return
+  }
+  loading.value = true
+  try {
+    await api.post('/auth/password/forgot', { email: email.value.trim() })
+    notice.value = 'Si el correo tiene una cuenta, te llegó un código de 6 números. Revisa también la carpeta de spam.'
+    password.value = ''
+    password_confirmation.value = ''
+    mode.value = 'reset'
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'No pudimos enviar el código. Inténtalo en un minuto.'
+  } finally {
+    loading.value = false
+  }
+}
+
+const resetPassword = async () => {
+  error.value = ''
+  if (!/^\d{6}$/.test(resetCode.value.trim())) {
+    error.value = 'El código tiene 6 números.'
+    return
+  }
+  loading.value = true
+  try {
+    await api.post('/auth/password/reset', {
+      email: email.value.trim(),
+      code: resetCode.value.trim(),
+      password: password.value,
+      password_confirmation: password_confirmation.value,
+    })
+    router.push('/customer/dashboard')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'No pudimos cambiar la contraseña.'
+  } finally {
+    loading.value = false
+  }
+}
+
 const register = async () => {
   // 1. Honeypot check (Bot trap)
   if (honeypot.value) return;
@@ -163,8 +217,9 @@ const register = async () => {
             <input v-model="honeypot" type="text" tabindex="-1" autocomplete="off">
           </div>
 
-          <h1 class="section-title">{{ mode === 'register' ? 'Crea tu' : 'Acceso' }} <span class="section-title-accent">{{ mode === 'register' ? 'cuenta' : 'N3XT' }}</span></h1>
-          <p class="mt-3 text-muted">{{ mode === 'register' ? 'Sigue tus pedidos, recibe avisos por correo y un cupón de bienvenida para tu primer pedido.' : 'Ingresa con tu correo y contraseña.' }}</p>
+          <h1 class="section-title">{{ TITLES[mode][0] }} <span class="section-title-accent">{{ TITLES[mode][1] }}</span></h1>
+          <p class="mt-3 text-muted">{{ TITLES[mode][2] }}</p>
+          <p v-if="notice && mode === 'reset'" role="status" class="mt-4 p-3 rounded-[var(--radius-control)] bg-primary/10 text-sm">{{ notice }}</p>
 
           <div v-if="error" role="alert" class="mt-6 p-4 rounded-[var(--radius-control)] border border-danger/30 bg-danger/5 text-sm text-danger font-medium">{{ error }}</div>
 
@@ -192,10 +247,47 @@ const register = async () => {
               <p class="text-sm text-muted text-center">
                 ¿Eres nuevo? <button type="button" class="font-semibold text-brand hover:underline" @click="mode = 'register'; error = ''">Regístrate</button>
               </p>
+              <p class="text-sm text-center">
+                <button type="button" class="font-semibold text-muted hover:text-ink hover:underline" @click="mode = 'forgot'; error = ''">¿Olvidaste tu contraseña?</button>
+              </p>
+            </form>
+
+            <!-- Pedir código -->
+            <form v-else-if="mode === 'forgot'" key="forgot" class="mt-6 space-y-5" novalidate @submit.prevent="forgotPassword">
+              <div>
+                <label for="forgot-email" class="block text-sm font-medium mb-2">Correo de tu cuenta</label>
+                <input id="forgot-email" v-model="email" type="email" required autocomplete="email" placeholder="tu@correo.com" class="field">
+              </div>
+              <button type="submit" :disabled="loading" class="btn-primary btn-lg w-full">{{ loading ? 'Enviando…' : 'Enviar código' }}</button>
+              <p class="text-sm text-muted text-center">
+                <button type="button" class="font-semibold text-brand hover:underline" @click="mode = 'password'; error = ''">Volver a iniciar sesión</button>
+              </p>
+            </form>
+
+            <!-- Código + contraseña nueva -->
+            <form v-else-if="mode === 'reset'" key="reset" class="mt-6 space-y-5" novalidate @submit.prevent="resetPassword">
+              <div>
+                <label for="reset-code" class="block text-sm font-medium mb-2">Código del correo</label>
+                <input id="reset-code" v-model="resetCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" class="field text-center text-lg tracking-[0.4em] tabular-nums">
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label for="reset-password" class="block text-sm font-medium mb-2">Contraseña nueva</label>
+                  <input id="reset-password" v-model="password" type="password" required minlength="8" autocomplete="new-password" class="field">
+                </div>
+                <div>
+                  <label for="reset-password2" class="block text-sm font-medium mb-2">Repítela</label>
+                  <input id="reset-password2" v-model="password_confirmation" type="password" required autocomplete="new-password" class="field">
+                </div>
+              </div>
+              <button type="submit" :disabled="loading" class="btn-primary btn-lg w-full">{{ loading ? 'Guardando…' : 'Cambiar contraseña' }}</button>
+              <p class="text-sm text-muted text-center">
+                ¿No llegó? <button type="button" class="font-semibold text-brand hover:underline" :disabled="loading" @click="forgotPassword">Enviar otro código</button>
+              </p>
             </form>
 
             <!-- Registro -->
-            <form v-else key="register" class="mt-8 space-y-5" @submit.prevent="register">
+            <form v-else-if="mode === 'register'" key="register" class="mt-8 space-y-5" @submit.prevent="register">
               <div>
                 <label for="reg-name" class="block text-sm font-medium mb-2">Nombre completo</label>
                 <input id="reg-name" v-model="name" type="text" required autocomplete="name" placeholder="Juan Pérez" class="field">
