@@ -53,8 +53,8 @@ onMounted(() => {
               <li><strong>Datos de contacto:</strong> Nombre, correo electrónico, teléfono y dirección de envío.</li>
               <li><strong>Datos de facturación:</strong> NIT, razón social y documentos de identificación cuando aplique.</li>
               <li><strong>Datos de tu cuenta:</strong> Correo y contraseña (guardada cifrada) si creas una cuenta.</li>
-            <li><strong>Datos técnicos:</strong> Archivos 3D (STL, OBJ, 3MF), parámetros de impresión y especificaciones de diseño.</li>
-              <li><strong>Datos de navegación:</strong> Información anónima sobre el uso del sitio web para mejorar nuestros servicios.</li>
+              <li><strong>Datos técnicos:</strong> Archivos 3D (STL, OBJ, 3MF), parámetros de impresión y especificaciones de diseño.</li>
+              <li><strong>Datos de navegación:</strong> Contamos las visitas a las páginas públicas de forma agregada (qué páginas se ven y desde qué tipo de dispositivo) para mejorar el sitio. No medimos tu cuenta ni el panel del taller, y no usamos esos datos para publicidad.</li>
             </ul>
           </section>
 
@@ -79,7 +79,7 @@ onMounted(() => {
               <li>Cifrado SSL/TLS en todas las comunicaciones</li>
               <li>Contraseñas cifradas: nunca guardamos tu contraseña en texto</li>
               <li>Tus pedidos solo se ven desde tu cuenta, después de verificar tu correo</li>
-            <li>Archivos 3D en almacenamiento privado, al que solo accede el taller</li>
+              <li>Archivos 3D en almacenamiento privado, al que solo accede el taller</li>
               <li>Límite de tamaño de archivos (50 MB) para prevenir abusos</li>
             </ul>
           </section>

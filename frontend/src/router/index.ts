@@ -46,6 +46,11 @@ const router = createRouter({
       component: GalleryDetailView
     },
     {
+      path: '/noticias/:slug?',
+      name: 'news',
+      component: () => import('../views/NewsView.vue')
+    },
+    {
       path: '/catalog',
       name: 'catalog',
       component: CatalogView

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publishedNews } from '../utils/news'
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useHead } from '@unhead/vue'
 import gsap from 'gsap'
@@ -296,15 +297,11 @@ const fetchSettings = async () => {
       // Si la DB está vacía (como en instalaciones nuevas), conservamos los valores por defecto.
       // El panel (WebManager) guarda las noticias como { t, st, body, image, category, status };
       // la Home las muestra como { t, d, tag, i, url }. Los borradores no se publican.
-      const news = (Array.isArray(dbWeb.news) ? dbWeb.news : [])
-        .filter((n: any) => n && n.t && (!n.status || n.status === 'published'))
-        .map((n: any) => ({
-          t: n.t,
-          d: n.d || n.st || String(n.body || '').slice(0, 200),
-          tag: n.tag || n.category || '',
-          i: n.i || n.image || '',
-          url: n.url || '',
-        }))
+      // Con texto propio, «Leer nota» abre /noticias/:slug; sin texto, el enlace externo
+      const news = publishedNews(dbWeb.news).map(n => ({
+        t: n.title, d: n.summary, tag: n.category, i: n.image,
+        url: n.body || !isRealUrl(n.url) ? `/noticias/${n.slug}` : n.url,
+      }))
       const posts = (Array.isArray(dbWeb.posts) ? dbWeb.posts : [])
         .filter((p: any) => p && p.t && (!p.status || p.status === 'published'))
         .map((p: any) => ({ t: p.t, d: p.d || '', l: p.l || '', i: p.i || p.image || '', tag: p.tag || '', url: p.url || '' }))
@@ -585,7 +582,7 @@ onMounted(() => {
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div v-reveal class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <h2 class="section-title">Novedades <span class="section-title-accent">3D Colombia</span></h2>
-          <a href="https://www.3dnatives.com/es/" target="_blank" rel="noopener noreferrer" class="btn-secondary self-start md:self-auto">Más noticias en 3Dnatives</a>
+          <router-link to="/noticias" class="btn-secondary self-start md:self-auto">Ver todas las noticias</router-link>
         </div>
 
         <div v-if="webSettings.news.length" class="mt-16 grid gap-10 lg:grid-cols-12 lg:gap-12">
@@ -596,7 +593,8 @@ onMounted(() => {
             <p v-if="webSettings.news[0].tag" class="mt-6 text-base font-semibold text-brand">{{ webSettings.news[0].tag }}</p>
             <h3 class="mt-2 text-3xl md:text-4xl font-black tracking-tight leading-tight">{{ webSettings.news[0].t }}</h3>
             <p class="mt-4 max-w-2xl text-lg leading-relaxed text-ink/80">{{ webSettings.news[0].d }}</p>
-            <a v-if="isRealUrl(webSettings.news[0].url)" :href="webSettings.news[0].url" target="_blank" rel="noopener noreferrer" class="mt-6 inline-flex font-semibold text-brand hover:underline underline-offset-4">Leer nota</a>
+            <router-link v-if="webSettings.news[0].url.startsWith('/')" :to="webSettings.news[0].url" class="mt-6 inline-flex font-semibold text-brand hover:underline underline-offset-4">Leer nota</router-link>
+            <a v-else-if="isRealUrl(webSettings.news[0].url)" :href="webSettings.news[0].url" target="_blank" rel="noopener noreferrer" class="mt-6 inline-flex font-semibold text-brand hover:underline underline-offset-4">Leer nota</a>
           </article>
 
           <ul v-reveal.stagger class="space-y-8 lg:col-span-5">
@@ -608,7 +606,8 @@ onMounted(() => {
                 <p v-if="item.tag" class="text-sm font-semibold text-brand">{{ item.tag }}</p>
                 <h3 class="mt-1 text-xl font-black tracking-tight leading-snug">{{ item.t }}</h3>
                 <p class="mt-2 text-base leading-relaxed text-ink/80 line-clamp-3">{{ item.d }}</p>
-                <a v-if="isRealUrl(item.url)" :href="item.url" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex font-semibold text-brand hover:underline underline-offset-4">Leer nota</a>
+                <router-link v-if="item.url.startsWith('/')" :to="item.url" class="mt-2 inline-flex font-semibold text-brand hover:underline underline-offset-4">Leer nota</router-link>
+                <a v-else-if="isRealUrl(item.url)" :href="item.url" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex font-semibold text-brand hover:underline underline-offset-4">Leer nota</a>
               </div>
             </li>
           </ul>

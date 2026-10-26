@@ -9,7 +9,7 @@ import AppFooter from '../components/AppFooter.vue'
 import ReviewsSection from '../components/ReviewsSection.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
-import { usePageMeta } from '../composables/usePageMeta'
+import { usePageMeta, absoluteUrl } from '../composables/usePageMeta'
 import { useCart } from '../composables/useCart'
 import { catalogWhatsAppUrl } from '../utils/whatsapp'
 
@@ -40,12 +40,43 @@ const route = useRoute()
 const quantity = ref(1)
 const product = ref<CatalogProduct | null>(null)
 
+// Calificación de las reseñas aprobadas (la manda ReviewsSection al cargar)
+const reviewSummary = ref<{ count: number; average: number | null }>({ count: 0, average: null })
+
 usePageMeta(() => ({
   title: product.value ? `${product.value.name} | N3XT 3D` : 'Detalle del producto | N3XT 3D',
   description: product.value?.description || 'Figuras, prototipos y piezas impresas en 3D con acabado a mano en nuestro taller.',
   image: product.value?.image || undefined,
   type: 'product',
+  jsonLd: product.value ? productJsonLd(product.value) : null,
 }))
+
+/** schema.org/Product: nombre, fotos, precio en COP y calificación. */
+function productJsonLd(p: CatalogProduct) {
+  const price = parsePrice(p.price)
+  const images = [p.image, ...(p.images || [])].filter(Boolean).map(i => absoluteUrl(i as string))
+  return {
+    '@type': 'Product',
+    name: p.name,
+    description: p.description || undefined,
+    image: images.length ? images : undefined,
+    category: p.category || undefined,
+    brand: { '@type': 'Brand', name: 'N3XT 3D' },
+    ...(price ? {
+      offers: {
+        '@type': 'Offer',
+        price,
+        priceCurrency: 'COP',
+        availability: 'https://schema.org/InStock',
+        url: absoluteUrl(`/catalog/${encodeURIComponent(productKey(p))}`),
+        seller: { '@id': 'https://n3xt3d.com/#business' },
+      },
+    } : {}),
+    ...(reviewSummary.value.count && reviewSummary.value.average ? {
+      aggregateRating: { '@type': 'AggregateRating', ratingValue: reviewSummary.value.average, reviewCount: reviewSummary.value.count },
+    } : {}),
+  }
+}
 const selectedImage = ref('')
 const mainImageFailed = ref(false)
 const loading = ref(true)
@@ -357,7 +388,7 @@ watch(() => route.params.id, (newId, oldId) => {
         </div>
 
         <!-- Reseñas de quienes compraron esta pieza -->
-        <ReviewsSection v-if="product" :product="productKey(product)" compact />
+        <ReviewsSection v-if="product" :product="productKey(product)" compact @summary="reviewSummary = $event" />
 
         <!-- Relacionados -->
         <section v-if="product && relatedProducts.length > 0" class="mt-20 md:mt-28 reveal" aria-labelledby="related-heading">

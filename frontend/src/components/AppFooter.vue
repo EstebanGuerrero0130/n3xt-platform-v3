@@ -8,6 +8,7 @@ const navLinks = [
   { n: 'Inicio', p: '/' },
   { n: 'Galería', p: '/galeria' },
   { n: 'Catálogo', p: '/catalog' },
+  { n: 'Noticias', p: '/noticias' },
   { n: 'Cotizador', p: '/quote' },
   { n: 'Rastrear', p: '/track' },
   { n: 'Taller', p: '/admin' },

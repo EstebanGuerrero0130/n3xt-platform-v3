@@ -13,9 +13,14 @@ export interface PageMeta {
   image?: string
   type?: string           // og:type (website, product, article)
   noIndex?: boolean
+  /** Datos estructurados schema.org (JSON-LD) de la página */
+  jsonLd?: Record<string, unknown> | null
 }
 
 const BASE_URL = 'https://n3xt3d.com'
+
+/** URL absoluta para datos estructurados (las imágenes locales son relativas). */
+export const absoluteUrl = (path?: string) => (!path ? undefined : path.startsWith('http') ? path : `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`)
 
 /**
  * Debe llamarse en `setup` (no tras un `await`). Para datos que llegan después
@@ -36,6 +41,9 @@ export function usePageMeta(input: PageMeta | (() => PageMeta)) {
 
   useHead({
     title,
+    script: computed(() => meta.value.jsonLd
+      ? [{ type: 'application/ld+json', key: 'page-jsonld', innerHTML: JSON.stringify({ '@context': 'https://schema.org', ...meta.value.jsonLd }) }]
+      : []),
     link: [{ rel: 'canonical', href: canonical }],
     meta: computed(() => [
       { name: 'description', content: description.value },

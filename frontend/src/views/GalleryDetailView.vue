@@ -6,7 +6,7 @@ import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
-import { usePageMeta } from '../composables/usePageMeta'
+import { usePageMeta, absoluteUrl } from '../composables/usePageMeta'
 import { useFocusTrap } from '../composables/useFocusTrap'
 
 const { applySplitTitle } = useSplitTitle()
@@ -46,6 +46,19 @@ const item = ref<GalleryDetailItem | null>(null)
 usePageMeta(() => ({
   title: item.value?.title ? `${item.value.title} | Galería N3XT 3D` : 'Proyecto | Galería N3XT 3D',
   description: item.value?.description || 'Un proyecto impreso en 3D en nuestro taller: proceso, materiales y acabado.',
+  image: item.value?.image || undefined,
+  // schema.org/CreativeWork: la obra impresa, con sus fotos y material
+  jsonLd: item.value ? {
+    '@type': 'CreativeWork',
+    name: item.value.title,
+    description: item.value.description || item.value.subtitle || undefined,
+    image: [item.value.image, ...normalizeImages(item.value.images)].filter(Boolean).map(i => absoluteUrl(i)),
+    genre: item.value.category || undefined,
+    material: item.value.material || undefined,
+    keywords: normalizeTags(item.value.tags).join(', ') || undefined,
+    dateCreated: item.value.date || undefined,
+    creator: { '@id': 'https://n3xt3d.com/#business' },
+  } : null,
 }))
 const webSettings = ref<{ gallery: GalleryDetailItem[]; cloudinary_name?: string }>({ gallery: [] })
 const lightboxOpen = ref(false)

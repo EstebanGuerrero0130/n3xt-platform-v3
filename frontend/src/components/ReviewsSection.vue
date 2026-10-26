@@ -9,6 +9,7 @@ import { api } from '../services/api'
 interface PublicReview { id: number; name: string; rating: number; comment: string; photo_url: string | null; date: string }
 
 const props = defineProps<{ product?: string | number; compact?: boolean }>()
+const emit = defineEmits<{ (e: 'summary', value: { count: number; average: number | null }): void }>()
 
 const reviews = ref<PublicReview[]>([])
 const average = ref<number | null>(null)
@@ -21,7 +22,9 @@ const load = async () => {
     average.value = data?.average ?? null
   } catch {
     reviews.value = []
+    average.value = null
   }
+  emit('summary', { count: reviews.value.length, average: average.value })
 }
 onMounted(load)
 watch(() => props.product, load)
