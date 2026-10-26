@@ -2,64 +2,59 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RecurrentCustomer;
+use App\Models\Order;
+use App\Models\Setting;
+use App\Services\CustomerAccountService;
+use App\Services\OrderMailer;
+use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
+/**
+ * Portal del cliente: perfil, verificación del correo, pedidos y compras del
+ * catálogo. El registro y el login están en UnifiedAuthController.
+ */
 class CustomerAuthController extends Controller
 {
-    public function register(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:recurrent_customers',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+    use ApiResponse;
 
-        $customer = RecurrentCustomer::create([
-            'name' => $request->name,
-            'email' => strtolower($request->email),
-            'password' => Hash::make($request->password),
-        ]);
+    public function __construct(
+        protected CustomerAccountService $accounts,
+        protected OrderMailer $mailer,
+    ) {}
 
-        // Sanctum SPA: use session auth instead of tokens
-        Auth::guard('customer')->login($customer);
-        $request->session()->regenerate();
-
-        return response()->json([
-            'customer' => $customer,
-        ]);
-    }
-
-    public function login(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        $customer = RecurrentCustomer::whereRaw('LOWER(email) = ?', [strtolower($request->email)])->first();
-
-        if (! $customer || ! Hash::check($request->password, $customer->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Las credenciales proporcionadas son incorrectas.'],
-            ]);
-        }
-
-        // Sanctum SPA: use session auth instead of tokens
-        Auth::guard('customer')->login($customer);
-        $request->session()->regenerate();
-
-        return response()->json([
-            'customer' => $customer,
-        ]);
-    }
-
+    /** Solo lo que el panel necesita: los datos que cargó el taller no salen de aquí. */
     public function profile(Request $request)
     {
-        return response()->json($request->user());
+        $c = $request->user();
+
+        return response()->json([
+            'id' => $c->id,
+            'name' => $c->name,
+            'email' => $c->email,
+            'email_verified' => $c->isVerified(),
+            'welcome_coupon' => $c->isVerified() && !$c->welcome_coupon_used_at ? $c->welcome_coupon : null,
+            'welcome_coupon_pct' => $this->accounts->welcomePct(),
+        ]);
+    }
+
+    public function verify(Request $request)
+    {
+        $data = $request->validate(['code' => 'required|digits:6']);
+        $error = $this->accounts->verify($request->user(), $data['code']);
+
+        return $error ? $this->error($error, 422) : $this->success(null, 'Correo verificado.');
+    }
+
+    public function resendCode(Request $request)
+    {
+        $customer = $request->user();
+        if ($customer->isVerified()) {
+            return $this->success(null, 'Tu correo ya está verificado.');
+        }
+        $this->accounts->sendVerificationCode($customer);
+
+        return $this->success(null, 'Te enviamos un código nuevo.');
     }
 
     /**
@@ -67,9 +62,13 @@ class CustomerAuthController extends Controller
      */
     public function orders(Request $request)
     {
+        // Sin verificar, cualquiera podría registrarse con un correo ajeno y leer sus pedidos
+        if (!$request->user()->isVerified()) {
+            return $this->error('Verifica tu correo para ver tus pedidos.', 403);
+        }
         $email = strtolower((string)$request->user()->email);
 
-        $orders = \App\Models\Order::query()
+        $orders = Order::query()
             ->whereRaw('LOWER(customer_email) = ?', [$email])
             ->orderByDesc('created_at')
             ->get(['id', 'job_name', 'status', 'technology', 'material_name', 'qty', 'infill', 'dimensions_mm',
@@ -100,6 +99,54 @@ class CustomerAuthController extends Controller
             });
 
         return response()->json(['data' => $orders]);
+    }
+
+    /**
+     * Compra del catálogo hecha por un cliente con sesión: queda como pedido en su
+     * cuenta y en el admin. Nombre y precio salen del catálogo guardado, no del navegador.
+     */
+    public function catalogOrder(Request $request)
+    {
+        $data = $request->validate([
+            'product' => 'required|string|max:255',
+            'qty' => 'required|integer|min:1|max:99',
+        ]);
+        $customer = $request->user();
+        if (!$customer->isVerified()) {
+            return $this->error('Verifica tu correo para guardar pedidos en tu cuenta.', 403);
+        }
+
+        $web = Setting::where('key', 'web')->value('value');
+        $web = is_array($web) ? $web : (json_decode((string) $web, true) ?: []);
+        $product = collect($web['catalog'] ?? [])->first(fn ($p) => is_array($p)
+            && (($p['status'] ?? 'active') === 'active')
+            && ((isset($p['id']) && (string) $p['id'] === $data['product']) || ($p['name'] ?? null) === $data['product']));
+
+        $price = (float) ($product['price'] ?? 0);
+        if (!$product || $price <= 0) {
+            return $this->error('Ese producto ya no está disponible en el catálogo.', 422);
+        }
+
+        $order = Order::create([
+            'customer_name' => $customer->name,
+            'customer_email' => $customer->email,
+            'customer_phone' => $customer->phone,
+            'job_name' => 'Catálogo: ' . $product['name'],
+            'technology' => 'CATALOGO',
+            'material_id' => 'CATALOGO',
+            'material_name' => $product['category'] ?? 'Producto de catálogo',
+            'qty' => $data['qty'],
+            'volume_mm3' => 0,
+            'scale_factor' => 1,
+            'estimated_duration_h' => 0,
+            'extras_cost' => 0,
+            'total_price' => round($price * $data['qty'], 2),
+            'status' => 'pending',
+            'comments' => 'Pedido desde el catálogo web (cierra la venta por WhatsApp).',
+        ]);
+        $this->mailer->received($order);
+
+        return $this->success(['order_id' => $order->id, 'total_price' => $order->total_price], 'Pedido guardado en tu cuenta.', 201);
     }
 
     public function logout(Request $request)

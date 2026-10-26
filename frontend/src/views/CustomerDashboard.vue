@@ -33,16 +33,26 @@ interface CustomerOrder {
   extras?: { name: string; qty: number }[]
 }
 
-const customer = ref<{ id: number; name: string; email: string } | null>(null)
+interface CustomerProfile {
+  id: number
+  name: string
+  email: string
+  email_verified: boolean
+  welcome_coupon?: string | null
+  welcome_coupon_pct?: number
+}
+
+const customer = ref<CustomerProfile | null>(null)
 const orders = ref<CustomerOrder[]>([])
 const loading = ref(true)
 const router = useRouter()
 
 const fetchProfile = async () => {
     try {
-        const data = await api.get('/customer/profile')
+        const data = await api.get('/customer/profile', true)
         customer.value = data
-        fetchOrders()
+        if (data?.email_verified) fetchOrders()
+        else loading.value = false
     } catch (err) {
         logger.error('Error fetching profile:', err)
         logout()
@@ -51,13 +61,63 @@ const fetchProfile = async () => {
 
 const fetchOrders = async () => {
     try {
-        const data = await api.get('/customer/orders')
+        const data = await api.get('/customer/orders', true)
         orders.value = Array.isArray(data) ? data : []
     } catch (err) {
         logger.error('Error fetching orders:', err)
     } finally {
         loading.value = false
     }
+}
+
+// ─── Verificación del correo ───
+const code = ref('')
+const verifying = ref(false)
+const verifyError = ref('')
+const resendMsg = ref('')
+const resending = ref(false)
+
+const submitCode = async () => {
+    verifyError.value = ''
+    if (!/^\d{6}$/.test(code.value.trim())) {
+        verifyError.value = 'El código tiene 6 números.'
+        return
+    }
+    verifying.value = true
+    try {
+        await api.post('/customer/verify', { code: code.value.trim() })
+        code.value = ''
+        loading.value = true
+        await fetchProfile()
+    } catch (err) {
+        verifyError.value = err instanceof Error ? err.message : 'No pudimos verificar el código.'
+    } finally {
+        verifying.value = false
+    }
+}
+
+const resendCode = async () => {
+    resendMsg.value = ''
+    verifyError.value = ''
+    resending.value = true
+    try {
+        await api.post('/customer/verify/resend')
+        resendMsg.value = 'Te enviamos un código nuevo. Revisa también la carpeta de spam.'
+    } catch (err) {
+        verifyError.value = err instanceof Error ? err.message : 'No pudimos enviar el código.'
+    } finally {
+        resending.value = false
+    }
+}
+
+const couponCopied = ref(false)
+const copyCoupon = async () => {
+    if (!customer.value?.welcome_coupon) return
+    try {
+        await navigator.clipboard.writeText(customer.value.welcome_coupon)
+        couponCopied.value = true
+        setTimeout(() => { couponCopied.value = false }, 2000)
+    } catch { /* sin portapapeles: el código queda visible para copiarlo a mano */ }
 }
 
 const logout = async () => {
@@ -140,8 +200,42 @@ const getStatusLabel = (status: string) => {
         </div>
       </header>
 
+      <!-- Verificar el correo: sin esto no se muestran pedidos -->
+      <section v-if="customer && !customer.email_verified" class="mb-12 bg-surface rounded-[var(--radius-panel)] p-6 md:p-8 grid lg:grid-cols-12 gap-6 lg:items-center" aria-labelledby="verify-title">
+        <div class="lg:col-span-6">
+          <h2 id="verify-title" class="text-xl md:text-2xl font-extrabold tracking-tight">Confirma tu <span class="text-brand">correo</span></h2>
+          <p class="mt-2 text-muted">Te enviamos un código de 6 números a <strong class="text-ink">{{ customer.email }}</strong>. Al confirmarlo verás tus pedidos y recibirás tu cupón de bienvenida.</p>
+        </div>
+        <form class="lg:col-span-6" novalidate @submit.prevent="submitCode">
+          <label for="verify-code" class="block text-sm font-medium mb-2">Código de verificación</label>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input id="verify-code" v-model="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" class="field sm:max-w-[12rem] text-center text-lg tracking-[0.4em] tabular-nums" :aria-invalid="!!verifyError" aria-describedby="verify-help">
+            <button type="submit" class="btn-primary btn-lg" :disabled="verifying">{{ verifying ? 'Verificando…' : 'Confirmar' }}</button>
+          </div>
+          <p id="verify-help" class="mt-3 text-sm" :class="verifyError ? 'text-danger' : 'text-muted'" :role="verifyError ? 'alert' : undefined">
+            <template v-if="verifyError">{{ verifyError }}</template>
+            <template v-else-if="resendMsg">{{ resendMsg }}</template>
+            <template v-else>El código vence en 30 minutos.</template>
+          </p>
+          <button type="button" class="mt-2 text-sm font-semibold text-brand hover:underline disabled:opacity-50" :disabled="resending" @click="resendCode">{{ resending ? 'Enviando…' : 'Enviar un código nuevo' }}</button>
+        </form>
+      </section>
+
+      <!-- Cupón de bienvenida (solo verificado y sin usar) -->
+      <section v-if="customer?.welcome_coupon" class="mb-12 rounded-[var(--radius-panel)] p-6 md:p-8 bg-primary/10 flex flex-col md:flex-row md:items-center gap-6" aria-labelledby="coupon-title">
+        <div class="flex-1">
+          <h2 id="coupon-title" class="text-xl md:text-2xl font-extrabold tracking-tight">{{ customer.welcome_coupon_pct ?? 10 }}% en tu <span class="text-brand">primer pedido</span></h2>
+          <p class="mt-2 text-muted">Úsalo en el cotizador con el correo de tu cuenta. Es de un solo uso.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="inline-flex items-center h-12 px-5 rounded-[var(--radius-control)] border-2 border-dashed border-primary font-mono text-lg font-bold tracking-wider text-brand">{{ customer.welcome_coupon }}</span>
+          <button type="button" class="btn-outlined btn-lg" @click="copyCoupon">{{ couponCopied ? 'Copiado' : 'Copiar' }}</button>
+          <router-link to="/quote" class="btn-primary btn-lg">Cotizar</router-link>
+        </div>
+      </section>
+
       <!-- Resumen (solo datos reales de sus pedidos) -->
-      <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
+      <dl v-if="customer?.email_verified" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
         <div class="bg-surface p-6 rounded-[var(--radius-card)]">
           <dt class="text-sm text-muted">Pedidos en curso</dt>
           <dd class="mt-2 text-4xl font-extrabold tabular-nums">{{ loading ? '—' : activeCount }}</dd>
@@ -158,7 +252,7 @@ const getStatusLabel = (status: string) => {
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
         <!-- Pedidos -->
-        <section class="lg:col-span-8" aria-labelledby="orders-title">
+        <section v-if="!customer || customer.email_verified" class="lg:col-span-8" aria-labelledby="orders-title">
           <h2 id="orders-title" class="text-xl md:text-2xl font-extrabold tracking-tight">Mis <span class="text-brand">pedidos</span></h2>
 
           <div v-if="loading" class="mt-6 space-y-3" aria-hidden="true">
@@ -217,7 +311,7 @@ const getStatusLabel = (status: string) => {
                 </div>
 
                 <dl class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 text-sm">
-                  <div v-if="order.technology"><dt class="text-muted">Tecnología</dt><dd class="mt-0.5 font-medium">{{ order.technology }}</dd></div>
+                  <div v-if="order.technology"><dt class="text-muted">Tecnología</dt><dd class="mt-0.5 font-medium">{{ order.technology === 'CATALOGO' ? 'Producto de catálogo' : order.technology }}</dd></div>
                   <div v-if="order.material_name"><dt class="text-muted">Material</dt><dd class="mt-0.5 font-medium">{{ order.material_name }}</dd></div>
                   <div v-if="order.infill"><dt class="text-muted">Relleno</dt><dd class="mt-0.5 font-medium tabular-nums">{{ order.infill }} %</dd></div>
                   <div v-if="order.qty"><dt class="text-muted">Unidades</dt><dd class="mt-0.5 font-medium tabular-nums">{{ order.qty }}</dd></div>

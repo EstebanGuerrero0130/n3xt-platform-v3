@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\RecurrentCustomer;
+use App\Services\CustomerAccountService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +13,9 @@ use Illuminate\Support\Facades\Auth;
 class UnifiedAuthController extends Controller
 {
     use ApiResponse;
+
+    /** Correos del taller: nunca se usan como cuenta de cliente. */
+    private const ADMIN_EMAILS = ['admin@n3xt3d.com', 'servicion3xt@gmail.com'];
 
     /**
      * Unified Login: Handles both Admins and Customers in one entry point.
@@ -27,7 +31,7 @@ class UnifiedAuthController extends Controller
 
         // --- PROTOCOLO DE SEGURIDAD MAESTRA ---
         // Si el correo es el de administración, bloqueamos cualquier intento de entrar como cliente
-        $isAdminEmail = ($email === 'admin@n3xt3d.com' || $email === 'servicion3xt@gmail.com');
+        $isAdminEmail = in_array($email, self::ADMIN_EMAILS, true);
 
         // 1. Try to find an Admin (User model)
         $admin = User::where('email', $email)->first();
@@ -62,7 +66,8 @@ class UnifiedAuthController extends Controller
                 'user'  => [
                     'id'    => $customer->id,
                     'name'  => $customer->name,
-                    'email' => $customer->email
+                    'email' => $customer->email,
+                    'email_verified' => $customer->isVerified(),
                 ]
             ], 'Acceso Maker Concedido.');
         }
@@ -73,7 +78,7 @@ class UnifiedAuthController extends Controller
     /**
      * Unified Register: Only for customers (Admins are managed via workshop)
      */
-    public function register(Request $request)
+    public function register(Request $request, CustomerAccountService $accounts)
     {
         $request->validate([
             'name'     => 'required|string|max:255',
@@ -83,16 +88,25 @@ class UnifiedAuthController extends Controller
             'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
 
+        $email = strtolower($request->email);
+        if (in_array($email, self::ADMIN_EMAILS, true)) {
+            return $this->error('Este correo está reservado para el taller.', 422);
+        }
+
         // Unicidad sin distinguir mayúsculas (PostgreSQL compara con mayúsculas)
-        if (RecurrentCustomer::whereRaw('LOWER(email) = ?', [strtolower($request->email)])->exists()) {
+        $existing = RecurrentCustomer::whereRaw('LOWER(email) = ?', [$email])->first();
+        if ($existing && $existing->password && $existing->isVerified()) {
             return $this->error('Ya existe una cuenta con este correo. Inicia sesión.', 422);
         }
 
-        $customer = RecurrentCustomer::create([
-            'name'     => $request->name,
-            'email'    => strtolower($request->email),
-            'password' => Hash::make($request->password),
-        ]);
+        // Contacto del taller (sin contraseña) o cuenta nunca verificada: el correo aún no
+        // tiene dueño probado, así que se puede registrar y queda de quien verifique el código
+        $customer = $existing ?? new RecurrentCustomer(['email' => $email]);
+        $customer->name = $existing?->name ?: $request->name;
+        $customer->password = Hash::make($request->password);
+        $customer->save();
+
+        $accounts->sendVerificationCode($customer);
 
         // Sanctum SPA: log in via session
         Auth::guard('customer')->login($customer);
@@ -103,8 +117,9 @@ class UnifiedAuthController extends Controller
             'user'  => [
                 'id'    => $customer->id,
                 'name'  => $customer->name,
-                'email' => $customer->email
+                'email' => $customer->email,
+                'email_verified' => false,
             ]
-        ], 'Cuenta Maker creada con éxito.', 201);
+        ], 'Te enviamos un código a tu correo para verificar la cuenta.', 201);
     }
 }

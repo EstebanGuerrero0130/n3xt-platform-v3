@@ -19,5 +19,19 @@ class RecurrentCustomer extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'verification_code_hash',
+        'verification_expires_at',
+        'verification_attempts',
     ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'verification_expires_at' => 'datetime',
+        'welcome_coupon_used_at' => 'datetime',
+    ];
+
+    public function isVerified(): bool
+    {
+        return $this->email_verified_at !== null;
+    }
 }

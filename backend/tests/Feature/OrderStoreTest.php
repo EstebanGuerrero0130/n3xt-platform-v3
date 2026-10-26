@@ -5,6 +5,9 @@ namespace Tests\Feature;
 use App\Models\Inventory;
 use App\Models\Material;
 use App\Models\Order;
+use App\Models\RecurrentCustomer;
+use App\Mail\CustomerMail;
+use Illuminate\Support\Facades\Mail;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\MeshVolumeService;
@@ -184,6 +187,7 @@ class OrderStoreTest extends TestCase
         $this->getJson('/api/customer/orders')->assertUnauthorized();
 
         $customer = \App\Models\RecurrentCustomer::create(['name' => 'Ana', 'email' => 'ana@example.com', 'password' => bcrypt('secret123')]);
+        $customer->forceFill(['email_verified_at' => now()])->save();
         $this->actingAs($customer, 'customer');
 
         $res = $this->getJson('/api/customer/orders')->assertOk();
@@ -199,5 +203,47 @@ class OrderStoreTest extends TestCase
         $this->getJson("/api/admin/orders/{$id}")->assertUnauthorized();
         $this->actingAs(User::factory()->create(), 'web');
         $this->getJson("/api/admin/orders/{$id}")->assertOk()->assertJsonPath('data.id', $id);
+    }
+
+    private function welcomeOwner(): RecurrentCustomer
+    {
+        $c = RecurrentCustomer::create(['name' => 'Ana', 'email' => 'ana@example.com', 'password' => bcrypt('secret123')]);
+        $c->forceFill(['email_verified_at' => now(), 'welcome_coupon' => 'BIENVENIDATEST01'])->save();
+        return $c;
+    }
+
+    public function test_welcome_coupon_applies_once_and_only_with_owner_email(): void
+    {
+        $owner = $this->welcomeOwner();
+        $full = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->json('data.total_price');
+
+        // Otro correo: rechazado
+        $this->post('/api/orders', $this->payload(['customer_email' => 'otro@example.com', 'coupon_code' => 'BIENVENIDATEST01']), ['Accept' => 'application/json'])
+            ->assertStatus(422);
+
+        // Dueño: aplica el 10 %
+        $res = $this->post('/api/orders', $this->payload(['coupon_code' => 'bienvenidatest01']), ['Accept' => 'application/json'])->assertCreated();
+        $this->assertLessThan($full, $res->json('data.total_price'));
+        $this->assertNotNull($owner->fresh()->welcome_coupon_used_at);
+
+        // Segundo uso: ya no existe para el cotizador
+        $this->post('/api/orders', $this->payload(['coupon_code' => 'BIENVENIDATEST01']), ['Accept' => 'application/json'])->assertCreated()
+            ->assertJsonPath('data.total_price', $full);
+        $this->postJson('/api/quote/coupon', ['code' => 'BIENVENIDATEST01'])->assertNotFound();
+    }
+
+    public function test_customer_gets_mail_when_order_is_received_and_status_changes(): void
+    {
+        Mail::fake();
+        $id = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->assertCreated()->json('data.order_id');
+        Mail::assertSent(CustomerMail::class, fn ($m) => $m->hasTo('ana@example.com') && $m->mailView === 'mail.order-update' && str_contains($m->mailSubject, 'Recibimos'));
+
+        $this->actingAs(User::factory()->create(), 'web');
+        $this->patchJson("/api/admin/orders/{$id}/status", ['status' => 'printing'])->assertOk();
+        Mail::assertSent(CustomerMail::class, fn ($m) => str_contains($m->mailSubject, 'en impresión'));
+
+        // Mismo estado otra vez: sin correo nuevo
+        $this->patchJson("/api/admin/orders/{$id}/status", ['status' => 'printing'])->assertOk();
+        Mail::assertSent(CustomerMail::class, 2);
     }
 }

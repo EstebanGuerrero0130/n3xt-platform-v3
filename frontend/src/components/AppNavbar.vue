@@ -58,6 +58,10 @@ const onKeydown = (e: KeyboardEvent) => {
 }
 
 const isAdmin = ref(false)
+const isCustomer = ref(false)
+// Destino y texto del botón de cuenta según la sesión
+const accountLink = computed(() => isAdmin.value ? '/admin' : isCustomer.value ? '/customer/dashboard' : '/admin/login')
+const accountLabel = computed(() => isAdmin.value ? 'Ir al taller' : isCustomer.value ? 'Mi cuenta' : 'Ingresar')
 
 // ─── Barra compacta al hacer scroll ───
 const scrolled = ref(false)
@@ -104,6 +108,7 @@ onMounted(async () => {
     const { api } = await import('../services/api')
     const auth = await api.checkAuth()
     isAdmin.value = !!auth?.authenticated && auth.role === 'admin'
+    isCustomer.value = !!auth?.authenticated && auth.role === 'customer'
   } catch {
     isAdmin.value = false
   }
@@ -145,8 +150,8 @@ onUnmounted(() => {
         ></span>
       </nav>
 
-      <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="hidden lg:inline-flex btn-secondary btn-sm">
-        {{ isAdmin ? 'Ir al taller' : 'Acceso taller' }}
+      <router-link :to="accountLink" class="hidden lg:inline-flex btn-secondary btn-sm">
+        {{ accountLabel }}
       </router-link>
 
       <button
@@ -185,8 +190,8 @@ onUnmounted(() => {
         @click="showMobileMenu = false"
       >{{ link.label }}</router-link>
 
-      <router-link :to="isAdmin ? '/admin' : '/admin/login'" class="mt-8 btn-secondary btn-lg w-full" @click="showMobileMenu = false">
-        {{ isAdmin ? 'Ir al taller' : 'Acceso taller' }}
+      <router-link :to="accountLink" class="mt-8 btn-secondary btn-lg w-full" @click="showMobileMenu = false">
+        {{ accountLabel }}
       </router-link>
     </nav>
   </transition>

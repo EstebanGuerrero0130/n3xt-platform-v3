@@ -37,12 +37,15 @@ Route::middleware('throttle:10,1')->post('/quote/coupon', [OrderController::clas
 Route::get('/settings', [SettingController::class, 'index']);
 Route::get('/materials', [MaterialController::class, 'index']);
 
-// Rutas de autenticación Maker (Clientes) - Legacy
-Route::middleware('throttle:5,1')->post('/maker-access/register', [CustomerAuthController::class, 'register']);
-Route::middleware('throttle:10,1')->post('/maker-access/login', [CustomerAuthController::class, 'login']);
-Route::middleware('auth:customer')->get('/customer/profile', [CustomerAuthController::class, 'profile']);
-Route::middleware('auth:customer')->get('/customer/orders', [CustomerAuthController::class, 'orders']);
-Route::middleware('auth:customer')->post('/customer/logout', [CustomerAuthController::class, 'logout']);
+// Portal del cliente (registro y login en /auth/*)
+Route::middleware('auth:customer')->group(function () {
+    Route::get('/customer/profile', [CustomerAuthController::class, 'profile']);
+    Route::get('/customer/orders', [CustomerAuthController::class, 'orders']);
+    Route::middleware('throttle:10,1')->post('/customer/verify', [CustomerAuthController::class, 'verify']);
+    Route::middleware('throttle:3,1')->post('/customer/verify/resend', [CustomerAuthController::class, 'resendCode']);
+    Route::middleware('throttle:10,1')->post('/customer/catalog-orders', [CustomerAuthController::class, 'catalogOrder']);
+    Route::post('/customer/logout', [CustomerAuthController::class, 'logout']);
+});
 
 // Sesión actual (admin o cliente) con rol explícito
 Route::get('/user', function (Request $request) {
@@ -50,7 +53,7 @@ Route::get('/user', function (Request $request) {
         return response()->json(array_merge($admin->only(['id', 'name', 'email']), ['role' => 'admin']));
     }
     if ($customer = auth('customer')->user()) {
-        return response()->json(array_merge($customer->only(['id', 'name', 'email']), ['role' => 'customer']));
+        return response()->json(array_merge($customer->only(['id', 'name', 'email']), ['role' => 'customer', 'email_verified' => $customer->isVerified()]));
     }
     // Visitante sin sesión: 200 con rol nulo (un 401 en cada página ensucia la consola y Lighthouse)
     return response()->json(['role' => null]);

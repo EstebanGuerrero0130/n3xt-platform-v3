@@ -4,7 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Order;
 use App\Models\RecurrentCustomer;
+use App\Mail\CustomerMail;
+use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class CustomerAccountTest extends TestCase
@@ -32,7 +35,8 @@ class CustomerAccountTest extends TestCase
 
     public function test_register_rejects_same_email_with_other_case(): void
     {
-        RecurrentCustomer::create(['name' => 'Cliente', 'email' => 'cliente@example.com', 'password' => bcrypt('secret123')]);
+        $c = RecurrentCustomer::create(['name' => 'Cliente', 'email' => 'cliente@example.com', 'password' => bcrypt('secret123')]);
+        $c->forceFill(['email_verified_at' => now()])->save();
 
         $this->register('CLIENTE@example.com')->assertStatus(422);
         $this->assertSame(1, RecurrentCustomer::count());
@@ -48,6 +52,7 @@ class CustomerAccountTest extends TestCase
     public function test_customer_orders_show_pieces_without_storage_paths(): void
     {
         $customer = RecurrentCustomer::create(['name' => 'Cliente', 'email' => 'cliente@example.com', 'password' => bcrypt('secret123')]);
+        $customer->forceFill(['email_verified_at' => now()])->save();
         Order::forceCreate([
             'customer_name' => 'Cliente', 'customer_email' => 'Cliente@example.com',
             'volume_mm3' => 1000, 'qty' => 2, 'technology' => 'FDM', 'material_id' => 'PLA', 'material_name' => 'PLA',
@@ -69,5 +74,79 @@ class CustomerAccountTest extends TestCase
         $res->assertJsonPath('data.0.models.0.name', 'pieza.stl');
         $res->assertJsonPath('data.0.models.0.qty', 2);
         $this->assertStringNotContainsString('orders_models', $res->getContent());
+    }
+
+    /** Registra y devuelve el código que llegó por correo. */
+    private function registerAndGetCode(string $email = 'cliente@example.com'): string
+    {
+        Mail::fake();
+        $this->register($email)->assertCreated()->assertJsonPath('data.user.email_verified', false);
+        $code = null;
+        Mail::assertSent(CustomerMail::class, function ($m) use (&$code) {
+            if ($m->mailView !== 'mail.verification-code') return false;
+            $code = $m->data['code'];
+            return true;
+        });
+        return $code;
+    }
+
+    public function test_orders_stay_hidden_until_email_is_verified(): void
+    {
+        $code = $this->registerAndGetCode();
+
+        $this->getJson('/api/customer/orders')->assertForbidden();
+        $this->getJson('/api/customer/profile')->assertOk()->assertJsonPath('email_verified', false)->assertJsonMissingPath('phone');
+
+        $this->postJson('/api/customer/verify', ['code' => $code === '000000' ? '111111' : '000000'])->assertStatus(422);
+        $this->postJson('/api/customer/verify', ['code' => $code])->assertOk();
+
+        $this->getJson('/api/customer/orders')->assertOk();
+        $profile = $this->getJson('/api/customer/profile')->assertJsonPath('email_verified', true);
+        $this->assertStringStartsWith('BIENVENIDA', $profile->json('welcome_coupon'));
+        Mail::assertSent(CustomerMail::class, fn ($m) => $m->mailView === 'mail.welcome-coupon');
+    }
+
+    public function test_verification_locks_after_too_many_attempts(): void
+    {
+        $code = $this->registerAndGetCode();
+        $wrong = $code === '123456' ? '654321' : '123456';
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/customer/verify', ['code' => $wrong])->assertStatus(422);
+        }
+        // Ni el código correcto sirve hasta pedir uno nuevo
+        $this->postJson('/api/customer/verify', ['code' => $code])->assertStatus(422);
+    }
+
+    public function test_unverified_or_workshop_contact_email_can_be_claimed_by_verifying(): void
+    {
+        // Contacto que cargó el taller, sin contraseña
+        RecurrentCustomer::create(['name' => 'Cliente Taller', 'email' => 'cliente@example.com', 'phone' => '300']);
+
+        $code = $this->registerAndGetCode();
+        $this->assertSame(1, RecurrentCustomer::count());
+        $this->postJson('/api/customer/verify', ['code' => $code])->assertOk();
+        $this->assertSame('Cliente Taller', RecurrentCustomer::first()->name);
+    }
+
+    public function test_catalog_order_uses_server_price(): void
+    {
+        Setting::updateOrCreate(['key' => 'web'], ['value' => ['catalog' => [
+            ['id' => 7, 'name' => 'Figura', 'price' => 50000, 'status' => 'active', 'category' => 'Coleccionables'],
+            ['id' => 8, 'name' => 'Oculta', 'price' => 10, 'status' => 'draft'],
+        ]]]);
+        $customer = RecurrentCustomer::create(['name' => 'Cliente', 'email' => 'cliente@example.com', 'password' => bcrypt('secret123')]);
+        $this->actingAs($customer, 'customer');
+
+        // Sin verificar: no
+        $this->postJson('/api/customer/catalog-orders', ['product' => '7', 'qty' => 2])->assertForbidden();
+
+        $customer->forceFill(['email_verified_at' => now()])->save();
+        Mail::fake();
+        $this->postJson('/api/customer/catalog-orders', ['product' => '7', 'qty' => 2, 'total_price' => 1])
+            ->assertCreated()->assertJsonPath('data.total_price', 100000);
+        $this->postJson('/api/customer/catalog-orders', ['product' => '8', 'qty' => 1])->assertStatus(422);
+
+        $this->getJson('/api/customer/orders')->assertJsonCount(1, 'data')->assertJsonPath('data.0.project_name', 'Catálogo: Figura');
+        Mail::assertSent(CustomerMail::class, 1);
     }
 }

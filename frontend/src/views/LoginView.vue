@@ -16,7 +16,8 @@ usePageMeta({
 
 // ─── SEO via @unhead/vue (usePageMeta at setup) ───
 
-const mode = ref('password') // 'password' or 'register'
+// ?registro=1 abre directo el formulario de registro (enlaces de catálogo y cotizador)
+const mode = ref(new URLSearchParams(window.location.search).has('registro') ? 'register' : 'password') // 'password' or 'register'
 
 // --- CAPTCHA PROTOCOL ---
 const { challenge, answer, verify, reset, isLocked } = useCaptcha()
@@ -36,7 +37,6 @@ const router = useRouter()
 const showPassword = ref(false)
 const honeypot = ref('')
 const lastAttemptTime = ref(0)
-const selectedRole = ref(window.location.pathname.includes('admin') ? 'admin' : 'customer')
 
 onMounted(async () => {
   // Redirigir si ya hay sesión activa
@@ -164,12 +164,7 @@ const register = async () => {
           </div>
 
           <h1 class="section-title">{{ mode === 'register' ? 'Crea tu' : 'Acceso' }} <span class="section-title-accent">{{ mode === 'register' ? 'cuenta' : 'N3XT' }}</span></h1>
-          <p class="mt-3 text-muted">{{ mode === 'register' ? 'Regístrate para seguir tus pedidos y cotizaciones.' : 'Ingresa con tu correo y contraseña.' }}</p>
-
-          <div v-if="mode === 'password'" class="mt-8 flex flex-wrap gap-2" role="group" aria-label="Tipo de cuenta">
-            <button type="button" class="chip" :aria-pressed="selectedRole === 'customer'" @click="selectedRole = 'customer'">Cliente</button>
-            <button type="button" class="chip" :aria-pressed="selectedRole === 'admin'" @click="selectedRole = 'admin'">Administrador</button>
-          </div>
+          <p class="mt-3 text-muted">{{ mode === 'register' ? 'Sigue tus pedidos, recibe avisos por correo y un cupón de bienvenida para tu primer pedido.' : 'Ingresa con tu correo y contraseña.' }}</p>
 
           <div v-if="error" role="alert" class="mt-6 p-4 rounded-[var(--radius-control)] border border-danger/30 bg-danger/5 text-sm text-danger font-medium">{{ error }}</div>
 

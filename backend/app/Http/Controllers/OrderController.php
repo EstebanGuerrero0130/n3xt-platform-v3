@@ -9,6 +9,9 @@ use App\Models\Printer;
 use App\Services\CostCalculatorService;
 use App\Services\MeshVolumeService;
 use App\Services\QuotePricingService;
+use App\Services\CustomerAccountService;
+use App\Services\OrderMailer;
+use App\Models\RecurrentCustomer;
 use App\Exceptions\InvalidMeshException;
 use App\Http\Middleware\EnsureAdmin;
 use App\Traits\ApiResponse;
@@ -30,6 +33,8 @@ class OrderController extends Controller
         protected CostCalculatorService $costCalculator,
         protected QuotePricingService $pricing,
         protected MeshVolumeService $meshVolume,
+        protected CustomerAccountService $accounts,
+        protected OrderMailer $mailer,
     ) {}
 
     /**
@@ -166,6 +171,16 @@ class OrderController extends Controller
 
         $settings = $this->pricing->loadSettings();
         $coupon = $this->pricing->findActiveCoupon($validated['coupon_code'] ?? null, $settings);
+
+        // Cupón de bienvenida: personal, solo con el correo de su dueño
+        $welcomeOwner = $coupon ? null : $this->accounts->welcomeCouponOwner($validated['coupon_code'] ?? null);
+        if ($welcomeOwner) {
+            if (strtolower((string) ($validated['customer_email'] ?? '')) !== strtolower((string) $welcomeOwner->email)) {
+                Storage::disk('local')->delete($stored);
+                return $this->error('Este cupón es personal: úsalo con el correo de tu cuenta.', 422);
+            }
+            $coupon = $this->accounts->welcomeCoupon($welcomeOwner);
+        }
         $quote = $this->pricing->quote(
             [
                 'technology' => $validated['technology'],
@@ -198,29 +213,40 @@ class OrderController extends Controller
         $extras = array_map(fn ($e) => $e + ['added_at' => $now], $quote['extras']);
 
         $first = $modelsOut[0];
-        $order = DB::transaction(fn () => Order::create(array_merge($this->orderFields($validated), [
-            'material_id'          => $material->id,
-            'material_name'        => $material->name,
-            'qty'                  => $quote['qty'],
-            'volume_mm3'           => round($quote['volume_mm3'], 2),
-            'estimated_weight_g'   => round($quote['weight_g'], 2),
-            'estimated_duration_h' => round($quote['duration_h'], 3),
-            'total_price'          => $quote['total'],
-            'dimensions_mm'        => count($modelsOut) === 1 ? $first['dimensions_mm'] : null,
-            'scale_factor'         => count($modelsOut) === 1 ? $first['scale_factor'] : 1,
-            'file_path'            => $first['path'],
-            'original_filename'    => $first['original_filename'],
-            'models'               => $modelsOut,
-            'status'               => 'pending',
-            'extra_items'          => count($extras) > 0 ? $extras : null,
-            'extras_cost'          => $quote['extras_cost'],
-            'cost_snapshot'        => [
-                'settings' => $settings,
-                'material_cost_per_kg' => $material->cost_per_kg,
-                'quote' => array_intersect_key($quote, array_flip(['unit_price', 'subtotal', 'coupon', 'discount', 'subtotal_after_discount', 'iva_pct', 'iva', 'total'])),
-                'captured_at' => $now,
-            ],
-        ])));
+        $order = DB::transaction(function () use ($validated, $material, $quote, $modelsOut, $first, $extras, $settings, $now, $welcomeOwner) {
+            if ($welcomeOwner && !$this->accounts->consumeWelcomeCoupon($welcomeOwner)) {
+                return null;
+            }
+            return Order::create(array_merge($this->orderFields($validated), [
+                'material_id'          => $material->id,
+                'material_name'        => $material->name,
+                'qty'                  => $quote['qty'],
+                'volume_mm3'           => round($quote['volume_mm3'], 2),
+                'estimated_weight_g'   => round($quote['weight_g'], 2),
+                'estimated_duration_h' => round($quote['duration_h'], 3),
+                'total_price'          => $quote['total'],
+                'dimensions_mm'        => count($modelsOut) === 1 ? $first['dimensions_mm'] : null,
+                'scale_factor'         => count($modelsOut) === 1 ? $first['scale_factor'] : 1,
+                'file_path'            => $first['path'],
+                'original_filename'    => $first['original_filename'],
+                'models'               => $modelsOut,
+                'status'               => 'pending',
+                'extra_items'          => count($extras) > 0 ? $extras : null,
+                'extras_cost'          => $quote['extras_cost'],
+                'cost_snapshot'        => [
+                    'settings' => $settings,
+                    'material_cost_per_kg' => $material->cost_per_kg,
+                    'quote' => array_intersect_key($quote, array_flip(['unit_price', 'subtotal', 'coupon', 'discount', 'subtotal_after_discount', 'iva_pct', 'iva', 'total'])),
+                    'captured_at' => $now,
+                ],
+            ]));
+        });
+
+        if (!$order) {
+            Storage::disk('local')->delete($stored);
+            return $this->error('Este cupón de bienvenida ya fue usado.', 422);
+        }
+        $this->mailer->received($order);
 
         return $this->success([
             'order_id' => $order->id,
@@ -280,6 +306,8 @@ class OrderController extends Controller
             ]
         ]));
 
+        $this->mailer->received($order);
+
         return $this->success(['order_id' => $order->id, 'total_price' => $order->total_price], 'Orden creada con éxito.', 201);
     }
 
@@ -300,6 +328,9 @@ class OrderController extends Controller
     {
         $data = $request->validate(['code' => 'required|string|max:50|alpha_num']);
         $coupon = $this->pricing->findActiveCoupon($data['code']);
+        if (!$coupon && ($owner = $this->accounts->welcomeCouponOwner($data['code']))) {
+            $coupon = $this->accounts->welcomeCoupon($owner);
+        }
 
         if (!$coupon) {
             return $this->error('Ese cupón no existe o ya no está activo.', 404);
@@ -338,6 +369,7 @@ class OrderController extends Controller
                 $oldPrinterId = $order->printer_id;
                 
                 $order->fill($validated)->save();
+                $this->mailer->statusChanged($order, $oldStatus);
 
                 // Logic: Handle Printer Status
                 if ($order->status === 'printing') {

@@ -340,7 +340,7 @@ const shareUrl = computed(() => {
             </div>
             <div v-if="order.technology">
               <dt class="text-xs text-muted">Tecnología</dt>
-              <dd class="mt-1 font-medium break-words">{{ order.technology }}</dd>
+              <dd class="mt-1 font-medium break-words">{{ order.technology === 'CATALOGO' ? 'Producto de catálogo' : order.technology }}</dd>
             </div>
             <div>
               <dt class="text-xs text-muted">Pago</dt>

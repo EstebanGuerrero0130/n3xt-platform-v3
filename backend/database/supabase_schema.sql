@@ -232,6 +232,12 @@ CREATE TABLE IF NOT EXISTS recurrent_customers (
     zip_code VARCHAR(255) NULL,
     location_reference VARCHAR(255) NULL,
     notes TEXT NULL,
+    email_verified_at TIMESTAMP NULL,                       -- Verificación por código
+    verification_code_hash VARCHAR(255) NULL,
+    verification_expires_at TIMESTAMP NULL,
+    verification_attempts SMALLINT NOT NULL DEFAULT 0,
+    welcome_coupon VARCHAR(32) NULL UNIQUE,                 -- Cupón personal de bienvenida
+    welcome_coupon_used_at TIMESTAMP NULL,
     created_at TIMESTAMP NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL DEFAULT NOW()
 );
