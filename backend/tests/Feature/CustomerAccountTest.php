@@ -176,4 +176,27 @@ class CustomerAccountTest extends TestCase
         // El código no se puede reusar
         $this->postJson('/api/auth/password/reset', ['email' => 'cliente@example.com', 'code' => $code, 'password' => 'otra_clave12', 'password_confirmation' => 'otra_clave12'])->assertStatus(422);
     }
+
+    public function test_cart_order_with_several_products_priced_by_server(): void
+    {
+        Setting::updateOrCreate(['key' => 'web'], ['value' => ['catalog' => [
+            ['id' => 1, 'name' => 'Figura', 'price' => '$185.000', 'status' => 'active', 'category' => 'Coleccionables'],
+            ['id' => 2, 'name' => 'Llavero', 'price' => 12000, 'status' => 'active'],
+        ]]]);
+        $customer = RecurrentCustomer::create(['name' => 'Cliente', 'email' => 'cliente@example.com', 'password' => bcrypt('secret123')]);
+        $customer->forceFill(['email_verified_at' => now()])->save();
+        $this->actingAs($customer, 'customer');
+        Mail::fake();
+
+        $this->postJson('/api/customer/catalog-orders', ['items' => [
+            ['product' => '1', 'qty' => 1], ['product' => '2', 'qty' => 3], ['product' => '2', 'qty' => 1],
+        ]])->assertCreated()->assertJsonPath('data.total_price', 185000 + 4 * 12000);
+
+        $order = Order::first();
+        $this->assertSame('Catálogo: 2 productos', $order->job_name);
+        $this->assertSame(5, $order->qty);
+        $this->assertSame([1, 4], array_column($order->models, 'qty'));
+
+        $this->postJson('/api/customer/catalog-orders', ['items' => [['product' => '99', 'qty' => 1]]])->assertStatus(422);
+    }
 }

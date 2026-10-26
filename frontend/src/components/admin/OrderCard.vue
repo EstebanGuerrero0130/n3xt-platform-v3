@@ -39,7 +39,7 @@ const moveRight = () => {
 }
 
 const isCatalog = computed(() => props.order.technology === 'CATALOGO')
-const hasFile = computed(() => !!props.order.file_path || (Array.isArray(props.order.models) && props.order.models.length > 0))
+const hasFile = computed(() => !!props.order.file_path || (Array.isArray(props.order.models) && props.order.models.some((m: any) => m?.path)))
 const money = (n: any) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CO')
 
 // Cancelar avisa al cliente por correo: siempre se confirma

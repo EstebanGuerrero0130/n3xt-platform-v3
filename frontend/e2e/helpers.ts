@@ -42,3 +42,28 @@ export function watchErrors(page: Page) {
   page.on('response', r => { if (r.status() >= 500) errors.push(`HTTP ${r.status()} ${r.url()}`) })
   return errors
 }
+
+/** Llama a la API desde la página (usa la sesión y el token CSRF del navegador). */
+export async function apiCall(page: Page, method: string, path: string, body?: unknown) {
+  return page.evaluate(async ({ method, path, body }) => {
+    await fetch('http://localhost:8000/sanctum/csrf-cookie', { credentials: 'include' })
+    const xsrf = decodeURIComponent((document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN=')) || '').slice(11))
+    const res = await fetch('http://localhost:8000/api' + path, {
+      method,
+      credentials: 'include',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+    return { status: res.status, json: await res.json().catch(() => null) }
+  }, { method, path, body })
+}
+
+/** Publica productos de prueba en el catálogo (como admin). */
+export async function seedCatalog(page: Page, catalog: unknown[]) {
+  await loginAdmin(page)
+  const current = await apiCall(page, 'GET', '/settings')
+  const web = { ...(current.json?.web || {}), catalog }
+  const res = await apiCall(page, 'POST', '/admin/settings', { settings: { web } })
+  expect(res.status).toBe(200)
+  await page.context().clearCookies()
+}

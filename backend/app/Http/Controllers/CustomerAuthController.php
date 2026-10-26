@@ -102,51 +102,93 @@ class CustomerAuthController extends Controller
     }
 
     /**
-     * Compra del catálogo hecha por un cliente con sesión: queda como pedido en su
-     * cuenta y en el admin. Nombre y precio salen del catálogo guardado, no del navegador.
+     * Compra del catálogo (carrito) de un cliente con sesión: un pedido con todos
+     * los productos. Nombres y precios salen del catálogo guardado, no del navegador.
+     * Acepta items[] o, por compatibilidad, product + qty.
      */
     public function catalogOrder(Request $request)
     {
         $data = $request->validate([
-            'product' => 'required|string|max:255',
-            'qty' => 'required|integer|min:1|max:99',
+            'items' => 'required_without:product|array|min:1|max:30',
+            'items.*.product' => 'required|string|max:255',
+            'items.*.qty' => 'required|integer|min:1|max:99',
+            'product' => 'required_without:items|string|max:255',
+            'qty' => 'required_with:product|integer|min:1|max:99',
         ]);
         $customer = $request->user();
         if (!$customer->isVerified()) {
             return $this->error('Verifica tu correo para guardar pedidos en tu cuenta.', 403);
         }
 
-        $web = Setting::where('key', 'web')->value('value');
-        $web = is_array($web) ? $web : (json_decode((string) $web, true) ?: []);
-        $product = collect($web['catalog'] ?? [])->first(fn ($p) => is_array($p)
-            && (($p['status'] ?? 'active') === 'active')
-            && ((isset($p['id']) && (string) $p['id'] === $data['product']) || ($p['name'] ?? null) === $data['product']));
+        $items = $data['items'] ?? [['product' => $data['product'], 'qty' => $data['qty']]];
+        $catalog = $this->activeCatalog();
 
-        $price = (float) ($product['price'] ?? 0);
-        if (!$product || $price <= 0) {
-            return $this->error('Ese producto ya no está disponible en el catálogo.', 422);
+        $lines = [];
+        foreach ($items as $item) {
+            $product = $catalog->first(fn ($p) => (isset($p['id']) && (string) $p['id'] === (string) $item['product']) || ($p['name'] ?? null) === $item['product']);
+            $price = $product ? self::price($product['price'] ?? 0) : 0;
+            if (!$product || $price <= 0) {
+                return $this->error('«' . $item['product'] . '» ya no está disponible en el catálogo. Quítalo del carrito.', 422);
+            }
+            $key = (string) ($product['id'] ?? $product['name']);
+            if (isset($lines[$key])) {
+                $lines[$key]['qty'] += (int) $item['qty'];
+                $lines[$key]['subtotal'] = round($price * $lines[$key]['qty'], 2);
+                continue;
+            }
+            $lines[$key] = [
+                'path' => null,
+                'product_id' => $product['id'] ?? null,
+                'original_filename' => $product['name'],
+                'image' => $product['image'] ?? null,
+                'qty' => (int) $item['qty'],
+                'unit_price' => $price,
+                'subtotal' => round($price * (int) $item['qty'], 2),
+            ];
         }
+        $lines = array_values($lines);
+        $total = array_sum(array_column($lines, 'subtotal'));
 
         $order = Order::create([
             'customer_name' => $customer->name,
             'customer_email' => $customer->email,
             'customer_phone' => $customer->phone,
-            'job_name' => 'Catálogo: ' . $product['name'],
+            'job_name' => count($lines) === 1 ? 'Catálogo: ' . $lines[0]['original_filename'] : 'Catálogo: ' . count($lines) . ' productos',
             'technology' => 'CATALOGO',
             'material_id' => 'CATALOGO',
-            'material_name' => $product['category'] ?? 'Producto de catálogo',
-            'qty' => $data['qty'],
+            'material_name' => count($lines) === 1 ? ($catalog->first(fn ($p) => ($p['name'] ?? null) === $lines[0]['original_filename'])['category'] ?? 'Producto de catálogo') : 'Productos de catálogo',
+            'qty' => array_sum(array_column($lines, 'qty')),
+            'models' => $lines,
             'volume_mm3' => 0,
             'scale_factor' => 1,
             'estimated_duration_h' => 0,
             'extras_cost' => 0,
-            'total_price' => round($price * $data['qty'], 2),
+            'total_price' => round($total, 2),
             'status' => 'pending',
             'comments' => 'Pedido desde el catálogo web (cierra la venta por WhatsApp).',
         ]);
         $this->mailer->received($order);
 
         return $this->success(['order_id' => $order->id, 'total_price' => $order->total_price], 'Pedido guardado en tu cuenta.', 201);
+    }
+
+    /** Productos activos del catálogo publicado. */
+    private function activeCatalog(): \Illuminate\Support\Collection
+    {
+        $web = Setting::where('key', 'web')->value('value');
+        $web = is_array($web) ? $web : (json_decode((string) $web, true) ?: []);
+
+        return collect($web['catalog'] ?? [])->filter(fn ($p) => is_array($p) && ($p['status'] ?? 'active') === 'active' && !empty($p['name']));
+    }
+
+    /** Precio del catálogo: el admin lo guarda como texto ("185000", "$185.000"). */
+    private static function price(mixed $v): float
+    {
+        if (is_numeric($v)) {
+            return (float) $v;
+        }
+        // Formato colombiano: punto de miles y coma decimal
+        return (float) preg_replace('/[^0-9.]/', '', str_replace(',', '.', str_replace('.', '', (string) $v)));
     }
 
     public function logout(Request $request)

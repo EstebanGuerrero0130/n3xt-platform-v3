@@ -23,7 +23,7 @@
             <ul v-if="pieces.length" class="mt-3 divide-y divide-line rounded-[var(--radius-control)] bg-surface">
               <li v-for="(p, i) in pieces" :key="i" class="px-4 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                 <span class="font-medium break-all">{{ p.name || `Modelo ${i + 1}` }} <span class="text-muted tabular-nums">× {{ p.qty || 1 }}</span></span>
-                <button type="button" class="order-last sm:order-none btn-outlined btn-sm" :aria-label="`Descargar ${p.name || 'modelo ' + (i + 1)}`" @click="emit('download', i)">Descargar</button>
+                <button v-if="p.hasFile" type="button" class="order-last sm:order-none btn-outlined btn-sm" :aria-label="`Descargar ${p.name || 'modelo ' + (i + 1)}`" @click="emit('download', i)">Descargar</button>
                 <span class="text-sm text-muted tabular-nums">
                   <template v-if="p.dims">{{ p.dims }} mm</template><template v-if="p.dims && p.weight"> · </template><template v-if="p.weight">{{ Math.round(p.weight) }} g</template><template v-if="p.subtotal"> · {{ money(p.subtotal) }}</template>
                 </span>
@@ -191,9 +191,9 @@ const pieces = computed(() => {
   const o = props.order
   if (!o) return []
   if (Array.isArray(o.models) && o.models.length) {
-    return o.models.map((m: any) => ({ name: m.original_filename, qty: m.qty, dims: m.dimensions_mm, weight: m.weight_g, subtotal: m.subtotal }))
+    return o.models.map((m: any) => ({ name: m.original_filename, qty: m.qty, dims: m.dimensions_mm, weight: m.weight_g, subtotal: m.subtotal, hasFile: !!m.path }))
   }
-  return o.original_filename ? [{ name: o.original_filename, qty: o.qty, dims: o.dimensions_mm, weight: o.estimated_weight_g, subtotal: null }] : []
+  return o.original_filename ? [{ name: o.original_filename, qty: o.qty, dims: o.dimensions_mm, weight: o.estimated_weight_g, subtotal: null, hasFile: !!o.file_path }] : []
 })
 const utilities = computed(() => props.materials.filter((m: any) => m.type && m.type !== 'material'))
 const trackingSaved = ref(false)

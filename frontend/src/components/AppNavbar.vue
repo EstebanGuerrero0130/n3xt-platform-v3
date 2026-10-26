@@ -6,6 +6,7 @@ let lastIndicator: { x: number; w: number } | null = null
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { useCart } from '../composables/useCart'
 
 // Dos nodos raíz (header + overlay móvil): evitamos warnings de atributos heredados
 defineOptions({ inheritAttrs: false })
@@ -59,6 +60,7 @@ const onKeydown = (e: KeyboardEvent) => {
 
 const isAdmin = ref(false)
 const isCustomer = ref(false)
+const { count: cartCount } = useCart()
 // Destino y texto del botón de cuenta según la sesión
 const accountLink = computed(() => isAdmin.value ? '/admin' : isCustomer.value ? '/customer/dashboard' : '/admin/login')
 const accountLabel = computed(() => isAdmin.value ? 'Ir al taller' : isCustomer.value ? 'Mi cuenta' : 'Ingresar')
@@ -150,9 +152,21 @@ onUnmounted(() => {
         ></span>
       </nav>
 
-      <router-link :to="accountLink" class="hidden lg:inline-flex btn-secondary btn-sm">
-        {{ accountLabel }}
-      </router-link>
+      <div class="flex items-center gap-1 lg:gap-2">
+        <!-- Carrito: solo aparece con productos -->
+        <router-link
+          v-if="cartCount > 0"
+          to="/carrito"
+          class="relative w-11 h-11 inline-flex items-center justify-center rounded-full text-ink hover:bg-surface-2"
+          :aria-label="`Carrito: ${cartCount} ${cartCount === 1 ? 'producto' : 'productos'}`"
+        >
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
+          <span class="absolute top-1 right-0.5 min-w-5 h-5 px-1 inline-flex items-center justify-center rounded-full bg-primary text-white text-xs font-bold tabular-nums" aria-hidden="true">{{ cartCount > 99 ? '99+' : cartCount }}</span>
+        </router-link>
+        <router-link :to="accountLink" class="hidden lg:inline-flex btn-secondary btn-sm">
+          {{ accountLabel }}
+        </router-link>
+      </div>
 
       <button
         ref="menuToggle"
