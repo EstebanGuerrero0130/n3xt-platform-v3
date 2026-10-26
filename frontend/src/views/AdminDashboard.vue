@@ -529,7 +529,7 @@ const handleTogglePaid = async (orderId) => {
 
 const confirmShipping = async () => {
   if (!trackingGuide.value || !trackingCarrier.value) {
-    showNotify('Por favor ingrese el numero de guia y la transportadora.', 'warning')
+    showNotify('Elige la transportadora y escribe el número de guía.', 'warning')
     return
   }
   await handleStatusUpdate({ 
@@ -690,12 +690,12 @@ const handleEditMaterial = (mat) => {
   modalState.editMaterial = true
 }
 
-const updateMaterial = async () => {
+const updateMaterial = async (payload) => {
   if (submitting.value) return
   submitting.value = true
   try {
-    const id = editingMaterial.value.id
-    await api.patch(`/materials/${id}`, editingMaterial.value, true)
+    const data = payload || editingMaterial.value
+    await api.patch(`/materials/${data.id}`, data, true)
     modalState.editMaterial = false
     await fetchInventory()
     showNotify('Material actualizado con éxito', 'success')
@@ -706,11 +706,11 @@ const updateMaterial = async () => {
   }
 }
 
-const addMaterial = async () => {
+const addMaterial = async (payload) => {
   if (submitting.value) return
   submitting.value = true
   try {
-    await api.post('/materials', newMaterial, true)
+    await api.post('/materials', payload || newMaterial, true)
     modalState.newMaterial = false
     await fetchInventory()
     showNotify('Material creado correctamente', 'success')
@@ -721,11 +721,12 @@ const addMaterial = async () => {
   }
 }
 
-const savePrinterEdit = async () => {
+const savePrinterEdit = async (payload) => {
   if (submitting.value) return
   submitting.value = true
   try {
-    await apiUpdatePrinter(editingPrinter.value.id, editingPrinter.value)
+    const data = payload || editingPrinter.value
+    await apiUpdatePrinter(data.id, data)
     modalState.editPrinter = false
     await fetchPrinters()
     showNotify('Impresora actualizada con exito', 'success')
@@ -736,11 +737,11 @@ const savePrinterEdit = async () => {
   }
 }
 
-const addPrinter = async () => {
+const addPrinter = async (payload) => {
   if (submitting.value) return
   submitting.value = true
   try {
-    await api.post('/admin/printers', newPrinter, true)
+    await api.post('/admin/printers', payload || newPrinter, true)
     modalState.newPrinter = false
     await fetchPrinters()
     showNotify('Impresora añadida', 'success')
@@ -847,14 +848,6 @@ const saveSettings = (silent = false, updatedData = null) => {
     )
   }
 }
-
-// Asistente de Costo por Paquete (Watch)
-watch(() => [newMaterial.package_price, newMaterial.package_qty, newMaterial.package_units], () => {
-  if (newMaterial.package_price > 0 && newMaterial.package_qty > 0 && newMaterial.package_units > 0) {
-    const totalQty = newMaterial.package_qty * newMaterial.package_units
-    newMaterial.cost_per_kg = Math.round((newMaterial.package_price / totalQty) * 100) / 100
-  }
-})
 
 const handleLogoUpload = async (event) => {
   const file = event.target.files[0]

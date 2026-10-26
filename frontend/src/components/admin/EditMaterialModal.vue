@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { reactive, watch } from "vue"
+import { reactive, watch, computed } from 'vue'
+import AdminModal from './AdminModal.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -7,63 +8,48 @@ const props = defineProps<{
   submitting: boolean
 }>()
 
+// Se envía el formulario al guardar: antes los cambios quedaban en una copia
+// local y se guardaban los valores originales
 const emit = defineEmits<{
-  (e: "update:modelValue", val: boolean): void
-  (e: "update-material"): void
-  (e: "update:editingMaterial", val: any): void
+  (e: 'update:modelValue', val: boolean): void
+  (e: 'update-material', payload: any): void
 }>()
 
-// Local copy for editing (props are readonly in Vue 3)
-const form = reactive({ ...(props.editingMaterial || {}) })
+const form = reactive<any>({})
+watch(() => props.modelValue, (open) => {
+  if (!open) return
+  Object.keys(form).forEach(k => delete form[k])
+  Object.assign(form, props.editingMaterial || {})
+})
 
-watch(() => props.editingMaterial, (val) => {
-  if (val) Object.assign(form, val)
-}, { deep: true })
-
-watch(form, (val) => {
-  emit("update:editingMaterial", { ...val })
-}, { deep: true })
+const costUnit = computed(() => form.unit === 'g' ? 'kg' : form.unit === 'ml' ? 'litro' : 'unidad')
+const submit = () => emit('update-material', {
+  id: form.id,
+  name: form.name,
+  cost_per_kg: Number(form.cost_per_kg) || 0,
+  color: form.color || null,
+  low_stock_threshold: Number(form.low_stock_threshold) || 0,
+})
 </script>
 
 <template>
-    <div v-if="modelValue" class="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-[500] flex items-center justify-center p-4 overflow-y-auto">
-      <div class="bg-white dark:bg-gray-900 rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-300 my-auto">
-        <div class="p-6 md:p-10 max-h-[90vh] overflow-y-auto no-scrollbar">
-          <div class="flex justify-between items-center mb-6 md:mb-8">
-            <h3 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Editar Ítem</h3>
-            <button class="text-gray-400 hover:text-gray-600 transition-colors text-2xl" @click="emit('update:modelValue', false)">
-              ✕
-            </button>
-          </div>
-          
-          <div class="space-y-6">
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Nombre del Material/Ítem</label>
-              <input v-model="form.name" type="text" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
-            </div>
-            
-            <div class="grid grid-cols-2 gap-6">
-              <div class="space-y-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Costo Unitario ($)</label>
-                <input v-model.number="form.cost_per_kg" type="number" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
-              </div>
-              <div class="space-y-2 col-span-2 sm:col-span-1">
-                <label class="text-[10px] font-black text-rose-400 uppercase tracking-widest">Umbral Alerta ({{ form.unit }})</label>
-                <input v-model.number="form.low_stock_threshold" type="number" class="w-full bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-2xl px-6 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none transition-all">
-              </div>
-            </div>
-          </div>
-          
-          <div class="mt-10 flex flex-col sm:flex-row gap-4">
-            <button class="btn-secondary flex-1 px-8 py-4" @click="emit('update:modelValue', false)">
-                Salir sin Guardar
-            </button>
-            <button :disabled="submitting" class="btn-primary flex-2 px-12 py-4" @click="emit('update-material')">
-              {{ submitting ? 'Guardando...' : 'Guardar Cambios' }}
-            </button>
-          </div>
-        </div>
+  <AdminModal :show="modelValue" :title="`Editar ${editingMaterial?.name || 'ítem'}`" :description="`${editingMaterial?.category || ''} · ${editingMaterial?.id || ''}`" :busy="submitting" @close="emit('update:modelValue', false)">
+    <form id="edit-material-form" class="space-y-4" @submit.prevent="submit">
+      <div><label for="em-name" class="admin-label mb-2">Nombre</label><input id="em-name" v-model="form.name" type="text" required class="field" data-autofocus></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label for="em-cost" class="admin-label mb-2">Costo por {{ costUnit }} ($)</label><input id="em-cost" v-model.number="form.cost_per_kg" type="number" min="0" step="any" class="field tabular-nums"></div>
+        <div><label for="em-min" class="admin-label mb-2">Avisar con menos de ({{ form.unit }})</label><input id="em-min" v-model.number="form.low_stock_threshold" type="number" min="0" class="field tabular-nums"></div>
       </div>
-    </div>
-
+      <div class="flex items-center gap-3">
+        <label for="em-color" class="admin-label">Color</label>
+        <input id="em-color" v-model="form.color" type="color" class="h-10 w-14 rounded-[var(--radius-control)] border border-line bg-canvas p-1">
+        <span class="font-mono text-sm text-muted">{{ form.color }}</span>
+      </div>
+      <p class="text-sm text-muted">Las existencias se suman desde la tabla de Inventario o registrando una compra.</p>
+    </form>
+    <template #footer>
+      <button type="button" class="btn-outlined" :disabled="submitting" @click="emit('update:modelValue', false)">Cancelar</button>
+      <button type="submit" form="edit-material-form" class="btn-primary" :disabled="submitting">{{ submitting ? 'Guardando…' : 'Guardar cambios' }}</button>
+    </template>
+  </AdminModal>
 </template>

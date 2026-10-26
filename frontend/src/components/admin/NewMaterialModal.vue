@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { reactive, watch } from "vue"
+import { reactive, watch, computed } from 'vue'
+import AdminModal from './AdminModal.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -7,168 +8,142 @@ const props = defineProps<{
   submitting: boolean
 }>()
 
+// El formulario se envía completo al guardar. Antes se editaba una copia que el
+// padre nunca recibía: se enviaba sin código (el servidor lo exige) y no se creaba nada
 const emit = defineEmits<{
-  (e: "update:modelValue", val: boolean): void
-  (e: "add-material"): void
-  (e: "update:newMaterial", val: any): void
+  (e: 'update:modelValue', val: boolean): void
+  (e: 'add-material', payload: any): void
 }>()
 
-// Local copy for editing (props are readonly in Vue 3)
-const form = reactive({ ...(props.newMaterial || {}) })
+const TYPES = [
+  { type: 'material', label: 'Material', hint: 'Filamento o resina' },
+  { type: 'utility', label: 'Insumo', hint: 'Cajas, imanes, pintura' },
+  { type: 'service', label: 'Servicio', hint: 'Mano de obra, lavado' },
+  { type: 'product', label: 'Producto', hint: 'Pieza terminada para vender' },
+]
+const CATEGORY_FOR: Record<string, string> = { material: 'FDM', utility: 'UTIL', service: 'UTIL', product: 'PROD' }
+const UNIT_FOR: Record<string, string> = { FDM: 'g', SLA: 'ml', UTIL: 'unid', PROD: 'unid' }
 
-watch(() => props.newMaterial, (val) => {
-  if (val) Object.assign(form, val)
-}, { deep: true })
+const empty = () => ({
+  id: '', name: '', category: 'FDM', type: 'material', unit: 'g', cost_per_kg: 0, color: '#000000',
+  initial_stock: 0, low_stock_threshold: 200, package_units: 1, package_qty: null as number | null, package_price: null as number | null,
+})
+const form = reactive(empty())
+const idTouched = { value: false }
+watch(() => props.modelValue, (open) => {
+  if (!open) return
+  Object.assign(form, empty(), { ...(props.newMaterial || {}), id: '' })
+  idTouched.value = false
+})
 
-watch(form, (val) => {
-  emit("update:newMaterial", { ...val })
-}, { deep: true })
+const setType = (t: string) => {
+  form.type = t
+  form.category = CATEGORY_FOR[t]
+  form.unit = UNIT_FOR[form.category]
+}
+const setCategory = (c: string) => { form.category = c; form.unit = UNIT_FOR[c] }
+
+// Código sugerido a partir de la categoría y el nombre (editable)
+const suggestedId = computed(() => {
+  const name = form.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24)
+  return name ? `${form.category}_${name}` : ''
+})
+watch(suggestedId, (v) => { if (!idTouched.value) form.id = v })
+
+// Asistente: precio de un paquete → costo por kg / litro / unidad
+const totalQty = computed(() => (Number(form.package_qty) || 0) * (Number(form.package_units) || 1))
+const perUnit = computed(() => totalQty.value > 0 ? (Number(form.package_price) || 0) / totalQty.value : 0)
+const bulkFactor = computed(() => (form.unit === 'g' || form.unit === 'ml') ? 1000 : 1)
+watch([perUnit, bulkFactor], () => {
+  if (perUnit.value > 0) {
+    form.cost_per_kg = Math.round(perUnit.value * bulkFactor.value * 100) / 100
+    if (!form.initial_stock) form.initial_stock = totalQty.value
+  }
+})
+const costLabel = computed(() => form.unit === 'g' ? 'kg' : form.unit === 'ml' ? 'litro' : 'unidad')
+
+const valid = computed(() => !!form.name.trim() && /^[A-Z0-9_-]{2,50}$/.test(form.id) && Number(form.cost_per_kg) >= 0)
+const submit = () => {
+  if (!valid.value) return
+  emit('add-material', {
+    id: form.id, name: form.name.trim(), category: form.category, type: form.type, unit: form.unit,
+    cost_per_kg: Number(form.cost_per_kg) || 0, color: form.color,
+    initial_stock: Number(form.initial_stock) || 0, low_stock_threshold: Number(form.low_stock_threshold) || 0,
+  })
+}
 </script>
 
 <template>
-    <div v-if="modelValue" class="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-[500] flex items-center justify-center p-4 overflow-y-auto">
-      <div class="bg-white dark:bg-gray-900 rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 my-auto">
-        <div class="p-6 md:p-10 max-h-[90vh] overflow-y-auto no-scrollbar">
-          <div class="flex justify-between items-start gap-4 mb-8 md:mb-10">
-            <div class="min-w-0">
-              <h3 class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter truncate">Registrar Nuevo Ítem</h3>
-              <p class="text-[9px] md:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Configuración técnica de inventario</p>
-            </div>
-            <button class="w-10 h-10 md:w-12 md:h-12 shrink-0 bg-gray-50 dark:bg-white/5 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-all text-lg md:text-xl" @click="emit('update:modelValue', false)">
-              ✕
-            </button>
-          </div>
-          
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-10">
-            <!-- ID Automático (ReadOnly) -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                    ID Técnico (Auto)
-                </label>
-                <input v-model="form.id" type="text" readonly class="w-full bg-gray-100 dark:bg-white/5 border-none rounded-2xl p-5 font-black text-sm text-gray-500 outline-none opacity-80 cursor-not-allowed">
-            </div>
+  <AdminModal :show="modelValue" title="Nuevo ítem de inventario" size="lg" :busy="submitting" @close="emit('update:modelValue', false)">
+    <form id="new-material-form" class="space-y-6" novalidate @submit.prevent="submit">
+      <fieldset>
+        <legend class="admin-label mb-2">Qué es</legend>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button
+            v-for="t in TYPES" :key="t.type" type="button"
+            :class="['text-left p-3 rounded-[var(--radius-control)] border transition-colors', form.type === t.type ? 'border-primary bg-primary/5' : 'border-line hover:bg-surface']"
+            :aria-pressed="form.type === t.type"
+            @click="setType(t.type)"
+          >
+            <span class="block font-semibold">{{ t.label }}</span>
+            <span class="block text-sm text-muted">{{ t.hint }}</span>
+          </button>
+        </div>
+      </fieldset>
 
-            <!-- Nombre Comercial -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Nombre Comercial / Marca</label>
-                <input v-model="form.name" type="text" placeholder="Ej: PLA Pro Negro Mate" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl p-5 font-bold text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-
-            <!-- Categoría -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Categoría Tecnológica</label>
-                <select v-model="form.category" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl p-5 font-bold text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                  <option value="FDM">Filamento (FDM)</option>
-                  <option value="SLA">Resina (SLA)</option>
-                  <option value="UTIL">Otros / Adicionales</option>
-                </select>
-            </div>
-
-            <!-- Tipo de Ítem -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tipo de Registro</label>
-                <select v-model="form.type" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl p-5 font-bold text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                  <option value="material">Materiales (Filamento/Resina)</option>
-                  <option value="utility">Insumos (Argollas/Cajas/Bolsas)</option>
-                  <option value="service">Servicios (Mano de Obra/Lavado)</option>
-                </select>
-            </div>
-
-            <!-- Asistente de Paquete (Opcional) -->
-            <div class="col-span-1 sm:col-span-2 p-5 md:p-6 bg-primary/5 rounded-[2rem] border border-primary/10 space-y-4">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Asistente de Costo Pro</p>
-                        <p class="text-[10px] text-gray-500 font-bold mt-1">Calcula el precio unitario exacto por lotes.</p>
-                    </div>
-                    <div v-if="form.package_price > 0 && form.package_qty > 0" class="px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-100 animate-in fade-in zoom-in duration-300">
-                        <p class="text-[7px] font-black text-emerald-600 uppercase mb-1">Auditoría de Cálculo:</p>
-                        <p class="text-xs font-black text-emerald-700">
-                            $ {{ (form.package_price / (form.package_qty * (form.package_units || 1))).toLocaleString(undefined, {minimumFractionDigits: 2}) }} / {{ form.unit }}
-                            <span v-if="form.unit === 'g' || form.unit === 'ml'" class="text-[8px] opacity-70 ml-1">
-                                ($ {{ ((form.package_price / (form.package_qty * (form.package_units || 1))) * 1000).toLocaleString() }} x Kg/L)
-                            </span>
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-                    <div class="space-y-1">
-                        <label class="text-[8px] font-black text-gray-400 uppercase">Nº Paquetes</label>
-                        <input v-model.number="form.package_units" type="number" placeholder="Ej: 2" class="w-full bg-white dark:bg-white/5 border-none rounded-xl p-3 font-bold text-xs outline-none focus:ring-2 focus:ring-primary/20 shadow-sm transition-all">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[8px] font-black text-gray-400 uppercase">{{ form.unit === 'g' ? 'Gramos x Paq' : form.unit === 'ml' ? 'ML x Paq' : 'Piezas x Paq' }}</label>
-                        <input v-model.number="form.package_qty" type="number" placeholder="Ej: 500" class="w-full bg-white dark:bg-white/5 border-none rounded-xl p-3 font-bold text-xs outline-none focus:ring-2 focus:ring-primary/20 shadow-sm transition-all">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[8px] font-black text-gray-400 uppercase">Precio Total ($)</label>
-                        <input v-model.number="form.package_price" type="number" placeholder="Ej: 120000" class="w-full bg-white dark:bg-white/5 border-none rounded-xl p-3 font-bold text-xs outline-none focus:ring-2 focus:ring-primary/20 shadow-sm transition-all">
-                    </div>
-                </div>
-                
-                <div v-if="form.package_qty > 0" class="pt-2 border-t border-primary/5 flex justify-between items-center text-[8px] font-black text-gray-400 uppercase tracking-widest">
-                    <span>Cantidad total a ingresar:</span>
-                    <span class="text-primary">{{ (form.package_qty * (form.package_units || 1)).toLocaleString() }} {{ form.unit }}</span>
-                </div>
-            </div>
-
-            <!-- Costo por Unidad -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Costo por Kilo/Litro/Unid.</label>
-                <div class="relative">
-                    <span class="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
-                    <input v-model.number="form.cost_per_kg" type="number" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl p-5 pl-10 font-black text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                </div>
-            </div>
-
-            <!-- Unidad de Medida -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Unidad de Medida</label>
-                <select v-model="form.unit" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl p-5 font-bold text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                  <option value="g">Gramos (g)</option>
-                  <option value="ml">Mililitros (ml)</option>
-                  <option value="unid">Unidad (ud)</option>
-                </select>
-            </div>
-
-            <!-- Stock Inicial -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Stock de Apertura</label>
-                    <input v-model.number="form.initial_stock" type="number" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl p-5 font-black text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                </div>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-rose-400 uppercase tracking-widest">Stock de Alerta (Rojo)</label>
-                    <input v-model.number="form.low_stock_threshold" type="number" class="w-full bg-rose-50 dark:bg-rose-500/10 border-none rounded-2xl p-5 font-black text-sm text-rose-900 dark:text-rose-100 outline-none focus:ring-2 focus:ring-rose-500/20 transition-all">
-                </div>
-            </div>
-
-            <!-- Selector de Color -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Identificador Visual</label>
-                <div class="flex items-center gap-4">
-                    <input v-model="form.color" type="color" class="w-16 h-14 bg-gray-50 border-none rounded-2xl p-1 cursor-pointer overflow-hidden transition-all hover:scale-105">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase italic">{{ form.color }}</span>
-                </div>
-            </div>
-          </div>
-          
-          <div class="flex flex-col sm:flex-row gap-4 pt-4">
-            <button class="btn-secondary flex-1 py-5" @click="emit('update:modelValue', false)">
-                Cancelar y Salir
-            </button>
-            <button 
-                :disabled="submitting" 
-                class="btn-primary flex-1 py-5"
-                @click="emit('add-material')"
-            >
-                {{ submitting ? 'Guardando...' : 'Crear Ítem en Taller' }}
-            </button>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label for="nm-name" class="admin-label mb-2">Nombre</label>
+          <input id="nm-name" v-model="form.name" type="text" required placeholder="Ej. PLA Pro Negro Mate" class="field" data-autofocus>
+        </div>
+        <div v-if="form.type === 'material'">
+          <label for="nm-tech" class="admin-label mb-2">Tecnología</label>
+          <select id="nm-tech" :value="form.category" class="field" @change="setCategory(($event.target as HTMLSelectElement).value)">
+            <option value="FDM">Filamento (FDM)</option>
+            <option value="SLA">Resina (SLA)</option>
+          </select>
+        </div>
+        <div>
+          <label for="nm-unit" class="admin-label mb-2">Unidad</label>
+          <select id="nm-unit" v-model="form.unit" class="field">
+            <option value="g">Gramos (g)</option>
+            <option value="ml">Mililitros (ml)</option>
+            <option value="unid">Unidades</option>
+          </select>
+        </div>
+        <div>
+          <label for="nm-id" class="admin-label mb-2">Código</label>
+          <input id="nm-id" v-model="form.id" type="text" class="field font-mono uppercase" maxlength="50" @input="idTouched.value = true; form.id = form.id.toUpperCase()">
+          <p class="mt-1.5 text-sm text-muted">Letras, números, guion o guion bajo. Se sugiere del nombre.</p>
+        </div>
+        <div class="flex items-end gap-3">
+          <div>
+            <label for="nm-color" class="admin-label mb-2">Color</label>
+            <input id="nm-color" v-model="form.color" type="color" class="h-11 w-16 rounded-[var(--radius-control)] border border-line bg-canvas p-1">
           </div>
         </div>
       </div>
-    </div>
 
+      <!-- Asistente de costo -->
+      <section class="admin-card bg-surface" aria-labelledby="nm-assist">
+        <h3 id="nm-assist" class="font-semibold">Calcular desde el precio del paquete <span class="font-normal text-muted">(opcional)</span></h3>
+        <div class="mt-3 grid grid-cols-3 gap-3">
+          <div><label for="nm-pu" class="admin-label mb-1">Paquetes</label><input id="nm-pu" v-model.number="form.package_units" type="number" min="1" class="field h-10 tabular-nums"></div>
+          <div><label for="nm-pq" class="admin-label mb-1">{{ form.unit === 'unid' ? 'Unidades' : form.unit }} por paquete</label><input id="nm-pq" v-model.number="form.package_qty" type="number" min="0" placeholder="1000" class="field h-10 tabular-nums"></div>
+          <div><label for="nm-pp" class="admin-label mb-1">Precio total ($)</label><input id="nm-pp" v-model.number="form.package_price" type="number" min="0" placeholder="85000" class="field h-10 tabular-nums"></div>
+        </div>
+        <p v-if="perUnit > 0" class="mt-3 text-sm">Sale a <strong class="tabular-nums">${{ (perUnit * bulkFactor).toLocaleString('es-CO', { maximumFractionDigits: 2 }) }}</strong> por {{ costLabel }} · entran {{ totalQty.toLocaleString('es-CO') }} {{ form.unit }}.</p>
+      </section>
+
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div><label for="nm-cost" class="admin-label mb-2">Costo por {{ costLabel }} ($)</label><input id="nm-cost" v-model.number="form.cost_per_kg" type="number" min="0" step="any" class="field tabular-nums"></div>
+        <div><label for="nm-stock" class="admin-label mb-2">Existencias iniciales ({{ form.unit }})</label><input id="nm-stock" v-model.number="form.initial_stock" type="number" min="0" class="field tabular-nums"></div>
+        <div><label for="nm-min" class="admin-label mb-2">Avisar con menos de ({{ form.unit }})</label><input id="nm-min" v-model.number="form.low_stock_threshold" type="number" min="0" class="field tabular-nums"></div>
+      </div>
+    </form>
+    <template #footer>
+      <button type="button" class="btn-outlined" :disabled="submitting" @click="emit('update:modelValue', false)">Cancelar</button>
+      <button type="submit" form="new-material-form" class="btn-primary" :disabled="submitting || !valid">{{ submitting ? 'Guardando…' : 'Crear ítem' }}</button>
+    </template>
+  </AdminModal>
 </template>

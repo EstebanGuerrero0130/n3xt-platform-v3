@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { reactive, watch } from "vue"
+import { reactive, watch } from 'vue'
+import AdminModal from './AdminModal.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -7,54 +8,44 @@ const props = defineProps<{
   submitting: boolean
 }>()
 
+// El formulario se envía completo al guardar (antes se editaba una copia que el
+// padre nunca recibía y la impresora se creaba con el formulario vacío)
 const emit = defineEmits<{
-  (e: "update:modelValue", val: boolean): void
-  (e: "add-printer"): void
-  (e: "update:newPrinter", val: any): void
+  (e: 'update:modelValue', val: boolean): void
+  (e: 'add-printer', payload: { name: string; model: string; technology: string }): void
 }>()
 
-// Local copy for editing (props are readonly in Vue 3)
-const form = reactive({ ...(props.newPrinter || {}) })
+const empty = () => ({ name: '', model: '', technology: 'FDM' })
+const form = reactive(empty())
+watch(() => props.modelValue, (open) => { if (open) Object.assign(form, empty(), props.newPrinter || {}) })
 
-watch(() => props.newPrinter, (val) => {
-  if (val) Object.assign(form, val)
-}, { deep: true })
-
-watch(form, (val) => {
-  emit("update:newPrinter", { ...val })
-}, { deep: true })
+const submit = () => {
+  if (!form.name.trim() || !form.model.trim()) return
+  emit('add-printer', { name: form.name.trim(), model: form.model.trim(), technology: form.technology })
+}
 </script>
 
 <template>
-    <div v-if="modelValue" class="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-[500] flex items-center justify-center p-4">
-      <div class="bg-white dark:bg-gray-900 rounded-[3rem] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-        <div class="p-6 md:p-10 max-h-[90vh] overflow-y-auto no-scrollbar">
-          <div class="flex justify-between items-center mb-6 md:mb-8">
-            <h3 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Nueva Impresora</h3>
-            <button class="text-gray-400 hover:text-gray-600 transition-colors text-2xl" @click="emit('update:modelValue', false)">
-              ✕
-            </button>
-          </div>
-          <div class="space-y-4">
-            <input v-model="form.name" type="text" placeholder="Nombre Identificador" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none">
-            <input v-model="form.model" type="text" placeholder="Modelo (ej: Ender 3, Mars 4)" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none">
-            <select v-model="form.technology" class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary">
-              <option value="FDM">Tecnología FDM</option>
-              <option value="SLA">Tecnología SLA</option>
-            </select>
-          </div>
-          <div class="mt-10 flex flex-col gap-3">
-            <button 
-                :disabled="submitting" 
-                class="w-full py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:-translate-y-1 transition-all disabled:opacity-50"
-                @click="emit('add-printer')"
-            >
-                {{ submitting ? 'Registrando...' : 'Registrar Máquina' }}
-            </button>
-            <button class="w-full py-4 bg-gray-100 dark:bg-white/5 text-gray-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all" @click="emit('update:modelValue', false)">Cerrar</button>
-          </div>
-        </div>
+  <AdminModal :show="modelValue" title="Nueva impresora" :busy="submitting" @close="emit('update:modelValue', false)">
+    <form id="new-printer-form" class="space-y-4" @submit.prevent="submit">
+      <div>
+        <label for="np-name" class="admin-label mb-2">Nombre</label>
+        <input id="np-name" v-model="form.name" type="text" required placeholder="Ej. Alpha-3" class="field" data-autofocus>
       </div>
-    </div>
-
+      <div>
+        <label for="np-model" class="admin-label mb-2">Modelo</label>
+        <input id="np-model" v-model="form.model" type="text" required placeholder="Ej. Ender 3 V2, Mars 4" class="field">
+      </div>
+      <fieldset>
+        <legend class="admin-label mb-2">Tecnología</legend>
+        <div class="flex gap-2">
+          <button v-for="t in ['FDM', 'SLA']" :key="t" type="button" class="chip" :aria-pressed="form.technology === t" @click="form.technology = t">{{ t === 'FDM' ? 'Filamento (FDM)' : 'Resina (SLA)' }}</button>
+        </div>
+      </fieldset>
+    </form>
+    <template #footer>
+      <button type="button" class="btn-outlined" :disabled="submitting" @click="emit('update:modelValue', false)">Cancelar</button>
+      <button type="submit" form="new-printer-form" class="btn-primary" :disabled="submitting || !form.name.trim() || !form.model.trim()">{{ submitting ? 'Guardando…' : 'Agregar impresora' }}</button>
+    </template>
+  </AdminModal>
 </template>

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+import AdminModal from './AdminModal.vue'
+
+const props = defineProps<{
   modelValue: boolean
   orderToShip: any
   trackingGuide: string
@@ -7,58 +10,45 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: "update:modelValue", val: boolean): void
-  (e: "update:trackingGuide", val: string): void
-  (e: "update:trackingCarrier", val: string): void
-  (e: "confirm-shipping"): void
+  (e: 'update:modelValue', val: boolean): void
+  (e: 'update:trackingGuide', val: string): void
+  (e: 'update:trackingCarrier', val: string): void
+  (e: 'confirm-shipping'): void
 }>()
 
-const onTrackingGuide = (e: Event) => {
-  emit("update:trackingGuide", (e.target as HTMLInputElement).value)
-}
-
-const onTrackingCarrier = (e: Event) => {
-  emit("update:trackingCarrier", (e.target as HTMLSelectElement).value)
+const CARRIERS = ['Servientrega', 'Interrapidísimo', 'Envía', 'Coordinadora', 'TCC', 'Recoge en el taller', 'Otra']
+// Si el cliente recoge en el taller no hay guía
+const isPickup = computed(() => props.trackingCarrier === 'Recoge en el taller')
+const canConfirm = computed(() => !!props.trackingCarrier && (isPickup.value || !!props.trackingGuide.trim()))
+const confirm = () => {
+  if (isPickup.value && !props.trackingGuide.trim()) emit('update:trackingGuide', 'Recoge en el taller')
+  emit('confirm-shipping')
 }
 </script>
 
 <template>
-    <div v-if="modelValue" class="fixed inset-0 bg-gray-950/60 backdrop-blur-md flex items-center justify-center p-4 z-[500]">
-      <div class="bg-white dark:bg-gray-900 rounded-[2rem] md:rounded-[3rem] shadow-2xl max-w-md w-full p-6 md:p-10 animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-white/5">
-            <div class="w-12 md:w-16 h-12 md:h-16 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center mb-4 md:mb-6 mx-auto">
-              <svg class="w-6 md:w-8 h-6 md:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-            </div>
-            <h3 class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white text-center uppercase tracking-tighter mb-2">Despachar Orden</h3>
-            <div class="space-y-3 md:space-y-4 mb-6 md:mb-8">
-                <select 
-                    :value="trackingCarrier"
-                    class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-xs font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
-                    @change="onTrackingCarrier"
-                >
-                    <option value="" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Seleccionar Transportadora...</option>
-                    <option value="Servientrega" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Servientrega</option>
-                    <option value="Interrapidisimo" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Interrapidísimo</option>
-                    <option value="Envia" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Envía</option>
-                    <option value="Coordinadora" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Coordinadora</option>
-                    <option value="TCC" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">TCC</option>
-                    <option value="Recoge en Taller" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Recoge en Taller</option>
-                    <option value="Personalizado" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Otro / Personalizado</option>
-                </select>
-
-                <input 
-                    :value="trackingGuide" 
-                    type="text" 
-                    placeholder="Ej: GUIA-123456" 
-                    class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base md:text-lg font-bold rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 outline-none focus:border-emerald-500 text-center tracking-widest uppercase shadow-inner" 
-                    @input="onTrackingGuide"
-                >
-            </div>
-            
-            <div class="flex flex-col sm:flex-row gap-3 md:gap-4">
-              <button class="btn-secondary flex-1 py-3 md:py-4" @click="emit('update:modelValue', false)">Cancelar</button>
-              <button class="btn-primary flex-1 py-3 md:py-4 !bg-emerald-500 hover:!bg-emerald-600 shadow-emerald-500/20" @click="emit('confirm-shipping')">Confirmar</button>
-            </div>
-          </div>
-        </div>
-
+  <AdminModal
+    :show="modelValue"
+    :title="`Registrar envío del pedido #${orderToShip?.id ?? ''}`"
+    description="El cliente recibe la guía por correo y la ve en su seguimiento."
+    @close="emit('update:modelValue', false)"
+  >
+    <form id="shipping-form" class="space-y-4" @submit.prevent="canConfirm && confirm()">
+      <div>
+        <label for="ship-carrier" class="admin-label mb-2">Transportadora</label>
+        <select id="ship-carrier" :value="trackingCarrier" class="field" data-autofocus @change="emit('update:trackingCarrier', ($event.target as HTMLSelectElement).value)">
+          <option value="">Elegir…</option>
+          <option v-for="c in CARRIERS" :key="c" :value="c">{{ c }}</option>
+        </select>
+      </div>
+      <div v-if="!isPickup">
+        <label for="ship-guide" class="admin-label mb-2">Número de guía</label>
+        <input id="ship-guide" :value="trackingGuide" type="text" inputmode="numeric" class="field tabular-nums" @input="emit('update:trackingGuide', ($event.target as HTMLInputElement).value)">
+      </div>
+    </form>
+    <template #footer>
+      <button type="button" class="btn-outlined" @click="emit('update:modelValue', false)">Cancelar</button>
+      <button type="submit" form="shipping-form" class="btn-primary" :disabled="!canConfirm">Marcar como enviado</button>
+    </template>
+  </AdminModal>
 </template>

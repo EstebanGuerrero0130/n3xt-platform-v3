@@ -17,7 +17,7 @@ class StoreMaterialRequest extends FormRequest
             'id' => 'required|string|unique:materials,id|max:50',
             'name' => 'required|string|max:255',
             'category' => 'required|string',
-            'type' => 'required|in:material,utility,service',
+            'type' => 'required|in:material,utility,service,product',
             'unit' => 'required|string',
             'cost_per_kg' => 'required|numeric|min:0',
             'density' => 'nullable|numeric|min:0.01',
