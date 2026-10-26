@@ -989,6 +989,14 @@ const openOrderDetails = (order) => {
 }
 
 
+// Tras agregar un insumo o guardar la guía: recarga y vuelve a abrir el pedido con datos frescos
+const refreshOrderDetails = async () => {
+  const id = selectedOrderDetails.value?.id
+  await fetchOrders()
+  const fresh = orders.value.find(o => o.id === id)
+  if (fresh) openOrderDetails(fresh)
+}
+
 // Motor de sincronización — hoisted para acceso desde onUnmounted
 let syncInterval
 
@@ -1108,6 +1116,7 @@ watch(activeTab, (tab) => {
   if (tab === 'accounting') fetchAnalytics()
   // Asegurar que cerramos modales al cambiar de pestaña para evitar bloqueos
   Object.keys(modalState).forEach(k => modalState[k] = false)
+  selectedOrderDetails.value = null
 })
 
 const logout = async () => {
@@ -1851,7 +1860,7 @@ const handlePurgeAll = () => {
       :materials="inventoryData"
       :settings="settings"
       @close="selectedOrderDetails = null; modalState.orderDetails = false"
-      @updated="fetchOrders()"
+      @updated="refreshOrderDetails"
     />
 
     <!-- Módulo: Gestión Web (extraído a WebManager.vue) -->

@@ -1,148 +1,129 @@
 <template>
-  <Teleport to="body">
-    <div v-if="order" class="fixed inset-0 z-[9997] flex items-center justify-center p-4" @click.self="$emit('close')">
-      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-      <div class="relative bg-gray-900 border border-gray-700 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-        <!-- Header -->
-        <div class="sticky top-0 bg-gray-900 z-10 p-4 md:p-6 pb-3 md:pb-4 border-b border-gray-800 flex justify-between items-start gap-3">
-          <div class="flex items-center gap-3 md:gap-4 min-w-0">
-            <div class="w-10 md:w-12 h-10 md:h-12 rounded-2xl bg-emerald-600/20 flex items-center justify-center shrink-0">
-              <svg class="w-5 md:w-6 h-5 md:h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+  <AdminModal :show="!!order" :title="order ? `Pedido #${order.id}` : ''" :description="order ? `${order.job_name || (isCatalog ? 'Producto de catálogo' : 'Impresión 3D')} · ${new Date(order.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''" size="xl" @close="$emit('close')">
+    <template v-if="order">
+      <div class="flex flex-wrap items-center gap-2 mb-6">
+        <span :class="['badge', statusClass]">{{ statusLabel }}</span>
+        <span :class="['badge', order.is_paid ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning']">{{ order.is_paid ? 'Pagado' : 'Pago pendiente' }}</span>
+        <span v-if="order.printer" class="badge bg-surface-2 text-ink">Máquina: {{ order.printer.name }}</span>
+      </div>
+
+      <!-- Avance -->
+      <ol v-if="order.status !== 'cancelled'" class="grid grid-cols-5 gap-2 mb-8" aria-label="Avance del pedido">
+        <li v-for="(step, idx) in statusSteps" :key="step.id" :aria-current="getStatusIndex(order.status) === idx ? 'step' : undefined">
+          <div :class="['h-1.5 rounded-full', getStatusIndex(order.status) >= idx ? 'bg-primary' : 'bg-surface-2']"></div>
+          <p :class="['mt-2 text-sm', getStatusIndex(order.status) >= idx ? 'text-ink font-semibold' : 'text-muted']">{{ step.label }}</p>
+        </li>
+      </ol>
+
+      <div class="grid gap-6 lg:grid-cols-12">
+        <div class="lg:col-span-7 space-y-6">
+          <!-- Piezas -->
+          <section aria-labelledby="od-pieces">
+            <h3 id="od-pieces" class="admin-h2 text-base">{{ isCatalog ? 'Producto' : 'Piezas' }}</h3>
+            <ul v-if="pieces.length" class="mt-3 divide-y divide-line rounded-[var(--radius-control)] bg-surface">
+              <li v-for="(p, i) in pieces" :key="i" class="px-4 py-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <span class="font-medium break-all">{{ p.name || `Modelo ${i + 1}` }} <span class="text-muted tabular-nums">× {{ p.qty || 1 }}</span></span>
+                <span class="text-sm text-muted tabular-nums">
+                  <template v-if="p.dims">{{ p.dims }} mm</template><template v-if="p.dims && p.weight"> · </template><template v-if="p.weight">{{ Math.round(p.weight) }} g</template><template v-if="p.subtotal"> · {{ money(p.subtotal) }}</template>
+                </span>
+              </li>
+            </ul>
+            <p v-else class="mt-3 text-muted">{{ isCatalog ? `${order.job_name?.replace(/^Catálogo: /, '') || 'Producto'} × ${order.qty || 1}` : 'Pedido manual, sin archivo 3D.' }}</p>
+            <dl class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div><dt class="text-muted">Tecnología</dt><dd class="mt-0.5 font-medium">{{ isCatalog ? 'Catálogo' : order.technology }}</dd></div>
+              <div><dt class="text-muted">Material</dt><dd class="mt-0.5 font-medium">{{ order.material_name || materialName }}</dd></div>
+              <div v-if="order.infill"><dt class="text-muted">Relleno</dt><dd class="mt-0.5 font-medium tabular-nums">{{ order.infill }} %</dd></div>
+              <div><dt class="text-muted">Unidades</dt><dd class="mt-0.5 font-medium tabular-nums">{{ order.qty || 1 }}</dd></div>
+              <div><dt class="text-muted">Peso</dt><dd class="mt-0.5 font-medium tabular-nums">{{ Math.round(order.estimated_weight_g || 0) }} g</dd></div>
+              <div><dt class="text-muted">Tiempo de máquina</dt><dd class="mt-0.5 font-medium tabular-nums">{{ hours(order.estimated_duration_h) }}</dd></div>
+            </dl>
+          </section>
+
+          <!-- Cliente y envío -->
+          <section aria-labelledby="od-customer" class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <h3 id="od-customer" class="admin-h2 text-base">Cliente</h3>
+              <p class="mt-2 font-semibold">{{ order.customer_name || 'Sin nombre' }}</p>
+              <p v-if="order.customer_company" class="text-sm text-muted">{{ order.customer_company }}</p>
+              <p v-if="order.customer_id_document" class="text-sm text-muted">CC/NIT {{ order.customer_id_document }}</p>
+              <p v-if="order.customer_email" class="text-sm"><a :href="'mailto:' + order.customer_email" class="text-brand hover:underline break-all">{{ order.customer_email }}</a></p>
+              <p v-if="order.customer_phone" class="text-sm"><a :href="'tel:' + order.customer_phone" class="hover:underline">{{ order.customer_phone }}</a></p>
             </div>
-            <div class="min-w-0">
-              <h2 class="text-lg md:text-2xl font-black text-white tracking-tight truncate">ORDEN #{{ order.id }}</h2>
-              <div class="flex items-center gap-2 mt-1">
-                <span :class="statusClass" class="text-[10px] md:text-xs font-bold px-2 md:px-3 py-0.5 md:py-1 rounded-full uppercase">{{ statusLabel }}</span>
-              </div>
+            <div>
+              <h3 class="admin-h2 text-base">Envío</h3>
+              <p v-if="order.shipping_address || order.shipping_city" class="mt-2 text-sm">{{ [order.shipping_address, order.shipping_city, order.shipping_zip].filter(Boolean).join(', ') }}</p>
+              <p v-else class="mt-2 text-sm text-muted">Sin dirección registrada.</p>
+              <p v-if="order.shipping_reference" class="text-sm text-muted">{{ order.shipping_reference }}</p>
             </div>
-          </div>
-          <button class="p-2 hover:bg-gray-800 rounded-xl transition-colors shrink-0" @click="$emit('close')">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
+          </section>
+
+          <!-- Guía -->
+          <section v-if="['completed', 'shipped'].includes(order.status)" aria-labelledby="od-tracking">
+            <h3 id="od-tracking" class="admin-h2 text-base">Guía de envío</h3>
+            <form class="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" @submit.prevent="saveTracking">
+              <div><label for="od-carrier" class="admin-label mb-1">Transportadora</label><input id="od-carrier" v-model="localCarrier" type="text" placeholder="Servientrega" class="field"></div>
+              <div><label for="od-guide" class="admin-label mb-1">Número de guía</label><input id="od-guide" v-model="localGuide" type="text" inputmode="numeric" class="field tabular-nums"></div>
+              <button type="submit" class="btn-primary">{{ trackingSaved ? 'Guardada' : 'Guardar guía' }}</button>
+            </form>
+          </section>
+
+          <section v-if="order.comments" aria-labelledby="od-notes">
+            <h3 id="od-notes" class="admin-h2 text-base">Notas</h3>
+            <p class="mt-2 text-sm whitespace-pre-line">{{ order.comments }}</p>
+          </section>
         </div>
 
-        <div class="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          <!-- Left: General Info + Logistics + Timeline -->
-          <div class="space-y-6">
-            <!-- Customer Info -->
-            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
-              <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">Cliente</h3>
-              <p class="text-xl font-black text-white">{{ order.customer_name }}</p>
-              <p v-if="order.customer_id_document" class="text-sm text-gray-500 mt-1">ID: {{ order.customer_id_document }}</p>
-              <p v-if="order.customer_phone" class="text-sm text-gray-400 mt-2">{{ order.customer_phone }}</p>
-              <p v-if="order.customer_email" class="text-sm text-gray-400">{{ order.customer_email }}</p>
+        <div class="lg:col-span-5 space-y-6">
+          <!-- Precio y costos -->
+          <section class="admin-card" aria-labelledby="od-money">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 id="od-money" class="admin-h2 text-base">Precio y costos</h3>
+              <span v-if="breakdown" class="text-sm font-semibold" :class="(breakdown.profit_margin_pct || 0) >= 25 ? 'text-success' : 'text-warning'">{{ breakdown.profit_margin_pct || 0 }} % de margen</span>
             </div>
-
-            <!-- Technical Specs -->
-            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
-              <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">Especificaciones Técnicas</h3>
-              <div class="grid grid-cols-2 gap-2 md:gap-3 text-xs md:text-sm">
-                <div><span class="text-gray-500">Tecnología:</span><span class="text-white font-bold ml-2">{{ order.technology }}</span></div>
-                <div><span class="text-gray-500">Material:</span><span class="text-white font-bold ml-2">{{ materialName }}</span></div>
-                <div><span class="text-gray-500">Peso:</span><span class="text-white font-bold ml-2">{{ order.estimated_weight_g || 0 }}g</span></div>
-                <div><span class="text-gray-500">Tiempo:</span><span class="text-white font-bold ml-2">{{ order.estimated_duration_h || 0 }}h</span></div>
+            <p class="mt-3 admin-kpi">{{ money(order.total_price) }}</p>
+            <dl v-if="breakdown" class="mt-4 text-sm">
+              <div
+v-for="row in [
+                ['Material', breakdown.material], ['Energía', breakdown.luz], ['Mano de obra', breakdown.labor],
+                ['Depreciación', breakdown.depr], ['Mantenimiento', breakdown.mant], ['Empaque', breakdown.prep_pack],
+              ]" :key="String(row[0])" class="flex justify-between py-1.5">
+                <dt class="text-muted">{{ row[0] }}</dt><dd class="tabular-nums">{{ money(row[1]) }}</dd>
               </div>
-            </div>
+              <div class="flex justify-between pt-3 mt-2 border-t border-line font-semibold"><dt>Costo de producción</dt><dd class="tabular-nums">{{ money(breakdown.production_cost) }}</dd></div>
+              <div class="flex justify-between pt-1.5 font-semibold"><dt>Margen</dt><dd class="tabular-nums" :class="breakdown.operating_margin < 0 ? 'text-danger' : 'text-success'">{{ money(breakdown.operating_margin) }}</dd></div>
+            </dl>
+          </section>
 
-            <!-- Shipping / Logistics -->
-            <div v-if="order.status !== 'pending'" class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
-              <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">Logística de Envío</h3>
-              <div v-if="order.customer_phone || order.shipping_address" class="space-y-2 text-sm mb-4">
-                <p v-if="order.shipping_address" class="text-gray-400">{{ order.shipping_address }}</p>
-                <p v-if="order.shipping_city" class="text-gray-400">{{ order.shipping_city }} {{ order.shipping_zip }}</p>
+          <!-- Insumos extra -->
+          <section class="admin-card" aria-labelledby="od-extras">
+            <h3 id="od-extras" class="admin-h2 text-base">Insumos extra</h3>
+            <ul v-if="order.extra_items?.length" class="mt-3 space-y-1.5 text-sm">
+              <li v-for="(item, idx) in order.extra_items" :key="idx" class="flex justify-between gap-3">
+                <span>{{ item.name }}<template v-if="item.qty > 1"> × {{ item.qty }}</template></span>
+                <span class="tabular-nums">{{ money(item.cost) }}</span>
+              </li>
+            </ul>
+            <p v-else class="mt-2 text-sm text-muted">Sin insumos extra.</p>
+            <p v-if="actionError" role="alert" class="mt-3 text-sm text-danger">{{ actionError }}</p>
+            <form v-if="showAddForm" class="mt-4 space-y-2" @submit.prevent="addExtra">
+              <label for="od-extra" class="admin-label">Insumo</label>
+              <select id="od-extra" v-model="newExtra.material_id" class="field">
+                <option value="">Elegir…</option>
+                <option v-for="m in (utilities.length ? utilities : materials)" :key="m.id" :value="m.id">{{ m.name }}</option>
+              </select>
+              <div class="flex gap-2">
+                <label for="od-extra-qty" class="sr-only">Cantidad</label>
+                <input id="od-extra-qty" v-model.number="newExtra.qty" type="number" min="1" class="field tabular-nums max-w-[7rem]">
+                <button type="submit" class="btn-primary" :disabled="!newExtra.material_id">Agregar</button>
+                <button type="button" class="btn-outlined" @click="showAddForm = false">Cancelar</button>
               </div>
-              <div v-if="order.status === 'shipped'" class="space-y-3">
-                <div>
-                  <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Transportadora</label>
-                  <input v-model="localCarrier" type="text" placeholder="EJ: SERVIENTREGA" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm outline-none">
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Número de Guía</label>
-                  <div class="flex flex-col sm:flex-row gap-2">
-                    <input v-model="localGuide" type="text" placeholder="EJ: 982347123" class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white text-sm outline-none">
-                    <button class="w-full sm:w-auto px-4 py-2.5 md:py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-bold text-sm transition-colors" @click="saveTracking">Guardar</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Timeline -->
-            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
-              <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 md:mb-4">Línea de Producción</h3>
-              <div class="flex items-center gap-1">
-                <template v-for="(step, idx) in statusSteps" :key="step.id">
-                <div class="flex-1 flex flex-col items-center">
-                  <div :class="['w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all', getStatusIndex(order.status) >= idx ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-gray-500']">
-                    {{ getStatusIndex(order.status) >= idx ? '✓' : idx + 1 }}
-                  </div>
-                  <p :class="['text-[10px] font-bold mt-1 text-center', getStatusIndex(order.status) >= idx ? 'text-emerald-400' : 'text-gray-600']">{{ step.label }}</p>
-                </div>
-                <div v-if="idx < statusSteps.length - 1" :class="['h-0.5 flex-1', getStatusIndex(order.status) > idx ? 'bg-emerald-600' : 'bg-gray-700']"></div>
-                </template>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right: Economic Analysis + Extras -->
-          <div class="space-y-6">
-            <!-- Price & Profitability -->
-            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
-              <div class="flex justify-between items-center mb-3 md:mb-4">
-                <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider">Análisis Económico</h3>
-                <span :class="profitClass" class="text-xs md:text-sm font-black">{{ breakdown?.profit_margin_pct || 0 }}% margen</span>
-              </div>
-              <div class="text-2xl md:text-3xl font-black text-emerald-400 mb-3 md:mb-4">${{ (order.total_price || 0).toLocaleString() }}</div>
-
-              <div v-if="breakdown" class="space-y-2 text-sm">
-                <div class="flex justify-between text-gray-400"><span>Material</span><span class="text-white font-bold">${{ breakdown.material.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Energía</span><span class="text-white font-bold">${{ breakdown.luz.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Mano de Obra</span><span class="text-white font-bold">${{ breakdown.labor.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Depreciación</span><span class="text-white font-bold">${{ breakdown.depr.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Mantenimiento</span><span class="text-white font-bold">${{ breakdown.mant.toLocaleString() }}</span></div>
-                <div class="flex justify-between text-gray-400"><span>Prep/Empaque</span><span class="text-white font-bold">${{ breakdown.prep_pack.toLocaleString() }}</span></div>
-                <div class="border-t border-gray-700 pt-2 mt-2">
-                  <div class="flex justify-between text-emerald-400 font-bold"><span>Costo Producción</span><span>${{ breakdown.production_cost.toLocaleString() }}</span></div>
-                  <div class="flex justify-between text-white font-bold text-base mt-1"><span>Margen Operativo</span><span>${{ breakdown.operating_margin.toLocaleString() }}</span></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Registered Extras -->
-            <div class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
-              <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">Extras Registrados</h3>
-              <div v-if="order.extra_items && order.extra_items.length" class="space-y-2 mb-4">
-                <div v-for="(item, idx) in order.extra_items" :key="idx" class="flex justify-between items-center text-sm bg-gray-800/50 rounded-xl px-4 py-2">
-                  <span class="text-white">{{ item.name }}</span>
-                  <span class="text-emerald-400 font-bold">${{ Number(item.cost || 0).toLocaleString() }}</span>
-                </div>
-              </div>
-              <p v-else class="text-sm text-gray-500">Sin extras registrados</p>
-              <p v-if="actionError" role="alert" class="mt-3 text-sm text-red-400">{{ actionError }}</p>
-
-              <!-- Add Extra -->
-              <div v-if="showAddForm" class="mt-4 space-y-3">
-                <select v-model="newExtra.material_id" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm outline-none">
-                  <option value="">Seleccionar insumo...</option>
-                  <option v-for="m in materials" :key="m.id" :value="m.id">{{ m.name }}</option>
-                </select>
-                <div class="flex flex-col sm:flex-row gap-2">
-                  <input v-model.number="newExtra.qty" type="number" min="1" class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-white text-sm outline-none">
-                  <button class="w-full sm:w-auto px-4 md:px-6 py-2.5 md:py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-bold text-sm transition-colors" @click="addExtra">Agregar</button>
-                </div>
-              </div>
-              <button v-else class="mt-3 text-sm text-emerald-400 hover:text-emerald-300 font-bold transition-colors" @click="showAddForm = true">+ Agregar Consumible</button>
-            </div>
-
-            <!-- Notes -->
-            <div v-if="order.comments" class="bg-gray-800/50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-700/50">
-              <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">Notas</h3>
-              <p class="text-sm text-gray-400 whitespace-pre-wrap">{{ order.comments }}</p>
-            </div>
-          </div>
+            </form>
+            <button v-else type="button" class="mt-4 btn-outlined btn-sm" @click="showAddForm = true">Agregar insumo</button>
+          </section>
         </div>
       </div>
-    </div>
-  </Teleport>
+    </template>
+  </AdminModal>
 </template>
 
 <script setup lang="ts">
@@ -150,6 +131,7 @@ import { ref, computed, watch, type PropType } from 'vue'
 import { api } from '../../services/api'
 import { calcOrderDetailBreakdown } from '../../services/costCalculator'
 import logger from '../../utils/logger'
+import AdminModal from './AdminModal.vue'
 
 const props = defineProps({
   order: { type: Object, default: null },
@@ -173,10 +155,10 @@ watch(() => props.order?.tracking_carrier, (val) => { localCarrier.value = val |
 watch(() => props.order?.tracking_guide, (val) => { localGuide.value = val || '' })
 
 const statusSteps = [
-  { id: 'pending', label: 'Recibido', desc: 'En cola de revisión.' },
-  { id: 'printing', label: 'Impresión', desc: 'En máquina.' },
-  { id: 'post-processing', label: 'Acabado', desc: 'Limpieza y Curado.' },
-  { id: 'completed', label: 'Terminado', desc: 'Listo para entrega.' },
+  { id: 'pending', label: 'Por revisar', desc: 'En cola de revisión.' },
+  { id: 'printing', label: 'En impresión', desc: 'En máquina.' },
+  { id: 'post-processing', label: 'En acabado', desc: 'Limpieza y curado.' },
+  { id: 'completed', label: 'Listo', desc: 'Listo para entrega.' },
   { id: 'shipped', label: 'Enviado', desc: 'En camino al cliente.' },
 ]
 
@@ -187,26 +169,39 @@ const getStatusIndex = (status: string) => {
 
 const statusLabel = computed(() => {
   const idx = getStatusIndex(props.order?.status)
+  if (props.order?.status === 'cancelled') return 'Cancelado'
   return idx >= 0 ? statusSteps[idx].label : props.order?.status
 })
 
 const statusClass = computed(() => {
   switch (props.order?.status) {
-    case 'pending': return 'bg-amber-600/20 text-amber-400'
-    case 'printing': return 'bg-blue-600/20 text-blue-400'
-    case 'post-processing': return 'bg-violet-600/20 text-violet-400'
-    case 'completed': return 'bg-emerald-600/20 text-emerald-400'
-    case 'shipped': return 'bg-cyan-600/20 text-cyan-400'
-    default: return 'bg-gray-600/20 text-gray-400'
+    case 'pending': return 'bg-warning/10 text-warning'
+    case 'printing': return 'bg-primary text-white'
+    case 'completed': return 'bg-success/10 text-success'
+    case 'cancelled': return 'bg-danger/10 text-danger'
+    default: return 'bg-surface-2 text-ink'
   }
 })
 
-const profitClass = computed(() => {
-  const pct = breakdown.value?.profit_margin_pct || 0
-  if (pct >= 40) return 'text-emerald-400'
-  if (pct >= 25) return 'text-amber-400'
-  return 'text-red-400'
+const money = (n: any) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CO')
+const isCatalog = computed(() => props.order?.technology === 'CATALOGO')
+// Piezas del pedido (models[] o el archivo suelto de pedidos viejos)
+const pieces = computed(() => {
+  const o = props.order
+  if (!o) return []
+  if (Array.isArray(o.models) && o.models.length) {
+    return o.models.map((m: any) => ({ name: m.original_filename, qty: m.qty, dims: m.dimensions_mm, weight: m.weight_g, subtotal: m.subtotal }))
+  }
+  return o.original_filename ? [{ name: o.original_filename, qty: o.qty, dims: o.dimensions_mm, weight: o.estimated_weight_g, subtotal: null }] : []
 })
+const utilities = computed(() => props.materials.filter((m: any) => m.type && m.type !== 'material'))
+const trackingSaved = ref(false)
+const hours = (h: any) => {
+  const total = Math.round((Number(h) || 0) * 60)
+  if (!total) return '—'
+  return total < 60 ? `${total} min` : `${Math.floor(total / 60)} h${total % 60 ? ' ' + (total % 60) + ' min' : ''}`
+}
+
 
 const materialName = computed(() => {
   if (!props.order?.material_id) return '-'
@@ -246,6 +241,8 @@ const saveTracking = async () => {
       tracking_guide: localGuide.value,
       tracking_carrier: localCarrier.value
     })
+    trackingSaved.value = true
+    setTimeout(() => { trackingSaved.value = false }, 2500)
     emit('updated')
   } catch (err) {
     logger.error('Error saving tracking:', err)
