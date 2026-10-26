@@ -121,4 +121,10 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    | Registros de clientes por minuto y por IP. Las pruebas e2e lo suben porque
+    | crean varias cuentas seguidas desde la misma máquina.
+    */
+    'register_per_minute' => (int) env('REGISTER_PER_MINUTE', 5),
+
 ];

@@ -13,6 +13,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Una sola cola de avisos por proceso (se vacía al cerrar cada petición)
         $this->app->singleton(\App\Services\OrderMailer::class);
+        $this->app->singleton(\App\Services\WorkshopAlerts::class);
     }
 
     /**

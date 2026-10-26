@@ -639,7 +639,11 @@ class OrderController extends Controller
         // Catálogo: unidades vendidas de cada producto vinculado a un ítem de stock
         foreach ($order->technology === 'CATALOGO' ? ($order->models ?? []) : [] as $line) {
             if (!empty($line['stock_item'])) {
-                Inventory::where('material_id', $line['stock_item'])->decrement('stock_available', (int) ($line['qty'] ?? 1));
+                $item = Inventory::where('material_id', $line['stock_item'])->first();
+                if ($item) {
+                    $item->stock_available -= (int) ($line['qty'] ?? 1);
+                    $item->save();
+                }
             }
         }
 

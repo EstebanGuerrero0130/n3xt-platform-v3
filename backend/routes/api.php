@@ -19,7 +19,7 @@ Route::any('/login', function() {
 // --- PROTOCOLO DE ACCESO UNIFICADO N3XT ---
 Route::any('/ping', function() { return response()->json(['status' => 'online', 'timestamp' => now()]); });
 Route::middleware('throttle:10,1')->post('/auth-master-industrial-access', [UnifiedAuthController::class, 'login']);
-Route::middleware('throttle:5,1')->post('/auth/unified-register', [UnifiedAuthController::class, 'register']);
+Route::middleware('throttle:' . config('auth.register_per_minute') . ',1')->post('/auth/unified-register', [UnifiedAuthController::class, 'register']);
 Route::middleware('throttle:3,1')->post('/auth/password/forgot', [UnifiedAuthController::class, 'forgotPassword']);
 Route::middleware('throttle:10,1')->post('/auth/password/reset', [UnifiedAuthController::class, 'resetPassword']);
 
@@ -28,6 +28,8 @@ Route::get('/health-check', function() { return response()->json(['status' => 'o
 
 // Sitemap dinámico (catalog + gallery desde settings)
 Route::get('/sitemap', [SitemapController::class, 'index'])->name('sitemap');
+// Vercel Cron (una vez al día): avisos de stock y mantenimiento
+Route::middleware('throttle:10,1')->get('/cron/alerts', [\App\Http\Controllers\CronController::class, 'alerts']);
 
 // Ruta pública protegida por rate limit
 Route::middleware('throttle:5,1')->post('/orders', [OrderController::class, 'store']);

@@ -11,7 +11,14 @@ class Inventory extends Model
     protected $casts = [
         'stock_available' => 'float',
         'low_stock_threshold' => 'float',
+        'low_stock_alerted_at' => 'datetime',
     ];
+
+    /** Cambió stock u horas: revisar avisos al cerrar la petición */
+    protected static function booted(): void
+    {
+        static::saved(fn () => app(\App\Services\WorkshopAlerts::class)->checkLater());
+    }
 
     public function material()
     {

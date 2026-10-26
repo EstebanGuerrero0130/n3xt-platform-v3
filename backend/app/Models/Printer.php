@@ -12,6 +12,16 @@ class Printer extends Model
         'total_hours_run', 'maintenance_interval_h'
     ];
 
+    protected $casts = [
+        'maintenance_alerted_at' => 'datetime',
+    ];
+
+    /** Cambió stock u horas: revisar avisos al cerrar la petición */
+    protected static function booted(): void
+    {
+        static::saved(fn () => app(\App\Services\WorkshopAlerts::class)->checkLater());
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class);

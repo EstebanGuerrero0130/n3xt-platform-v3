@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS inventories (
     material_id VARCHAR(255) NOT NULL REFERENCES materials(id) ON DELETE CASCADE,
     stock_available DECIMAL(10, 2) NOT NULL DEFAULT 0,    -- en gramos o ml
     low_stock_threshold DECIMAL(10, 2) NOT NULL DEFAULT 500,
+    low_stock_alerted_at TIMESTAMP NULL,                  -- Ya se avisó por correo
     created_at TIMESTAMP NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL DEFAULT NOW()
 );
@@ -94,6 +95,7 @@ CREATE TABLE IF NOT EXISTS printers (
     last_maintenance DATE NULL,
     next_maintenance DATE NULL,
     maintenance_notes TEXT NULL,
+    maintenance_alerted_at TIMESTAMP NULL,                -- Ya se avisó por correo
     created_at TIMESTAMP NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL DEFAULT NOW()
 );

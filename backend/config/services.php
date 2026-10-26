@@ -45,6 +45,12 @@ return [
     ],
 
     // Archivos 3D de pedidos en Supabase Storage (bucket privado). Sin esto: disco local.
+    // Avisos del taller (stock bajo, mantenimiento) y el cron diario que los revisa
+    'alerts' => [
+        'email' => env('ALERTS_EMAIL'),
+        'cron_secret' => env('CRON_SECRET'),
+    ],
+
     'supabase_storage' => [
         'driver' => env('MODELS_STORAGE', 'local'),
         'url' => env('SUPABASE_URL'),
