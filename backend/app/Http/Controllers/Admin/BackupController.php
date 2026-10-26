@@ -26,7 +26,7 @@ class BackupController extends Controller
     ];
 
     /** Columnas sensibles que nunca salen ni entran por backup. */
-    private const SENSITIVE_COLUMNS = ['password', 'remember_token'];
+    private const SENSITIVE_COLUMNS = ['password', 'remember_token', 'verification_code_hash'];
 
     public function exportAll()
     {
