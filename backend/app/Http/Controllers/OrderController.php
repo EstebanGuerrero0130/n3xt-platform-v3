@@ -373,7 +373,12 @@ class OrderController extends Controller
                 $oldStatus = $order->status;
                 $oldPrinterId = $order->printer_id;
                 
-                $order->fill($validated)->save();
+                $order->fill($validated);
+                // Inicio real de la impresión: lo usa el calendario de producción
+                if ($order->status === 'printing' && $oldStatus !== 'printing') {
+                    $order->printing_started_at = now();
+                }
+                $order->save();
                 $this->mailer->statusChanged($order, $oldStatus);
 
                 // Logic: Handle Printer Status

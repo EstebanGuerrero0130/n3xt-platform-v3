@@ -192,6 +192,26 @@ class OrderStoreTest extends TestCase
         $this->get("/api/admin/orders/{$order->id}/download")->assertOk();
     }
 
+    public function test_moving_to_printing_records_start_time(): void
+    {
+        $this->actingAs(User::factory()->create(), 'web');
+        $printer = \App\Models\Printer::create(['name' => 'Ender', 'model' => 'E3', 'technology' => 'FDM', 'status' => 'idle']);
+        $id = $this->postJson('/api/orders', [
+            'customer_name' => 'Taller', 'technology' => 'FDM', 'material_id' => 'PLA_BLACK',
+            'volume_mm3' => 1000, 'estimated_weight_g' => 15, 'total_price' => 42000, 'estimated_duration_h' => 3,
+        ])->json('data.order_id');
+
+        $this->travelTo(now()->setTime(9, 30));
+        $this->patchJson("/api/admin/orders/{$id}/status", ['status' => 'printing', 'printer_id' => $printer->id])->assertOk();
+        $started = Order::findOrFail($id)->printing_started_at;
+        $this->assertSame('09:30', $started->format('H:i'));
+
+        // Seguir en impresión no reinicia la hora
+        $this->travel(2)->hours();
+        $this->patchJson("/api/admin/orders/{$id}/status", ['status' => 'printing', 'printer_id' => $printer->id])->assertOk();
+        $this->assertTrue($started->equalTo(Order::findOrFail($id)->printing_started_at));
+    }
+
     public function test_coupon_endpoint(): void
     {
         $this->postJson('/api/quote/coupon', ['code' => 'n3xt10'])->assertOk()

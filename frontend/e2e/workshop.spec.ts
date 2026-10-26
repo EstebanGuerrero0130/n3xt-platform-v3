@@ -27,3 +27,31 @@ test('pedido manual con archivo 3D', async ({ page }) => {
   expect(download).toBe(200)
   expect(errors).toEqual([])
 })
+
+test('calendario de producción: impresión y cola por máquina', async ({ page }) => {
+  const errors = watchErrors(page)
+  await loginAdmin(page)
+  const stamp = Date.now()
+  const printer = await apiCall(page, 'POST', '/admin/printers', { name: `Máquina ${stamp}`, model: 'E2E', technology: 'FDM' })
+  expect(printer.status).toBe(201)
+
+  const materials = await apiCall(page, 'GET', '/materials')
+  const list = Array.isArray(materials.json) ? materials.json : materials.json?.data || []
+  const material = list.find((m: any) => m.category === 'FDM' && (m.type ?? 'material') === 'material')
+  const newOrder = async (job: string) => (await apiCall(page, 'POST', '/orders', {
+    customer_name: 'Taller', technology: 'FDM', material_id: material.id, job_name: job,
+    volume_mm3: 1000, estimated_weight_g: 10, total_price: 20000, estimated_duration_h: 3,
+  })).json.data.order_id
+  const printingId = await newOrder(`Imprimiendo ${stamp}`)
+  await newOrder(`En cola ${stamp}`)
+  const moved = await apiCall(page, 'PATCH', `/admin/orders/${printingId}/status`, { status: 'printing', printer_id: printer.json.data.id })
+  expect(moved.status).toBe(200)
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Calendario' }).click()
+  const jobs = page.getByRole('list', { name: `Trabajos de Máquina ${stamp}` })
+  await expect(jobs.getByRole('listitem').filter({ hasText: `Imprimiendo ${stamp}` })).toContainText('Imprimiendo')
+  // La cola puede caer en otra máquina FDM libre: basta con que esté agendada
+  await expect(page.getByRole('listitem').filter({ hasText: `En cola ${stamp}` })).toContainText('En cola')
+  expect(errors).toEqual([])
+})

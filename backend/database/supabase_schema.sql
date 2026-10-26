@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
     -- Impresora asignada
     printer_id BIGINT NULL REFERENCES printers(id) ON DELETE SET NULL,
+    printing_started_at TIMESTAMP NULL,                    -- Inicio real de la impresión (calendario)
 
     created_at TIMESTAMP NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL DEFAULT NOW()

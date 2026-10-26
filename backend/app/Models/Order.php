@@ -17,7 +17,7 @@ class Order extends Model
         'printer_id', 'estimated_duration_h',
         'extras_cost', 'extra_items', 'cost_snapshot', 'is_paid',
         'stock_deducted', 'hours_added_to_printer', 'project_id',
-        'job_name', 'models'
+        'job_name', 'models', 'printing_started_at'
     ];
 
     protected $casts = [
@@ -34,7 +34,8 @@ class Order extends Model
         'cost_snapshot' => 'array',
         'is_paid' => 'boolean',
         'stock_deducted' => 'boolean',
-        'hours_added_to_printer' => 'boolean'
+        'hours_added_to_printer' => 'boolean',
+        'printing_started_at' => 'datetime',
     ];
 
     public function printer()

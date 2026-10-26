@@ -13,6 +13,7 @@ import AdminHeader from '../components/admin/AdminHeader.vue'
 import NotificationSystem from '../components/admin/NotificationSystem.vue'
 import PriceSimulator from '../components/admin/PriceSimulator.vue'
 import ManualOrderForm from '../components/admin/ManualOrderForm.vue'
+import ProductionCalendar from '../components/admin/ProductionCalendar.vue'
 import EditMaterialModal from '../components/admin/EditMaterialModal.vue'
 import NewMaterialModal from '../components/admin/NewMaterialModal.vue'
 import NewPrinterModal from '../components/admin/NewPrinterModal.vue'
@@ -79,6 +80,7 @@ const analyticsData = ref(null)
 const loading = ref(true)
 const loadingAnalytics = ref(false)
 const activeTab = ref('kanban')
+const productionView = ref<'board' | 'calendar'>('board')
 const isSidebarOpen = ref(false)
 const isDark = ref(localStorage.getItem('n3xt_theme') !== 'light')
 const updateTheme = () => {
@@ -1675,7 +1677,20 @@ const handlePurgeAll = () => {
             </div>
           </dl>
 
+          <div class="mb-6 flex gap-2" role="group" aria-label="Vista de producción">
+            <button type="button" class="chip" :aria-pressed="productionView === 'board'" @click="productionView = 'board'">Tablero</button>
+            <button type="button" class="chip" :aria-pressed="productionView === 'calendar'" @click="productionView = 'calendar'">Calendario</button>
+          </div>
+
+          <ProductionCalendar
+            v-if="productionView === 'calendar'"
+            :printers="printers"
+            :orders="orders"
+            @view="openOrderDetails($event)"
+          />
+
           <KanbanBoard 
+            v-else
             :orders="orders"
             :loading="loading"
             @update-status="handleStatusUpdate"
