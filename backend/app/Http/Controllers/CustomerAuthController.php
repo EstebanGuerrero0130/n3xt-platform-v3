@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Setting;
 use App\Services\CustomerAccountService;
 use App\Services\OrderMailer;
+use App\Services\ModelStorage;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -81,6 +82,10 @@ class CustomerAuthController extends Controller
                     'qty'           => $m['qty'] ?? 1,
                     'dimensions_mm' => $m['dimensions_mm'] ?? null,
                     'weight_g'      => $m['weight_g'] ?? null,
+                    // Productos del catálogo: para volver a ponerlos en el carrito
+                    'product_id'    => $m['product_id'] ?? null,
+                    'unit_price'    => $m['unit_price'] ?? null,
+                    'image'         => $m['image'] ?? null,
                 ])->values();
                 if ($models->isEmpty() && $o->original_filename) {
                     $models = collect([['name' => $o->original_filename, 'qty' => $o->qty, 'dimensions_mm' => $o->dimensions_mm, 'weight_g' => $o->estimated_weight_g]]);
@@ -189,6 +194,73 @@ class CustomerAuthController extends Controller
         }
         // Formato colombiano: punto de miles y coma decimal
         return (float) preg_replace('/[^0-9.]/', '', str_replace(',', '.', str_replace('.', '', (string) $v)));
+    }
+
+    /**
+     * Repetir un pedido de piezas 3D: pedido nuevo con copia de los archivos y los
+     * mismos parámetros. Precio del pedido original sin cupón; el taller lo confirma.
+     * (Los de catálogo se repiten desde el carrito, con el precio de hoy.)
+     */
+    public function repeatOrder(Request $request, ModelStorage $storage, $id)
+    {
+        $customer = $request->user();
+        if (!$customer->isVerified()) {
+            return $this->error('Verifica tu correo para repetir pedidos.', 403);
+        }
+        $original = Order::whereKey($id)->whereRaw('LOWER(customer_email) = ?', [strtolower($customer->email)])->first();
+        if (!$original) {
+            return $this->error('Pedido no encontrado.', 404);
+        }
+        if ($original->technology === 'CATALOGO') {
+            return $this->error('Los pedidos del catálogo se repiten desde el carrito.', 422);
+        }
+
+        $models = collect($original->models ?? [])->filter(fn ($m) => !empty($m['path']))->values();
+        if ($models->isEmpty() && $original->file_path) {
+            $models = collect([['path' => $original->file_path, 'original_filename' => $original->original_filename, 'qty' => $original->qty]]);
+        }
+        if ($models->isEmpty() || !$models->every(fn ($m) => $storage->exists($m['path']))) {
+            return $this->error('Ya no tenemos los archivos de ese pedido. Cotízalo de nuevo subiendo el archivo.', 422);
+        }
+
+        $copied = [];
+        try {
+            $newModels = $models->map(function ($m) use ($storage, &$copied) {
+                $path = $storage->copy($m['path']);
+                $copied[] = $path;
+                return array_merge($m, ['path' => $path]);
+            })->all();
+        } catch (\Throwable $e) {
+            $storage->delete($copied);
+            return $this->error('No se pudieron copiar los archivos. Inténtalo de nuevo.', 500);
+        }
+
+        // Precio base del pedido original, sin el descuento del cupón
+        $q = $original->cost_snapshot['quote'] ?? null;
+        // (mismo redondeo que el cotizador: IVA redondeado aparte y sumado al subtotal)
+        $price = $q && isset($q['subtotal'], $q['iva_pct'])
+            ? $q['subtotal'] + floor($q['subtotal'] * $q['iva_pct'] / 100 + 0.5)
+            : (float) $original->total_price;
+
+        $order = Order::create(array_merge(
+            $original->only(['customer_name', 'customer_company', 'customer_email', 'customer_phone', 'customer_id_document',
+                'shipping_address', 'shipping_city', 'shipping_zip', 'shipping_reference', 'technology', 'material_id',
+                'material_name', 'infill', 'qty', 'volume_mm3', 'estimated_weight_g', 'estimated_duration_h',
+                'dimensions_mm', 'scale_factor', 'cost_snapshot']),
+            [
+                'job_name' => trim(($original->job_name ?: 'Pedido') . ' (repetido)'),
+                'models' => $newModels,
+                'file_path' => $newModels[0]['path'],
+                'original_filename' => $newModels[0]['original_filename'] ?? $original->original_filename,
+                'extras_cost' => 0,
+                'total_price' => $price,
+                'status' => 'pending',
+                'comments' => "Repetición del pedido #{$original->id}. El taller confirma el precio antes de imprimir.",
+            ]
+        ));
+        $this->mailer->received($order);
+
+        return $this->success(['order_id' => $order->id, 'total_price' => $order->total_price], 'Pedido repetido.', 201);
     }
 
     public function logout(Request $request)

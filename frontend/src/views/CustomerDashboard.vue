@@ -6,6 +6,7 @@ import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { usePageMeta } from '../composables/usePageMeta'
+import { useCart } from '../composables/useCart'
 
 usePageMeta({
   title: 'Panel del Cliente | N3XT 3D',
@@ -29,7 +30,7 @@ interface CustomerOrder {
   extras_cost?: number | null
   tracking_guide?: string | null
   tracking_carrier?: string | null
-  models?: { name: string | null; qty: number; dimensions_mm?: string | null; weight_g?: number | null }[]
+  models?: { name: string | null; qty: number; dimensions_mm?: string | null; weight_g?: number | null; product_id?: string | number | null; unit_price?: number | null; image?: string | null }[]
   extras?: { name: string; qty: number }[]
 }
 
@@ -46,6 +47,33 @@ const customer = ref<CustomerProfile | null>(null)
 const orders = ref<CustomerOrder[]>([])
 const loading = ref(true)
 const router = useRouter()
+const cart = useCart()
+
+// ─── Repetir pedido ───
+const repeating = ref<number | null>(null)
+const repeatMsg = ref<{ id: number; text: string; ok: boolean } | null>(null)
+const repeatOrder = async (order: CustomerOrder) => {
+  repeatMsg.value = null
+  // Catálogo: los productos vuelven al carrito (con el precio de hoy)
+  if (order.technology === 'CATALOGO') {
+    for (const m of order.models || []) {
+      if (m.name) cart.add({ id: m.product_id ?? undefined, name: m.name, price: m.unit_price ?? 0, image: m.image ?? undefined }, m.qty || 1)
+    }
+    router.push('/carrito')
+    return
+  }
+  if (!confirm(`¿Repetir el pedido #${order.id}? Usamos los mismos archivos y material; el taller te confirma el precio.`)) return
+  repeating.value = order.id
+  try {
+    const res = await api.post(`/customer/orders/${order.id}/repeat`)
+    repeatMsg.value = { id: order.id, ok: true, text: `Creamos el pedido #${res?.order_id}. Te llegará un correo de confirmación.` }
+    await fetchOrders()
+  } catch (err) {
+    repeatMsg.value = { id: order.id, ok: false, text: err instanceof Error ? err.message : 'No pudimos repetir el pedido.' }
+  } finally {
+    repeating.value = null
+  }
+}
 
 const fetchProfile = async () => {
     try {
@@ -323,10 +351,16 @@ const getStatusLabel = (status: string) => {
 
                 <p v-if="order.extras?.length" class="mt-4 text-sm"><span class="text-muted">Extras:</span> {{ order.extras.map(e => e.qty > 1 ? `${e.name} × ${e.qty}` : e.name).join(', ') }}</p>
 
-                <router-link :to="trackLink(order)" class="mt-5 btn-outlined">
-                  Ver seguimiento
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                </router-link>
+                <div class="mt-5 flex flex-wrap gap-3">
+                  <router-link :to="trackLink(order)" class="btn-outlined">
+                    Ver seguimiento
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  </router-link>
+                  <button type="button" class="btn-outlined" :disabled="repeating === order.id" @click="repeatOrder(order)">
+                    {{ repeating === order.id ? 'Repitiendo…' : order.technology === 'CATALOGO' ? 'Volver a pedir' : 'Repetir pedido' }}
+                  </button>
+                </div>
+                <p v-if="repeatMsg?.id === order.id" :role="repeatMsg.ok ? 'status' : 'alert'" :class="['mt-3 text-sm', repeatMsg.ok ? 'text-success' : 'text-danger']">{{ repeatMsg.text }}</p>
               </div>
             </li>
           </ul>

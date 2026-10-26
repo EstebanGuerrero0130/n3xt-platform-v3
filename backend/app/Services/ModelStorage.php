@@ -78,6 +78,30 @@ class ModelStorage
         ]);
     }
 
+    /** Copia un archivo a una ruta nueva (repetir pedido sin compartir archivos). */
+    public function copy(string $path): string
+    {
+        $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'stl';
+        $new = self::DIR . '/n3xt_' . time() . '_' . Str::random(10) . '.' . strtolower($ext);
+
+        if (!$this->usesSupabase()) {
+            Storage::disk('local')->copy($path, $new);
+            return $new;
+        }
+
+        $res = Http::withToken(config('services.supabase_storage.key'))
+            ->post(rtrim(config('services.supabase_storage.url'), '/') . '/storage/v1/object/copy', [
+                'bucketId' => config('services.supabase_storage.bucket'),
+                'sourceKey' => $path,
+                'destinationKey' => $new,
+            ]);
+        if ($res->failed()) {
+            throw new \RuntimeException('No se pudo copiar el archivo (' . $res->status() . ').');
+        }
+
+        return $new;
+    }
+
     /** Borra uno o varios archivos; un fallo no interrumpe al que llama. */
     public function delete(array|string|null $paths): void
     {

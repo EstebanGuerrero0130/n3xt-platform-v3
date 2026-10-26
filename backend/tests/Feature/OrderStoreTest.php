@@ -295,4 +295,27 @@ class OrderStoreTest extends TestCase
         $total = $this->post('/api/orders', $this->payload(['coupon_code' => 'TODOGRATIS']), ['Accept' => 'application/json'])->json('data.total_price');
         $this->assertGreaterThan(0, $total);
     }
+
+    public function test_customer_can_repeat_own_3d_order_with_copied_files_and_no_coupon(): void
+    {
+        $plain = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->json('data.total_price');
+        $id = $this->post('/api/orders', $this->payload(['coupon_code' => 'N3XT10']), ['Accept' => 'application/json'])->assertCreated()->json('data.order_id');
+
+        $ana = RecurrentCustomer::create(['name' => 'Ana', 'email' => 'ana@example.com', 'password' => bcrypt('secret123')]);
+        $ana->forceFill(['email_verified_at' => now()])->save();
+        $otro = RecurrentCustomer::create(['name' => 'Otro', 'email' => 'otro@example.com', 'password' => bcrypt('secret123')]);
+        $otro->forceFill(['email_verified_at' => now()])->save();
+
+        $this->actingAs($otro, 'customer')->postJson("/api/customer/orders/{$id}/repeat")->assertNotFound();
+
+        $res = $this->actingAs($ana, 'customer')->postJson("/api/customer/orders/{$id}/repeat")->assertCreated();
+        $this->assertEquals($plain, $res->json('data.total_price'));
+
+        $original = Order::find($id);
+        $copy = Order::find($res->json('data.order_id'));
+        $this->assertNotSame($original->models[0]['path'], $copy->models[0]['path']);
+        Storage::disk('local')->assertExists($copy->models[0]['path']);
+        $this->assertSame('pending', $copy->status);
+        $this->assertStringContainsString("#{$id}", $copy->comments);
+    }
 }

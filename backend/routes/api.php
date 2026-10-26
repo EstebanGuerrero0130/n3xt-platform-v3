@@ -46,6 +46,7 @@ Route::middleware('auth:customer')->group(function () {
     Route::middleware('throttle:10,1')->post('/customer/verify', [CustomerAuthController::class, 'verify']);
     Route::middleware('throttle:3,1')->post('/customer/verify/resend', [CustomerAuthController::class, 'resendCode']);
     Route::middleware('throttle:10,1')->post('/customer/catalog-orders', [CustomerAuthController::class, 'catalogOrder']);
+    Route::middleware('throttle:10,1')->post('/customer/orders/{id}/repeat', [CustomerAuthController::class, 'repeatOrder']);
     Route::post('/customer/logout', [CustomerAuthController::class, 'logout']);
 });
 
