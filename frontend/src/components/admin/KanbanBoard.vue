@@ -19,13 +19,14 @@ const scroll = (direction: any) => {
   }
 }
 
+// Mismos nombres que ve el cliente en Rastreo
 const columns = [
-  { id: 'pending', title: 'Pendientes', color: 'bg-red-500' },
-  { id: 'printing', title: 'Impresora', color: 'bg-amber-500' },
-  { id: 'post-processing', title: 'Post-Pro', color: 'bg-blue-500' },
-  { id: 'completed', title: 'Terminado', color: 'bg-indigo-500' },
-  { id: 'shipped', title: 'Enviados', color: 'bg-emerald-500' },
-  { id: 'cancelled', title: 'Fallida / Cancelada', color: 'bg-rose-900' }
+  { id: 'pending', title: 'Por revisar', color: 'bg-warning' },
+  { id: 'printing', title: 'En impresión', color: 'bg-primary' },
+  { id: 'post-processing', title: 'En acabado', color: 'bg-[#3b82f6]' },
+  { id: 'completed', title: 'Listo', color: 'bg-success' },
+  { id: 'shipped', title: 'Enviado', color: 'bg-muted' },
+  { id: 'cancelled', title: 'Cancelado (24 h)', color: 'bg-danger' }
 ]
 
 // Mapa reactivo escribible para que vuedraggable pueda modificar las listas
@@ -85,114 +86,71 @@ const onDragChange = (evt: any, newStatus: any) => {
 </script>
 
 <template>
-  <div class="relative group/kanban">
-    <!-- Skeleton Loading -->
-    <div v-if="loading" class="flex gap-6 md:gap-8 overflow-x-auto pb-8 snap-x no-scrollbar scroll-smooth animate-pulse">
-      <div
-v-for="colIdx in 6" :key="'skel-col-'+colIdx" 
-        class="flex flex-col min-h-[75vh] min-w-[280px] md:min-w-[340px] w-[280px] md:w-[340px] snap-center"
-      >
-        <!-- Column Header Skeleton -->
-        <div class="flex items-center justify-between mb-6 px-6 py-4 bg-gray-100 dark:bg-[#151a22] rounded-[24px]">
-          <div class="flex items-center gap-4">
-            <div class="w-4 h-4 rounded-full bg-gray-200 dark:bg-[#2a3040]"></div>
-            <div class="h-3 w-24 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-          </div>
-          <div class="h-6 w-8 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-        </div>
-        
-        <!-- Cards Skeleton -->
-        <div class="flex-1 bg-gray-100/30 dark:bg-white/5 rounded-[24px] p-5 space-y-6 border-2 border-dashed border-gray-200/50 dark:border-[#21262d]">
-          <div
-v-for="cardIdx in (colIdx < 2 ? 3 : 2)" :key="'skel-card-'+colIdx+'-'+cardIdx" 
-            class="bg-white dark:bg-[#151a22] rounded-[28px] p-6 border border-gray-100 dark:border-[#21262d] space-y-4"
-          >
-            <div class="flex justify-between items-start">
-              <div class="space-y-2 flex-1">
-                <div class="h-4 w-3/4 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-                <div class="h-3 w-1/2 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-              </div>
-              <div class="h-8 w-8 bg-gray-200 dark:bg-[#2a3040] rounded-xl"></div>
-            </div>
-            <div class="flex gap-2">
-              <div class="h-5 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-              <div class="h-5 w-20 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-            </div>
-            <div class="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-[#21262d]">
-              <div class="h-4 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-              <div class="h-4 w-12 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-            </div>
-          </div>
+  <div class="relative">
+    <!-- Esqueleto de carga -->
+    <div v-if="loading" class="flex gap-4 overflow-x-auto pb-4 no-scrollbar" aria-hidden="true">
+      <div v-for="colIdx in 6" :key="'skel-col-'+colIdx" class="w-[300px] shrink-0">
+        <div class="h-11 mb-3 rounded-[var(--radius-control)] bg-surface animate-pulse"></div>
+        <div class="space-y-3">
+          <div v-for="cardIdx in (colIdx < 3 ? 3 : 1)" :key="cardIdx" class="h-40 rounded-[var(--radius-card)] bg-surface animate-pulse"></div>
         </div>
       </div>
     </div>
+    <p v-if="loading" class="sr-only" role="status">Cargando pedidos…</p>
 
-    <!-- Real Content -->
     <template v-else>
-    <!-- Botones de Navegación Lateral -->
-    <button 
-      class="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-12 h-12 md:w-14 md:h-14 bg-white dark:bg-[#151a22] shadow-2xl rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-primary transition-all duration-300 opacity-100 md:opacity-0 md:group-hover/kanban:opacity-100 border border-gray-100 dark:border-[#21262d]"
-      @click="scroll(-1)"
-    >
-      <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/></svg>
-    </button>
-
-    <button 
-      class="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-12 h-12 md:w-14 md:h-14 bg-white dark:bg-[#151a22] shadow-2xl rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-primary transition-all duration-300 opacity-100 md:opacity-0 md:group-hover/kanban:opacity-100 border border-gray-100 dark:border-[#21262d]"
-      @click="scroll(1)"
-    >
-      <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
-    </button>
-
-    <!-- Container -->
-    <div ref="scrollContainer" class="flex gap-6 md:gap-8 overflow-x-auto pb-8 snap-x no-scrollbar scroll-smooth">
-      <div
-v-for="(col, idx) in columns" :key="col.id" 
-        class="flex flex-col min-h-[75vh] min-w-[320px] md:min-w-[340px] w-[320px] md:w-[340px] snap-center animate-slide-up" 
-        :style="{ animationDelay: (idx * 150) + 'ms' }"
-      >
-        <!-- Column Header: Premium Glass -->
-        <div class="flex items-center justify-between mb-4 md:mb-6 px-4 md:px-6 py-3 md:py-4 bg-white/80 dark:bg-[#151a22]/90 backdrop-blur-2xl rounded-[20px] md:rounded-[24px] border border-white dark:border-[#21262d] shadow-xl shadow-gray-200/20 dark:shadow-none group/header relative overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/header:opacity-100 transition-opacity"></div>
-          <div class="flex items-center gap-4 relative z-10">
-            <div :class="['w-4 h-4 rounded-full shadow-lg shadow-black/5 ring-4 ring-white dark:ring-gray-900', col.color]"></div>
-            <h3 class="font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] text-[10px]">{{ col.title }}</h3>
-          </div>
-          <span class="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] font-black px-3 py-1 rounded-full tabular-nums relative z-10">
-            {{ (groupedOrders[col.id] || []).length }}
-          </span>
-        </div>
-
-        <!-- Column Content (Draggable Area) -->
-        <draggable 
-          :list="groupedOrders[col.id]" 
-          group="orders"
-          item-key="id"
-          class="flex-1 bg-gray-100/30 dark:bg-white/5 backdrop-blur-sm rounded-[20px] md:rounded-[24px] p-3 md:p-5 space-y-4 md:space-y-6 border-2 border-dashed border-gray-200/50 dark:border-[#21262d] min-h-[400px] md:min-h-[600px] hover:bg-gray-100/50 dark:hover:bg-white/10 hover:border-primary/20"
-          ghost-class="opacity-50"
-          drag-class="rotate-3 scale-105"
-          @change="(evt: any) => onDragChange(evt, col.id)"
-        >
-          <!-- vuedraggable no tipa sus slots -->
-          <!-- @vue-ignore -->
-          <template #item="{ element }">
-            <OrderCard 
-              :order="element"
-              @assign="$emit('assign', $event)"
-              @download="$emit('download', $event)"
-              @view="$emit('view', $event)"
-              @delete="$emit('delete', $event)"
-              @download-pdf="$emit('download-pdf', $event)"
-              @update-status="$emit('update-status', $event)"
-              @toggle-paid="$emit('toggle-paid', $event)"
-            />
-          </template>
-        </draggable>
+      <div class="flex items-center justify-end gap-2 mb-3">
+        <button type="button" class="icon-btn bg-surface hover:bg-surface-2 text-ink" aria-label="Ver columnas anteriores" @click="scroll(-1)">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <button type="button" class="icon-btn bg-surface hover:bg-surface-2 text-ink" aria-label="Ver columnas siguientes" @click="scroll(1)">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </button>
       </div>
-    </div>
+
+      <div ref="scrollContainer" class="flex gap-4 overflow-x-auto pb-4 snap-x scroll-smooth">
+        <section v-for="col in columns" :key="col.id" class="w-[300px] md:w-[320px] shrink-0 snap-start flex flex-col" :aria-label="col.title">
+          <header class="flex items-center justify-between h-11 px-3 mb-3 rounded-[var(--radius-control)] bg-surface">
+            <h2 class="flex items-center gap-2 text-[0.9375rem] font-semibold">
+              <span :class="['w-2.5 h-2.5 rounded-full', col.color]" aria-hidden="true"></span>
+              {{ col.title }}
+            </h2>
+            <span class="min-w-7 h-7 px-2 inline-flex items-center justify-center rounded-full bg-surface-2 text-sm font-semibold tabular-nums">{{ (groupedOrders[col.id] || []).length }}</span>
+          </header>
+
+          <draggable
+            :list="groupedOrders[col.id]"
+            group="orders"
+            item-key="id"
+            class="flex-1 min-h-[420px] space-y-3 rounded-[var(--radius-card)] p-2 -m-2 transition-colors"
+            ghost-class="kanban-ghost"
+            @change="(evt: any) => onDragChange(evt, col.id)"
+          >
+            <!-- vuedraggable no tipa sus slots -->
+            <!-- @vue-ignore -->
+            <template #item="{ element }">
+              <OrderCard
+                :order="element"
+                @assign="$emit('assign', $event)"
+                @download="$emit('download', $event)"
+                @view="$emit('view', $event)"
+                @delete="$emit('delete', $event)"
+                @download-pdf="$emit('download-pdf', $event)"
+                @update-status="$emit('update-status', $event)"
+                @toggle-paid="$emit('toggle-paid', $event)"
+              />
+            </template>
+            <!-- @vue-ignore -->
+            <template #footer>
+              <p v-if="!(groupedOrders[col.id] || []).length" class="py-10 text-center text-sm text-muted rounded-[var(--radius-card)] border border-dashed border-line">Sin pedidos</p>
+            </template>
+          </draggable>
+        </section>
+      </div>
     </template>
   </div>
 </template>
 
 <style scoped>
+.kanban-ghost { opacity: 0.4; }
 </style>

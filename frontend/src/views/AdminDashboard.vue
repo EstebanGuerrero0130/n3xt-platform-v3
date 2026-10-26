@@ -920,6 +920,21 @@ const handleExportCSV = async () => {
 
 // --- Computed & Logic ---
 
+// Resumen de Producción: solo cifras que sirven para decidir el día
+const kanbanStats = computed(() => {
+  const by = (st) => orders.value.filter(o => o.status === st).length
+  return {
+    pending: by('pending'),
+    printing: by('printing'),
+    finishing: by('post-processing'),
+    ready: by('completed'),
+    unpaid: orders.value
+      .filter(o => !o.is_paid && o.status !== 'cancelled')
+      .reduce((sum, o) => sum + (Number(o.total_price) || 0), 0),
+  }
+})
+const formatMoney = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CO')
+
 const openOrderDetails = (order) => {
   try {
     // Integrity Logic: Use snapshot if available, fallback to current settings
@@ -1568,16 +1583,12 @@ const handlePurgeAll = () => {
 </script>
 
 <template>
-  <div :class="{'dark': isDark}" class="min-h-screen bg-[#f8fafc] dark:bg-[#0a0f14] text-gray-900 dark:text-white flex overflow-hidden font-sans selection:bg-primary/20 transition-colors duration-500">
-    
-    <!-- Background Industrial Engine -->
-    <div class="fixed inset-0 technical-grid opacity-20 dark:opacity-10 pointer-events-none z-0"></div>
-    <div class="fixed top-[-10%] right-[-10%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[180px] pointer-events-none z-0"></div>
-
-    <!-- Backdrop for mobile sidebar -->
-    <div 
-      v-if="isSidebarOpen" 
-      class="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-xs z-40 md:hidden transition-all duration-300" 
+  <div class="min-h-screen bg-canvas text-ink flex overflow-hidden">
+    <!-- Fondo del menú en móvil -->
+    <div
+      v-if="isSidebarOpen"
+      class="fixed inset-0 bg-black/50 z-40 md:hidden"
+      aria-hidden="true"
       @click="isSidebarOpen = false"
     ></div>
 
@@ -1592,7 +1603,7 @@ const handlePurgeAll = () => {
     />
 
     <!-- MAIN CONTENT AREA -->
-    <main id="main" class="flex-1 flex flex-col min-w-0 bg-transparent h-screen overflow-hidden relative z-10">
+    <main id="main" class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
 
         <!-- PREMIUM HEADER (extraído a AdminHeader.vue) -->
         <AdminHeader
@@ -1606,8 +1617,7 @@ const handlePurgeAll = () => {
         />
 
         <!-- VIEWPORT: DINAMIC CONTENT -->
-        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative p-2 pb-28 md:p-12 md:pb-12 bg-transparent">
-            
+        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden px-4 py-6 md:px-8 md:py-8 pb-24 md:pb-10">
             <div class="w-full max-w-[1600px] mx-auto">
                 <transition 
                     name="view-fade" 
@@ -1617,87 +1627,43 @@ const handlePurgeAll = () => {
                     <div :key="activeTab">
         
         <!-- Módulo: Producción (Kanban) -->
-        <div v-if="activeTab === 'kanban'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div class="flex flex-col lg:flex-row items-center justify-between gap-4 md:gap-8 mb-6 md:mb-12 bg-white/40 dark:bg-gray-950/40 backdrop-blur-md p-4 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/60 dark:border-white/5 shadow-2xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden group">
-            <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-1000"></div>
-            <div class="relative z-10 text-center md:text-left">
-                <h2 class="text-2xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase italic leading-none">
-                    Panel de <span class="text-primary">Control</span>
-                </h2>
-                <p class="text-[9px] md:text-xs text-gray-400 font-bold uppercase tracking-[0.3em] md:tracking-[0.4em] mt-2 md:mt-4 flex items-center justify-center md:justify-start gap-2 md:gap-3">
-                    <span class="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
-                    Workshop Status: Operational
-                </p>
+        <div v-if="activeTab === 'kanban'">
+          <header class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
+            <div>
+              <h1 class="admin-title">Producción <span class="text-brand">del taller</span></h1>
+              <p class="admin-lead">Arrastra cada pedido a su etapa. Al pasar a impresión eliges la máquina.</p>
             </div>
-            
-            <div class="flex flex-wrap justify-center lg:justify-end gap-3 md:gap-4 relative z-10">
-              <div class="bg-white/80 dark:bg-gray-900/80 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 min-w-[120px] md:min-w-[160px] shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
-                <p class="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Carga Activa</p>
-                <div class="flex items-end gap-2">
-                  <h3 class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">{{ orders.filter(o => o.status === 'printing').length }}</h3>
-                  <span class="text-[7px] md:text-[8px] font-black text-primary uppercase tracking-widest mb-0.5 italic">Jobs</span>
-                </div>
-              </div>
+            <div class="flex flex-wrap gap-3">
+              <button type="button" class="btn-outlined btn-lg" @click="modalState.simulator = true">Simulador de precios</button>
+              <button type="button" class="btn-primary btn-lg" @click="modalState.manualOrder = true">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>
+                Nuevo pedido
+              </button>
             </div>
-          </div>
-          <!-- Estadísticas Rápidas de Producción -->
-          <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8 mb-6 md:mb-12">
-            <div class="bg-white dark:bg-gray-900 p-4 md:p-10 rounded-[1.5rem] md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-white/5 group relative overflow-hidden">
-              <p class="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 md:mb-3">Total Proyectos</p>
-              <h3 class="text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter">{{ orders.length }}</h3>
-              <div class="mt-4 md:mt-6">
-                <button class="btn-primary w-full py-3 md:py-4 !rounded-xl md:!rounded-2xl text-xs md:text-sm" @click="modalState.simulator = true">
-                  <svg class="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                  <span>Análisis de Manufactura</span>
-                </button>
-              </div>
-            </div>
+          </header>
 
-            <div class="bg-white dark:bg-gray-900 p-4 md:p-10 rounded-[1.5rem] md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-white/5 group">
-              <p class="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 md:mb-3">Pendientes</p>
-              <div class="flex items-center justify-between">
-                <h3 class="text-3xl md:text-5xl font-black text-red-500 tracking-tighter">{{ orders.filter(o => o.status === 'pending').length }}</h3>
-                <div class="w-10 h-10 md:w-12 md:h-12 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl md:rounded-2xl flex items-center justify-center animate-pulse">
-                  <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </div>
-              </div>
+          <dl class="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-8">
+            <div class="admin-card">
+              <dt class="admin-label">Por revisar</dt>
+              <dd class="mt-2 admin-kpi" :class="kanbanStats.pending ? 'text-warning' : ''">{{ kanbanStats.pending }}</dd>
             </div>
-
-            <div class="bg-white dark:bg-gray-900 p-4 md:p-10 rounded-[1.5rem] md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-white/5 group">
-              <p class="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 md:mb-3">En Producción</p>
-              <div class="flex items-center justify-between">
-                <h3 class="text-3xl md:text-5xl font-black text-amber-500 tracking-tighter">{{ orders.filter(o => o.status === 'printing').length }}</h3>
-                <div class="w-10 h-10 md:w-12 md:h-12 bg-amber-50 dark:bg-amber-500/10 text-amber-500 rounded-xl md:rounded-2xl flex items-center justify-center">
-                  <svg class="w-5 h-5 md:w-6 md:h-6 animate-spin-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                </div>
-              </div>
+            <div class="admin-card">
+              <dt class="admin-label">En impresión</dt>
+              <dd class="mt-2 admin-kpi">{{ kanbanStats.printing }}</dd>
             </div>
-
-            <!-- Terminados & Eficiencia -->
-            <div class="bg-white dark:bg-gray-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-white/5 group flex flex-col justify-between overflow-hidden relative">
-              <div class="flex items-center justify-between mb-3 md:mb-4">
-                <div>
-                  <p class="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Terminados</p>
-                  <h3 class="text-3xl md:text-4xl font-black text-emerald-500 tracking-tighter">{{ orders.filter(o => o.status === 'completed').length }}</h3>
-                </div>
-                <div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 rounded-xl md:rounded-2xl flex items-center justify-center">
-                  <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </div>
-              </div>
-
-              <!-- El Cuadro Negro (Eficiencia Bruta) -->
-              <div class="bg-gray-950 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] shadow-2xl shadow-black/40 relative overflow-hidden border border-white/5 group-hover:scale-[1.02] transition-transform duration-500">
-                <div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all"></div>
-                <p class="text-[7px] md:text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] md:tracking-[0.3em] mb-2">Eficiencia Bruta</p>
-                <div class="flex items-end gap-2">
-                  <h3 class="text-lg md:text-2xl font-black text-white tracking-tighter leading-none">${{ Math.round(orders.reduce((acc, o) => acc + (o.status === 'completed' ? o.total_price : 0), 0)).toLocaleString() }}</h3>
-                  <span class="text-[7px] md:text-[8px] font-black text-primary uppercase tracking-widest mb-0.5 italic">COP</span>
-                </div>
-              </div>
+            <div class="admin-card">
+              <dt class="admin-label">En acabado</dt>
+              <dd class="mt-2 admin-kpi">{{ kanbanStats.finishing }}</dd>
             </div>
-          </div>
+            <div class="admin-card">
+              <dt class="admin-label">Listos para entregar</dt>
+              <dd class="mt-2 admin-kpi text-success">{{ kanbanStats.ready }}</dd>
+            </div>
+            <div class="admin-card col-span-2 lg:col-span-1">
+              <dt class="admin-label">Por cobrar</dt>
+              <dd class="mt-2 admin-kpi">{{ formatMoney(kanbanStats.unpaid) }}</dd>
+            </div>
+          </dl>
 
           <KanbanBoard 
             :orders="orders"
@@ -1714,7 +1680,7 @@ const handlePurgeAll = () => {
         </div>
 
         <!-- Módulo: Finanzas (Accounting Dashboard) -->
-        <div v-if="activeTab === 'accounting'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'accounting'">
           <AccountingDashboard 
             :analytics="analyticsData"
             :loading="loadingAnalytics"
@@ -1724,7 +1690,7 @@ const handlePurgeAll = () => {
         </div>
 
         <!-- Módulo: Inventario (Inventory Manager) -->
-        <div v-if="activeTab === 'inventory'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'inventory'">
           <InventoryManager 
             :inventory="inventoryData" 
             @add-item="modalState.newMaterial = true"
@@ -1735,7 +1701,7 @@ const handlePurgeAll = () => {
         </div>
 
         <!-- Módulo: Registro de Compras (Purchase Log) -->
-        <div v-if="activeTab === 'purchases'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'purchases'">
           <PurchaseLog 
             :inventory="inventoryData"
             :suppliers="contacts.suppliers"
@@ -1745,7 +1711,7 @@ const handlePurgeAll = () => {
         </div>
 
         <!-- Módulo: Historial de Pedidos -->
-        <div v-if="activeTab === 'history'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'history'">
           <OrderHistory 
             :orders="orders"
             :loading-analytics="loadingAnalytics"
@@ -1758,7 +1724,7 @@ const handlePurgeAll = () => {
         </div>
 
         <!-- Módulo: Códigos y Descuentos -->
-        <div v-if="activeTab === 'discounts'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1400px] mx-auto">
+        <div v-if="activeTab === 'discounts'">
           <DiscountManager
             :coupons="settings.coupons"
             :uses="couponUses"
@@ -1769,7 +1735,7 @@ const handlePurgeAll = () => {
         </div>
 
         <!-- Módulo: Estado de la Granja (Machine Monitor) -->
-        <div v-if="activeTab === 'machines'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'machines'">
           <MachineMonitor 
             :printers="printers"
             :loading="loading"
@@ -1784,7 +1750,7 @@ const handlePurgeAll = () => {
         </div>
 
         <!-- Módulo: Base de Contactos -->
-        <div v-if="activeTab === 'contacts'" class="p-0 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div v-if="activeTab === 'contacts'">
           <ContactManager 
             :customers="contacts.customers"
             :suppliers="contacts.suppliers"

@@ -24,7 +24,7 @@ const navItems = [
   { id: 'contacts', label: 'Contactos', icon: '<svg class=\"w-5 h-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z\"/></svg>' },
   { id: 'discounts', label: 'Descuentos', icon: '<svg class=\"w-5 h-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z\"/></svg>' },
   { id: 'settings', label: 'Parámetros', icon: '<svg class=\"w-5 h-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z\"/><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\"/></svg>' },
-  { id: 'web', label: 'Sitio Web', icon: '<svg class=\"w-5 h-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9\"/></svg>' }
+  { id: 'web', label: 'Sitio web', icon: '<svg class=\"w-5 h-5\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9\"/></svg>' }
 ]
 
 const handleNavClick = (tabId: any) => {
@@ -38,76 +38,58 @@ const logout = () => {
 </script>
 
 <template>
-  <!-- N3XT PREMIUM SIDEBAR -->
-  <aside 
+  <aside
     :class="[
-      'fixed inset-y-0 left-0 z-50 w-[75vw] md:w-72 bg-white/80 dark:bg-black/60 backdrop-blur-3xl text-gray-900 dark:text-white transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] transform md:static md:block md:translate-x-0 border-r border-gray-100 dark:border-white/5 animate-slide-up',
+      'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-surface text-ink transform transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:static md:translate-x-0',
       isOpen ? 'translate-x-0' : '-translate-x-full'
     ]"
+    aria-label="Menú del panel"
   >
-    <!-- Glow Effect Sidebar -->
-    <div class="absolute -top-24 -left-24 w-64 h-64 bg-primary/20 rounded-full blur-[100px] pointer-events-none opacity-50"></div>
-    
-    <div class="flex flex-col h-full relative z-10">
-      <!-- Sidebar Brand -->
-      <div class="p-4 md:p-8 pb-4 md:pb-12 flex flex-col items-center cursor-pointer group/brand relative" @click="$router.push('/')">
-          <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover/brand:opacity-100 transition-opacity rounded-[3rem] -m-4"></div>
-          <div class="relative w-12 md:w-16 h-12 md:h-16 bg-gradient-to-br from-primary to-emerald-500 rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center shadow-2xl shadow-primary/30 mb-2 md:mb-4 transition-transform group-hover/brand:scale-110 group-hover/brand:rotate-6 duration-500">
-              <span class="text-white font-black text-2xl md:text-3xl italic">N</span>
-          </div>
-          <h1 class="relative text-xl md:text-2xl font-black tracking-tighter uppercase leading-none text-gray-900 dark:text-white group-hover/brand:text-primary transition-colors">N3XT<span class="text-gray-400 ml-1">3D</span></h1>
-          <span class="relative text-[7px] md:text-[8px] font-black text-primary/60 uppercase tracking-[0.4em] mt-1 md:mt-2">Industrial OS v3.2</span>
+    <div class="flex flex-col h-full">
+      <!-- Marca -->
+      <div class="px-6 pt-7 pb-6">
+        <router-link to="/" class="inline-flex items-baseline gap-2 font-display text-2xl font-black tracking-tight [font-stretch:118%] text-ink" title="Ver el sitio">
+          N3XT<span class="text-brand">3D</span>
+        </router-link>
+        <p class="mt-1 text-sm text-muted">Panel del taller</p>
       </div>
 
-      <!-- Navigation Links -->
-      <nav class="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
-        <button 
-          v-for="item in navItems" :key="item.id"
-          :class="[
-            'w-full flex items-center gap-3 md:gap-5 px-4 md:px-6 py-3 md:py-4 rounded-[1.5rem] transition-all duration-500 font-black text-[10px] md:text-xs uppercase tracking-[0.2em] group relative overflow-hidden',
-            activeTab === item.id
-              ? 'bg-primary/10 dark:bg-primary/20 text-primary shadow-sm'
-              : 'text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
-          ]"
-          @click="handleNavClick(item.id)"
-        >
-          <span v-if="activeTab === item.id" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
-          <span :innerHTML="sanitizeSVG(item.icon)" class="w-5 h-5 flex-shrink-0" :class="activeTab === item.id ? 'text-primary' : ''"></span>
-          <span class="relative z-10">{{ item.label }}</span>
-          
-          <!-- Notification badge for orders -->
-          <span 
-            v-if="typeof item.badge === 'function' ? item.badge() > 0 : (item.badge as any) > 0"
-            class="ml-auto px-3 py-1 bg-rose-500 text-white text-[8px] font-black rounded-full shadow-lg shadow-rose-500/30"
-          >
-            {{ typeof item.badge === 'function' ? (item.badge() > 99 ? '99+' : item.badge()) : item.badge }}
-          </span>
-        </button>
+      <!-- Navegación -->
+      <nav class="flex-1 px-3 overflow-y-auto no-scrollbar" aria-label="Secciones">
+        <ul class="space-y-1">
+          <li v-for="item in navItems" :key="item.id">
+            <button
+              type="button"
+              :aria-current="activeTab === item.id ? 'page' : undefined"
+              :class="[
+                'w-full flex items-center gap-3 h-11 px-3 rounded-[var(--radius-control)] text-[0.9375rem] font-medium transition-colors',
+                activeTab === item.id ? 'bg-primary/10 text-brand font-semibold' : 'text-muted hover:text-ink hover:bg-surface-2'
+              ]"
+              @click="handleNavClick(item.id)"
+            >
+              <span :innerHTML="sanitizeSVG(item.icon)" class="w-5 h-5 shrink-0" aria-hidden="true"></span>
+              <span>{{ item.label }}</span>
+              <span
+                v-if="typeof item.badge === 'function' && item.badge() > 0"
+                class="ml-auto min-w-6 h-6 px-2 inline-flex items-center justify-center rounded-full bg-primary text-white text-xs font-bold tabular-nums"
+                :aria-label="`${item.badge()} pendientes`"
+              >{{ item.badge() > 99 ? '99+' : item.badge() }}</span>
+            </button>
+          </li>
+        </ul>
       </nav>
 
-      <!-- Sidebar Footer -->
-      <div class="p-4 md:p-6 border-t border-gray-100 dark:border-white/5 space-y-2 md:space-y-3">
-        <button class="w-full flex items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 rounded-[1.5rem] text-gray-400 dark:text-gray-600 hover:text-rose-500 hover:bg-rose-500/5 transition-all font-black text-[9px] md:text-[10px] uppercase tracking-[0.2em]" @click="logout">
-          <svg class="w-4 md:w-5 h-4 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-          <span class="hidden sm:inline">Cerrar Sesión</span><span class="sm:hidden">Salir</span>
+      <!-- Pie -->
+      <div class="p-3 space-y-1 border-t border-line">
+        <router-link to="/" class="w-full flex items-center gap-3 h-11 px-3 rounded-[var(--radius-control)] text-[0.9375rem] font-medium text-muted hover:text-ink hover:bg-surface-2 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          Ver el sitio
+        </router-link>
+        <button type="button" class="w-full flex items-center gap-3 h-11 px-3 rounded-[var(--radius-control)] text-[0.9375rem] font-medium text-muted hover:text-danger hover:bg-danger/5 transition-colors" @click="logout">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          Cerrar sesión
         </button>
-        
-        <div class="px-4 md:px-6 pt-2">
-          <div class="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
-          <p class="text-[6px] md:text-[7px] font-black text-gray-300 dark:text-gray-700 uppercase tracking-[0.3em] md:tracking-[0.5em] text-center mt-3 md:mt-4">Sistema N3XT</p>
-        </div>
       </div>
     </div>
   </aside>
 </template>
-
-<style scoped>
-.animate-slide-up {
-  animation: slideUp 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-</style>
