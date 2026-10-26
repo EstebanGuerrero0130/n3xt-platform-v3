@@ -44,4 +44,12 @@ return [
         'secret' => env('TURNSTILE_SECRET'),
     ],
 
+    // Archivos 3D de pedidos en Supabase Storage (bucket privado). Sin esto: disco local.
+    'supabase_storage' => [
+        'driver' => env('MODELS_STORAGE', 'local'),
+        'url' => env('SUPABASE_URL'),
+        'key' => env('SUPABASE_SERVICE_KEY'),
+        'bucket' => env('SUPABASE_MODELS_BUCKET', 'order-models'),
+    ],
+
 ];

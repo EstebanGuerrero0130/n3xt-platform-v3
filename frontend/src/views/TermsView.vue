@@ -21,7 +21,7 @@ onMounted(() => {
     <main id="main" class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
       <header class="mb-10 md:mb-14 grid lg:grid-cols-12 gap-6 lg:items-end">
         <h1 class="section-title lg:col-span-8">Términos y <span class="section-title-accent">condiciones</span></h1>
-        <p class="lg:col-span-4 text-sm text-muted">Última actualización: Junio 2026</p>
+        <p class="lg:col-span-4 text-sm text-muted">Última actualización: Octubre 2026</p>
       </header>
 
       <div class="grid lg:grid-cols-12 gap-10 items-start">
@@ -51,7 +51,7 @@ onMounted(() => {
             <h2 id="descripcion-del-servicio">2. Descripción del Servicio</h2>
             <p>N3XT 3D ofrece servicios de fabricación aditiva (impresión 3D) incluyendo:</p>
             <ul>
-              <li>Cotización automatizada mediante motor OrcaEngine</li>
+              <li>Cotización automática en línea a partir de tu archivo 3D</li>
               <li>Impresión 3D en tecnologías FDM y SLA</li>
               <li>Post-procesado y acabado de piezas</li>
               <li>Venta de catálogo de piezas y coleccionables</li>
@@ -62,10 +62,12 @@ onMounted(() => {
           <section aria-labelledby="cotizaciones-y-ordenes">
             <h2 id="cotizaciones-y-ordenes">3. Cotizaciones y Órdenes</h2>
             <ul>
-              <li>Las cotizaciones generadas por OrcaEngine son estimaciones basadas en los parámetros ingresados</li>
+              <li>Las cotizaciones del cotizador en línea son estimaciones basadas en tu archivo y los parámetros elegidos</li>
               <li>El precio final puede variar según el análisis técnico del archivo 3D</li>
               <li>Una vez confirmada la orden, se enviará una factura electrónica válida en Colombia</li>
               <li>Los tiempos de producción son estimados y pueden variar según la complejidad</li>
+            <li>Se usa un cupón por pedido; no son acumulables. El cupón de bienvenida es personal, de un solo uso y solo vale con el correo de tu cuenta</li>
+            <li>Eres responsable de mantener segura la contraseña de tu cuenta</li>
             </ul>
           </section>
 

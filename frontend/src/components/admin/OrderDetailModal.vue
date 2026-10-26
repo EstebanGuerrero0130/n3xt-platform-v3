@@ -21,8 +21,9 @@
           <section aria-labelledby="od-pieces">
             <h3 id="od-pieces" class="admin-h2 text-base">{{ isCatalog ? 'Producto' : 'Piezas' }}</h3>
             <ul v-if="pieces.length" class="mt-3 divide-y divide-line rounded-[var(--radius-control)] bg-surface">
-              <li v-for="(p, i) in pieces" :key="i" class="px-4 py-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <li v-for="(p, i) in pieces" :key="i" class="px-4 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                 <span class="font-medium break-all">{{ p.name || `Modelo ${i + 1}` }} <span class="text-muted tabular-nums">× {{ p.qty || 1 }}</span></span>
+                <button type="button" class="order-last sm:order-none btn-outlined btn-sm" :aria-label="`Descargar ${p.name || 'modelo ' + (i + 1)}`" @click="emit('download', i)">Descargar</button>
                 <span class="text-sm text-muted tabular-nums">
                   <template v-if="p.dims">{{ p.dims }} mm</template><template v-if="p.dims && p.weight"> · </template><template v-if="p.weight">{{ Math.round(p.weight) }} g</template><template v-if="p.subtotal"> · {{ money(p.subtotal) }}</template>
                 </span>
@@ -141,7 +142,7 @@ const props = defineProps({
 
 const actionError = ref('')
 
-const emit = defineEmits(['close', 'updated', 'update-order'])
+const emit = defineEmits(['close', 'updated', 'update-order', 'download'])
 
 const showAddForm = ref(false)
 const newExtra = ref({ material_id: '', qty: 1 })

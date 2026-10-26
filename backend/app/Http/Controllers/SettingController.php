@@ -50,32 +50,39 @@ class SettingController extends Controller
         }
     }
 
+    /**
+     * Logo de la empresa. Con Cloudinary configurado se sube allí (en Vercel el
+     * disco es temporal y el logo desaparecía); si no, al disco público local.
+     */
     public function uploadLogo(Request $request)
     {
         $request->validate([
-            'logo' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'logo' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
+        $file = $request->file('logo');
 
-        if ($request->hasFile('logo')) {
-            // Delete old logo if exists
-            $oldLogo = Setting::where('key', 'company_logo')->first();
-            if ($oldLogo && $oldLogo->value && \Storage::disk('public')->exists($oldLogo->value)) {
-                \Storage::disk('public')->delete($oldLogo->value);
+        if (config('services.cloudinary.cloud_name')) {
+            $url = $this->cloudinaryUpload($file, 'n3xt_logo_' . time());
+            if (!$url) {
+                return response()->json(['message' => 'No se pudo subir el logo'], 502);
             }
+            Setting::updateOrCreate(['key' => 'company_logo'], ['value' => $url]);
 
-            $file = $request->file('logo');
-            $path = $file->store('logos', 'public');
-
-            Setting::updateOrCreate(['key' => 'company_logo'], ['value' => $path]);
-
-            return response()->json([
-                'message' => 'Logo actualizado con éxito',
-                'logo_url' => asset('storage/' . $path) . '?t=' . time(),
-                'logo_path' => $path
-            ]);
+            return response()->json(['message' => 'Logo actualizado con éxito', 'logo_url' => $url, 'logo_path' => $url]);
         }
 
-        return response()->json(['message' => 'Error al subir el archivo'], 400);
+        $oldLogo = Setting::where('key', 'company_logo')->value('value');
+        if (is_string($oldLogo) && !str_starts_with($oldLogo, 'http') && \Storage::disk('public')->exists($oldLogo)) {
+            \Storage::disk('public')->delete($oldLogo);
+        }
+        $path = $file->store('logos', 'public');
+        Setting::updateOrCreate(['key' => 'company_logo'], ['value' => $path]);
+
+        return response()->json([
+            'message' => 'Logo actualizado con éxito',
+            'logo_url' => asset('storage/' . $path) . '?t=' . time(),
+            'logo_path' => $path,
+        ]);
     }
 
     public function uploadImage(Request $request)
@@ -85,52 +92,36 @@ class SettingController extends Controller
             'public_id' => 'nullable|string|max:120|regex:/^[A-Za-z0-9_\-\/]+$/',
         ]);
 
-        if (!$request->hasFile('file')) {
-            return response()->json(['message' => 'No se envió ningún archivo'], 400);
-        }
-
-        $file = $request->file('file');
         // Destino fijo del servidor: el cliente no decide a qué cuenta se sube
-        $cloudName = config('services.cloudinary.cloud_name');
-        $uploadPreset = config('services.cloudinary.upload_preset');
         $publicId = $request->input('public_id', 'n3xt_upload_' . time());
-
-        // Construir el multipart form data
-        $postFields = [
-            'file' => curl_file_create($file->getPathname(), $file->getMimeType(), $file->getClientOriginalName()),
-            'upload_preset' => $uploadPreset,
-            'public_id' => $publicId,
-        ];
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, "https://api.cloudinary.com/v1_1/{$cloudName}/image/upload");
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
-
-        if ($error) {
-            return response()->json(['message' => 'Error de conexión con Cloudinary', 'error' => $error], 500);
-        }
-
-        $data = json_decode($response, true);
-
-        if ($httpCode !== 200 || !isset($data['secure_url'])) {
-            return response()->json([
-                'message' => 'Error al subir imagen a Cloudinary',
-                'error' => $data['error']['message'] ?? 'Error desconocido',
-            ], 500);
+        $url = $this->cloudinaryUpload($request->file('file'), $publicId);
+        if (!$url) {
+            return response()->json(['message' => 'Error al subir imagen a Cloudinary'], 502);
         }
 
         return response()->json([
             'message' => 'Imagen subida correctamente',
-            'secure_url' => $data['secure_url'],
-            'public_id' => $data['public_id'] ?? $publicId,
+            'secure_url' => $url,
+            'public_id' => $publicId,
         ]);
+    }
+
+    /** Sube una imagen con el preset sin firma de la cuenta; devuelve la URL https o null. */
+    private function cloudinaryUpload(\Illuminate\Http\UploadedFile $file, string $publicId): ?string
+    {
+        $cloudName = config('services.cloudinary.cloud_name');
+        $res = \Illuminate\Support\Facades\Http::timeout(30)
+            ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+            ->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
+                'upload_preset' => config('services.cloudinary.upload_preset'),
+                'public_id' => $publicId,
+            ]);
+
+        if ($res->failed() || !$res->json('secure_url')) {
+            \Illuminate\Support\Facades\Log::warning('Cloudinary rechazó la subida', ['status' => $res->status(), 'error' => $res->json('error.message')]);
+            return null;
+        }
+
+        return $res->json('secure_url');
     }
 }

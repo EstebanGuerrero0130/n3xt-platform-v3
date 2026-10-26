@@ -11,6 +11,7 @@ use App\Services\MeshVolumeService;
 use App\Services\QuotePricingService;
 use App\Services\CustomerAccountService;
 use App\Services\OrderMailer;
+use App\Services\ModelStorage;
 use App\Models\RecurrentCustomer;
 use App\Exceptions\InvalidMeshException;
 use App\Http\Middleware\EnsureAdmin;
@@ -35,6 +36,7 @@ class OrderController extends Controller
         protected MeshVolumeService $meshVolume,
         protected CustomerAccountService $accounts,
         protected OrderMailer $mailer,
+        protected ModelStorage $models,
     ) {}
 
     /**
@@ -143,10 +145,10 @@ class OrderController extends Controller
             foreach ($uploads as $i => $up) {
                 $file = $up['file'];
                 $extension = strtolower($file->getClientOriginalExtension());
-                $path = $file->storeAs('orders_models', 'n3xt_' . time() . '_' . Str::random(10) . '.' . $extension, 'local');
+                // Se mide el archivo subido antes de guardarlo (el almacenamiento puede ser remoto)
+                $mesh = $this->meshVolume->analyze($file->getRealPath(), $extension);
+                $path = $this->models->put($file);
                 $stored[] = $path;
-
-                $mesh = $this->meshVolume->analyze(Storage::disk('local')->path($path), $extension);
 
                 $pricingModels[] = [
                     'name' => $file->getClientOriginalName(),
@@ -164,7 +166,7 @@ class OrderController extends Controller
                 ];
             }
         } catch (InvalidMeshException $e) {
-            Storage::disk('local')->delete($stored);
+            $this->models->delete($stored);
             $name = isset($file) ? $file->getClientOriginalName() : 'el archivo';
             return $this->error("No pudimos leer {$name}: {$e->getMessage()}", 422);
         }
@@ -176,7 +178,7 @@ class OrderController extends Controller
         $welcomeOwner = $coupon ? null : $this->accounts->welcomeCouponOwner($validated['coupon_code'] ?? null);
         if ($welcomeOwner) {
             if (strtolower((string) ($validated['customer_email'] ?? '')) !== strtolower((string) $welcomeOwner->email)) {
-                Storage::disk('local')->delete($stored);
+                $this->models->delete($stored);
                 return $this->error('Este cupón es personal: úsalo con el correo de tu cuenta.', 422);
             }
             $coupon = $this->accounts->welcomeCoupon($welcomeOwner);
@@ -243,7 +245,7 @@ class OrderController extends Controller
         });
 
         if (!$order) {
-            Storage::disk('local')->delete($stored);
+            $this->models->delete($stored);
             return $this->error('Este cupón de bienvenida ya fue usado.', 422);
         }
         if ($coupon && !$welcomeOwner) {
@@ -265,7 +267,7 @@ class OrderController extends Controller
         $originalFilename = 'Manual Order';
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $path = $file->storeAs('orders_models', 'n3xt_' . time() . '_' . Str::random(10) . '.' . strtolower($file->getClientOriginalExtension()), 'local');
+            $path = $this->models->put($file);
             $originalFilename = $file->getClientOriginalName();
         }
 
@@ -488,25 +490,29 @@ class OrderController extends Controller
     /**
      * Download order 3D model
      */
-    public function download($id)
+    public function download(Request $request, $id)
     {
         $order = Order::findOrFail($id);
-        
-        if (!$order->file_path || !Storage::disk('local')->exists($order->file_path)) {
-            return $this->error('Archivo no encontrado físicamente.', 404);
+
+        // ?model=N baja la pieza N de models[]; sin él, la primera (pedidos viejos: file_path)
+        $index = (int) $request->query('model', 0);
+        $model = $order->models[$index] ?? null;
+        $path = $model['path'] ?? ($index === 0 ? $order->file_path : null);
+        $name = $model['original_filename'] ?? $order->original_filename ?? 'modelo.stl';
+
+        if (!$this->models->exists($path)) {
+            return $this->error('Archivo no encontrado.', 404);
         }
 
-        return response()->download(Storage::disk('local')->path($order->file_path), $order->original_filename);
+        return $this->models->download($path, $name);
     }
 
     public function destroy($id)
     {
         try {
             $order = Order::findOrFail($id);
-            // Delete file if exists
-            if ($order->file_path) {
-                Storage::disk('local')->delete($order->file_path);
-            }
+            // Todas las piezas del pedido, no solo la primera
+            $this->models->delete(array_merge([$order->file_path], array_column($order->models ?? [], 'path')));
             $order->delete();
             return $this->success(null, 'Pedido eliminado exitosamente.');
         } catch (\Exception $e) {

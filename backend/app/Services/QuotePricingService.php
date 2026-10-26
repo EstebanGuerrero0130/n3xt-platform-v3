@@ -20,6 +20,9 @@ use Illuminate\Support\Facades\DB;
  */
 class QuotePricingService
 {
+    /** Descuento máximo de un cupón (%), aunque el admin guarde más. */
+    public const MAX_COUPON_PCT = 50;
+
     public const SLA_ALCOHOL_ID = 'Alco_ML_05';
     public const SLA_CURING_ID = 'Cicl_Serv_06';
     public const SLA_ALCOHOL_ML_PER_PIECE = 50;
@@ -351,6 +354,8 @@ class QuotePricingService
             if (array_key_exists('active', $c) && !filter_var($c['active'], FILTER_VALIDATE_BOOLEAN)) continue;
             $pct = self::jsNumber($c['discount_pct'] ?? null);
             if (is_nan($pct) || $pct <= 0 || $pct > 100) continue;
+            // Tope: ningún cupón deja un pedido a menos de la mitad del precio
+            $pct = min($pct, self::MAX_COUPON_PCT);
             $max = (int) ($c['max_uses'] ?? 0);
             if ($max > 0 && (int) ($uses[$code] ?? 0) >= $max) continue;
             return [

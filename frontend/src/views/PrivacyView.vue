@@ -21,7 +21,7 @@ onMounted(() => {
     <main id="main" class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
       <header class="mb-10 md:mb-14 grid lg:grid-cols-12 gap-6 lg:items-end">
         <h1 class="section-title lg:col-span-8">Política de <span class="section-title-accent">privacidad</span></h1>
-        <p class="lg:col-span-4 text-sm text-muted">Última actualización: Junio 2026</p>
+        <p class="lg:col-span-4 text-sm text-muted">Última actualización: Octubre 2026</p>
       </header>
 
       <div class="grid lg:grid-cols-12 gap-10 items-start">
@@ -52,7 +52,8 @@ onMounted(() => {
             <ul>
               <li><strong>Datos de contacto:</strong> Nombre, correo electrónico, teléfono y dirección de envío.</li>
               <li><strong>Datos de facturación:</strong> NIT, razón social y documentos de identificación cuando aplique.</li>
-              <li><strong>Datos técnicos:</strong> Archivos 3D (STL, OBJ, 3MF), parámetros de impresión y especificaciones de diseño.</li>
+              <li><strong>Datos de tu cuenta:</strong> Correo y contraseña (guardada cifrada) si creas una cuenta.</li>
+            <li><strong>Datos técnicos:</strong> Archivos 3D (STL, OBJ, 3MF), parámetros de impresión y especificaciones de diseño.</li>
               <li><strong>Datos de navegación:</strong> Información anónima sobre el uso del sitio web para mejorar nuestros servicios.</li>
             </ul>
           </section>
@@ -63,7 +64,9 @@ onMounted(() => {
             <ul>
               <li>Procesar cotizaciones y órdenes de fabricación 3D</li>
               <li>Comunicarnos contigo sobre el estado de tus proyectos</li>
-              <li>Mejorar nuestro motor de cotización OrcaEngine</li>
+              <li>Manejar tu cuenta: verificar tu correo con un código, recuperar tu contraseña y mostrarte tus pedidos</li>
+            <li>Avisarte por correo cuando recibimos tu pedido y cada vez que cambia de estado</li>
+            <li>Mejorar el cotizador y nuestros precios</li>
               <li>Cumplir con obligaciones fiscales y legales en Colombia</li>
               <li>Enviar comunicaciones relacionadas con el servicio (no spam)</li>
             </ul>
@@ -74,15 +77,16 @@ onMounted(() => {
             <p>Implementamos medidas de seguridad técnicas y organizativas para proteger tu información, incluyendo:</p>
             <ul>
               <li>Cifrado SSL/TLS en todas las comunicaciones</li>
-              <li>Almacenamiento seguro con Supabase (PostgreSQL)</li>
-              <li>Control de acceso basado en tokens (Sanctum)</li>
+              <li>Contraseñas cifradas: nunca guardamos tu contraseña en texto</li>
+              <li>Tus pedidos solo se ven desde tu cuenta, después de verificar tu correo</li>
+            <li>Archivos 3D en almacenamiento privado, al que solo accede el taller</li>
               <li>Límite de tamaño de archivos (50 MB) para prevenir abusos</li>
             </ul>
           </section>
 
           <section aria-labelledby="archivos-3d-y-propiedad-intelectual">
             <h2 id="archivos-3d-y-propiedad-intelectual">5. Archivos 3D y Propiedad Intelectual</h2>
-            <p>Los archivos 3D que subes a nuestra plataforma son de tu propiedad. No compartimos, distribuimos ni utilizamos tus diseños sin tu consentimiento explícito. Una vez completada tu orden, los archivos se eliminan de nuestros servidores dentro de los 30 días posteriores a la finalización del proyecto.</p>
+            <p>Los archivos 3D que subes a nuestra plataforma son de tu propiedad. No compartimos, distribuimos ni utilizamos tus diseños sin tu consentimiento explícito. Los guardamos mientras fabricamos y entregamos tu pedido, por si hay que repetir una pieza. Si quieres que los borremos, escríbenos y lo hacemos en máximo 10 días hábiles.</p>
           </section>
 
           <section aria-labelledby="tus-derechos">

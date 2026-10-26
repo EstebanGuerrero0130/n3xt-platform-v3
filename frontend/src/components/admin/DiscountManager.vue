@@ -51,8 +51,8 @@ const addCoupon = () => {
     formError.value = 'El código lleva de 3 a 32 letras, números o guiones (sin espacios).'
     return
   }
-  if (!(pct > 0 && pct <= 100)) {
-    formError.value = 'El descuento va de 1 a 100 %.'
+  if (!(pct > 0 && pct <= 50)) {
+    formError.value = 'El descuento va de 1 a 50 %.'
     return
   }
   if (code.startsWith('BIENVENIDA')) {
@@ -118,7 +118,7 @@ const saveWelcome = () => {
       </div>
       <div class="md:col-span-2">
         <label for="coupon-pct" class="admin-label mb-2">Descuento (%)</label>
-        <input id="coupon-pct" v-model.number="form.discount_pct" type="number" min="1" max="100" class="field tabular-nums" required>
+        <input id="coupon-pct" v-model.number="form.discount_pct" type="number" min="1" max="50" class="field tabular-nums" required>
       </div>
       <div class="md:col-span-2">
         <label for="coupon-max" class="admin-label mb-2">Máximo de usos</label>

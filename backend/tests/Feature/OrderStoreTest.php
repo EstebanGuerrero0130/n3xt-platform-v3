@@ -287,4 +287,12 @@ class OrderStoreTest extends TestCase
         $this->assertArrayNotHasKey('FIJO', $codes->all());
         $this->assertSame(10.0, (float) $codes['N3XT10']); // el existente no se pisa
     }
+
+    public function test_coupons_are_capped_at_fifty_percent(): void
+    {
+        Setting::updateOrCreate(['key' => 'coupons'], ['value' => [['code' => 'TODOGRATIS', 'discount_pct' => 100, 'active' => true]]]);
+        $this->postJson('/api/quote/coupon', ['code' => 'TODOGRATIS'])->assertOk()->assertJsonPath('data.discount_pct', 50);
+        $total = $this->post('/api/orders', $this->payload(['coupon_code' => 'TODOGRATIS']), ['Accept' => 'application/json'])->json('data.total_price');
+        $this->assertGreaterThan(0, $total);
+    }
 }

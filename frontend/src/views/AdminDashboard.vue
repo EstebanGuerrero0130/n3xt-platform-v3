@@ -596,7 +596,7 @@ const handleDeleteContact = (type, id) => {
 }
 
 
-const downloadFile = async (order) => {
+const downloadFile = async (order, index = 0) => {
   if (!order.file_path && !order.id) {
     showNotify('No hay archivo digital asociado a este pedido.', 'warning')
     return
@@ -604,7 +604,7 @@ const downloadFile = async (order) => {
   
   try {
     // Use api client with session cookies (Sanctum SPA) instead of Bearer token
-    const res = await fetch(`${api.baseUrl}/admin/orders/${order.id}/download`, {
+    const res = await fetch(`${api.baseUrl}/admin/orders/${order.id}/download?model=${index}`, {
       credentials: 'include',
       headers: { 'Accept': 'application/json' }
     })
@@ -616,7 +616,7 @@ const downloadFile = async (order) => {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = order.original_filename || `order_${order.id}.stl`
+    a.download = order.models?.[index]?.original_filename || order.original_filename || `pedido_${order.id}.stl`
     a.click()
     showNotify('Iniciando descarga del archivo...', 'success')
   } catch (err) {
@@ -1854,6 +1854,7 @@ const handlePurgeAll = () => {
       :settings="settings"
       @close="selectedOrderDetails = null; modalState.orderDetails = false"
       @updated="refreshOrderDetails"
+      @download="(idx) => downloadFile(selectedOrderDetails, idx)"
     />
 
     <!-- Módulo: Gestión Web (extraído a WebManager.vue) -->
