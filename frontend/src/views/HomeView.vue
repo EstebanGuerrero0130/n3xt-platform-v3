@@ -6,6 +6,7 @@ import { api } from '../services/api'
 import AppNavbar from '../components/AppNavbar.vue'
 import BrandTicker from '../components/BrandTicker.vue'
 import AppFooter from '../components/AppFooter.vue'
+import ReviewsSection from '../components/ReviewsSection.vue'
 import logger from '../utils/logger'
 import { srcsetFor } from '../utils/images'
 import {
@@ -578,6 +579,8 @@ onMounted(() => {
     </section>
 
     <!-- Novedades 3D Colombia: una nota grande y tres en lista -->
+    <ReviewsSection />
+
     <section v-if="webSettings.news.length" id="news" class="bg-surface py-24 md:py-36">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div v-reveal class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">

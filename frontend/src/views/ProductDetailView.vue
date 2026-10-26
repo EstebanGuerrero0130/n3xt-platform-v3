@@ -6,6 +6,7 @@ import { api } from '../services/api'
 import { useRevealAnim } from '../composables/useRevealAnim'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
+import ReviewsSection from '../components/ReviewsSection.vue'
 import logger from '../utils/logger'
 import { useSplitTitle } from '../composables/useSplitTitle'
 import { usePageMeta } from '../composables/usePageMeta'
@@ -354,6 +355,9 @@ watch(() => route.params.id, (newId, oldId) => {
             </div>
           </div>
         </div>
+
+        <!-- Reseñas de quienes compraron esta pieza -->
+        <ReviewsSection v-if="product" :product="productKey(product)" compact />
 
         <!-- Relacionados -->
         <section v-if="product && relatedProducts.length > 0" class="mt-20 md:mt-28 reveal" aria-labelledby="related-heading">

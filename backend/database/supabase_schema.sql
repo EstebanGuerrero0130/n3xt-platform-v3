@@ -415,6 +415,24 @@ CREATE TABLE IF NOT EXISTS saved_quotes (
 );
 
 -- ============================================================
+-- TABLA: reviews (reseñas de clientes; se publican al aprobarlas)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS reviews (
+    id BIGSERIAL PRIMARY KEY,
+    customer_id BIGINT NOT NULL REFERENCES recurrent_customers(id) ON DELETE CASCADE,
+    order_id BIGINT NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
+    product_ids JSONB NULL,
+    author_name VARCHAR(255) NOT NULL,
+    rating SMALLINT NOT NULL,
+    comment TEXT NOT NULL,
+    photo_url VARCHAR(255) NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'pending',   -- pending | approved | rejected
+    created_at TIMESTAMP NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS reviews_status_created_at_index ON reviews (status, created_at);
+
+-- ============================================================
 -- ✅ ESQUEMA N3XT 3D COMPLETADO
 -- Total: 19 tablas, 34 migraciones consolidadas
 -- Compatible con: Supabase PostgreSQL + Laravel 12

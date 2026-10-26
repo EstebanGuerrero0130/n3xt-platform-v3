@@ -37,6 +37,7 @@ Route::middleware('throttle:10,1')->post('/quote/coupon', [OrderController::clas
 
 // Ruta pública para leer configuraciones y materiales
 Route::get('/settings', [SettingController::class, 'index']);
+Route::get('/reviews', [\App\Http\Controllers\ReviewController::class, 'index']);
 Route::get('/materials', [MaterialController::class, 'index']);
 
 // Portal del cliente (registro y login en /auth/*)
@@ -51,6 +52,7 @@ Route::middleware('auth:customer')->group(function () {
     Route::middleware('throttle:10,1')->post('/customer/quotes', [\App\Http\Controllers\SavedQuoteController::class, 'store']);
     Route::get('/customer/quotes/{id}/files/{index}', [\App\Http\Controllers\SavedQuoteController::class, 'file'])->whereNumber(['id', 'index']);
     Route::delete('/customer/quotes/{id}', [\App\Http\Controllers\SavedQuoteController::class, 'destroy'])->whereNumber('id');
+    Route::middleware('throttle:5,1')->post('/customer/orders/{id}/review', [\App\Http\Controllers\ReviewController::class, 'store'])->whereNumber('id');
     Route::post('/customer/logout', [CustomerAuthController::class, 'logout']);
 });
 
@@ -84,6 +86,9 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::patch('/admin/orders/{id}/status', [OrderController::class, 'updateStatus']);
     Route::post('/admin/orders/{id}/toggle-paid', [OrderController::class, 'togglePaid']);
     Route::delete('/admin/orders/{id}', [OrderController::class, 'destroy']);
+    Route::get('/admin/reviews', [\App\Http\Controllers\ReviewController::class, 'adminIndex']);
+    Route::patch('/admin/reviews/{id}', [\App\Http\Controllers\ReviewController::class, 'moderate'])->whereNumber('id');
+    Route::delete('/admin/reviews/{id}', [\App\Http\Controllers\ReviewController::class, 'destroy'])->whereNumber('id');
     Route::get('/admin/orders/{id}/download', [OrderController::class, 'download']);
     Route::post('/admin/purge-all', [OrderController::class, 'purgeAll']);
     Route::post('/admin/orders/{id}/extras', [OrderController::class, 'addExtra']);

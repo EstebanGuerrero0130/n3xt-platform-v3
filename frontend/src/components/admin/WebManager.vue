@@ -7,6 +7,7 @@ import { ref, computed } from 'vue'
 import logger from '../../utils/logger'
 import { api } from '../../services/api'
 import VueDraggableLib from 'vuedraggable'
+import ReviewsManager from './ReviewsManager.vue'
 const VueDraggable = VueDraggableLib as any
 
 const props = defineProps<{
@@ -148,7 +149,7 @@ const resetHome = () => {
 
 const SUBTABS = [
   { id: 'dashboard', n: 'Resumen' }, { id: 'home', n: 'Inicio' }, { id: 'general', n: 'General' }, { id: 'catalog', n: 'Catálogo' },
-  { id: 'gallery', n: 'Galería' }, { id: 'news', n: 'Noticias' }, { id: 'posts', n: 'En redes' }, { id: 'social', n: 'Plataformas' },
+  { id: 'gallery', n: 'Galería' }, { id: 'news', n: 'Noticias' }, { id: 'posts', n: 'En redes' }, { id: 'reviews', n: 'Reseñas' }, { id: 'social', n: 'Plataformas' },
 ]
 const money = (v: any) => {
   const n = parseFloat(String(v ?? '').replace(/[^0-9.-]+/g, ''))
@@ -715,6 +716,9 @@ v-for="(item, idx) in [
         </div>
       </article>
     </div>
+
+    <!-- ===== Reseñas de clientes (se guardan al instante, no con Publicar) ===== -->
+    <ReviewsManager v-if="webSubTab === 'reviews'" />
 
     <!-- ===== Plataformas (botones "Síguenos" de la Home) ===== -->
     <div v-if="webSubTab === 'social'" class="space-y-4">

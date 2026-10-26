@@ -32,6 +32,7 @@ interface CustomerOrder {
   tracking_carrier?: string | null
   models?: { name: string | null; qty: number; dimensions_mm?: string | null; weight_g?: number | null; product_id?: string | number | null; unit_price?: number | null; image?: string | null }[]
   extras?: { name: string; qty: number }[]
+  review?: { rating: number; status: string } | null
 }
 
 interface CustomerProfile {
@@ -67,6 +68,39 @@ const deleteQuote = async (q: SavedQuote) => {
     quotes.value = quotes.value.filter(x => x.id !== q.id)
   } catch (err) {
     alert(err instanceof Error ? err.message : 'No se pudo borrar.')
+  }
+}
+
+// ─── Reseñas: se califican pedidos listos o enviados ───
+const REVIEWABLE = ['completed', 'shipped']
+const reviewFor = ref<number | null>(null)
+const review = ref({ rating: 5, comment: '', photo: null as File | null })
+const reviewError = ref('')
+const sendingReview = ref(false)
+const openReview = (id: number) => {
+  reviewFor.value = id
+  review.value = { rating: 5, comment: '', photo: null }
+  reviewError.value = ''
+}
+const sendReview = async (order: CustomerOrder) => {
+  reviewError.value = ''
+  if (review.value.comment.trim().length < 10) {
+    reviewError.value = 'Cuéntanos un poco más (mínimo 10 caracteres).'
+    return
+  }
+  sendingReview.value = true
+  try {
+    const fd = new FormData()
+    fd.append('rating', String(review.value.rating))
+    fd.append('comment', review.value.comment.trim())
+    if (review.value.photo) fd.append('photo', review.value.photo)
+    await api.post(`/customer/orders/${order.id}/review`, fd)
+    order.review = { rating: review.value.rating, status: 'pending' }
+    reviewFor.value = null
+  } catch (err) {
+    reviewError.value = err instanceof Error ? err.message : 'No pudimos enviar la reseña.'
+  } finally {
+    sendingReview.value = false
   }
 }
 
@@ -382,6 +416,39 @@ const getStatusLabel = (status: string) => {
                   </button>
                 </div>
                 <p v-if="repeatMsg?.id === order.id" :role="repeatMsg.ok ? 'status' : 'alert'" :class="['mt-3 text-sm', repeatMsg.ok ? 'text-success' : 'text-danger']">{{ repeatMsg.text }}</p>
+
+                <!-- Reseña -->
+                <div v-if="REVIEWABLE.includes(order.status)" class="mt-5 pt-5 border-t border-line">
+                  <p v-if="order.review" class="text-sm">
+                    Tu calificación: <span class="text-warning tracking-wider" :aria-label="`${order.review.rating} de 5 estrellas`">{{ '★'.repeat(order.review.rating) }}<span class="text-muted">{{ '★'.repeat(5 - order.review.rating) }}</span></span>
+                    <span class="ml-2 text-muted">{{ order.review.status === 'approved' ? '· publicada' : order.review.status === 'rejected' ? '· no publicada' : '· en revisión' }}</span>
+                  </p>
+                  <button v-else-if="reviewFor !== order.id" type="button" class="btn-outlined btn-sm" @click="openReview(order.id)">Calificar este pedido</button>
+                  <form v-else class="space-y-4" novalidate @submit.prevent="sendReview(order)">
+                    <fieldset>
+                      <legend class="block text-sm font-medium mb-2">¿Cómo te fue?</legend>
+                      <div class="flex gap-1" role="radiogroup">
+                        <label v-for="n in 5" :key="n" class="cursor-pointer">
+                          <input v-model="review.rating" type="radio" name="review-rating" :value="n" class="sr-only peer">
+                          <span :class="['text-3xl leading-none peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--brand-text)] rounded', n <= review.rating ? 'text-warning' : 'text-line']" :aria-label="`${n} ${n === 1 ? 'estrella' : 'estrellas'}`">★</span>
+                        </label>
+                      </div>
+                    </fieldset>
+                    <div>
+                      <label :for="`review-comment-${order.id}`" class="block text-sm font-medium mb-2">Tu comentario</label>
+                      <textarea :id="`review-comment-${order.id}`" v-model="review.comment" rows="3" maxlength="1000" class="field !h-auto py-2.5" placeholder="¿Qué te pareció la pieza, el acabado y la atención?"></textarea>
+                    </div>
+                    <div>
+                      <label :for="`review-photo-${order.id}`" class="block text-sm font-medium mb-2">Foto de tu pieza <span class="font-normal text-muted">(opcional)</span></label>
+                      <input :id="`review-photo-${order.id}`" type="file" accept="image/jpeg,image/png,image/webp" class="text-sm" @change="(e: any) => review.photo = e.target.files?.[0] || null">
+                    </div>
+                    <p v-if="reviewError" role="alert" class="text-sm text-danger">{{ reviewError }}</p>
+                    <div class="flex gap-2">
+                      <button type="submit" class="btn-primary btn-sm" :disabled="sendingReview">{{ sendingReview ? 'Enviando…' : 'Enviar reseña' }}</button>
+                      <button type="button" class="btn-outlined btn-sm" :disabled="sendingReview" @click="reviewFor = null">Cancelar</button>
+                    </div>
+                  </form>
+                </div>
               </div>
             </li>
           </ul>

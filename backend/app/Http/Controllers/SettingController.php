@@ -106,22 +106,8 @@ class SettingController extends Controller
         ]);
     }
 
-    /** Sube una imagen con el preset sin firma de la cuenta; devuelve la URL https o null. */
     private function cloudinaryUpload(\Illuminate\Http\UploadedFile $file, string $publicId): ?string
     {
-        $cloudName = config('services.cloudinary.cloud_name');
-        $res = \Illuminate\Support\Facades\Http::timeout(30)
-            ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
-            ->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
-                'upload_preset' => config('services.cloudinary.upload_preset'),
-                'public_id' => $publicId,
-            ]);
-
-        if ($res->failed() || !$res->json('secure_url')) {
-            \Illuminate\Support\Facades\Log::warning('Cloudinary rechazó la subida', ['status' => $res->status(), 'error' => $res->json('error.message')]);
-            return null;
-        }
-
-        return $res->json('secure_url');
+        return app(\App\Services\ImageUploader::class)->upload($file, $publicId);
     }
 }

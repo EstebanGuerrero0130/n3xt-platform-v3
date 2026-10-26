@@ -69,13 +69,14 @@ class CustomerAuthController extends Controller
         }
         $email = strtolower((string)$request->user()->email);
 
+        $reviews = \App\Models\Review::where('customer_id', $request->user()->id)->get()->keyBy('order_id');
         $orders = Order::query()
             ->whereRaw('LOWER(customer_email) = ?', [$email])
             ->orderByDesc('created_at')
             ->get(['id', 'job_name', 'status', 'technology', 'material_name', 'qty', 'infill', 'dimensions_mm',
                 'original_filename', 'models', 'extra_items', 'extras_cost', 'estimated_weight_g', 'estimated_duration_h',
                 'total_price', 'is_paid', 'tracking_guide', 'tracking_carrier', 'created_at'])
-            ->map(function ($o) {
+            ->map(function ($o) use ($reviews) {
                 // Piezas sin rutas internas de almacenamiento (`path` es privado del taller)
                 $models = collect($o->models ?? [])->map(fn ($m) => [
                     'name'          => $m['original_filename'] ?? null,
@@ -98,6 +99,7 @@ class CustomerAuthController extends Controller
                 return array_merge($o->only(['id', 'status', 'technology', 'material_name', 'qty', 'infill', 'estimated_weight_g',
                     'estimated_duration_h', 'extras_cost', 'total_price', 'is_paid', 'tracking_guide', 'tracking_carrier', 'created_at']), [
                     'project_name' => $o->job_name,
+                    'review'       => ($r = $reviews->get($o->id)) ? ['rating' => $r->rating, 'status' => $r->status] : null,
                     'models'       => $models,
                     'extras'       => $extras,
                 ]);
