@@ -1,6 +1,6 @@
 <template>
   <AdminModal :show="visible" title="Nuevo pedido manual" description="Para pedidos que llegan por WhatsApp o en el taller. El precio lo pones tú." size="xl" :busy="submitting" @close="$emit('close')">
-    <form id="manual-order-form" class="grid gap-6 lg:grid-cols-2" novalidate @submit.prevent="canSubmit && submit()">
+    <form id="manual-order-form" class="grid grid-cols-1 gap-6 lg:grid-cols-2" novalidate @submit.prevent="canSubmit && submit()">
       <section class="space-y-4" aria-labelledby="mo-customer">
         <h3 id="mo-customer" class="admin-h2 text-base">Cliente</h3>
         <div v-if="contacts.length">

@@ -842,7 +842,8 @@ html.lenis.lenis-stopped {
   }
   .admin-lead { margin-top: 0.5rem; font-size: 1rem; line-height: 1.5; color: var(--text-muted); max-width: 62ch; }
   .admin-h2 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; line-height: 1.2; color: var(--text-main); }
-  .admin-card { background: var(--bg-surface); border-radius: var(--radius-card); padding: 1.25rem; }
+  /* min-width: 0: en una grilla, una tabla ancha no estira la columna fuera de la pantalla */
+  .admin-card { background: var(--bg-surface); border-radius: var(--radius-card); padding: 1.25rem; min-width: 0; }
   @media (min-width: 768px) { .admin-card { padding: 1.5rem; } }
   .admin-label { display: block; font-size: 0.875rem; line-height: 1.4; color: var(--text-muted); }
   .admin-kpi { font-size: clamp(1.75rem, 1.4rem + 1vw, 2.25rem); line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text-main); }

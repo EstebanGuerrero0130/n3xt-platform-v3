@@ -135,7 +135,7 @@ const saveWelcome = () => {
       </div>
     </form>
 
-    <div class="grid gap-6 lg:grid-cols-12 items-start">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
       <!-- Lista -->
       <section class="admin-card lg:col-span-8" aria-labelledby="coupons-title">
         <div class="flex items-baseline justify-between gap-4 mb-4">

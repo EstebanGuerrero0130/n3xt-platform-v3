@@ -357,7 +357,7 @@ const fetchInventory = async () => {
   try {
     const res = await api.get('/materials', true)
     inventoryData.value = Array.isArray(res) ? res : (res?.data || [])
-  } catch (_err) {
+  } catch {
     inventoryData.value = []
   }
 }
@@ -366,7 +366,7 @@ const fetchPrinters = async () => {
   try {
     const res = await api.get('/admin/printers', true)
     printers.value = Array.isArray(res) ? res : (res?.data || [])
-  } catch (_err) {
+  } catch {
     printers.value = []
   }
 }
@@ -1607,7 +1607,7 @@ const handlePurgeAll = () => {
       :is-open="isSidebarOpen"
       :active-tab="activeTab === 'accounting' ? 'accounting' : activeTab"
       :pending-orders-count="orders.filter(o => o.status === 'pending').length"
-      @update:activeTab="(tab) => { activeTab = tab === 'analytics' ? 'accounting' : tab; isSidebarOpen = false }"
+      @update:active-tab="(tab) => { activeTab = tab === 'analytics' ? 'accounting' : tab; isSidebarOpen = false }"
       @close="isSidebarOpen = false"
       @logout="logout"
     />

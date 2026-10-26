@@ -1,6 +1,6 @@
 <template>
   <AdminModal :show="visible" title="Simulador de precios" description="Calcula el precio con los valores de Parámetros. Puedes descargar la cotización o convertirla en pedido." size="xl" @close="$emit('close')">
-    <div class="grid gap-6 lg:grid-cols-12">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
       <!-- Datos -->
       <form class="lg:col-span-7 space-y-6" novalidate @submit.prevent>
         <section class="grid gap-4 sm:grid-cols-2" aria-labelledby="sim-client">

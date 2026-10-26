@@ -83,11 +83,11 @@ const overduePrintersCount = computed(() => {
       <p class="text-ink">{{ overduePrintersCount === 1 ? 'Una impresora tiene' : `${overduePrintersCount} impresoras tienen` }} la fecha de mantenimiento vencida: {{ printers.filter(isMaintenanceOverdue).map(p => p.name).join(', ') }}.</p>
     </div>
 
-    <div v-if="loading" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
+    <div v-if="loading" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
       <div v-for="i in 3" :key="i" class="h-64 admin-card animate-pulse"></div>
     </div>
 
-    <div v-else-if="printers.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div v-else-if="printers.length" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <article v-for="printer in printers" :key="printer.id" class="admin-card flex flex-col" :aria-label="printer.name">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">

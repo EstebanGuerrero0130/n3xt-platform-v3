@@ -15,7 +15,7 @@
         </li>
       </ol>
 
-      <div class="grid gap-6 lg:grid-cols-12">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div class="lg:col-span-7 space-y-6">
           <!-- Piezas -->
           <section aria-labelledby="od-pieces">

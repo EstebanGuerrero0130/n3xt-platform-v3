@@ -10,7 +10,7 @@
       </button>
     </header>
 
-    <div class="grid gap-6 xl:grid-cols-12 items-start">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-12 items-start">
       <div class="xl:col-span-8 space-y-6">
         <!-- Costos de máquina -->
         <section class="admin-card" aria-labelledby="set-machine">

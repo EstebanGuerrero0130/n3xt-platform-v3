@@ -410,7 +410,7 @@ const selectOrder = (id: any) => {
         <div class="admin-card !p-4"><dt class="admin-label">Material perdido</dt><dd class="mt-1 text-xl font-bold tabular-nums" :class="analytics.summary?.waste_weight_g > 0 ? 'text-danger' : ''">{{ analytics.summary?.waste_weight_g || 0 }} g</dd></div>
       </dl>
 
-      <div class="grid gap-6 xl:grid-cols-12 items-start">
+      <div class="grid grid-cols-1 gap-6 xl:grid-cols-12 items-start">
         <!-- Pedidos -->
         <section class="admin-card xl:col-span-8" aria-labelledby="audit-title">
           <h2 id="audit-title" class="admin-h2">Pedidos</h2>
@@ -460,7 +460,7 @@ const selectOrder = (id: any) => {
       </div>
 
       <!-- Gráficas -->
-      <div class="grid gap-6 xl:grid-cols-12">
+      <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <section class="admin-card xl:col-span-8" aria-labelledby="flow-title">
           <h2 id="flow-title" class="admin-h2">Ventas, gastos y ganancia por mes</h2>
           <div class="mt-4 h-72 md:h-80"><VChart :option="lineChartOption" :theme="chartTheme" autoresize style="width:100%;height:100%" /></div>

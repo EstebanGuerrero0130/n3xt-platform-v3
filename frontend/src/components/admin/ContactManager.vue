@@ -235,7 +235,7 @@ const handleViewShippingLabel = (customer: any) => {
       </div>
     </div>
 
-    <div v-if="loading" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
+    <div v-if="loading" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
       <div v-for="i in 3" :key="i" class="h-48 admin-card animate-pulse"></div>
     </div>
 
@@ -244,7 +244,7 @@ const handleViewShippingLabel = (customer: any) => {
       <p v-if="!searchQuery" class="mt-1 text-muted">Crea el primero con el botón de arriba.</p>
     </div>
 
-    <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <article v-for="item in (filteredItems as any[])" :key="item.id" class="admin-card flex flex-col" :aria-label="item.name">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">

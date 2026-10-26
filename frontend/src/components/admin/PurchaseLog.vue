@@ -483,7 +483,7 @@ onMounted(() => {
 
     <!-- Registrar compra -->
     <AdminModal :show="showNewPurchaseModal" title="Registrar compra" description="Si es material del taller, súmalo al inventario como stock." size="lg" @close="showNewPurchaseModal = false">
-      <form id="purchase-form" class="grid gap-6 md:grid-cols-2" novalidate @submit.prevent="handleAddPurchase">
+      <form id="purchase-form" class="grid grid-cols-1 gap-6 md:grid-cols-2" novalidate @submit.prevent="handleAddPurchase">
         <div class="space-y-5">
           <div>
             <label for="purchase-category" class="admin-label mb-2">Tipo de compra</label>

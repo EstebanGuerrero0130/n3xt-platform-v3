@@ -128,7 +128,7 @@ const getStatusLabel = (status: any) => {
 
     <!-- Filtros -->
     <div class="admin-card space-y-4">
-      <div class="grid gap-4 lg:grid-cols-12 lg:items-end">
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
         <div class="lg:col-span-4">
           <label for="history-search" class="admin-label mb-2">Buscar</label>
           <input id="history-search" v-model="searchQuery" type="search" placeholder="Número de pedido o cliente" class="field">
@@ -162,7 +162,7 @@ const getStatusLabel = (status: any) => {
       <div class="admin-card"><dt class="admin-label">Material</dt><dd class="mt-2 admin-kpi">{{ metricsSummary.weight }} kg</dd></div>
     </dl>
 
-    <div class="grid gap-6 xl:grid-cols-12 items-start">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-12 items-start">
       <!-- Tabla -->
       <section class="admin-card xl:col-span-8" aria-label="Pedidos">
         <div class="overflow-x-auto -mx-1 px-1">

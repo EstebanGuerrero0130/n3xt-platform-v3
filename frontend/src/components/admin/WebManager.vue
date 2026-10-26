@@ -398,7 +398,7 @@ v-for="(item, idx) in [
 
       <section aria-labelledby="home-prints">
         <h2 id="home-prints" class="admin-h2 mb-3">Lo que imprimimos</h2>
-        <div class="grid gap-4 lg:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <article v-for="(l, i) in home.print_lines" :key="i" class="admin-card space-y-3">
             <div class="aspect-[4/3] rounded-[var(--radius-control)] bg-surface-2 overflow-hidden relative">
               <img v-if="l.i" :src="l.i" alt="" class="w-full h-full object-cover">
@@ -414,7 +414,7 @@ v-for="(item, idx) in [
         </div>
       </section>
 
-      <div class="grid gap-6 xl:grid-cols-2">
+      <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section class="admin-card" aria-labelledby="home-steps">
           <h2 id="home-steps" class="admin-h2">Cómo trabajamos</h2>
           <ol class="mt-4 space-y-4">
@@ -441,7 +441,7 @@ v-for="(item, idx) in [
     </div>
 
     <!-- ===== General ===== -->
-    <div v-if="webSubTab === 'general'" class="grid gap-6 xl:grid-cols-2 items-start">
+    <div v-if="webSubTab === 'general'" class="grid grid-cols-1 gap-6 xl:grid-cols-2 items-start">
       <section class="admin-card" aria-labelledby="web-social">
         <h2 id="web-social" class="admin-h2">Redes sociales</h2>
         <p class="mt-1 text-sm text-muted">Pega el enlace completo. Si escribes solo <span class="font-mono">@usuario</span>, lo completamos al salir del campo.</p>
@@ -491,7 +491,7 @@ v-for="(item, idx) in [
 
       <section v-for="(group, category) in groupedCatalog" :key="category" :aria-label="String(category)">
         <h2 class="admin-h2 mb-3">{{ category }} <span class="text-base font-normal text-muted">({{ group.length }})</span></h2>
-        <div class="grid gap-4 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <article v-for="{ item, index } in group" :id="`catalog-item-${index}`" :key="item.id ?? index" class="admin-card">
             <div class="flex gap-4">
               <div class="w-24 h-24 shrink-0 rounded-[var(--radius-control)] bg-surface-2 overflow-hidden relative">
