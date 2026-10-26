@@ -67,3 +67,27 @@ export async function seedCatalog(page: Page, catalog: unknown[]) {
   expect(res.status).toBe(200)
   await page.context().clearCookies()
 }
+
+/** Resuelve una operación de captcha "¿Cuánto es A op B?" en un campo. */
+export async function solveMath(page: Page, labelText: string, inputSelector: string) {
+  const [, a, op, b] = labelText.match(/(\d+)\s*([+\-−×x*])\s*(\d+)/)!
+  const n = { '+': +a + +b, '-': +a - +b, '−': +a - +b, '×': +a * +b, x: +a * +b, '*': +a * +b }[op]!
+  await page.locator(inputSelector).fill(String(n))
+}
+
+/** Crea un cliente por el formulario real y verifica su correo. Devuelve el correo. */
+export async function registerVerifiedCustomer(page: Page, password = 'Primera_2026') {
+  const email = `e2e${Date.now() % 10_000_000}@example.com`
+  await page.goto('/admin/login?registro=1')
+  await page.locator('#reg-name').fill('Cliente E2E')
+  await page.locator('#reg-email').fill(email)
+  await page.locator('#reg-password').fill(password)
+  await page.locator('#reg-password2').fill(password)
+  await solveMath(page, await page.locator('label[for=reg-captcha] + p').innerText(), '#reg-captcha')
+  await page.getByRole('button', { name: 'Crear mi cuenta' }).click()
+  await expect(page).toHaveURL(/customer\/dashboard/)
+  await page.locator('#verify-code').fill(lastMailCode(email))
+  await page.getByRole('button', { name: 'Confirmar' }).click()
+  await expect(page.getByText(/BIENVENIDA[A-Z0-9]{6}/)).toBeVisible()
+  return email
+}

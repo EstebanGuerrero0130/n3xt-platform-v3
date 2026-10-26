@@ -49,6 +49,27 @@ const loading = ref(true)
 const router = useRouter()
 const cart = useCart()
 
+// ─── Cotizaciones guardadas ───
+interface SavedQuote { id: number; name: string; technology: string; estimated_total: number | null; created_at: string; models: { name: string; qty: number }[] }
+const quotes = ref<SavedQuote[]>([])
+const fetchQuotes = async () => {
+  try {
+    const data = await api.get('/customer/quotes', true)
+    quotes.value = Array.isArray(data) ? data : []
+  } catch (err) {
+    logger.error('Error fetching quotes:', err)
+  }
+}
+const deleteQuote = async (q: SavedQuote) => {
+  if (!confirm(`¿Borrar la cotización «${q.name}»? Se borran también sus archivos.`)) return
+  try {
+    await api.delete(`/customer/quotes/${q.id}`)
+    quotes.value = quotes.value.filter(x => x.id !== q.id)
+  } catch (err) {
+    alert(err instanceof Error ? err.message : 'No se pudo borrar.')
+  }
+}
+
 // ─── Repetir pedido ───
 const repeating = ref<number | null>(null)
 const repeatMsg = ref<{ id: number; text: string; ok: boolean } | null>(null)
@@ -79,7 +100,7 @@ const fetchProfile = async () => {
     try {
         const data = await api.get('/customer/profile', true)
         customer.value = data
-        if (data?.email_verified) fetchOrders()
+        if (data?.email_verified) { fetchOrders(); fetchQuotes() }
         else loading.value = false
     } catch (err) {
         logger.error('Error fetching profile:', err)
@@ -364,6 +385,28 @@ const getStatusLabel = (status: string) => {
               </div>
             </li>
           </ul>
+
+          <!-- Cotizaciones guardadas -->
+          <section v-if="quotes.length" class="mt-12" aria-labelledby="quotes-title">
+            <h2 id="quotes-title" class="text-xl md:text-2xl font-extrabold tracking-tight">Cotizaciones <span class="text-brand">guardadas</span></h2>
+            <ul class="mt-6 space-y-3">
+              <li v-for="q in quotes" :key="q.id" class="p-5 bg-surface rounded-[var(--radius-card)] flex flex-col sm:flex-row sm:items-center gap-4">
+                <div class="min-w-0 flex-1">
+                  <p class="font-semibold truncate">{{ q.name }}</p>
+                  <p class="mt-1 text-sm text-muted">
+                    {{ q.models.map(m => m.qty > 1 ? `${m.name} × ${m.qty}` : m.name).join(', ') }} · {{ q.technology }} · {{ orderDate(q.created_at) }}
+                  </p>
+                </div>
+                <span v-if="q.estimated_total" class="font-bold tabular-nums">{{ money(q.estimated_total) }}</span>
+                <div class="flex gap-2">
+                  <router-link :to="{ path: '/quote', query: { cotizacion: q.id } }" class="btn-primary btn-sm">Abrir en el cotizador</router-link>
+                  <button type="button" class="icon-btn text-muted hover:text-danger hover:bg-danger/10" :aria-label="`Borrar ${q.name}`" @click="deleteQuote(q)">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </section>
         </section>
 
         <!-- Ayuda -->

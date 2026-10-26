@@ -397,6 +397,24 @@ ALTER TABLE failed_jobs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE migrations DISABLE ROW LEVEL SECURITY;
 
 -- ============================================================
+-- TABLA: saved_quotes (cotizaciones guardadas por el cliente)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS saved_quotes (
+    id BIGSERIAL PRIMARY KEY,
+    customer_id BIGINT NOT NULL REFERENCES recurrent_customers(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    technology VARCHAR(10) NOT NULL,
+    material_id VARCHAR(255) NULL,
+    infill SMALLINT NULL,
+    layer_height DECIMAL(4, 2) NULL,
+    models JSONB NOT NULL,              -- [{path, original_filename, qty, scale_factor}]
+    extras JSONB NULL,                  -- [{id, qty}]
+    estimated_total INTEGER NULL,
+    created_at TIMESTAMP NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NULL DEFAULT NOW()
+);
+
+-- ============================================================
 -- ✅ ESQUEMA N3XT 3D COMPLETADO
 -- Total: 19 tablas, 34 migraciones consolidadas
 -- Compatible con: Supabase PostgreSQL + Laravel 12

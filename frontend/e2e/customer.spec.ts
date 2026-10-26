@@ -1,14 +1,7 @@
-import { test, expect, type Page } from '@playwright/test'
-import { lastMailCode, watchErrors } from './helpers'
+import { test, expect } from '@playwright/test'
+import { lastMailCode, solveMath, watchErrors } from './helpers'
 
 const email = `e2e${Date.now() % 1_000_000}@example.com`
-
-async function solveCaptcha(page: Page) {
-  const text = await page.locator('label[for=reg-captcha] + p').innerText()
-  const [, a, op, b] = text.match(/(\d+)\s*([+\-−×x*])\s*(\d+)/)!
-  const n = { '+': +a + +b, '-': +a - +b, '−': +a - +b, '×': +a * +b, x: +a * +b, '*': +a * +b }[op]!
-  await page.locator('#reg-captcha').fill(String(n))
-}
 
 test.describe.serial('cuenta de cliente', () => {
   test('registro y verificación por correo', async ({ page }) => {
@@ -18,7 +11,7 @@ test.describe.serial('cuenta de cliente', () => {
     await page.locator('#reg-email').fill(email)
     await page.locator('#reg-password').fill('Primera_2026')
     await page.locator('#reg-password2').fill('Primera_2026')
-    await solveCaptcha(page)
+    await solveMath(page, await page.locator('label[for=reg-captcha] + p').innerText(), '#reg-captcha')
     await page.getByRole('button', { name: 'Crear mi cuenta' }).click()
     await expect(page).toHaveURL(/customer\/dashboard/)
 

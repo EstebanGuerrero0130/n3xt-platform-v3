@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import StlViewer from '../components/StlViewer.vue'
 import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
@@ -144,13 +145,107 @@ const fetchSettings = async () => {
 useRevealAnim({ delay: 200 })
 
 
+// ─── Cotizaciones guardadas (cliente con correo verificado) ───
+const route = useRoute()
+const router = useRouter()
+const account = ref<{ role: string | null; verified: boolean }>({ role: null, verified: false })
+const canSaveQuote = computed(() => account.value.role === 'customer' && account.value.verified)
+const saveOpen = ref(false)
+const saveName = ref('')
+const savingQuote = ref(false)
+
+const openSave = () => {
+  const loaded = models.value.filter(m => m.hasModel && m.file)
+  saveName.value = loaded.length === 1 ? (loaded[0].file?.name.replace(/\.(stl|obj)$/i, '') || 'Mi cotización') : `${loaded.length} piezas`
+  saveOpen.value = true
+}
+
+const saveQuote = async () => {
+  const loaded = models.value.filter(m => m.hasModel && m.file)
+  if (!loaded.length || savingQuote.value) return
+  savingQuote.value = true
+  try {
+    const fd = new FormData()
+    fd.append('name', saveName.value.trim() || 'Mi cotización')
+    fd.append('technology', selectedTechnology.value)
+    if (selectedMaterial.value) fd.append('material_id', selectedMaterial.value)
+    fd.append('infill', String(Math.round(infill.value || 15)))
+    fd.append('layer_height', String(layerHeight.value || 0.2))
+    if (breakdown.value.total > 0) fd.append('estimated_total', String(Math.round(breakdown.value.total)))
+    loaded.forEach((m, i) => {
+      fd.append(`models[${i}][file]`, m.file as File)
+      fd.append(`models[${i}][qty]`, String(Math.max(1, Math.floor(m.qty) || 1)))
+      fd.append(`models[${i}][scale_factor]`, String(m.currentScale || 1))
+    })
+    selectedExtras.value.forEach((e, i) => {
+      fd.append(`extra_items[${i}][material_id]`, e.id)
+      fd.append(`extra_items[${i}][qty]`, String(e.qty))
+    })
+    await api.post('/customer/quotes', fd)
+    saveOpen.value = false
+    notify('Guardamos la cotización. La encuentras en tu cuenta, en Cotizaciones guardadas.', 'success', 7000)
+  } catch (err) {
+    notify(err instanceof Error ? err.message : 'No pudimos guardar la cotización.', 'error')
+  } finally {
+    savingQuote.value = false
+  }
+}
+
+/** Reabre una cotización guardada: parámetros, archivos (en el visor), escala y cantidades. */
+const restoreQuote = async (id: number) => {
+  let saved: any
+  try {
+    const list = await api.get('/customer/quotes', true)
+    saved = (Array.isArray(list) ? list : []).find((q: any) => q.id === id)
+  } catch { /* sin sesión: se ignora */ }
+  if (!saved) {
+    notify('No encontramos esa cotización en tu cuenta.', 'warning')
+    return
+  }
+  loadingQuote.value = true
+  quoteMessage.value = `Abriendo «${saved.name}»…`
+  selectedTechnology.value = saved.technology || 'FDM'
+  await nextTick()
+  if (saved.material_id && materials.value.some(m => m.id === saved.material_id)) selectedMaterial.value = saved.material_id
+  if (saved.infill) infill.value = saved.infill
+  if (saved.layer_height) layerHeight.value = Number(saved.layer_height)
+  selectedExtras.value = (saved.extras || []).filter((e: any) => utilities.value.some((u: any) => u.id === e.id)).map((e: any) => ({ id: e.id, qty: e.qty }))
+
+  for (const [i, m] of (saved.models || []).entries()) {
+    if (i > 0) addModel()
+    else activeModelIdx.value = 0
+    await nextTick()
+    const model = activeModel.value
+    try {
+      const res = await fetch(`${api.baseUrl}/customer/quotes/${id}/files/${i}`, { credentials: 'include' })
+      if (!res.ok) throw new Error(String(res.status))
+      const file = new File([await res.blob()], m.name || `modelo_${i + 1}.stl`)
+      quoteMessage.value = `Cargando ${file.name}…`
+      const ok = await viewerRef.value?.loadFileFor(file)
+      if (ok && model) {
+        model.qty = m.qty || 1
+        if (m.scale_factor && m.scale_factor !== 1) viewerRef.value?.setScale(model.id, m.scale_factor)
+      }
+    } catch {
+      notify(`No pudimos abrir ${m.name || 'un archivo'} de la cotización.`, 'error')
+    }
+  }
+  activeModelIdx.value = 0
+  loadingQuote.value = false
+  notify(`Abrimos «${saved.name}». Revisa los datos y pulsa Calcular precio.`, 'success', 7000)
+  router.replace({ query: {} })
+}
+
 onMounted(async () => {
   loadingQuote.value = true
   quoteMessage.value = 'Cargando materiales y configuración...'
+  api.checkAuth().then(a => { account.value = { role: a.role, verified: !!a.user?.email_verified } })
   await fetchSettings()
   await fetchMaterials()
   loadingQuote.value = false
   calculatePrice()
+  const quoteId = Number(route.query.cotizacion)
+  if (quoteId) await restoreQuote(quoteId)
 })
 
 const selectedTechnology = ref('FDM')
@@ -738,6 +833,23 @@ onUnmounted(() => {
               </button>
             </div>
             <p v-if="models.length >= MAX_MODELS" id="quote-max-models" class="mt-2 text-sm text-muted">Llegaste al máximo de {{ MAX_MODELS }} modelos por pedido.</p>
+
+            <!-- Guardar para retomar después -->
+            <div v-if="models.some(m => m.hasModel)" class="mt-3">
+              <template v-if="canSaveQuote">
+                <button v-if="!saveOpen" type="button" class="text-sm font-semibold text-brand hover:underline" @click="openSave">Guardar esta cotización para después</button>
+                <form v-else class="flex flex-wrap items-end gap-2" @submit.prevent="saveQuote">
+                  <div class="flex-1 min-w-[12rem]">
+                    <label for="save-quote-name" class="block text-sm font-medium mb-1">Nombre de la cotización</label>
+                    <input id="save-quote-name" v-model="saveName" maxlength="120" class="field h-10">
+                  </div>
+                  <button type="submit" class="btn-primary btn-sm" :disabled="savingQuote">{{ savingQuote ? 'Guardando…' : 'Guardar' }}</button>
+                  <button type="button" class="btn-outlined btn-sm" :disabled="savingQuote" @click="saveOpen = false">Cancelar</button>
+                </form>
+              </template>
+              <p v-else-if="account.role === 'customer'" class="text-sm text-muted"><router-link to="/customer/dashboard" class="font-semibold text-brand hover:underline">Verifica tu correo</router-link> para guardar cotizaciones.</p>
+              <p v-else-if="account.role !== 'admin'" class="text-sm text-muted"><router-link to="/admin/login?registro=1" class="font-semibold text-brand hover:underline">Crea tu cuenta</router-link> para guardar esta cotización y retomarla cuando quieras.</p>
+            </div>
           </div>
 
           <!-- Estado de carga / mensaje -->

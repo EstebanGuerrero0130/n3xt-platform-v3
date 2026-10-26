@@ -47,6 +47,10 @@ Route::middleware('auth:customer')->group(function () {
     Route::middleware('throttle:3,1')->post('/customer/verify/resend', [CustomerAuthController::class, 'resendCode']);
     Route::middleware('throttle:10,1')->post('/customer/catalog-orders', [CustomerAuthController::class, 'catalogOrder']);
     Route::middleware('throttle:10,1')->post('/customer/orders/{id}/repeat', [CustomerAuthController::class, 'repeatOrder']);
+    Route::get('/customer/quotes', [\App\Http\Controllers\SavedQuoteController::class, 'index']);
+    Route::middleware('throttle:10,1')->post('/customer/quotes', [\App\Http\Controllers\SavedQuoteController::class, 'store']);
+    Route::get('/customer/quotes/{id}/files/{index}', [\App\Http\Controllers\SavedQuoteController::class, 'file'])->whereNumber(['id', 'index']);
+    Route::delete('/customer/quotes/{id}', [\App\Http\Controllers\SavedQuoteController::class, 'destroy'])->whereNumber('id');
     Route::post('/customer/logout', [CustomerAuthController::class, 'logout']);
 });
 

@@ -318,7 +318,25 @@ const removeModel = (key: ModelKey) => {
   needsUpdate = true
 }
 
-defineExpose({ removeModel })
+/**
+ * Carga programática (reabrir una cotización guardada): espera a que el archivo
+ * quede procesado en el modelo activo. true si cargó, false si falló.
+ */
+let pendingLoad: ((ok: boolean) => void) | null = null
+const settleLoad = (ok: boolean) => { const r = pendingLoad; pendingLoad = null; r?.(ok) }
+const loadFileFor = (file: File): Promise<boolean> => new Promise(resolve => {
+  pendingLoad = resolve
+  loadFile(file)
+})
+/** Escala uniforme de un modelo ya cargado (la que tenía al guardarse). */
+const setScale = (key: ModelKey, factor: number) => {
+  const entry = entries.get(key)
+  if (!entry || !(factor > 0)) return
+  entry.group.scale.set(factor, factor, factor)
+  emitTransformation(key)
+}
+
+defineExpose({ removeModel, loadFileFor, setScale })
 
 const autoOrient = (key: ModelKey | null = shownKey) => {
     if (key === null) return
@@ -638,11 +656,13 @@ const processGeometry = (geometry: any, file: File, key: ModelKey) => {
   }
 
   emit('file-ready', file, key)
+  settleLoad(true)
 }
 
 const loadFile = async (file: File) => {
   if (loadingKey.value !== null) {
     emit('error', 'Espera a que termine de cargar el archivo anterior.')
+    settleLoad(false)
     return
   }
   const key = props.activeKey
@@ -655,16 +675,18 @@ const loadFile = async (file: File) => {
       ? 'Formato .3MF aún no soportado. Exporta tu modelo como .STL u .OBJ.'
       : 'Formato no admitido. Solo aceptamos archivos .STL u .OBJ.'
     emit('error', msg)
+    settleLoad(false)
     return
   }
 
   if (file.size > MAX_FILE_MB * 1024 * 1024) {
     emit('error', `El archivo excede el máximo de ${MAX_FILE_MB}MB. Reduce la resolución del mesh o comprime el modelo.`)
+    settleLoad(false)
     return
   }
 
   await loadThree()
-  if (isUnmounted || !scene) return
+  if (isUnmounted || !scene) { settleLoad(false); return }
 
   loadingKey.value = key
   emit('loading', true)
@@ -676,6 +698,7 @@ const loadFile = async (file: File) => {
       loadingKey.value = null
       emit('loading', false)
       emit('error', 'El procesamiento tardó demasiado. Intenta con un archivo más ligero o verifica tu conexión.')
+      settleLoad(false)
     }
   }, 15000) // 15 segundos máximo
 
@@ -685,6 +708,7 @@ const loadFile = async (file: File) => {
     if (loadingTimeout) clearTimeout(loadingTimeout)
     emit('loading', false)
     emit('error', 'Error al procesar el archivo 3D. Verifica que el formato sea correcto.')
+    settleLoad(false)
   }
 
   const reader = new FileReader()
