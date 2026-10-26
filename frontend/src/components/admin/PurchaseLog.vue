@@ -5,6 +5,7 @@ import { api } from '../../services/api'
 import { inject } from 'vue'
 import logger from '../../utils/logger'
 import { writePrintDocument } from '../../services/pdfPrint'
+import AdminModal from './AdminModal.vue'
 
 const showNotify: any = inject('showNotify')
 
@@ -380,6 +381,25 @@ const handleDeletePurchase = async (id: any) => {
   _timers.push(timer1)
 }
 
+const CATEGORIES: Record<string, { label: string; cls: string }> = {
+  inventory_restock: { label: 'Stock', cls: 'bg-success/10 text-success' },
+  maintenance: { label: 'Mantenimiento', cls: 'bg-warning/10 text-warning' },
+  tools: { label: 'Herramientas', cls: 'bg-[#3b82f6]/15 text-[#2563eb] dark:text-[#93c5fd]' },
+  office: { label: 'Oficina', cls: 'bg-surface-2 text-ink' },
+}
+const categoryOf = (c: string) => CATEGORIES[c] ?? { label: c || 'Otro', cls: 'bg-surface-2 text-ink' }
+const money = (n: any) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CO')
+const MATERIAL_TYPES = [
+  { type: 'material', label: 'Material', category: 'FDM', unit: 'g' },
+  { type: 'product', label: 'Producto', category: 'PROD', unit: 'unid' },
+  { type: 'utility', label: 'Insumo', category: 'UTIL', unit: 'unid' },
+]
+const selectedUnit = computed(() => isNewMaterial.value
+  ? newPurchase.value.material_data.unit
+  : (props.inventory.find((m: any) => m.id === newPurchase.value.material_id)?.unit || 'ud'))
+const totalAmount = computed(() => (Number(newPurchase.value.units) || 0) * (Number(newPurchase.value.unit_amount) || 0))
+const unitCost = computed(() => totalAmount.value > 0 ? Number(newPurchase.value.total_cost) / totalAmount.value : 0)
+
 const stats = computed(() => {
   return {
     total: filteredPurchases.value.reduce((acc: any, p: any) => acc + parseFloat(p.total_cost), 0),
@@ -395,430 +415,186 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="animate-in fade-in slide-in-from-bottom-6 duration-700 p-4">
-    <!-- Skeleton Loading -->
-    <div v-if="loading" class="animate-pulse">
-      <!-- Header Skeleton -->
-      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-8 px-4">
-        <div class="space-y-3">
-          <div class="h-10 w-64 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-          <div class="h-4 w-48 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-        </div>
-        <div class="h-14 w-96 bg-gray-200 dark:bg-[#2a3040] rounded-[2rem]"></div>
-      </div>
-
-      <!-- KPI Cards Skeleton -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12 px-4">
-        <div v-for="i in 4" :key="'kpi-'+i" class="bg-gray-100 dark:bg-[#151a22] p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-200/50 dark:border-[#21262d]">
-          <div class="h-3 w-24 bg-gray-200 dark:bg-[#2a3040] rounded-full mx-auto mb-4"></div>
-          <div class="h-8 w-32 bg-gray-200 dark:bg-[#2a3040] rounded-full mx-auto"></div>
-        </div>
-      </div>
-
-      <!-- Cards Grid Skeleton -->
-      <div class="px-4 pb-20">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="i in 6" :key="'card-'+i" class="bg-gray-100 dark:bg-[#151a22] rounded-[2.5rem] border border-gray-200/50 dark:border-[#21262d] p-8 space-y-6">
-            <div class="flex justify-between items-start">
-              <div class="space-y-2">
-                <div class="h-3 w-28 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-                <div class="h-5 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-              </div>
-              <div class="h-10 w-10 bg-gray-200 dark:bg-[#2a3040] rounded-2xl"></div>
-            </div>
-            <div class="h-6 w-3/4 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-            <div class="flex items-center gap-2">
-              <div class="h-5 w-5 bg-gray-200 dark:bg-[#2a3040] rounded-lg"></div>
-              <div class="h-3 w-32 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-            </div>
-            <div class="bg-gray-200/50 dark:bg-[#1a1f2e] rounded-2xl p-4 flex justify-between">
-              <div class="space-y-2">
-                <div class="h-2 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-                <div class="h-4 w-20 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-              </div>
-              <div class="space-y-2 text-right">
-                <div class="h-2 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full ml-auto"></div>
-                <div class="h-4 w-20 bg-gray-200 dark:bg-[#2a3040] rounded-full ml-auto"></div>
-              </div>
-            </div>
-            <div class="flex justify-between items-end pt-2">
-              <div class="space-y-2">
-                <div class="h-2 w-16 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-                <div class="h-7 w-24 bg-gray-200 dark:bg-[#2a3040] rounded-full"></div>
-              </div>
-              <div class="h-12 w-12 bg-gray-200 dark:bg-[#2a3040] rounded-2xl"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Real Content -->
-    <template v-else>
-    <!-- Header -->
-    <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-8 px-4">
+  <div class="space-y-8">
+    <header class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
       <div>
-        <h2 class="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter uppercase mb-2">Registro de Compras</h2>
-        <div class="flex items-center gap-3">
-          <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-          <p class="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest text-[10px] md:text-[10px]">Trazabilidad financiera y operativa</p>
-        </div>
+        <h1 class="admin-title">Compras <span class="text-brand">y gastos</span></h1>
+        <p class="admin-lead">Material, repuestos y gastos del taller. Una compra de stock suma existencias al inventario.</p>
       </div>
-      
-      <!-- Filtros y Botones -->
-      <div class="flex flex-col sm:flex-row flex-wrap items-center gap-4 bg-white dark:bg-gray-900 p-3 md:p-4 rounded-2xl md:rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-sm w-full xl:w-auto">
-        <div class="flex items-center gap-2 px-4 border-b sm:border-b-0 sm:border-r border-gray-100 dark:border-white/5 w-full sm:w-auto pb-2 sm:pb-0">
-            <label class="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase">Desde</label>
-            <input v-model="dateFilter.start" type="date" class="bg-transparent border-none text-xs font-bold text-gray-900 dark:text-white outline-none flex-1">
-        </div>
-        <div class="flex items-center gap-2 px-4 border-b sm:border-b-0 sm:border-r border-gray-100 dark:border-white/5 w-full sm:w-auto pb-2 sm:pb-0">
-            <label class="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase">Hasta</label>
-            <input v-model="dateFilter.end" type="date" class="bg-transparent border-none text-xs font-bold text-gray-900 dark:text-white outline-none flex-1">
-        </div>
-        <div class="flex gap-2 w-full sm:w-auto">
-            <button class="flex-1 sm:flex-none p-4 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 rounded-xl md:rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2" @click="generatePDFReport">
-                <span class="text-[10px] font-black uppercase tracking-widest">PDF</span>
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            </button>
-            <button class="flex-[2] sm:flex-none px-6 md:px-8 py-4 bg-gray-900 dark:bg-primary text-white rounded-xl md:rounded-2xl shadow-xl shadow-black/10 hover:bg-primary dark:hover:bg-white dark:hover:text-primary transition-all active:scale-95 flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest" @click="showNewPurchaseModal = true">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nueva Compra
-            </button>
-        </div>
+      <div class="flex flex-wrap gap-3">
+        <button type="button" class="btn-outlined btn-lg" :disabled="!filteredPurchases.length" @click="generatePDFReport">Reporte PDF</button>
+        <button type="button" class="btn-primary btn-lg" @click="showNewPurchaseModal = true">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>
+          Registrar compra
+        </button>
+      </div>
+    </header>
+
+    <div class="admin-card grid gap-4 sm:grid-cols-2 lg:max-w-xl">
+      <div>
+        <label for="purchases-from" class="admin-label mb-2">Desde</label>
+        <input id="purchases-from" v-model="dateFilter.start" type="date" class="field">
+      </div>
+      <div>
+        <label for="purchases-to" class="admin-label mb-2">Hasta</label>
+        <input id="purchases-to" v-model="dateFilter.end" type="date" class="field">
       </div>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12 px-4">
-      <div class="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none flex flex-col justify-between group hover:shadow-xl transition-all">
-        <p class="text-[10px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Gasto Periodo</p>
-        <h3 class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter text-center">$ {{ stats.total.toLocaleString() }}</h3>
-      </div>
-      <div class="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none flex flex-col justify-between group hover:shadow-xl transition-all">
-        <p class="text-[10px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Stock</p>
-        <h3 class="text-2xl md:text-4xl font-black text-primary tracking-tighter text-center">$ {{ stats.inventory.toLocaleString() }}</h3>
-      </div>
-      <div class="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none flex flex-col justify-between group hover:shadow-xl transition-all">
-        <p class="text-[10px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Mant.</p>
-        <h3 class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter text-center">$ {{ stats.maintenance.toLocaleString() }}</h3>
-      </div>
-      <div class="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none flex flex-col justify-between group hover:shadow-xl transition-all">
-        <p class="text-[10px] md:text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center">Registros</p>
-        <h3 class="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter text-center">{{ stats.count }}</h3>
-      </div>
+    <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div class="admin-card"><dt class="admin-label">Gasto del periodo</dt><dd class="mt-2 admin-kpi">{{ money(stats.total) }}</dd></div>
+      <div class="admin-card"><dt class="admin-label">En stock</dt><dd class="mt-2 admin-kpi">{{ money(stats.inventory) }}</dd></div>
+      <div class="admin-card"><dt class="admin-label">Mantenimiento y herramientas</dt><dd class="mt-2 admin-kpi">{{ money(stats.maintenance) }}</dd></div>
+      <div class="admin-card"><dt class="admin-label">Registros</dt><dd class="mt-2 admin-kpi">{{ stats.count }}</dd></div>
+    </dl>
+
+    <div v-if="loading" class="admin-card space-y-3" aria-hidden="true">
+      <div v-for="i in 4" :key="i" class="h-12 rounded-[var(--radius-control)] bg-surface-2 animate-pulse"></div>
     </div>
 
-    <!-- Historial Estilo Cards Premium -->
-    <div class="px-4 pb-20">
-      <div v-if="filteredPurchases.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div
-v-for="p in filteredPurchases" :key="p.id" 
-             class="group relative bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm dark:shadow-none hover:shadow-2xl hover:shadow-gray-200/50 dark:hover:border-primary/20 transition-all duration-500 hover:-translate-y-1 overflow-hidden">
-          
-          <!-- Decoración de Fondo -->
-          <div class="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 dark:bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-          
-          <!-- Badge de Fecha y Categoría -->
-          <div class="flex justify-between items-start mb-6 relative z-10">
-            <div class="flex flex-col gap-1">
-              <span class="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em]">{{ new Date(p.purchase_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) }}</span>
-              <div
-:class="[
-                'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border inline-block',
-                p.category === 'inventory_restock' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20' : 
-                p.category === 'maintenance' ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20' : 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-500/20'
-              ]">
-                {{ p.category === 'inventory_restock' ? 'Stock' : p.category === 'maintenance' ? 'Mant.' : 'Herram.' }}
-              </div>
-            </div>
-            <button 
-                :class="[
-                  'w-10 h-10 rounded-2xl transition-all flex items-center justify-center shadow-sm',
-                  confirmingDeleteId === p.id ? 'bg-rose-600 text-white animate-pulse scale-110' : 'bg-gray-50 text-gray-300 hover:bg-rose-50 hover:text-rose-500'
-                ]" 
-                @click="handleDeletePurchase(p.id)"
-            >
-                <svg v-if="confirmingDeleteId !== p.id" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                <span v-else class="text-[8px] font-black">OK?</span>
-            </button>
-          </div>
-
-          <!-- Info Principal -->
-          <div class="space-y-4 mb-8 relative z-10">
-            <h4 class="text-lg font-black text-gray-900 dark:text-white leading-tight uppercase tracking-tighter group-hover:text-primary transition-colors">{{ p.item_name }}</h4>
-            <div class="flex items-center gap-2">
-              <div class="w-5 h-5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-[10px] font-black text-indigo-500">P</div>
-              <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ p.supplier || 'Proveedor Eventual' }}</span>
-            </div>
-          </div>
-
-          <!-- Detalles de Cantidad -->
-          <div class="bg-gray-50/50 dark:bg-white/5 rounded-2xl p-4 flex justify-between items-center mb-6 border border-gray-100/50 dark:border-white/5">
-            <div class="flex flex-col">
-              <span class="text-[8px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-widest">Carga Detalle</span>
-              <span class="text-xs font-black text-gray-800 dark:text-gray-200">
-                {{ parseFloat(p.units).toLocaleString() }} 
-                <span class="text-[10px] text-gray-400 dark:text-gray-600 font-bold">{{ p.category === 'inventory_restock' ? 'uds' : 'piezas' }}</span>
-              </span>
-            </div>
-            <div class="text-right">
-              <span class="text-[8px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-widest">Contenido</span>
-              <p class="text-xs font-black text-primary">
-                {{ parseFloat(p.unit_amount).toLocaleString() }} 
-                <span class="text-[10px] opacity-70">{{ p.material ? p.material.unit : (p.category === 'inventory_restock' ? 'ud' : 'ud') }}</span>
-              </p>
-            </div>
-          </div>
-
-          <!-- Footer de Tarjeta: Precio -->
-          <div class="flex justify-between items-end">
-            <div class="flex flex-col">
-              <span class="text-[8px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-1">Inversión Total</span>
-              <span class="text-2xl font-black text-gray-900 dark:text-white tracking-tighter">$ {{ parseFloat(p.total_cost).toLocaleString() }}</span>
-            </div>
-            <div class="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:translate-x-0 translate-x-4 transition-all duration-500">
-               <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-            </div>
-          </div>
-        </div>
+    <section v-else class="admin-card" aria-label="Compras">
+      <p v-if="!filteredPurchases.length" class="py-12 text-center text-muted">No hay compras registradas en estas fechas.</p>
+      <div v-else class="overflow-x-auto -mx-1 px-1">
+        <table class="admin-table min-w-[46rem]">
+          <thead><tr><th>Fecha</th><th>Compra</th><th>Tipo</th><th>Cantidad</th><th>Total</th><th class="sr-only">Acciones</th></tr></thead>
+          <tbody>
+            <tr v-for="p in filteredPurchases" :key="p.id">
+              <td class="tabular-nums whitespace-nowrap">{{ new Date(p.purchase_date.substring(0, 10) + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) }}</td>
+              <td>
+                <span class="block font-medium truncate max-w-[18rem]">{{ p.item_name }}</span>
+                <span class="block text-sm text-muted truncate max-w-[18rem]">{{ p.supplier || 'Sin proveedor' }}</span>
+              </td>
+              <td><span :class="['badge', categoryOf(p.category).cls]">{{ categoryOf(p.category).label }}</span></td>
+              <td class="tabular-nums whitespace-nowrap text-sm">{{ parseFloat(p.units).toLocaleString('es-CO') }} × {{ parseFloat(p.unit_amount).toLocaleString('es-CO') }} {{ p.material ? p.material.unit : 'ud' }}</td>
+              <td class="tabular-nums font-semibold whitespace-nowrap">{{ money(p.total_cost) }}</td>
+              <td class="text-right">
+                <button
+                  type="button"
+                  :class="['btn-sm rounded-full px-3 font-semibold transition-colors', confirmingDeleteId === p.id ? 'bg-danger text-white' : 'text-muted hover:text-danger hover:bg-danger/10']"
+                  :aria-label="confirmingDeleteId === p.id ? `Confirmar: eliminar ${p.item_name}` : `Eliminar ${p.item_name}`"
+                  @click="handleDeletePurchase(p.id)"
+                >{{ confirmingDeleteId === p.id ? '¿Eliminar?' : 'Eliminar' }}</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+    </section>
 
-      <!-- Empty State -->
-      <div v-else class="py-32 flex flex-col items-center justify-center bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-200">
-        <svg class="w-16 h-16 mb-6 text-gray-300 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
-        <p class="text-gray-400 font-black uppercase tracking-[0.3em] text-xs">Sin registros en este periodo</p>
-      </div>
-    </div>
+    <!-- Registrar compra -->
+    <AdminModal :show="showNewPurchaseModal" title="Registrar compra" description="Si es material del taller, súmalo al inventario como stock." size="lg" @close="showNewPurchaseModal = false">
+      <form id="purchase-form" class="grid gap-6 md:grid-cols-2" novalidate @submit.prevent="handleAddPurchase">
+        <div class="space-y-5">
+          <div>
+            <label for="purchase-category" class="admin-label mb-2">Tipo de compra</label>
+            <select id="purchase-category" v-model="newPurchase.category" class="field">
+              <option value="inventory_restock">Stock (material o insumo)</option>
+              <option value="maintenance">Mantenimiento y repuestos</option>
+              <option value="tools">Herramientas y maquinaria</option>
+              <option value="office">Oficina y administrativo</option>
+            </select>
+          </div>
 
-    <div v-if="showNewPurchaseModal" class="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-[100] flex items-center justify-center p-0 md:p-4 overflow-y-auto no-scrollbar">
-      <div class="bg-white md:rounded-[3rem] w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in duration-500 my-auto border border-white/20">
-        <div class="p-6 md:p-12 max-h-[95vh] overflow-y-auto no-scrollbar">
-          
-          <!-- Header Premium -->
-          <div class="flex justify-between items-center mb-10 md:mb-12">
-            <div class="flex items-center gap-6">
-                <div class="w-16 h-16 bg-gray-900 rounded-[1.5rem] flex items-center justify-center shadow-2xl shadow-black/20 transform -rotate-6"><svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
+          <template v-if="newPurchase.category === 'inventory_restock'">
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Ítem del inventario">
+              <button type="button" class="chip !min-h-9 !px-3 text-sm" :aria-pressed="!isNewMaterial" @click="isNewMaterial = false">Ítem existente</button>
+              <button type="button" class="chip !min-h-9 !px-3 text-sm" :aria-pressed="isNewMaterial" @click="isNewMaterial = true">Ítem nuevo</button>
+            </div>
+
+            <div v-if="!isNewMaterial">
+              <label for="purchase-material" class="admin-label mb-2">Ítem</label>
+              <select id="purchase-material" v-model="newPurchase.material_id" class="field">
+                <option value="">Elige del inventario…</option>
+                <option v-for="m in inventory" :key="m.id" :value="m.id">{{ m.name }} ({{ m.category }})</option>
+              </select>
+            </div>
+
+            <template v-else>
+              <fieldset>
+                <legend class="admin-label mb-2">Clase de ítem</legend>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="t in MATERIAL_TYPES" :key="t.type" type="button" class="chip !min-h-9 !px-3 text-sm"
+                    :aria-pressed="newPurchase.material_data.type === t.type"
+                    @click="newPurchase.material_data.type = t.type; newPurchase.material_data.category = t.category; newPurchase.material_data.unit = t.unit"
+                  >{{ t.label }}</button>
+                </div>
+              </fieldset>
+              <div class="grid grid-cols-2 gap-3">
+                <div v-if="newPurchase.material_data.type === 'material'">
+                  <label for="purchase-tech" class="admin-label mb-2">Tecnología</label>
+                  <select id="purchase-tech" v-model="newPurchase.material_data.category" class="field" @change="newPurchase.material_data.unit = newPurchase.material_data.category === 'SLA' ? 'ml' : 'g'">
+                    <option value="FDM">Filamento (FDM)</option>
+                    <option value="SLA">Resina (SLA)</option>
+                  </select>
+                </div>
                 <div>
-                  <h3 class="text-3xl md:text-4xl font-black text-gray-900 uppercase tracking-tighter leading-none">Registrar Compra</h3>
-                  <p class="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                    Auditoría de Insumos y Suministros
-                  </p>
+                  <label for="purchase-unit" class="admin-label mb-2">Unidad</label>
+                  <select id="purchase-unit" v-model="newPurchase.material_data.unit" class="field">
+                    <option value="g">Gramos (g)</option>
+                    <option value="ml">Mililitros (ml)</option>
+                    <option value="unid">Unidades</option>
+                  </select>
                 </div>
-            </div>
-            <button class="w-12 h-12 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-gray-900 hover:text-white transition-all duration-500 shadow-inner" @click="showNewPurchaseModal = false">
-              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+              </div>
+              <div>
+                <label for="purchase-name" class="admin-label mb-2">Nombre</label>
+                <input id="purchase-name" v-model="newPurchase.material_data.name" type="text" placeholder="Ej. PLA Pro Negro" class="field">
+              </div>
+              <div class="flex items-center gap-3">
+                <label for="purchase-color" class="admin-label">Color</label>
+                <input id="purchase-color" v-model="newPurchase.material_data.color" type="color" class="h-10 w-14 rounded-[var(--radius-control)] border border-line bg-canvas p-1">
+                <span class="ml-auto text-sm text-muted">Código: <span class="font-mono text-ink">{{ newPurchase.material_data.id || '—' }}</span></span>
+              </div>
+            </template>
+          </template>
+
+          <div v-else>
+            <label for="purchase-desc" class="admin-label mb-2">Qué compraste</label>
+            <input id="purchase-desc" v-model="newPurchase.item_name" type="text" placeholder="Ej. Correa GT2 6 mm" class="field">
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
-            <!-- Columna Izquierda: Origen y Tipo -->
-            <div class="lg:col-span-5 space-y-8">
-                <div class="bg-gray-50/50 p-8 rounded-[2.5rem] border border-gray-100 space-y-6">
-                    <div class="space-y-3">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            Categoria de Gasto
-                        </label>
-                        <select v-model="newPurchase.category" class="w-full bg-white border border-gray-100 rounded-2xl p-5 font-black text-xs text-gray-900 outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
-                            <option value="inventory_restock">Reabastecer Stock</option>
-                            <option value="maintenance">Mantenimiento / Repuestos</option>
-                            <option value="tools">Herramientas / Maquinaria</option>
-                            <option value="office">Administrativo / Oficina</option>
-                        </select>
-                    </div>
-
-                    <div v-if="newPurchase.category === 'inventory_restock'" class="pt-4 border-t border-gray-100 space-y-6">
-                        <div class="flex items-center justify-between">
-                            <label class="text-[10px] font-black text-primary uppercase tracking-widest">Vincular Item</label>
-                            <button class="text-[8px] font-black uppercase tracking-widest px-4 py-2 bg-white border border-primary/20 rounded-full text-primary hover:bg-primary hover:text-white transition-all shadow-md" @click="isNewMaterial = !isNewMaterial">
-                                {{ isNewMaterial ? 'Seleccionar Existente' : 'Nuevo Material' }}
-                            </button>
-                        </div>
-
-                        <div v-if="!isNewMaterial" class="animate-in fade-in slide-in-from-left-4">
-                            <select v-model="newPurchase.material_id" class="w-full bg-white border border-gray-100 rounded-2xl p-5 font-black text-xs text-gray-900 outline-none shadow-sm focus:ring-4 focus:ring-primary/10">
-                                <option value="">Selecciona del Inventario...</option>
-                                <option v-for="m in inventory" :key="m.id" :value="m.id">{{ m.name }} ({{ m.category }})</option>
-                            </select>
-                        </div>
-
-                        <div v-else class="space-y-6 animate-in zoom-in duration-500">
-                            <!-- Tipo de Registro (Cerebro del formulario) -->
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                    Tipo de Registro
-                                </label>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <button 
-                                        type="button"
-                                        :class="[
-                                            'py-3 rounded-xl text-[8px] font-black uppercase transition-all border',
-                                            newPurchase.material_data.type === 'material' ? 'bg-primary text-white border-primary shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                                        ]"
-                                        @click="() => {
-                                            newPurchase.material_data.type = 'material';
-                                            newPurchase.material_data.category = 'FDM';
-                                            newPurchase.material_data.unit = 'g';
-                                        }"
-                                    >Material</button>
-                                    <button 
-                                        type="button"
-                                        :class="[
-                                            'py-3 rounded-xl text-[8px] font-black uppercase transition-all border',
-                                            newPurchase.material_data.type === 'product' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                                        ]"
-                                        @click="() => {
-                                            newPurchase.material_data.type = 'product';
-                                            newPurchase.material_data.category = 'PROD';
-                                            newPurchase.material_data.unit = 'unid';
-                                        }"
-                                    >Producto</button>
-                                    <button 
-                                        type="button"
-                                        :class="[
-                                            'py-3 rounded-xl text-[8px] font-black uppercase transition-all border',
-                                            newPurchase.material_data.type === 'utility' ? 'bg-amber-500 text-white border-amber-500 shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                                        ]"
-                                        @click="() => {
-                                            newPurchase.material_data.type = 'utility';
-                                            newPurchase.material_data.category = 'UTIL';
-                                            newPurchase.material_data.unit = 'unid';
-                                        }"
-                                    >Insumo</button>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4">
-                                <div v-if="newPurchase.material_data.type === 'material'" class="space-y-2">
-                                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2">Tecnología</label>
-                                    <select v-model="newPurchase.material_data.category" class="w-full bg-white border border-gray-100 rounded-2xl p-4 font-black text-[10px] text-gray-900 outline-none shadow-sm uppercase" @change="newPurchase.material_data.unit = newPurchase.material_data.category === 'SLA' ? 'ml' : 'g'">
-                                        <option value="FDM">Filamento (FDM)</option>
-                                        <option value="SLA">Resina (SLA)</option>
-                                    </select>
-                                </div>
-                                <div :class="newPurchase.material_data.type === 'material' ? 'col-span-1' : 'col-span-2'" class="space-y-2">
-                                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2">Unidad de Medida</label>
-                                    <select v-model="newPurchase.material_data.unit" class="w-full bg-white border border-gray-100 rounded-2xl p-4 font-black text-[10px] text-gray-900 outline-none shadow-sm uppercase">
-                                        <option value="g">Gramos (g)</option>
-                                        <option value="ml">Mililitros (ml)</option>
-                                        <option value="unid">Unidades (ud)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-black text-gray-400 uppercase ml-2">Nombre Identificador</label>
-                                <input v-model="newPurchase.material_data.name" type="text" placeholder="Ej: PLA Pro Negro" class="w-full bg-white border border-gray-100 rounded-2xl p-5 font-black text-xs text-gray-900 outline-none shadow-sm focus:ring-4 focus:ring-primary/10">
-                            </div>
-
-                            <div class="flex items-center gap-4 bg-white/50 p-4 rounded-2xl border border-dashed border-gray-200">
-                                <div class="flex items-center gap-2 flex-1">
-                                    <input v-model="newPurchase.material_data.color" type="color" class="w-8 h-8 rounded-lg border-none bg-transparent cursor-pointer">
-                                    <span class="text-[10px] font-black text-gray-400 uppercase">Visual</span>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-[8px] font-black text-gray-300 uppercase block">ID Sugerido</span>
-                                    <span class="text-[10px] font-black text-gray-400 italic font-mono">{{ newPurchase.material_data.id || '---' }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div v-else class="space-y-3 animate-in fade-in">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            Descripcion General
-                        </label>
-                        <input v-model="newPurchase.item_name" type="text" placeholder="Ej: Correa GT2 6mm" class="w-full bg-white border border-gray-100 rounded-2xl p-5 font-bold text-sm text-gray-900 outline-none shadow-sm focus:ring-4 focus:ring-primary/10">
-                    </div>
-                </div>
-
-                <!-- Proveedor Card -->
-                <div class="bg-indigo-50/30 p-8 rounded-[2.5rem] border border-indigo-100/50 space-y-6">
-                    <div class="space-y-3">
-                        <label class="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                            Proveedor
-                        </label>
-                        <select class="w-full bg-white border border-indigo-100 rounded-2xl p-4 font-black text-xs text-gray-900 outline-none shadow-sm" @change="handleSelectSupplier">
-                            <option value="">-- Nuevo Proveedor --</option>
-                            <option v-for="s in suppliers" :key="s.id" :value="s.name">{{ s.name }}</option>
-                        </select>
-                        <input v-model="newPurchase.supplier" type="text" placeholder="Nombre Comercial" class="w-full bg-white border border-indigo-100 rounded-2xl p-4 font-bold text-xs text-gray-900 outline-none shadow-sm">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Columna Derecha: Cantidades y Análisis Económico -->
-            <div class="lg:col-span-7 space-y-8">
-                <div class="grid grid-cols-2 gap-6 bg-gray-900 p-8 rounded-[3rem] shadow-2xl shadow-black/20 relative overflow-hidden">
-                    <!-- Cantidades -->
-                    <div class="space-y-3 relative z-10">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Nº Unidades</label>
-                        <input v-model.number="newPurchase.units" type="number" class="w-full bg-white/10 border border-white/10 rounded-2xl p-5 font-black text-2xl text-white outline-none focus:ring-4 focus:ring-primary/30">
-                    </div>
-                    <div class="space-y-3 relative z-10">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Contenido Unit.</label>
-                        <input v-model.number="newPurchase.unit_amount" type="number" class="w-full bg-white/10 border border-white/10 rounded-2xl p-5 font-black text-2xl text-white outline-none focus:ring-4 focus:ring-primary/30">
-                    </div>
-
-                    <div class="col-span-2 pt-6 border-t border-white/10 relative z-10">
-                        <div class="flex justify-between items-center mb-6">
-                            <span class="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Carga Total de Stock</span>
-                            <span class="text-3xl font-black text-white tracking-tighter">
-                                {{ (newPurchase.units * newPurchase.unit_amount).toLocaleString() }} 
-                                <span class="text-xs text-gray-500 uppercase">{{ isNewMaterial ? newPurchase.material_data.unit : (inventory.find((m: any) => m.id === newPurchase.material_id)?.unit || 'g') }}</span>
-                            </span>
-                        </div>
-                        
-                        <div class="space-y-3">
-                            <label class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Inversión Total ($)</label>
-                            <input v-model.number="newPurchase.total_cost" type="number" class="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 font-black text-4xl text-emerald-400 outline-none focus:ring-4 focus:ring-emerald-500/20">
-                        </div>
-                    </div>
-
-                    <!-- Decorative logo in background -->
-                    <div class="absolute -right-8 -bottom-8 w-40 h-40 opacity-10 text-white pointer-events-none">
-                        <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
-                    </div>
-                </div>
-
-                <!-- Gadget de Análisis de Costo -->
-                <div v-if="newPurchase.total_cost > 0 && (newPurchase.units * newPurchase.unit_amount) > 0" class="bg-emerald-50 p-8 rounded-[2.5rem] border border-emerald-100 flex flex-col md:flex-row justify-between items-center gap-6 animate-in zoom-in duration-500 shadow-xl shadow-emerald-500/5">
-                    <div class="text-center md:text-left">
-                        <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Precio Unitario Calculado</p>
-                        <p class="text-3xl font-black text-emerald-900 tracking-tighter">
-                            $ {{ (newPurchase.total_cost / (newPurchase.units * newPurchase.unit_amount)).toLocaleString(undefined, {minimumFractionDigits: 2}) }}
-                            <span class="text-xs text-emerald-500 font-bold uppercase ml-1">/ {{ isNewMaterial ? newPurchase.material_data.unit : (inventory.find((m: any) => m.id === newPurchase.material_id)?.unit || 'ud') }}</span>
-                        </p>
-                    </div>
-                    <div v-if="isNewMaterial && (newPurchase.material_data.unit === 'g' || newPurchase.material_data.unit === 'ml')" class="bg-white/50 px-6 py-4 rounded-2xl border border-emerald-100/50">
-                        <p class="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Costo Proyectado Kg/L</p>
-                        <p class="text-xl font-black text-emerald-600">$ {{ ((newPurchase.total_cost / (newPurchase.units * newPurchase.unit_amount)) * 1000).toLocaleString() }}</p>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                        Fecha de Operacion
-                    </label>
-                    <input v-model="newPurchase.purchase_date" type="date" class="w-full bg-gray-50 border border-gray-100 rounded-2xl p-5 font-black text-sm text-gray-900 outline-none focus:ring-4 focus:ring-primary/10">
-                </div>
-            </div>
+          <div>
+            <label for="purchase-supplier" class="admin-label mb-2">Proveedor</label>
+            <select v-if="suppliers.length" class="field mb-2" aria-label="Elegir un proveedor guardado" @change="handleSelectSupplier">
+              <option value="">Proveedor guardado…</option>
+              <option v-for="sp in suppliers" :key="sp.id" :value="sp.name">{{ sp.name }}</option>
+            </select>
+            <input id="purchase-supplier" v-model="newPurchase.supplier" type="text" placeholder="Nombre del proveedor" class="field">
           </div>
-
-          <!-- Acciones Finales -->
-          <div class="mt-12 md:mt-16 flex flex-col md:flex-row gap-6">
-            <button class="flex-1 py-6 bg-gray-100 text-gray-400 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-gray-200 hover:text-gray-600 transition-all duration-500 flex items-center justify-center gap-3" @click="showNewPurchaseModal = false">
-                SALIR SIN REGISTRAR
-            </button>
-            <button class="flex-[2] py-6 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-black/30 hover:scale-[1.02] hover:shadow-primary/20 active:scale-95 transition-all duration-500 flex items-center justify-center gap-4" @click="handleAddPurchase">
-                REGISTRAR COMPRA COMPLETA
-            </button>
-          </div>
-
         </div>
-      </div>
-    </div>
-  </template>
-</div>
+
+        <div class="space-y-5">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="purchase-units" class="admin-label mb-2">Unidades</label>
+              <input id="purchase-units" v-model.number="newPurchase.units" type="number" min="1" class="field tabular-nums">
+            </div>
+            <div>
+              <label for="purchase-amount" class="admin-label mb-2">Contenido por unidad ({{ selectedUnit }})</label>
+              <input id="purchase-amount" v-model.number="newPurchase.unit_amount" type="number" min="0" class="field tabular-nums">
+            </div>
+          </div>
+          <p class="text-sm text-muted">Total que entra al stock: <span class="font-semibold text-ink tabular-nums">{{ totalAmount.toLocaleString('es-CO') }} {{ selectedUnit }}</span></p>
+          <div>
+            <label for="purchase-cost" class="admin-label mb-2">Valor pagado ($)</label>
+            <input id="purchase-cost" v-model.number="newPurchase.total_cost" type="number" min="0" class="field tabular-nums">
+          </div>
+          <div v-if="unitCost > 0" class="admin-card !p-4 bg-surface">
+            <p class="text-sm text-muted">Costo por {{ selectedUnit }}</p>
+            <p class="text-lg font-bold tabular-nums">${{ unitCost.toLocaleString('es-CO', { maximumFractionDigits: 2 }) }}</p>
+            <p v-if="isNewMaterial && (newPurchase.material_data.unit === 'g' || newPurchase.material_data.unit === 'ml')" class="mt-1 text-sm text-muted">Equivale a {{ money(unitCost * 1000) }} por {{ newPurchase.material_data.unit === 'g' ? 'kg' : 'litro' }}.</p>
+          </div>
+          <div>
+            <label for="purchase-date" class="admin-label mb-2">Fecha</label>
+            <input id="purchase-date" v-model="newPurchase.purchase_date" type="date" class="field">
+          </div>
+        </div>
+      </form>
+      <template #footer>
+        <button type="button" class="btn-outlined" @click="showNewPurchaseModal = false">Cancelar</button>
+        <button type="submit" form="purchase-form" class="btn-primary">Registrar compra</button>
+      </template>
+    </AdminModal>
+  </div>
 </template>
-<style scoped>
-</style>
