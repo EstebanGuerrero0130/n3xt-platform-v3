@@ -5,7 +5,6 @@ import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { srcsetFor } from '../utils/images'
-import { sampleGallery } from '../data/sampleGallery'
 import { usePageMeta } from '../composables/usePageMeta'
 
 usePageMeta({
@@ -133,10 +132,6 @@ const fetchSettings = async () => {
         )
         .filter((item: any) => item.image || item.title)
     }
-    // Sin galería en el panel: trabajos de ejemplo (sin enlace a un detalle que no existe)
-    if (!webSettings.value.gallery.length) {
-      webSettings.value.gallery = sampleGallery.map((w, idx) => ({ ...w, uid: idx, images: [], tags: '' }))
-    }
     if (data?.web?.cloudinary_name) {
       webSettings.value.cloudinary_name = data.web.cloudinary_name
     }
@@ -250,6 +245,13 @@ onUnmounted(() => {
               <span v-if="idx % 6 === 0 && (item.subtitle || item.description)" class="mt-3 block max-w-md text-base leading-relaxed text-white/85 line-clamp-2">{{ item.subtitle || item.description }}</span>
             </span>
           </component>
+        </div>
+
+        <!-- Aún sin trabajos publicados -->
+        <div v-else-if="!webSettings.gallery.length" class="py-24 text-center max-w-md mx-auto">
+          <h2 class="text-3xl font-black uppercase tracking-tight">Pronto, nuevos trabajos</h2>
+          <p class="mt-3 text-lg text-muted">Estamos preparando el portafolio. Mientras tanto, cotiza tu pieza o escríbenos.</p>
+          <router-link to="/quote" class="btn-primary mt-6">Cotizar mi pieza</router-link>
         </div>
 
         <!-- Vacío -->

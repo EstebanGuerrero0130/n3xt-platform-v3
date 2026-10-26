@@ -8,7 +8,6 @@ import BrandTicker from '../components/BrandTicker.vue'
 import AppFooter from '../components/AppFooter.vue'
 import logger from '../utils/logger'
 import { srcsetFor } from '../utils/images'
-import { sampleGallery } from '../data/sampleGallery'
 import {
   HERO_PILL, DEFAULT_HIGHLIGHTS, DEFAULT_PROCESS_STEPS, DEFAULT_PRINT_LINES, DEFAULT_FINISHING_STEPS,
   type HomeHighlight, type HomeStep, type HomePrintLine, type HomeFinishing,
@@ -184,21 +183,10 @@ const applyHomeTexts = (home: any) => {
 const webSettings = ref<WebSettings>({
   social: { tiktok: '#', instagram: '#', facebook: '#', whatsapp: '#', youtube: '#' },
   workshop_status: 'Abierto de lunes a sábado',
-  // Contenido de ejemplo con imágenes del proyecto: se reemplaza por lo que se
-  // configure en el panel (Sitio web). Sin esto, las secciones desaparecían.
-  news: [
-    { t: 'Filamento hecho con residuos de café', d: 'Materiales compuestos con fibra vegetal y residuos de café: menos plástico virgen y un acabado mate con textura propia.', tag: 'Materiales', i: '/assets/n3xt_news_coffee_filament_1778543014372.webp', url: '' },
-    { t: 'La manufactura aditiva llega a las ferias de Bogotá', d: 'Stands de impresión industrial, escáneres y materiales técnicos: la industria nacional apuesta por producir en el país.', tag: 'Eventos', i: '/assets/n3xt_news_colombia_expo_1778543002087.webp', url: '' },
-    { t: 'Hackatones maker en Medellín', d: 'Equipos que diseñan, imprimen y prueban prototipos en un fin de semana, con impresoras abiertas a todos.', tag: 'Comunidad', i: '/assets/n3xt_news_maker_hackathon_1778543041136.webp', url: '' },
-    { t: 'Modelos anatómicos para planear cirugías', d: 'Laboratorios médicos imprimen réplicas a partir de tomografías para estudiar cada caso antes de operar.', tag: 'Salud', i: '/assets/n3xt_news_medical_3d_1778543028268.webp', url: '' },
-  ],
+  // Noticias, galería y publicaciones vienen solo del panel (Sitio web); vacías, la sección se oculta
+  news: [],
   gallery: [],
-  posts: [
-    { t: 'Sung Jinwoo, de Solo Leveling', d: 'Impresa en resina 8K y pintada a mano con aerógrafo, de la base al filo de la daga.', l: '', i: '/assets/img/tiktok1.webp', tag: 'TikTok', url: '' },
-    { t: 'Blaster de Overwatch a escala real', d: 'Prop para cosplay en piezas encajables, con canal interno para luces LED.', l: '', i: '/assets/img/tiktok2.webp', tag: 'TikTok', url: '' },
-    { t: 'La granja a toda máquina', d: 'Turno de noche: series cortas de piezas funcionales saliendo en paralelo.', l: '', i: '/assets/n3xt_social_bambu_fleet_1778543135730.webp', tag: 'Taller', url: '' },
-    { t: 'Engranajes en filamento reciclado', d: 'Prueba de resistencia de un mecanismo impreso en material de origen reciclado.', l: '', i: '/assets/n3xt_social_eco_material_1778543149399.webp', tag: 'Prototipo', url: '' },
-  ],
+  posts: [],
   catalog: [],
   pdf_catalog_url: '',
   pdf_catalog_desc: '',
@@ -235,9 +223,10 @@ const webSettings = ref<WebSettings>({
 })
 
 const isReady = ref(false)
+const hasSocialLinks = computed(() => ['tiktok', 'instagram', 'youtube'].some(k => isRealUrl((webSettings.value.social as any)[k])))
 
 const featuredWorks = computed(() => {
-  const g = webSettings.value.gallery.length ? webSettings.value.gallery : sampleGallery
+  const g = webSettings.value.gallery
   const featured = g.filter(w => w.featured)
   return (featured.length ? featured : g).slice(0, 5) as (GalleryItem & { sample?: boolean })[]
 })
@@ -334,8 +323,8 @@ const fetchSettings = async () => {
         ...webSettings.value,
         social,
         workshop_status: dbWeb.workshop_status || webSettings.value.workshop_status,
-        news: news.length > 0 ? news : webSettings.value.news,
-        posts: posts.length > 0 ? posts : webSettings.value.posts,
+        news,
+        posts,
         catalog: dbWeb.catalog || webSettings.value.catalog,
         pdf_catalog_url: dbWeb.pdf_catalog_url || webSettings.value.pdf_catalog_url,
         privacy_policy: dbWeb.privacy_policy || '',
@@ -349,7 +338,7 @@ const fetchSettings = async () => {
                   : { images: [], tags: '', featured: false, ...item }
               )
               .filter((item: any) => item.image || item.title)
-          : sampleGallery,
+          : [],
         company_name: data.company?.name || webSettings.value.company_name
       }
     }
@@ -557,7 +546,7 @@ onMounted(() => {
     </section>
 
     <!-- Trabajos destacados: mosaico con una pieza protagonista -->
-    <section class="py-24 md:py-36">
+    <section v-if="featuredWorks.length" class="py-24 md:py-36">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div v-reveal class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <h2 class="section-title">Trabajos <span class="section-title-accent">destacados</span></h2>
@@ -589,7 +578,7 @@ onMounted(() => {
     </section>
 
     <!-- Novedades 3D Colombia: una nota grande y tres en lista -->
-    <section id="news" class="bg-surface py-24 md:py-36">
+    <section v-if="webSettings.news.length" id="news" class="bg-surface py-24 md:py-36">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div v-reveal class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <h2 class="section-title">Novedades <span class="section-title-accent">3D Colombia</span></h2>
@@ -625,7 +614,7 @@ onMounted(() => {
     </section>
 
     <!-- Novedades en tiempo real (redes) -->
-    <section class="py-24 md:py-36">
+    <section v-if="webSettings.posts.length || hasSocialLinks" class="py-24 md:py-36">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div v-reveal class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <h2 class="section-title">Novedades <span class="section-title-accent">en tiempo real</span></h2>

@@ -578,7 +578,7 @@ v-for="(item, idx) in [
         </div>
       </div>
 
-      <p v-if="!(settings?.web?.gallery || []).length" class="admin-card py-14 text-center text-muted">Aún no hay proyectos. La galería pública muestra trabajos de ejemplo hasta que agregues los tuyos.</p>
+      <p v-if="!(settings?.web?.gallery || []).length" class="admin-card py-14 text-center text-muted">Aún no hay proyectos. Mientras esté vacía, la página Galería invita a cotizar y la Home oculta «Trabajos destacados».</p>
 
       <VueDraggable
         v-model="settings.web.gallery"
@@ -640,7 +640,7 @@ v-for="(item, idx) in [
         <p class="text-muted">{{ settings?.web?.news?.length || 0 }} noticias · la Home muestra las publicadas, en este orden</p>
         <button type="button" class="btn-primary btn-sm" @click="settings.web.news.push({ t: '', st: '', image: '', body: '', date: localDateISO(), status: 'draft', category: '', slug: '' })">Nueva noticia</button>
       </div>
-      <p v-if="!settings?.web?.news?.length" class="admin-card py-14 text-center text-muted">Sin noticias: la Home muestra noticias de ejemplo hasta que publiques las tuyas.</p>
+      <p v-if="!settings?.web?.news?.length" class="admin-card py-14 text-center text-muted">Sin noticias publicadas: la sección «Novedades 3D Colombia» no aparece en la Home.</p>
 
       <article v-for="(article, idx) in settings?.web?.news || []" :key="idx" class="admin-card">
         <div class="flex gap-4">
@@ -689,7 +689,7 @@ v-for="(item, idx) in [
         <p class="text-muted">{{ settings?.web?.posts?.length || 0 }} publicaciones · la Home muestra las 4 primeras publicadas</p>
         <button type="button" class="btn-primary btn-sm" @click="addPost">Nueva publicación</button>
       </div>
-      <p v-if="!settings?.web?.posts?.length" class="admin-card py-14 text-center text-muted">Sin publicaciones: la Home muestra contenido de ejemplo hasta que agregues las tuyas.</p>
+      <p v-if="!settings?.web?.posts?.length" class="admin-card py-14 text-center text-muted">Sin publicaciones: la Home solo muestra los botones de tus redes (si las configuraste en General).</p>
 
       <article v-for="(post, idx) in settings?.web?.posts || []" :key="idx" class="admin-card flex gap-4">
         <div class="w-20 h-24 shrink-0 rounded-[var(--radius-control)] bg-surface-2 overflow-hidden">
