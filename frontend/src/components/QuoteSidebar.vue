@@ -33,7 +33,10 @@ const props = defineProps({
   modelSummaries: { type: Array as PropType<ModelSummary[]>, default: () => [] },
   isSlicing: { type: Boolean, default: false },
   previousTotal: { type: Number, default: 0 },
-  lastOrder: { type: Object as PropType<{ id: number | string | null; total: number | null } | null>, default: null }
+  lastOrder: { type: Object as PropType<{ id: number | string | null; total: number | null } | null>, default: null },
+  /** Fecha estimada de entrega ("jueves 30 de octubre"); vacía si no se pudo calcular */
+  readyLabel: { type: String, default: '' },
+  urgent: { type: Boolean, default: false }
 })
 
 const emit = defineEmits([
@@ -311,6 +314,9 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
         <p class="mt-3 text-sm text-muted">Total estimado (IVA incluido)</p>
         <p class="price-count text-3xl font-extrabold tracking-tight tabular-nums text-resin" :class="{ 'bump': previousTotal !== breakdown.total && previousTotal > 0 }">
           ${{ Math.round(breakdown.total).toLocaleString('es-CO') }}
+        </p>
+        <p v-if="readyLabel" class="mt-1 text-sm text-muted">
+          Lista aproximadamente el <span class="font-medium text-ink">{{ readyLabel }}</span><template v-if="urgent"> (urgente)</template>
         </p>
 
         <ul v-if="modelSummaries.length > 1" class="mt-4 space-y-1.5 text-sm" aria-label="Estimado por modelo">

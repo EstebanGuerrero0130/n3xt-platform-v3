@@ -36,6 +36,8 @@ Route::middleware('throttle:5,1')->post('/orders', [OrderController::class, 'sto
 Route::middleware('throttle:15,1')->post('/process-stl', [OrderController::class, 'processStl']);
 Route::middleware('throttle:20,1')->get('/orders/track', [OrderController::class, 'track']);
 Route::middleware('throttle:10,1')->post('/quote/coupon', [OrderController::class, 'validateCoupon']);
+Route::middleware('throttle:30,1')->get('/quote/capacity', [\App\Http\Controllers\QuoteInfoController::class, 'capacity']);
+Route::middleware('throttle:30,1')->get('/quote/lead-time', [\App\Http\Controllers\QuoteInfoController::class, 'leadTime']);
 
 // Ruta pública para leer configuraciones y materiales
 Route::get('/settings', [SettingController::class, 'index']);

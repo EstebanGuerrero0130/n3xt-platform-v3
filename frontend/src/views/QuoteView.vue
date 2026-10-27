@@ -6,6 +6,7 @@ import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
 import { calcQuoteEstimate, calcExtraCost } from '../services/costCalculator'
 import { useRevealAnim } from '../composables/useRevealAnim'
+import { fitNotice, type Capacity } from '../utils/buildVolume'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import QuoteSidebar from '../components/QuoteSidebar.vue'
@@ -751,6 +752,47 @@ const modelSummaries = computed(() =>
     }))
 )
 
+// --- Avisos de producción: tamaño máximo y fecha estimada ---
+/** Mayor volumen de impresión por tecnología; si falla la consulta no se avisa nada */
+const capacity = ref<Capacity | null>(null)
+onMounted(async () => {
+  try { capacity.value = await api.get('/quote/capacity') } catch { capacity.value = null }
+})
+
+/** Piezas (ya escaladas) que no caben en ninguna máquina de la tecnología elegida */
+const fitNotices = computed(() =>
+  models.value
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => m.hasModel)
+    .map(({ m, i }) => ({ id: m.id, name: modelLabel(m, i), text: fitNotice(m.dimensions, selectedTechnology.value, capacity.value) }))
+    .filter((n): n is { id: number; name: string; text: string } => n.text !== null)
+)
+
+/**
+ * Pedido urgente: lo pone el interruptor "Urgente" del cotizador (otro cambio lo
+ * agrega con su recargo y lo envía como `urgent` en el pedido). Aquí solo cambia
+ * la fecha estimada: urgente pasa al frente de la cola.
+ */
+const urgent = ref(false)
+
+/** "jueves 30 de octubre", o vacío si no hay precio o el servidor no responde */
+const readyLabel = ref('')
+let leadTimeSeq = 0
+watch(
+  () => [breakdown.value.total, breakdown.value.duration, selectedTechnology.value, urgent.value] as const,
+  async ([total, hours, technology, isUrgent]) => {
+    const seq = ++leadTimeSeq
+    if (!(total > 0) || !(hours > 0)) { readyLabel.value = ''; return }
+    const params = new URLSearchParams({ technology, hours: (Math.ceil(hours * 10) / 10).toString(), urgent: isUrgent ? '1' : '0' })
+    try {
+      const data = await api.get(`/quote/lead-time?${params}`)
+      if (seq === leadTimeSeq) readyLabel.value = typeof data?.label === 'string' ? data.label : ''
+    } catch {
+      if (seq === leadTimeSeq) readyLabel.value = ''
+    }
+  },
+)
+
 const handleModelLoaded = (data: ModelStats) => {
   const model = findModel(data.key)
   if (model) {
@@ -884,6 +926,14 @@ onUnmounted(() => {
             </transition>
           </div>
 
+          <!-- Piezas más grandes que nuestras máquinas: solo informativo -->
+          <ul v-if="fitNotices.length" class="mt-4 space-y-2" aria-label="Avisos de tamaño">
+            <li v-for="n in fitNotices" :key="n.id" class="flex gap-3 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3 text-sm">
+              <svg class="w-5 h-5 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <p class="min-w-0 text-ink"><span v-if="fitNotices.length > 1 || models.length > 1" class="font-semibold">{{ n.name }}: </span>{{ n.text }}.</p>
+            </li>
+          </ul>
+
         </div>
       </section>
 
@@ -925,6 +975,8 @@ onUnmounted(() => {
           :is-slicing="isSlicing"
           :previous-total="previousTotal"
           :last-order="lastOrder"
+          :ready-label="readyLabel"
+          :urgent="urgent"
           @update:selected-technology="selectedTechnology = $event"
           @update:selected-material="selectedMaterial = $event"
           @update:qty="updateActiveQty"
