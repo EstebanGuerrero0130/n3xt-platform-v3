@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, watch, computed } from 'vue'
 import AdminModal from './AdminModal.vue'
+import MaterialQuoteFields from './MaterialQuoteFields.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -22,6 +23,8 @@ watch(() => props.modelValue, (open) => {
   Object.assign(form, props.editingMaterial || {})
 })
 
+// Parámetros del cotizador: vacío = valor por defecto (null)
+const quoteParam = (v: unknown) => (v === '' || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v))
 const costUnit = computed(() => form.unit === 'g' ? 'kg' : form.unit === 'ml' ? 'litro' : 'unidad')
 const submit = () => emit('update-material', {
   id: form.id,
@@ -29,6 +32,11 @@ const submit = () => emit('update-material', {
   cost_per_kg: Number(form.cost_per_kg) || 0,
   color: form.color || null,
   low_stock_threshold: Number(form.low_stock_threshold) || 0,
+  ...(form.type === 'material' ? {
+    speed_factor: quoteParam(form.speed_factor),
+    waste_pct: quoteParam(form.waste_pct),
+    failure_pct: quoteParam(form.failure_pct),
+  } : {}),
 })
 </script>
 
@@ -45,6 +53,7 @@ const submit = () => emit('update-material', {
         <input id="em-color" v-model="form.color" type="color" class="h-10 w-14 rounded-[var(--radius-control)] border border-line bg-canvas p-1">
         <span class="font-mono text-sm text-muted">{{ form.color }}</span>
       </div>
+      <MaterialQuoteFields v-if="form.type === 'material'" v-model="form" id-prefix="em" />
       <p class="text-sm text-muted">Las existencias se suman desde la tabla de Inventario o registrando una compra.</p>
     </form>
     <template #footer>

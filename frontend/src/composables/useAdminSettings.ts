@@ -20,6 +20,8 @@ export function useAdminSettings({ showNotify, askConfirm }: SettingsDeps) {
     prep: { mano_obra_hr: 1000, prep_time_pct: 10 },
     oper: { transporte: 5, ganancia: 20, marketing: 10, fallos: 5 },
     margin: { iva: 19 },
+    // Reglas comerciales: en 0 / vacías no cambian el precio
+    rules: { min_order_total: 0, volume_tiers: [], round_to: 0, labor_per_piece_min: 0, rush_pct: 0 },
     company: { name: 'N3XT 3D TECHNOLOGY', nit: '10271500341', email: 'servicion3xt@gmail.com', phone: '+57 3118796416', address: 'Guateque-Boyaca', slogan: 'Manufactura Digital Avanzada', website: '' },
     web: {
       social: { tiktok: '', instagram: '', facebook: '', whatsapp: 'https://wa.me/573118796416', youtube: '' },
@@ -83,6 +85,10 @@ export function useAdminSettings({ showNotify, askConfirm }: SettingsDeps) {
         if (data.prep) settings.value.prep = { ...settings.value.prep, ...data.prep }
         if (data.oper) settings.value.oper = { ...settings.value.oper, ...data.oper }
         if (data.margin) settings.value.margin = { ...settings.value.margin, ...data.margin }
+        if (data.rules && typeof data.rules === 'object') {
+          settings.value.rules = { ...settings.value.rules, ...data.rules }
+          if (!Array.isArray(settings.value.rules.volume_tiers)) settings.value.rules.volume_tiers = []
+        }
         if (data.company) settings.value.company = { ...settings.value.company, ...data.company }
         if (data.web) {
           settings.value.web = { ...settings.value.web, ...data.web }

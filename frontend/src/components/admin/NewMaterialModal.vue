@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, watch, computed } from 'vue'
 import AdminModal from './AdminModal.vue'
+import MaterialQuoteFields from './MaterialQuoteFields.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -27,6 +28,7 @@ const UNIT_FOR: Record<string, string> = { FDM: 'g', SLA: 'ml', UTIL: 'unid', PR
 const empty = () => ({
   id: '', name: '', category: 'FDM', type: 'material', unit: 'g', cost_per_kg: 0, color: '#000000',
   initial_stock: 0, low_stock_threshold: 200, package_units: 1, package_qty: null as number | null, package_price: null as number | null,
+  speed_factor: null as number | string | null, waste_pct: null as number | string | null, failure_pct: null as number | string | null,
 })
 const form = reactive(empty())
 const idTouched = { value: false }
@@ -62,6 +64,8 @@ watch([perUnit, bulkFactor], () => {
 })
 const costLabel = computed(() => form.unit === 'g' ? 'kg' : form.unit === 'ml' ? 'litro' : 'unidad')
 
+// Parámetros del cotizador: vacío = valor por defecto (null)
+const quoteParam = (v: unknown) => (v === '' || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v))
 const valid = computed(() => !!form.name.trim() && /^[A-Z0-9_-]{2,50}$/.test(form.id) && Number(form.cost_per_kg) >= 0)
 const submit = () => {
   if (!valid.value) return
@@ -69,6 +73,9 @@ const submit = () => {
     id: form.id, name: form.name.trim(), category: form.category, type: form.type, unit: form.unit,
     cost_per_kg: Number(form.cost_per_kg) || 0, color: form.color,
     initial_stock: Number(form.initial_stock) || 0, low_stock_threshold: Number(form.low_stock_threshold) || 0,
+    ...(form.type === 'material' ? {
+      speed_factor: quoteParam(form.speed_factor), waste_pct: quoteParam(form.waste_pct), failure_pct: quoteParam(form.failure_pct),
+    } : {}),
   })
 }
 </script>
@@ -140,6 +147,8 @@ const submit = () => {
         <div><label for="nm-stock" class="admin-label mb-2">Existencias iniciales ({{ form.unit }})</label><input id="nm-stock" v-model.number="form.initial_stock" type="number" min="0" class="field tabular-nums"></div>
         <div><label for="nm-min" class="admin-label mb-2">Avisar con menos de ({{ form.unit }})</label><input id="nm-min" v-model.number="form.low_stock_threshold" type="number" min="0" class="field tabular-nums"></div>
       </div>
+
+      <MaterialQuoteFields v-if="form.type === 'material'" v-model="form" id-prefix="nm" />
     </form>
     <template #footer>
       <button type="button" class="btn-outlined" :disabled="submitting" @click="emit('update:modelValue', false)">Cancelar</button>

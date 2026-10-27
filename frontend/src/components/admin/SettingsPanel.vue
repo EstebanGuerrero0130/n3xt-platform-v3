@@ -60,6 +60,38 @@
             </div>
           </div>
         </section>
+
+        <!-- Reglas comerciales -->
+        <section class="admin-card" aria-labelledby="set-rules">
+          <h2 id="set-rules" class="admin-h2">Reglas comerciales</h2>
+          <p class="mt-1 text-sm text-muted">Se aplican en el cotizador y en el servidor. En 0 no cambian el precio.</p>
+          <div class="mt-5 grid gap-5 sm:grid-cols-2">
+            <div v-for="f in RULE_FIELDS" :key="f.key">
+              <label :for="`set-rule-${f.key}`" class="admin-label mb-2">{{ f.label }} <span class="opacity-70">({{ f.unit }})</span></label>
+              <input :id="`set-rule-${f.key}`" v-model.number="localSettings.rules[f.key]" type="number" min="0" :step="f.step" class="field tabular-nums" :aria-describedby="`set-rule-${f.key}-help`">
+              <p :id="`set-rule-${f.key}-help`" class="mt-1.5 text-sm text-muted">{{ f.help }}</p>
+            </div>
+          </div>
+
+          <fieldset class="mt-6">
+            <legend class="admin-label">Descuento por volumen</legend>
+            <p class="mt-1 text-sm text-muted">Según el total de piezas del pedido, antes del cupón. Cupón y volumen juntos nunca pasan del 50 %.</p>
+            <ul v-if="localSettings.rules.volume_tiers.length" class="mt-3 space-y-2">
+              <li v-for="(t, i) in localSettings.rules.volume_tiers" :key="i" class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label :for="`set-tier-qty-${i}`" class="admin-label mb-1">Desde (piezas)</label>
+                  <input :id="`set-tier-qty-${i}`" v-model.number="t.min_qty" type="number" min="1" step="1" class="field h-10 w-32 tabular-nums">
+                </div>
+                <div>
+                  <label :for="`set-tier-pct-${i}`" class="admin-label mb-1">Descuento (%)</label>
+                  <input :id="`set-tier-pct-${i}`" v-model.number="t.discount_pct" type="number" min="0" max="50" step="0.5" class="field h-10 w-32 tabular-nums">
+                </div>
+                <button type="button" class="btn-outlined btn-sm" :aria-label="`Quitar el tramo ${Number(i) + 1}`" @click="removeTier(Number(i))">Quitar</button>
+              </li>
+            </ul>
+            <button type="button" class="mt-3 btn-outlined btn-sm" @click="addTier">Añadir tramo</button>
+          </fieldset>
+        </section>
       </div>
 
       <div class="xl:col-span-4 space-y-6">
@@ -153,7 +185,12 @@ const suggestedDefaults: Record<string, Record<string, number>> = {
   margin: { iva: 19 },
 }
 
+const emptyRules = () => ({ min_order_total: 0, volume_tiers: [] as { min_qty: number; discount_pct: number }[], round_to: 0, labor_per_piece_min: 0, rush_pct: 0 })
+
 const applyDefaults = (target: any) => {
+  // Reglas comerciales: sin configurar no cambian el precio
+  target.rules = { ...emptyRules(), ...(target.rules && typeof target.rules === 'object' ? target.rules : {}) }
+  if (!Array.isArray(target.rules.volume_tiers)) target.rules.volume_tiers = []
   Object.keys(suggestedDefaults).forEach(category => {
     if (!target[category]) return
     Object.keys(suggestedDefaults[category]).forEach(key => {
@@ -179,6 +216,21 @@ watch(() => props.settings, (newVal) => {
     applyDefaults(localSettings)
   }
 }, { deep: true, immediate: true })
+
+// Descuentos por volumen: filas editables (las vacías o inválidas las descarta el servidor)
+const addTier = () => {
+  const tiers = localSettings.rules.volume_tiers
+  const last = tiers[tiers.length - 1]
+  tiers.push({ min_qty: last ? Number(last.min_qty || 0) * 2 || 10 : 10, discount_pct: last ? Number(last.discount_pct || 0) + 5 : 5 })
+}
+const removeTier = (i: number) => localSettings.rules.volume_tiers.splice(i, 1)
+
+const RULE_FIELDS = [
+  { key: 'min_order_total', label: 'Pedido mínimo', unit: '$ antes de IVA', step: '1000', help: 'Ningún pedido baja de este valor. 0 = sin mínimo.' },
+  { key: 'round_to', label: 'Redondear precio unitario a', unit: '$', step: '100', help: 'Hacia arriba, por ejemplo a 500 o 1.000. 0 = sin redondeo.' },
+  { key: 'labor_per_piece_min', label: 'Posproceso por pieza', unit: 'minutos', step: '1', help: 'Retirar soportes, lijar o limpiar; se cobra al valor de la hora de mano de obra.' },
+  { key: 'rush_pct', label: 'Recargo por urgencia', unit: '%', step: '5', help: 'Con más de 0, el cliente ve la opción «Urgente» en el cotizador.' },
+]
 
 const saveSettings = (silent = false) => {
   // Pass the local settings data so the parent can sync
