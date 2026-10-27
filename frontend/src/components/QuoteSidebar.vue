@@ -11,6 +11,7 @@ interface SidebarModel {
 }
 interface SidebarMaterial { id: string; name: string; category: string; cost_per_kg?: number | string; density?: number | string; color?: string }
 interface SidebarExtra { id: string; qty: number }
+interface Adjustment { type: string; label: string; pct: number | null; amount: number }
 interface ModelSummary { id: number; name: string; qty: number; total: number; priced: boolean }
 
 const props = defineProps({
@@ -29,14 +30,16 @@ const props = defineProps({
   couponCode: { type: String, default: '' },
   couponError: { type: String, default: '' },
   couponLoading: { type: Boolean, default: false },
-  breakdown: { type: Object as PropType<{ pieces?: number; weight: number; duration: number; matCost: number; infraCost: number; utilityCost: number; marginCost: number; discount: number; subtotal: number; iva: number; ivaPct?: number; total: number }>, default: () => ({ pieces: 0, weight: 0, duration: 0, matCost: 0, infraCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, ivaPct: 19, total: 0 }) },
+  breakdown: { type: Object as PropType<{ pieces?: number; weight: number; duration: number; matCost: number; infraCost: number; utilityCost: number; marginCost: number; discount: number; subtotal: number; iva: number; ivaPct?: number; total: number; beds?: number; adjustments?: Adjustment[] }>, default: () => ({ pieces: 0, weight: 0, duration: 0, matCost: 0, infraCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, ivaPct: 19, total: 0, beds: 0, adjustments: [] }) },
   modelSummaries: { type: Array as PropType<ModelSummary[]>, default: () => [] },
   isSlicing: { type: Boolean, default: false },
   previousTotal: { type: Number, default: 0 },
   lastOrder: { type: Object as PropType<{ id: number | string | null; total: number | null } | null>, default: null },
   /** Fecha estimada de entrega ("jueves 30 de octubre"); vacía si no se pudo calcular */
   readyLabel: { type: String, default: '' },
-  urgent: { type: Boolean, default: false }
+  urgent: { type: Boolean, default: false },
+  /** Recargo por urgencia (%); sin recargo no se muestra el interruptor */
+  rushPct: { type: Number, default: 0 }
 })
 
 const emit = defineEmits([
@@ -50,7 +53,8 @@ const emit = defineEmits([
   'applyCoupon',
   'removeCoupon',
   'calculate',
-  'requestQuote'
+  'requestQuote',
+  'update:urgent'
 ])
 
 const localQty = ref(props.qty)
@@ -98,6 +102,11 @@ const formatTime = (h: number) => {
     return `${hours}h ${minutes}m`;
 }
 const money = (n: number) => '$' + Math.round(n || 0).toLocaleString('es-CO')
+
+/** Ajustes comerciales que ve el cliente (el redondeo va dentro del precio unitario) */
+const visibleAdjustments = computed(() => (props.breakdown.adjustments ?? []).filter(a => a.type !== 'rounding' && a.amount !== 0))
+const adjustmentText = (a: Adjustment) => a.pct !== null ? `${a.label} ${a.pct > 0 ? '+' : '−'}${Math.abs(a.pct).toLocaleString('es-CO')} %` : a.label
+const signedMoney = (n: number) => (n < 0 ? '−' : '+') + money(Math.abs(n))
 
 const hasSlicingOrSLA = computed(() => 
   props.models.some(m => m.hasSlicing) || props.selectedTechnology === 'SLA'
@@ -282,6 +291,17 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
       </div>
     </section>
 
+    <!-- Urgente (solo con recargo configurado) -->
+    <section v-if="rushPct > 0">
+      <label for="quote-urgent" class="flex items-start gap-3 cursor-pointer">
+        <input id="quote-urgent" type="checkbox" :checked="urgent" class="mt-0.5 w-5 h-5 shrink-0 accent-[var(--color-primary)]" aria-describedby="quote-urgent-help" @change="$emit('update:urgent', ($event.target as HTMLInputElement).checked)">
+        <span>
+          <span class="block text-sm font-semibold text-ink">Urgente</span>
+          <span id="quote-urgent-help" class="block text-sm text-muted">Pasa al frente de la cola de impresión. Recargo de {{ rushPct.toLocaleString('es-CO') }} %.</span>
+        </span>
+      </label>
+    </section>
+
     <!-- Calcular (FDM) -->
     <div v-if="selectedTechnology === 'FDM'" class="space-y-2">
       <p v-if="needsRecalc && !isSlicing" id="quote-recalc-hint" class="text-sm text-warning">
@@ -328,12 +348,14 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
 
         <dl class="mt-4 space-y-2 text-sm" :class="modelSummaries.length > 1 ? 'border-t border-line pt-3' : ''">
           <div v-if="(breakdown.pieces ?? 0) > 1" class="flex justify-between gap-4"><dt class="text-muted">Piezas</dt><dd class="tabular-nums text-ink">{{ breakdown.pieces }}</dd></div>
+          <div v-if="(breakdown.pieces ?? 0) > 1 && (breakdown.beds ?? 0) > 0" class="flex justify-between gap-4"><dt class="text-muted">Impresión</dt><dd class="tabular-nums text-ink">{{ breakdown.beds }} {{ breakdown.beds === 1 ? 'cama' : 'camas' }}</dd></div>
           <div class="flex justify-between gap-4"><dt class="text-muted">Peso estimado</dt><dd class="tabular-nums text-ink">{{ breakdown.weight.toFixed(1) }} g</dd></div>
           <div class="flex justify-between gap-4"><dt class="text-muted">Tiempo de impresión</dt><dd class="tabular-nums text-ink">{{ formatTime(breakdown.duration) }}</dd></div>
           <div class="border-t border-line pt-2 flex justify-between gap-4"><dt class="text-muted">Material</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.matCost).toLocaleString('es-CO') }}</dd></div>
           <div class="flex justify-between gap-4"><dt class="text-muted">Máquina y energía</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.infraCost).toLocaleString('es-CO') }}</dd></div>
           <div class="flex justify-between gap-4"><dt class="text-muted">Extras</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.utilityCost).toLocaleString('es-CO') }}</dd></div>
           <div class="flex justify-between gap-4"><dt class="text-muted">Operación y margen</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.marginCost).toLocaleString('es-CO') }}</dd></div>
+          <div v-for="a in visibleAdjustments" :key="a.type" class="flex justify-between gap-4"><dt :class="a.amount < 0 ? 'text-resin' : 'text-muted'">{{ adjustmentText(a) }}</dt><dd class="tabular-nums" :class="a.amount < 0 ? 'text-resin' : 'text-ink'">{{ signedMoney(a.amount) }}</dd></div>
           <div v-if="breakdown.discount > 0" class="flex justify-between gap-4"><dt class="text-resin">Descuento</dt><dd class="tabular-nums text-resin">−${{ Math.round(breakdown.discount).toLocaleString('es-CO') }}</dd></div>
           <div class="border-t border-line pt-2 flex justify-between gap-4"><dt class="text-muted">Subtotal</dt><dd class="tabular-nums font-medium text-ink">${{ Math.round(breakdown.subtotal).toLocaleString('es-CO') }}</dd></div>
           <div class="flex justify-between gap-4"><dt class="text-muted">IVA ({{ breakdown.ivaPct ?? 19 }} %)</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.iva).toLocaleString('es-CO') }}</dd></div>

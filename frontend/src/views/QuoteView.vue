@@ -4,7 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import StlViewer from '../components/StlViewer.vue'
 import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
-import { calcQuoteEstimate, calcExtraCost } from '../services/costCalculator'
+import {
+  calcQuoteEstimate, calcExtraCost, normalizeRules, normalizeCalibration, normalizeBeds, calibrationFactor, materialParams,
+  chooseOrientation, footprint, slaHeight, fdmPrintHours, FDM_PREP_H, FDM_PURGE_G,
+  type Axis, type Dims3, type QuoteAdjustment,
+} from '../services/costCalculator'
 import { useRevealAnim } from '../composables/useRevealAnim'
 import { fitNotice, type Capacity } from '../utils/buildVolume'
 import AppNavbar from '../components/AppNavbar.vue'
@@ -25,6 +29,10 @@ interface Material {
   density?: number | string
   cost_per_kg?: number | string
   unit?: string
+  /** Parámetros del cotizador (null = valor por defecto) */
+  speed_factor?: number | string | null
+  waste_pct?: number | string | null
+  failure_pct?: number | string | null
 }
 interface CuraFactors {
   resolution?: number
@@ -53,6 +61,10 @@ interface QuoteModel {
   duration: number
   name: string
   curaFactors: CuraFactors
+  /** Ejes del archivo (escalados): áreas hacia abajo / de apoyo y bbox; null si el visor no las dio */
+  downArea: Dims3 | null
+  bedContact: Dims3 | null
+  bbox: Dims3 | null
 }
 interface ModelStats {
   key: number | string
@@ -61,6 +73,9 @@ interface ModelStats {
   dimensions: { x: number; y: number; z: number }
   scale?: number
   supportArea?: number
+  downArea?: Dims3
+  bedContact?: Dims3
+  bbox?: Dims3
 }
 interface CustomerForm {
   name: string; company: string; document: string; email: string; phone: string
@@ -85,6 +100,10 @@ const appData = ref({
     oper: { transporte: 0, ganancia: 0, marketing: 0, fallos: 0 },
     margin: { iva: 19 }
 })
+// Reglas comerciales, calibración y camas por defecto (mismas normalizaciones que el servidor)
+const rules = ref(normalizeRules(null))
+const calibration = ref(normalizeCalibration(null))
+const settingsBeds = ref<unknown>(null)
 const materials = ref<Material[]>([])
 const utilities = ref<Material[]>([])
 const selectedExtras = ref<any[]>([])
@@ -137,6 +156,10 @@ const fetchSettings = async () => {
       // ?? en lugar de || para permitir IVA 0%
       const ivaNum = m.iva === null || m.iva === undefined || String(m.iva) === '' ? NaN : Number(m.iva)
       m.iva = Number.isFinite(ivaNum) ? ivaNum : 19
+
+      rules.value = normalizeRules(data.rules)
+      calibration.value = normalizeCalibration(data.calibration)
+      settingsBeds.value = data.beds ?? null
     }
   } catch (err) {
     logger.error('Error fetching settings:', err)
@@ -263,6 +286,7 @@ const newModel = (): QuoteModel => {
     id, file: null, qty: 1, volume: 0, totalArea: 0, dimensions: { x: 0, y: 0, z: 0 }, supportArea: 0,
     currentScale: 1.0, hasModel: false, hasSlicing: false, weight: 0, duration: 0, name: `Modelo ${id + 1}`,
     curaFactors: { resolution: 1, infill_density: 1, shell_weight_g: 0, internal_weight_g: 0, support_weight_g: 0, filament_length_m: 0, prep_time_h: 0.233, print_time_h: 0 },
+    downArea: null, bedContact: null, bbox: null,
   }
 }
 const models = ref<QuoteModel[]>([newModel()])
@@ -383,7 +407,8 @@ const runCuraEngineAnalysis = async () => {
 }
 
 const breakdown = ref({
-  pieces: 0, weight: 0, duration: 0, matCost: 0, infraCost: 0, laborCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, ivaPct: 19, total: 0
+  pieces: 0, weight: 0, duration: 0, matCost: 0, infraCost: 0, laborCost: 0, utilityCost: 0, marginCost: 0, discount: 0, subtotal: 0, iva: 0, ivaPct: 19, total: 0,
+  beds: 0, adjustments: [] as QuoteAdjustment[],
 })
 /** Total estimado (IVA incluido) atribuido a cada modelo, por id */
 const modelTotals = ref<Record<number, number>>({})
@@ -571,6 +596,7 @@ const submitOrder = async () => {
     formData.append('infill', String(Math.round(infill.value || 15)))
     formData.append('layer_height', String(layerHeight.value || 0.2))
     if (activeCoupon.value) formData.append('coupon_code', activeCoupon.value.code)
+    formData.append('urgent', urgent.value ? '1' : '0')
     // Solo informativo: el servidor calcula el precio definitivo
     if (breakdown.value.total > 0) formData.append('total_price', String(breakdown.value.total))
     formData.append('job_name', loaded.length === 1 ? (loaded[0].file?.name || 'Modelo 1') : `${loaded.length} modelos`)
@@ -637,24 +663,43 @@ watch([selectedTechnology, selectedMaterial, models, infill, layerHeight, active
   calculatePrice()
 }, { deep: true })
 
-/** Peso y tiempo de UNA pieza del modelo, según la tecnología */
+/** Orientación FDM con menos soporte (sin áreas por eje: la del visor) */
+const modelOrientation = (model: QuoteModel): { axis: Axis; supportArea: number } =>
+  model.downArea ? chooseOrientation(model.downArea, model.bedContact) : { axis: 'y', supportArea: model.supportArea }
+
+/** Tiempo de impresión × velocidad del material × calibración del taller */
+const timeFactor = (mat: Material) =>
+  materialParams(mat).speed_factor * calibrationFactor(calibration.value, selectedTechnology.value === 'FDM' ? 'FDM' : 'SLA', mat.id)
+
+/**
+ * Una pieza del modelo, igual que QuotePricingService::quote: FDM sin purga ni
+ * preparación (van por cama), SLA solo peso; más su huella y altura en la cama.
+ */
 const modelUnitStats = (model: QuoteModel, mat: Material) => {
+  const waste = 1 + materialParams(mat).waste_pct / 100
   if (selectedTechnology.value === 'FDM') {
-    if (!model.hasSlicing || !model.curaFactors) return { weightG: 0, hours: 0 }
+    const { axis } = modelOrientation(model)
+    const place = { footprint: footprint(model.bbox, axis), heightMm: model.bbox ? model.bbox[axis] : 0 }
+    if (!model.hasSlicing || !model.curaFactors) return { weightG: 0, hours: 0, ...place }
     const cf = model.curaFactors
+    const net = (Number(cf.shell_weight_g) || 0) + (Number(cf.internal_weight_g) || 0) + (Number(cf.support_weight_g) || 0)
     return {
-      weightG: (Number(cf.shell_weight_g) || 0)
-             + (Number(cf.internal_weight_g) || 0)
-             + (Number(cf.support_weight_g) || 0)
-             + (Number(cf.purge_weight_g) || 3.0),
-      hours: (Number(cf.prep_time_h) || 0) + (Number(cf.print_time_h) || 0),
+      weightG: net * waste,
+      hours: fdmPrintHours(net, Number(mat.density) || 0, layerHeight.value || 0.2) * timeFactor(mat),
+      ...place,
     }
   }
-  // SLA: volume viene en mm³, convertir a cm³
+  // SLA: volume viene en mm³, convertir a cm³; altura como la recibe el servidor (1 decimal)
   const volCm3 = (model.volume || 0) / 1000
   const density = Number(mat.density) || 1.1
-  const heightMm = model.dimensions?.z || model.dimensions?.y || 0
-  return { weightG: volCm3 * density * 1.1, hours: Math.max(0.5, heightMm / 25) }
+  const d = model.dimensions
+  const client = { x: Number(d.x.toFixed(1)), y: Number(d.y.toFixed(1)), z: Number(d.z.toFixed(1)) }
+  return {
+    weightG: volCm3 * density * 1.1 * waste,
+    hours: 0,
+    footprint: footprint(model.bbox, 'y'),
+    heightMm: slaHeight(client, model.bbox),
+  }
 }
 
 /** Precio ESTIMADO en el navegador: suma de todos los modelos (cada uno × su cantidad). */
@@ -703,6 +748,8 @@ const calculatePrice = () => {
     }
   })
 
+  const tech = selectedTechnology.value === 'FDM' ? 'FDM' : 'SLA'
+  const speed = timeFactor(mat)
   const r = calcQuoteEstimate({
     models: quoteModels,
     costPerKg: Number(mat.cost_per_kg) || 0,
@@ -712,6 +759,15 @@ const calculatePrice = () => {
     margin: cfg.margin,
     extrasCost: utilityCost,
     discountPct: activeCoupon.value?.discount_pct ?? 0,
+    // Piezas en cama compartida: misma cama con la que cotiza el servidor
+    technology: tech,
+    bed: normalizeBeds(capacity.value ?? settingsBeds.value)[tech],
+    bedHours: FDM_PREP_H + fdmPrintHours(FDM_PURGE_G, Number(mat.density) || 0, layerHeight.value || 0.2) * speed,
+    bedWeightG: FDM_PURGE_G,
+    bedTimeFactor: speed,
+    failurePct: materialParams(mat).failure_pct,
+    rules: rules.value,
+    urgent: urgent.value,
   })
 
   if (r.total !== breakdown.value.total) {
@@ -733,6 +789,8 @@ const calculatePrice = () => {
     iva: r.iva,
     ivaPct: r.ivaPct,
     total: r.total,
+    beds: r.beds,
+    adjustments: r.adjustments,
   }
 }
 
@@ -774,6 +832,18 @@ const fitNotices = computed(() =>
  * la fecha estimada: urgente pasa al frente de la cola.
  */
 const urgent = ref(false)
+/** El interruptor solo aparece con recargo configurado (settings rules.rush_pct) */
+const rushPct = computed(() => rules.value.rush_pct)
+watch(urgent, () => calculatePrice())
+watch(capacity, () => calculatePrice())
+
+/** Modelos FDM que se imprimirán girados respecto al visor para usar menos soporte */
+const orientationNotes = computed(() =>
+  selectedTechnology.value !== 'FDM' ? [] : models.value
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => m.hasModel && modelOrientation(m).axis !== 'y')
+    .map(({ m, i }) => ({ id: m.id, name: modelLabel(m, i) }))
+)
 
 /** "jueves 30 de octubre", o vacío si no hay precio o el servidor no responde */
 const readyLabel = ref('')
@@ -800,7 +870,11 @@ const handleModelLoaded = (data: ModelStats) => {
     model.totalArea = data.totalArea || 0
     model.dimensions = { x: data.dimensions.x, y: data.dimensions.y, z: data.dimensions.z }
     model.currentScale = data.scale || 1.0
-    model.supportArea = data.supportArea || 0
+    model.downArea = data.downArea ?? null
+    model.bedContact = data.bedContact ?? null
+    model.bbox = data.bbox ?? null
+    // Soporte en la orientación elegida (lo usa el laminado y su firma)
+    model.supportArea = data.downArea ? chooseOrientation(data.downArea, data.bedContact).supportArea : (data.supportArea || 0)
     model.hasModel = true
   }
   if (selectedTechnology.value !== 'FDM') calculatePrice()
@@ -927,6 +1001,13 @@ onUnmounted(() => {
           </div>
 
           <!-- Piezas más grandes que nuestras máquinas: solo informativo -->
+          <ul v-if="orientationNotes.length" class="mt-4 space-y-2" aria-label="Orientación de impresión">
+            <li v-for="n in orientationNotes" :key="n.id" class="flex gap-3 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3 text-sm">
+              <svg class="w-5 h-5 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <p class="min-w-0 text-ink"><span v-if="models.length > 1" class="font-semibold">{{ n.name }}: </span>la imprimiremos girada para que necesite menos soporte.</p>
+            </li>
+          </ul>
+
           <ul v-if="fitNotices.length" class="mt-4 space-y-2" aria-label="Avisos de tamaño">
             <li v-for="n in fitNotices" :key="n.id" class="flex gap-3 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3 text-sm">
               <svg class="w-5 h-5 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -977,11 +1058,13 @@ onUnmounted(() => {
           :last-order="lastOrder"
           :ready-label="readyLabel"
           :urgent="urgent"
+          :rush-pct="rushPct"
           @update:selected-technology="selectedTechnology = $event"
           @update:selected-material="selectedMaterial = $event"
           @update:qty="updateActiveQty"
           @update:infill="infill = $event"
           @update:layer-height="layerHeight = $event"
+          @update:urgent="urgent = $event"
           @update:coupon-code="couponCode = $event"
           @toggle-extra="toggleExtra"
           @apply-coupon="applyCoupon"

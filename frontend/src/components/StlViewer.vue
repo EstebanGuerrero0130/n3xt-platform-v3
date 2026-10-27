@@ -56,6 +56,10 @@ interface ModelStats {
   scale: number
   totalArea: number
   supportArea: number
+  /** Ejes del archivo, ya escalados: área hacia abajo, parte que apoya en la cama y bbox (para orientar y acomodar en cama) */
+  downArea: { x: number; y: number; z: number }
+  bedContact: { x: number; y: number; z: number }
+  bbox: { x: number; y: number; z: number }
 }
 
 const MAX_FILE_MB = 50 // Debe coincidir con StoreOrderRequest (file max:51200 KB)
@@ -95,6 +99,8 @@ interface ModelEntry {
   group: any
   boxHelper: any
   baseVolume: number
+  /** Medidas de la malla sin escalar (ejes del archivo) */
+  axes: AxisAreas
   camPos: [number, number, number]
   camTarget: [number, number, number]
   maxDistance: number
@@ -418,13 +424,18 @@ const emitTransformation = (key: ModelKey, event: 'model-transformed' | 'model-l
   const totalArea = calculateTotalArea(group.children[0].geometry)
   const supportArea = calculateSupportArea(group.children[0].geometry)
 
+  const s2 = Math.abs(scale.x * scale.z)
+  const a = entry.axes
   const stats: ModelStats = {
     key,
     volume: currentVolume,
     dimensions: { x: size.x, y: size.y, z: size.z },
     scale: scale.x,
     totalArea: totalArea * Math.abs(scale.x * scale.z), // Approximation for area scale
-    supportArea: supportArea * Math.abs(scale.x * scale.z)
+    supportArea: supportArea * Math.abs(scale.x * scale.z),
+    downArea: { x: a.down.x * s2, y: a.down.y * s2, z: a.down.z * s2 },
+    bedContact: { x: a.contact.x * s2, y: a.contact.y * s2, z: a.contact.z * s2 },
+    bbox: { x: a.size.x * Math.abs(scale.x), y: a.size.y * Math.abs(scale.x), z: a.size.z * Math.abs(scale.x) },
   }
   if (event === 'model-loaded') emit('model-loaded', stats)
   else emit('model-transformed', stats)
@@ -494,6 +505,47 @@ const calculateVolume = (geometry: any) => {
 
   // Valor real en mm³ (la normalización metros→mm ya se aplica sobre la geometría en processGeometry)
   return Math.abs(sum);
+}
+
+interface AxisAreas {
+  down: { x: number; y: number; z: number }
+  contact: { x: number; y: number; z: number }
+  size: { x: number; y: number; z: number }
+}
+
+/**
+ * Por eje del archivo: área de caras hacia abajo (normal geométrica < -0.5) y la parte
+ * plana en el nivel más bajo, que apoya en la cama y no lleva soporte. Mismo criterio
+ * que MeshVolumeService del servidor.
+ */
+const calculateAxisAreas = (geometry: any): AxisAreas => {
+  const keys = ['x', 'y', 'z'] as const
+  const down = { x: 0, y: 0, z: 0 }
+  const contact = { x: 0, y: 0, z: 0 }
+  geometry.computeBoundingBox()
+  const box = geometry.boundingBox
+  const size = { x: box.max.x - box.min.x, y: box.max.y - box.min.y, z: box.max.z - box.min.z }
+  const position = geometry.attributes.position
+  if (!position) return { down, contact, size }
+  const tol = 1e-3
+  for (let i = 0; i < position.count; i += 3) {
+    _vA.fromBufferAttribute(position, i)
+    _vB.fromBufferAttribute(position, i + 1)
+    _vC.fromBufferAttribute(position, i + 2)
+    _edge1.subVectors(_vB, _vA)
+    _edge2.subVectors(_vC, _vA)
+    _cross.crossVectors(_edge1, _edge2)
+    const len = _cross.length()
+    if (!(len > 0)) continue
+    const area = len / 2
+    for (const k of keys) {
+      if (_cross[k] / len >= -0.5) continue
+      down[k] += area
+      const lo = Math.min(_vA[k], _vB[k], _vC[k])
+      if (Math.max(_vA[k], _vB[k], _vC[k]) - lo <= tol && lo <= box.min[k] + tol) contact[k] += area
+    }
+  }
+  return { down, contact, size }
 }
 
 const calculateSupportArea = (geometry: any) => {
@@ -629,10 +681,12 @@ const processGeometry = (geometry: any, file: File, key: ModelKey) => {
 
   // Reemplaza la malla anterior de este modelo (solo cuando la nueva se parseó bien)
   removeModel(key)
+  ensureVectors()
   entries.set(key, {
     group,
     boxHelper,
     baseVolume,
+    axes: calculateAxisAreas(geometry),
     camPos: [dist, dist, dist],
     camTarget: [0, height / 2, 0],
     maxDistance: dist * 3,
