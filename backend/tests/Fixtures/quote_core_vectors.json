@@ -303,35 +303,36 @@
       },
       "expected": {
         "pieces": 3,
-        "weight": 909,
-        "duration": 42.87,
-        "beds": 3,
+        "weight": 918,
+        "duration": 43.74,
+        "beds": 6,
         "piecesPerBed": 1,
-        "matCost": 77265,
-        "infraCost": 63036.047999999995,
-        "laborCost": 4287,
+        "matCost": 78030,
+        "infraCost": 64315.296,
+        "laborCost": 4374.000000000001,
         "utilityCost": 0,
-        "productionCost": 145088.048,
-        "marginCost": 72543,
-        "unitPrice": 72544,
-        "grossSubtotal": 217632,
+        "productionCost": 147219.296,
+        "marginCost": 73611,
+        "unitPrice": 73610,
+        "grossSubtotal": 220830,
         "volumeDiscount": 0,
         "discount": 0,
-        "subtotal": 217632,
-        "iva": 41350,
+        "subtotal": 220830,
+        "iva": 41958,
         "ivaPct": 19,
-        "total": 258982,
+        "total": 262788,
         "urgent": false,
         "adjustments": [],
         "models": [
           {
             "qty": 3,
             "piecesPerBed": 1,
-            "weightG": 303,
-            "hours": 14.29
+            "weightG": 306,
+            "hours": 14.58
           }
         ]
-      }
+      },
+      "note": "Pieza más grande que la cama: cada una se imprime en 2 partes (300/256), 6 camas en vez de 3"
     },
     {
       "name": "fdm_sin_huella_una_por_cama",
@@ -1147,6 +1148,320 @@
           }
         ]
       }
+    },
+    {
+      "name": "sla_placa_de_pie_misma_orientacion",
+      "note": "Placa 100x100x2 de pie (eje y del visor): huella 100x2 y altura 100 con el mismo eje; antes la huella era de pie y la altura acostada (2 mm, 0.5 h)",
+      "input": {
+        "costPerKg": 85000,
+        "infra": {
+          "luz_hr": 926,
+          "depr_hr": 400,
+          "mant_hr": 700,
+          "etiquetas": 500,
+          "load_factor": 0.4
+        },
+        "prep": {
+          "mano_obra_hr": 1000,
+          "prep_time_pct": 10
+        },
+        "oper": {
+          "transporte": 5,
+          "ganancia": 30,
+          "marketing": 5,
+          "fallos": 10
+        },
+        "margin": {
+          "iva": 19
+        },
+        "technology": "SLA",
+        "bed": {
+          "x": 218,
+          "y": 123,
+          "z": 250
+        },
+        "bedTimeFactor": 1,
+        "models": [
+          {
+            "id": 1,
+            "weightG": 22,
+            "hours": 0,
+            "qty": 25,
+            "footprint": {
+              "x": 100,
+              "y": 2
+            },
+            "heightMm": 100
+          }
+        ]
+      },
+      "expected": {
+        "pieces": 25,
+        "weight": 550,
+        "duration": 4,
+        "beds": 1,
+        "piecesPerBed": 25,
+        "matCost": 46750.00000000001,
+        "infraCost": 5881.6,
+        "laborCost": 400,
+        "utilityCost": 0,
+        "productionCost": 53531.600000000006,
+        "marginCost": 26750,
+        "unitPrice": 3212,
+        "grossSubtotal": 80300,
+        "volumeDiscount": 0,
+        "discount": 0,
+        "subtotal": 80300,
+        "iva": 15257,
+        "ivaPct": 19,
+        "total": 95557,
+        "urgent": false,
+        "adjustments": [],
+        "models": [
+          {
+            "qty": 25,
+            "piecesPerBed": 25,
+            "weightG": 22,
+            "hours": 0.16
+          }
+        ]
+      }
+    },
+    {
+      "name": "sla_pieza_mas_alta_que_la_cama",
+      "note": "Pieza de 600 mm en cama de 250 de alto: 3 partes, 3 camas de 200 mm cada una",
+      "input": {
+        "costPerKg": 85000,
+        "infra": {
+          "luz_hr": 926,
+          "depr_hr": 400,
+          "mant_hr": 700,
+          "etiquetas": 500,
+          "load_factor": 0.4
+        },
+        "prep": {
+          "mano_obra_hr": 1000,
+          "prep_time_pct": 10
+        },
+        "oper": {
+          "transporte": 5,
+          "ganancia": 30,
+          "marketing": 5,
+          "fallos": 10
+        },
+        "margin": {
+          "iva": 19
+        },
+        "technology": "SLA",
+        "bed": {
+          "x": 218,
+          "y": 123,
+          "z": 250
+        },
+        "bedTimeFactor": 1,
+        "models": [
+          {
+            "id": 1,
+            "weightG": 50,
+            "hours": 0,
+            "qty": 1,
+            "footprint": {
+              "x": 20,
+              "y": 20
+            },
+            "heightMm": 600
+          }
+        ]
+      },
+      "expected": {
+        "pieces": 1,
+        "weight": 50,
+        "duration": 24,
+        "beds": 3,
+        "piecesPerBed": 1,
+        "matCost": 4250,
+        "infraCost": 35289.600000000006,
+        "laborCost": 2400.0000000000005,
+        "utilityCost": 0,
+        "productionCost": 42439.600000000006,
+        "marginCost": 21220,
+        "unitPrice": 63659,
+        "grossSubtotal": 63659,
+        "volumeDiscount": 0,
+        "discount": 0,
+        "subtotal": 63659,
+        "iva": 12095,
+        "ivaPct": 19,
+        "total": 75754,
+        "urgent": false,
+        "adjustments": [],
+        "models": [
+          {
+            "qty": 1,
+            "piecesPerBed": 30,
+            "weightG": 50,
+            "hours": 24
+          }
+        ]
+      }
+    },
+    {
+      "name": "fdm_huella_130_en_cama_256",
+      "note": "Por área cabrían 2 piezas de 130x130 en 256x256, pero en filas solo cabe 1: 2 camas",
+      "input": {
+        "costPerKg": 85000,
+        "infra": {
+          "luz_hr": 926,
+          "depr_hr": 400,
+          "mant_hr": 700,
+          "etiquetas": 500,
+          "load_factor": 0.4
+        },
+        "prep": {
+          "mano_obra_hr": 1000,
+          "prep_time_pct": 10
+        },
+        "oper": {
+          "transporte": 5,
+          "ganancia": 30,
+          "marketing": 5,
+          "fallos": 10
+        },
+        "margin": {
+          "iva": 19
+        },
+        "technology": "FDM",
+        "bed": {
+          "x": 256,
+          "y": 256,
+          "z": 256
+        },
+        "bedHours": 0.29,
+        "bedWeightG": 3,
+        "models": [
+          {
+            "id": 1,
+            "weightG": 120,
+            "hours": 6,
+            "qty": 2,
+            "footprint": {
+              "x": 130,
+              "y": 130
+            },
+            "heightMm": 20
+          }
+        ]
+      },
+      "expected": {
+        "pieces": 2,
+        "weight": 246,
+        "duration": 12.58,
+        "beds": 2,
+        "piecesPerBed": 1,
+        "matCost": 20910,
+        "infraCost": 18497.631999999998,
+        "laborCost": 1258,
+        "utilityCost": 0,
+        "productionCost": 41165.632,
+        "marginCost": 20582,
+        "unitPrice": 30874,
+        "grossSubtotal": 61748,
+        "volumeDiscount": 0,
+        "discount": 0,
+        "subtotal": 61748,
+        "iva": 11732,
+        "ivaPct": 19,
+        "total": 73480,
+        "urgent": false,
+        "adjustments": [],
+        "models": [
+          {
+            "qty": 2,
+            "piecesPerBed": 1,
+            "weightG": 123,
+            "hours": 6.29
+          }
+        ]
+      }
+    },
+    {
+      "name": "fdm_cubo_400_en_cama_256",
+      "note": "Cubo de 400 mm en cama de 256: 2x2x2 = 8 camas (se imprime en partes)",
+      "input": {
+        "costPerKg": 85000,
+        "infra": {
+          "luz_hr": 926,
+          "depr_hr": 400,
+          "mant_hr": 700,
+          "etiquetas": 500,
+          "load_factor": 0.4
+        },
+        "prep": {
+          "mano_obra_hr": 1000,
+          "prep_time_pct": 10
+        },
+        "oper": {
+          "transporte": 5,
+          "ganancia": 30,
+          "marketing": 5,
+          "fallos": 10
+        },
+        "margin": {
+          "iva": 19
+        },
+        "technology": "FDM",
+        "bed": {
+          "x": 256,
+          "y": 256,
+          "z": 256
+        },
+        "bedHours": 0.29,
+        "bedWeightG": 3,
+        "models": [
+          {
+            "id": 1,
+            "weightG": 2000,
+            "hours": 60,
+            "qty": 1,
+            "footprint": {
+              "x": 400,
+              "y": 400
+            },
+            "heightMm": 400
+          }
+        ]
+      },
+      "expected": {
+        "pieces": 1,
+        "weight": 2024,
+        "duration": 62.32,
+        "beds": 8,
+        "piecesPerBed": 1,
+        "matCost": 172040,
+        "infraCost": 91635.32800000001,
+        "laborCost": 6232,
+        "utilityCost": 0,
+        "productionCost": 270407.328,
+        "marginCost": 135203,
+        "unitPrice": 405611,
+        "grossSubtotal": 405611,
+        "volumeDiscount": 0,
+        "discount": 0,
+        "subtotal": 405611,
+        "iva": 77066,
+        "ivaPct": 19,
+        "total": 482677,
+        "urgent": false,
+        "adjustments": [],
+        "models": [
+          {
+            "qty": 1,
+            "piecesPerBed": 1,
+            "weightG": 2024,
+            "hours": 62.32
+          }
+        ]
+      }
     }
   ],
   "helpers": [
@@ -1516,6 +1831,262 @@
         0.12
       ],
       "expected": 0.2580645161290323
+    },
+    {
+      "fn": "piecesPerBed",
+      "args": [
+        {
+          "x": 130,
+          "y": 130
+        },
+        {
+          "x": 256,
+          "y": 256
+        }
+      ],
+      "expected": 1
+    },
+    {
+      "fn": "piecesPerBed",
+      "args": [
+        {
+          "x": 100,
+          "y": 2
+        },
+        {
+          "x": 218,
+          "y": 123
+        }
+      ],
+      "expected": 25
+    },
+    {
+      "fn": "piecesPerBed",
+      "args": [
+        {
+          "x": 60,
+          "y": 100
+        },
+        {
+          "x": 218,
+          "y": 123
+        }
+      ],
+      "expected": 2
+    },
+    {
+      "fn": "bedsPerPiece",
+      "args": [
+        {
+          "x": 400,
+          "y": 400
+        },
+        400,
+        {
+          "x": 256,
+          "y": 256,
+          "z": 256
+        }
+      ],
+      "expected": 8
+    },
+    {
+      "fn": "bedsPerPiece",
+      "args": [
+        {
+          "x": 300,
+          "y": 30
+        },
+        10,
+        {
+          "x": 256,
+          "y": 256,
+          "z": 256
+        }
+      ],
+      "expected": 2
+    },
+    {
+      "fn": "bedsPerPiece",
+      "args": [
+        {
+          "x": 120,
+          "y": 240
+        },
+        50,
+        {
+          "x": 256,
+          "y": 123,
+          "z": 250
+        }
+      ],
+      "expected": 1
+    },
+    {
+      "fn": "bedsPerPiece",
+      "args": [
+        {
+          "x": 20,
+          "y": 20
+        },
+        20,
+        {
+          "x": 256,
+          "y": 256,
+          "z": 256
+        }
+      ],
+      "expected": 1
+    },
+    {
+      "fn": "bedsPerPiece",
+      "args": [
+        null,
+        600,
+        {
+          "x": 218,
+          "y": 123,
+          "z": 250
+        }
+      ],
+      "expected": 3
+    },
+    {
+      "fn": "finiteNum",
+      "args": [
+        "1e400"
+      ],
+      "expected": null
+    },
+    {
+      "fn": "finiteNum",
+      "args": [
+        " 12.5 "
+      ],
+      "expected": 12.5
+    },
+    {
+      "fn": "finiteNum",
+      "args": [
+        "abc"
+      ],
+      "expected": null
+    },
+    {
+      "fn": "normalizeRules",
+      "args": [
+        [
+          {
+            "min_order_total": 5000
+          }
+        ]
+      ],
+      "expected": {
+        "min_order_total": 0,
+        "volume_tiers": [],
+        "round_to": 0,
+        "labor_per_piece_min": 0,
+        "rush_pct": 0
+      }
+    },
+    {
+      "fn": "normalizeRules",
+      "args": [
+        {
+          "min_order_total": 1000,
+          "volume_tiers": {
+            "a": {
+              "min_qty": 2,
+              "discount_pct": 5
+            }
+          }
+        }
+      ],
+      "expected": {
+        "min_order_total": 1000,
+        "volume_tiers": [],
+        "round_to": 0,
+        "labor_per_piece_min": 0,
+        "rush_pct": 0
+      }
+    },
+    {
+      "fn": "normalizeCalibration",
+      "args": [
+        {
+          "time_factor": [
+            1.5
+          ],
+          "by_material": [
+            1.2,
+            0.9
+          ]
+        }
+      ],
+      "expected": {
+        "time_factor": {
+          "FDM": 1,
+          "SLA": 1
+        },
+        "by_material": {}
+      }
+    },
+    {
+      "fn": "normalizeCalibration",
+      "args": [
+        [
+          {
+            "FDM": 1.2
+          }
+        ]
+      ],
+      "expected": {
+        "time_factor": {
+          "FDM": 1,
+          "SLA": 1
+        },
+        "by_material": {}
+      }
+    },
+    {
+      "fn": "normalizeBeds",
+      "args": [
+        [
+          {
+            "x": 100,
+            "y": 100,
+            "z": 100
+          }
+        ]
+      ],
+      "expected": {
+        "FDM": {
+          "x": 256,
+          "y": 256,
+          "z": 256
+        },
+        "SLA": {
+          "x": 218,
+          "y": 123,
+          "z": 250
+        }
+      }
+    },
+    {
+      "fn": "normalizeRules",
+      "args": [
+        {
+          "rush_pct": "1e400",
+          "round_to": "100"
+        }
+      ],
+      "expected": {
+        "min_order_total": 0,
+        "volume_tiers": [],
+        "round_to": 100,
+        "labor_per_piece_min": 0,
+        "rush_pct": 0
+      }
     }
   ]
 }

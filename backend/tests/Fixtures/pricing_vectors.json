@@ -255,21 +255,22 @@
                 "models": [
                     {
                         "weight_g": 3.884705000000001,
-                        "duration_h": 1.4240000000000002
+                        "duration_h": 0.7240000000000001
                     }
                 ],
                 "weight_g": 3.884705000000001,
-                "duration_h": 1.4240000000000002,
-                "production_cost": 5208.9258500000005,
+                "duration_h": 0.7240000000000001,
+                "production_cost": 4109.645850000001,
                 "extras_cost": 2001.5,
-                "unit_price": 14585,
-                "subtotal": 14585,
+                "unit_price": 11507,
+                "subtotal": 11507,
                 "discount": 0,
-                "subtotal_after_discount": 14585,
-                "iva_pct": 19,
-                "iva": 2771,
-                "total": 17356
-            }
+                "subtotal_after_discount": 11507,
+                "iva_pct": 19.0,
+                "iva": 2186,
+                "total": 13693
+            },
+            "note": "Eje vertical SLA único (v. 2026-11): sin áreas por eje la pieza va con Y vertical como en el visor; altura 18.1 mm (antes se tomaba Z). Total anterior: 17356."
         },
         {
             "name": "sla_qty4_coupon15_iva0_custom_infra",
@@ -334,23 +335,23 @@
                 "models": [
                     {
                         "weight_g": 7.9321923828125005,
-                        "duration_h": 0.445
+                        "duration_h": 0.22625
                     }
                 ],
                 "weight_g": 31.728769531250002,
-                "duration_h": 1.78,
-                "production_cost": 19888.1603828125,
+                "duration_h": 0.905,
+                "production_cost": 18352.0103828125,
                 "extras_cost": 8331.0,
-                "unit_price": 13922,
-                "subtotal": 55688,
-                "discount": 8353,
-                "subtotal_after_discount": 47335,
+                "unit_price": 12846,
+                "subtotal": 51384,
+                "discount": 7708,
+                "subtotal_after_discount": 43676,
                 "iva_pct": 0.0,
                 "iva": 0,
-                "total": 47335,
+                "total": 43676,
                 "beds": 1
             },
-            "note": "Camas compartidas (v. 2026-10): 4 piezas en 1 cama(s); antes cada pieza pagaba su preparación/purga (FDM) o su propio tiempo de cama (SLA). Total anterior: 69646."
+            "note": "Camas compartidas (v. 2026-10): 4 piezas en 1 cama(s); antes cada pieza pagaba su preparación/purga (FDM) o su propio tiempo de cama (SLA). Total anterior: 69646. | Eje vertical SLA único (v. 2026-11): sin áreas por eje la pieza va con Y vertical como en el visor; altura 22.63 mm (antes se tomaba Z). Total anterior: 47335."
         },
         {
             "name": "fdm_string_settings_null_density_thin_shell",

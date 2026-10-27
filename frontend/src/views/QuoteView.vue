@@ -6,7 +6,7 @@ import { sanitizeSVG } from '../utils/sanitize'
 import { api } from '../services/api'
 import {
   calcQuoteEstimate, calcExtraCost, normalizeRules, normalizeCalibration, normalizeBeds, calibrationFactor, materialParams,
-  chooseOrientation, footprint, slaHeight, fdmPrintHours, FDM_PREP_H, FDM_PURGE_G,
+  chooseOrientation, placement, fdmPrintHours, FDM_PREP_H, FDM_PURGE_G,
   type Axis, type Dims3, type QuoteAdjustment,
 } from '../services/costCalculator'
 import { useRevealAnim } from '../composables/useRevealAnim'
@@ -677,9 +677,9 @@ const timeFactor = (mat: Material) =>
  */
 const modelUnitStats = (model: QuoteModel, mat: Material) => {
   const waste = 1 + materialParams(mat).waste_pct / 100
+  // Mismo eje vertical para huella y altura en FDM y SLA (igual que el servidor)
+  const place = placement(model.bbox, modelOrientation(model).axis)
   if (selectedTechnology.value === 'FDM') {
-    const { axis } = modelOrientation(model)
-    const place = { footprint: footprint(model.bbox, axis), heightMm: model.bbox ? model.bbox[axis] : 0 }
     if (!model.hasSlicing || !model.curaFactors) return { weightG: 0, hours: 0, ...place }
     const cf = model.curaFactors
     const net = (Number(cf.shell_weight_g) || 0) + (Number(cf.internal_weight_g) || 0) + (Number(cf.support_weight_g) || 0)
@@ -689,17 +689,10 @@ const modelUnitStats = (model: QuoteModel, mat: Material) => {
       ...place,
     }
   }
-  // SLA: volume viene en mm³, convertir a cm³; altura como la recibe el servidor (1 decimal)
+  // SLA: volume viene en mm³, convertir a cm³
   const volCm3 = (model.volume || 0) / 1000
   const density = Number(mat.density) || 1.1
-  const d = model.dimensions
-  const client = { x: Number(d.x.toFixed(1)), y: Number(d.y.toFixed(1)), z: Number(d.z.toFixed(1)) }
-  return {
-    weightG: volCm3 * density * 1.1 * waste,
-    hours: 0,
-    footprint: footprint(model.bbox, 'y'),
-    heightMm: slaHeight(client, model.bbox),
-  }
+  return { weightG: volCm3 * density * 1.1 * waste, hours: 0, ...place }
 }
 
 /** Precio ESTIMADO en el navegador: suma de todos los modelos (cada uno × su cantidad). */

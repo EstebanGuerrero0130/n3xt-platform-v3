@@ -351,41 +351,61 @@ export function piecesPerBed(fp: Footprint | null | undefined, bed: Partial<Dims
   const fx = Number(fp?.x) || 0
   const fy = Number(fp?.y) || 0
   if (bx <= 0 || by <= 0 || fx <= 0 || fy <= 0) return 1
-  // Una pieza más grande que la cama ocupa una cama entera
+  // Una pieza más grande que la cama ocupa una cama entera (ver bedsPerPiece)
   if (!((fx <= bx && fy <= by) || (fx <= by && fy <= bx))) return 1
-  const n = Math.floor((bx * by * BED_PACKING) / ((fx + BED_SPACING_MM) * (fy + BED_SPACING_MM)))
-  return Math.max(1, n)
+  const sp = BED_SPACING_MM
+  const area = Math.floor((bx * by * BED_PACKING) / ((fx + sp) * (fy + sp)))
+  // Por área no basta: también deben caber en filas (con la pieza girada o no)
+  const grid = Math.max(
+    Math.floor((bx + sp) / (fx + sp)) * Math.floor((by + sp) / (fy + sp)),
+    Math.floor((bx + sp) / (fy + sp)) * Math.floor((by + sp) / (fx + sp)),
+  )
+  return Math.max(1, Math.min(area, grid))
 }
 
 /**
- * Altura SLA: la que mide el visor (z, si no y), acotada a lo posible para la malla
- * (entre su menor lado y su diagonal). Igual que QuotePricingService::slaHeight.
+ * Camas que ocupa UNA pieza: 1 si cabe; si no, se imprime en partes y cada eje que
+ * se pasa de la cama multiplica por ceil(lado / cama) (la huella puede girarse).
  */
-export function slaHeight(client: Partial<Dims3> | null | undefined, bbox: Dims3 | null | undefined): number {
-  const cz = Math.abs(Number(client?.z) || 0)
-  const cy = Math.abs(Number(client?.y) || 0)
-  let candidate = cz > 0 ? cz : (cy > 0 ? cy : 0)
-  if (candidate > 0) {
-    if (bbox) {
-      const lo = Math.min(bbox.x, bbox.y, bbox.z)
-      const hi = Math.sqrt(bbox.x * bbox.x + bbox.y * bbox.y + bbox.z * bbox.z)
-      candidate = Math.min(Math.max(candidate, lo), hi)
-    }
-    return candidate
+export function bedsPerPiece(fp: Footprint | null | undefined, heightMm: number, bed: Partial<Dims3> | null | undefined): number {
+  const bx = Number(bed?.x) || 0
+  const by = Number(bed?.y) || 0
+  const bz = Number(bed?.z) || 0
+  const fx = Number(fp?.x) || 0
+  const fy = Number(fp?.y) || 0
+  let xy = 1
+  if (bx > 0 && by > 0 && fx > 0 && fy > 0) {
+    xy = Math.min(Math.ceil(fx / bx) * Math.ceil(fy / by), Math.ceil(fx / by) * Math.ceil(fy / bx))
   }
-  if (bbox) return bbox.z > 0 ? bbox.z : bbox.y
-  return 0
+  const z = bz > 0 && heightMm > bz ? Math.ceil(heightMm / bz) : 1
+  return Math.max(1, xy) * z
+}
+
+/** Huella y altura en la cama con `axis` vertical (bbox del archivo, ya escalado) */
+export function placement(bbox: Dims3 | null | undefined, axis: Axis): { footprint: Footprint | null; heightMm: number } {
+  return { footprint: footprint(bbox, axis), heightMm: bbox ? bbox[axis] : 0 }
 }
 
 interface BedSlot { height: number; pieces: number; used: number; items: number[] }
 
-/** Reparte las piezas en camas: de la más alta a la más baja, llenando cada cama */
-function packBeds(models: { qty: number; heightMm: number }[], ppb: number[]): BedSlot[] {
+/**
+ * Reparte las piezas en camas: de la más alta a la más baja, llenando cada cama.
+ * Una pieza que no cabe ocupa `parts` camas enteras, cada una con la altura de su parte.
+ */
+function packBeds(models: { qty: number; heightMm: number }[], ppb: number[], parts: number[], zParts: number[]): BedSlot[] {
   const order = models.map((_, i) => i)
   order.sort((a, b) => (models[b].heightMm - models[a].heightMm) || (a - b))
   const beds: BedSlot[] = []
   let cur = -1
   for (const i of order) {
+    if (parts[i] > 1) {
+      const items = models.map((_, k) => (k === i ? 1 : 0))
+      for (let p = 0; p < models[i].qty * parts[i]; p++) {
+        beds.push({ height: models[i].heightMm / zParts[i], pieces: 1, used: 1, items: [...items] })
+        cur++
+      }
+      continue
+    }
     const need = 1 / ppb[i]
     for (let p = 0; p < models[i].qty; p++) {
       if (cur < 0 || beds[cur].used + need > 1 + 1e-9) {
@@ -508,7 +528,9 @@ export function calcQuoteEstimate(input: QuoteInput): QuoteResult {
 
   // Camas: cuántas piezas caben y en qué cama va cada una
   const ppb = models.map(m => (tech ? piecesPerBed(m.footprint, input.bed) : 1))
-  const beds = tech ? packBeds(models, ppb) : []
+  const parts = models.map(m => (tech ? bedsPerPiece(m.footprint, m.heightMm, input.bed) : 1))
+  const zParts = models.map(m => (tech ? bedsPerPiece(null, m.heightMm, input.bed) : 1))
+  const beds = tech ? packBeds(models, ppb, parts, zParts) : []
   const bedCount = tech ? beds.length : pieces
   const maxPerBed = beds.reduce((s, b) => Math.max(s, b.pieces), 1)
 

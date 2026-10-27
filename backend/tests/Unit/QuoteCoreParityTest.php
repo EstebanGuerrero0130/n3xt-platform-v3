@@ -66,6 +66,8 @@ class QuoteCoreParityTest extends TestCase
             })(),
             'piecesPerBed' => QuotePricingService::piecesPerBed($a[0], $a[1]),
             'fdmPrintHours' => QuotePricingService::fdmPrintHours($a[0], $a[1], $a[2]),
+            'bedsPerPiece' => QuotePricingService::bedsPerPiece($a[0], $a[1], $a[2]),
+            'finiteNum' => QuotePricingService::finiteNum($a[0]),
         };
         $this->assertClose($h['expected'], $actual, $h['fn']);
     }

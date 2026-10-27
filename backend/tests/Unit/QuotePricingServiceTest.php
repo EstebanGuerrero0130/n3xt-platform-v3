@@ -14,7 +14,9 @@ use PHPUnit\Framework\TestCase;
  * Los casos con varias piezas (los que tienen `note`) cambiaron a propósito: ahora las
  * piezas comparten cama, así que la preparación y la purga FDM se cobran por cama y el
  * tiempo SLA es el de cada cama (pieza más alta / 25), no el de cada pieza. Los casos de
- * una sola pieza siguen dando lo mismo que antes. La paridad del núcleo con el frontend
+ * una sola pieza siguen dando lo mismo que antes. Los casos SLA también cambiaron: la
+ * altura usa el mismo eje vertical que la huella (Y del visor si no hay áreas por eje).
+ * La paridad del núcleo con el frontend
  * se prueba en QuoteCoreParityTest.
  */
 class QuotePricingServiceTest extends TestCase
@@ -132,7 +134,7 @@ class QuotePricingServiceTest extends TestCase
         $this->assertNull(QuotePricingService::findCoupon('NOPE', $coupons));
     }
 
-    public function test_per_model_qty_and_sla_height_clamp(): void
+    public function test_per_model_qty_and_sla_height_from_bbox(): void
     {
         $svc = $this->service();
         $base = ['volume_mm3' => 8000, 'total_area_mm2' => 2400, 'support_area_mm2' => 400, 'bbox_mm' => [20, 20, 20], 'scale_factor' => 1];
@@ -148,14 +150,81 @@ class QuotePricingServiceTest extends TestCase
         $this->assertSame(4, $r['qty']);
         $this->assertEqualsWithDelta($r['models'][0]['raw']['weight_g'] * 4, $r['weight_g'], 1e-9);
 
-        // SLA: dimensions_mm del cliente acotadas a [lado menor, diagonal] del bbox escalado
-        $sla = $svc->quote(
-            ['technology' => 'SLA', 'models' => [$base + ['name' => 'r', 'qty' => 1, 'dimensions_mm' => '20x20x9999']]],
+        // SLA: la altura sale del bbox medido por el servidor, no de dimensions_mm del cliente
+        foreach (['20x20x9999', '1x1x1'] as $dims) {
+            $sla = $svc->quote(
+                ['technology' => 'SLA', 'models' => [$base + ['name' => 'r', 'qty' => 1, 'dimensions_mm' => $dims]]],
+                [],
+                ['cost_per_kg' => 250000, 'density' => 1.1],
+                []
+            );
+            $this->assertEqualsWithDelta(20, $sla['models'][0]['height_mm'], 1e-9, $dims);
+        }
+    }
+
+    public function test_sla_uses_one_vertical_axis_for_footprint_and_height(): void
+    {
+        // Placa 100×100×2 (Y vertical en el visor): de pie, huella 100×2 y 100 mm de alto
+        $plate = [
+            'name' => 'placa', 'qty' => 25, 'scale_factor' => 1,
+            'volume_mm3' => 20000, 'total_area_mm2' => 20800, 'support_area_mm2' => 200,
+            'bbox_mm' => [100, 100, 2], 'dimensions_mm' => '100.0 x 100.0 x 2.0',
+            'down_area_mm2' => ['x' => 200, 'y' => 200, 'z' => 10000],
+            'bed_contact_mm2' => ['x' => 200, 'y' => 200, 'z' => 10000],
+        ];
+        $r = $this->service()->quote(
+            ['technology' => 'SLA', 'bed' => ['x' => 218, 'y' => 123, 'z' => 250], 'models' => [$plate]],
             [],
-            ['cost_per_kg' => 250000, 'density' => 1.1],
+            ['id' => 'RES', 'cost_per_kg' => 250000, 'density' => 1.1],
             []
         );
-        $this->assertEqualsWithDelta(sqrt(3 * 400), $sla['models'][0]['height_mm'], 0.01);
+        $this->assertSame('y', $r['models'][0]['orientation']);
+        $this->assertEqualsWithDelta(100, $r['models'][0]['height_mm'], 1e-9);
+        $this->assertSame(1, $r['beds']);
+        $this->assertSame(25, $r['pieces_per_bed']);
+        $this->assertEqualsWithDelta(4.0, $r['duration_h'], 1e-9);
+
+        // Si conviene acostarla (Z vertical), huella y altura cambian juntas
+        $flat = $plate + [];
+        $flat['down_area_mm2'] = ['x' => 200, 'y' => 5000, 'z' => 10000];
+        $flat['bed_contact_mm2'] = ['x' => 0, 'y' => 0, 'z' => 10000];
+        $f = $this->service()->quote(
+            ['technology' => 'SLA', 'bed' => ['x' => 218, 'y' => 123, 'z' => 250], 'models' => [$flat]],
+            [],
+            ['id' => 'RES', 'cost_per_kg' => 250000, 'density' => 1.1],
+            []
+        );
+        $this->assertSame('z', $f['models'][0]['orientation']);
+        $this->assertEqualsWithDelta(2, $f['models'][0]['height_mm'], 1e-9);
+        $this->assertSame(1, $f['pieces_per_bed']);
+        $this->assertSame(25, $f['beds']);
+    }
+
+    public function test_bed_packing_by_rows_and_oversize_parts(): void
+    {
+        // 130×130 en 256×256: por área serían 2, en filas cabe 1
+        $this->assertSame(1, QuotePricingService::piecesPerBed(['x' => 130, 'y' => 130], ['x' => 256, 'y' => 256]));
+        $two = $this->fdmQuote([$this->cube(['qty' => 2, 'bbox_mm' => [130, 20, 130]])]);
+        $this->assertSame(2, $two['beds']);
+
+        // Cubo de 400 mm en cama de 256: 2×2×2 partes, una cama cada una
+        $big = $this->fdmQuote([$this->cube(['bbox_mm' => [400, 400, 400]])]);
+        $this->assertSame(8, $big['beds']);
+        $this->assertSame(1, $big['pieces_per_bed']);
+    }
+
+    public function test_finite_num_and_json_lists_like_frontend(): void
+    {
+        $this->assertNull(QuotePricingService::finiteNum('1e400'));
+        $this->assertSame(12.5, QuotePricingService::finiteNum(' 12.5 '));
+        // Una lista JSON no es un objeto de settings (isObj del frontend)
+        $this->assertSame(0.0, QuotePricingService::normalizeRules([['min_order_total' => 5000]])['min_order_total']);
+        $this->assertSame([], QuotePricingService::normalizeRules(['volume_tiers' => ['a' => ['min_qty' => 2, 'discount_pct' => 5]]])['volume_tiers']);
+        $cal = QuotePricingService::normalizeCalibration(['time_factor' => [1.5], 'by_material' => [1.2]]);
+        $this->assertSame(['FDM' => 1.0, 'SLA' => 1.0], $cal['time_factor']);
+        $this->assertSame([], $cal['by_material']);
+        // Sin recargo infinito por un texto fuera de rango
+        $this->assertSame(0.0, QuotePricingService::normalizeRules(['rush_pct' => '1e400'])['rush_pct']);
     }
 
     private function cube(array $extra = []): array

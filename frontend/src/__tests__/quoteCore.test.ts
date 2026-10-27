@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   calcQuoteEstimate, normalizeRules, normalizeCalibration, calibrationFactor, normalizeBeds, materialParams,
-  chooseOrientation, piecesPerBed, fdmPrintHours, footprint, slaHeight, type QuoteInput,
+  chooseOrientation, piecesPerBed, bedsPerPiece, fdmPrintHours, finiteNum, footprint, placement, type QuoteInput,
 } from '../services/costCalculator'
 
 // Mismo archivo que comprueba QuoteCoreParityTest (PHPUnit): paridad navegador ↔ servidor
@@ -18,6 +18,8 @@ const helpers: Record<string, (...a: any[]) => unknown> = {
   chooseOrientation,
   piecesPerBed,
   fdmPrintHours,
+  bedsPerPiece,
+  finiteNum,
 }
 
 describe('paridad con QuotePricingService (quote_core_vectors.json)', () => {
@@ -77,6 +79,18 @@ describe('camas', () => {
     expect(r.duration).toBe(2) // 50 / 25, no × 6
   })
 
+  it('piezas por cama: no solo por área, también en filas', () => {
+    expect(piecesPerBed({ x: 130, y: 130 }, bed)).toBe(1)
+    expect(calcQuoteEstimate(fdm(2, { models: [{ id: 1, weightG: 120, hours: 6, qty: 2, footprint: { x: 130, y: 130 }, heightMm: 20 }] })).beds).toBe(2)
+  })
+
+  it('pieza más grande que la cama: se cobra una cama por parte', () => {
+    expect(bedsPerPiece({ x: 400, y: 400 }, 400, bed)).toBe(8)
+    const r = calcQuoteEstimate(fdm(1, { models: [{ id: 1, weightG: 2000, hours: 60, qty: 1, footprint: { x: 400, y: 400 }, heightMm: 400 }] }))
+    expect(r.beds).toBe(8)
+    expect(r.duration).toBeCloseTo(60 + 0.29 * 8, 9)
+  })
+
   it('sin huella (datos viejos) cada pieza ocupa su cama', () => {
     const r = calcQuoteEstimate({ ...fdm(3), models: [{ id: 1, weightG: 6.2, hours: 0.31, qty: 3 }] })
     expect(r.beds).toBe(3)
@@ -95,9 +109,20 @@ describe('orientación', () => {
     expect(footprint({ x: 10, y: 20, z: 30 }, 'y')).toEqual({ x: 10, y: 30 })
   })
 
-  it('altura SLA acotada al bbox (igual que el servidor)', () => {
-    expect(slaHeight({ x: 20, y: 20, z: 9999 }, { x: 20, y: 20, z: 20 })).toBeCloseTo(Math.sqrt(1200), 9)
-    expect(slaHeight(null, { x: 20, y: 30, z: 0 })).toBe(30)
+  it('huella y altura salen del mismo eje vertical (FDM y SLA)', () => {
+    // Placa 100×100×2 con Y vertical (visor): queda de pie, 100 mm de alto
+    expect(placement({ x: 100, y: 100, z: 2 }, 'y')).toEqual({ footprint: { x: 100, y: 2 }, heightMm: 100 })
+    expect(placement({ x: 100, y: 100, z: 2 }, 'z')).toEqual({ footprint: { x: 100, y: 100 }, heightMm: 2 })
+    expect(placement(null, 'y')).toEqual({ footprint: null, heightMm: 0 })
+  })
+
+  it('SLA: placa de pie, 25 por cama y el tiempo de su altura real', () => {
+    const r = calcQuoteEstimate({
+      ...cfg, technology: 'SLA', bed: { x: 218, y: 123, z: 250 },
+      models: [{ id: 1, weightG: 22, hours: 0, qty: 25, ...placement({ x: 100, y: 100, z: 2 }, 'y') }],
+    })
+    expect(r.beds).toBe(1)
+    expect(r.duration).toBe(4) // 100 / 25, no 0.5 h de una placa acostada
   })
 })
 

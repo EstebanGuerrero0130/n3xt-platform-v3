@@ -117,7 +117,7 @@ class QuotePricingService
      *       'down_area_mm2'   => ['x','y','z'] (SIN escalar, opcional: área hacia abajo por eje),
      *       'bed_contact_mm2' => ['x','y','z'] (SIN escalar, opcional: parte que apoya en la cama),
      *       'bbox_mm' => [x, y, z] (SIN escalar, opcional),
-     *       'dimensions_mm' => "X x Y x Z" (cliente, ya escalado, opcional),
+     *       'dimensions_mm' => "X x Y x Z" (cliente, solo informativo: no entra al precio),
      *       'infill'?, 'layer_height'?  (override por modelo)
      *   ]],
      *   'extras' => [['material_id', 'qty']],
@@ -172,16 +172,18 @@ class QuotePricingService
                 'hours' => 0.0,
             ];
 
+            // Orientación con menos soporte (si llegan las áreas por eje; si no, la del visor).
+            // FDM y SLA usan el mismo eje vertical para la huella y la altura.
+            if (isset($m['down_area_mm2']) && is_array($m['down_area_mm2'])) {
+                $o = self::chooseOrientation(
+                    self::scaleAxes($m['down_area_mm2'], $s * $s),
+                    isset($m['bed_contact_mm2']) && is_array($m['bed_contact_mm2']) ? self::scaleAxes($m['bed_contact_mm2'], $s * $s) : null
+                );
+                $axis = $o['axis'];
+                $supportArea = $o['support_area_mm2'];
+            }
+
             if ($isFdm) {
-                // Orientación con menos soporte (si llegan las áreas por eje; si no, la del visor)
-                if (isset($m['down_area_mm2']) && is_array($m['down_area_mm2'])) {
-                    $o = self::chooseOrientation(
-                        self::scaleAxes($m['down_area_mm2'], $s * $s),
-                        isset($m['bed_contact_mm2']) && is_array($m['bed_contact_mm2']) ? self::scaleAxes($m['bed_contact_mm2'], $s * $s) : null
-                    );
-                    $axis = $o['axis'];
-                    $supportArea = $o['support_area_mm2'];
-                }
                 $infill = (int)(self::jsOr($m['infill'] ?? null, (float)$defaultInfill));
                 $layer = self::jsOr($m['layer_height'] ?? null, $defaultLayer);
 
@@ -192,14 +194,14 @@ class QuotePricingService
                 $row['hours'] = self::fdmPrintHours($net, $fdmDensity, $layer) * $speed;
                 $row['infill'] = $infill;
                 $row['layer_height'] = $layer;
-                $row['height_mm'] = $bbox ? $bbox[self::AXES[$axis]] : 0.0;
             } else {
                 // SLA: volumen mm³ → cm³
                 $volCm3 = $volume / 1000;
                 $density = self::jsOr($material['density'] ?? null, 1.1);
                 $row['weight_g'] = $volCm3 * $density * 1.1 * $waste;
-                $row['height_mm'] = $this->slaHeight($m, $s);
             }
+            // Altura medida por el servidor (bbox), nunca las medidas que manda el cliente
+            $row['height_mm'] = $bbox ? $bbox[self::AXES[$axis]] : 0.0;
             $row['support_area_mm2'] = $supportArea;
             $row['orientation'] = $axis;
             $row['footprint'] = self::footprint($bbox, $axis);
@@ -413,10 +415,14 @@ class QuotePricingService
         $ppb = array_fill(0, $n, 1);
         $beds = [];
         if ($tech !== null) {
+            $parts = array_fill(0, $n, 1);
+            $zParts = array_fill(0, $n, 1);
             foreach ($models as $i => $m) {
                 $ppb[$i] = self::piecesPerBed($m['footprint'], $in['bed'] ?? null);
+                $parts[$i] = self::bedsPerPiece($m['footprint'], $m['heightMm'], $in['bed'] ?? null);
+                $zParts[$i] = self::bedsPerPiece(null, $m['heightMm'], $in['bed'] ?? null);
             }
-            $beds = self::packBeds($models, $ppb);
+            $beds = self::packBeds($models, $ppb, $parts, $zParts);
         }
         $bedCount = $tech !== null ? count($beds) : $pieces;
         $maxPerBed = 1;
@@ -606,19 +612,45 @@ class QuotePricingService
         $fx = self::jsOr($footprint['x'] ?? null, 0.0);
         $fy = self::jsOr($footprint['y'] ?? null, 0.0);
         if ($bx <= 0 || $by <= 0 || $fx <= 0 || $fy <= 0) return 1;
-        // Una pieza más grande que la cama ocupa una cama entera
+        // Una pieza más grande que la cama ocupa una cama entera (ver bedsPerPiece)
         if (!(($fx <= $bx && $fy <= $by) || ($fx <= $by && $fy <= $bx))) return 1;
-        $n = floor(($bx * $by * self::BED_PACKING) / (($fx + self::BED_SPACING_MM) * ($fy + self::BED_SPACING_MM)));
-        return max(1, (int)$n);
+        $sp = self::BED_SPACING_MM;
+        $area = floor(($bx * $by * self::BED_PACKING) / (($fx + $sp) * ($fy + $sp)));
+        // Por área no basta: también deben caber en filas (con la pieza girada o no)
+        $grid = max(
+            floor(($bx + $sp) / ($fx + $sp)) * floor(($by + $sp) / ($fy + $sp)),
+            floor(($bx + $sp) / ($fy + $sp)) * floor(($by + $sp) / ($fx + $sp))
+        );
+        return max(1, (int)min($area, $grid));
+    }
+
+    /**
+     * Camas que ocupa UNA pieza: 1 si cabe; si no, se imprime en partes y cada eje que
+     * se pasa de la cama multiplica por ceil(lado / cama) (la huella puede girarse).
+     */
+    public static function bedsPerPiece(?array $footprint, float $heightMm, ?array $bed): int
+    {
+        $bx = self::jsOr($bed['x'] ?? null, 0.0);
+        $by = self::jsOr($bed['y'] ?? null, 0.0);
+        $bz = self::jsOr($bed['z'] ?? null, 0.0);
+        $fx = self::jsOr($footprint['x'] ?? null, 0.0);
+        $fy = self::jsOr($footprint['y'] ?? null, 0.0);
+        $xy = 1;
+        if ($bx > 0 && $by > 0 && $fx > 0 && $fy > 0) {
+            $xy = (int)min(ceil($fx / $bx) * ceil($fy / $by), ceil($fx / $by) * ceil($fy / $bx));
+        }
+        $z = ($bz > 0 && $heightMm > $bz) ? (int)ceil($heightMm / $bz) : 1;
+        return max(1, $xy) * $z;
     }
 
     /**
      * Reparte las piezas en camas: de la más alta a la más baja, llenando cada cama
-     * (cada pieza ocupa 1/piezas_por_cama de la suya).
+     * (cada pieza ocupa 1/piezas_por_cama de la suya). Una pieza que no cabe ocupa
+     * $parts camas enteras, cada una con la altura de su parte.
      *
      * @return array<int, array{height: float, pieces: int, used: float, items: int[]}>
      */
-    private static function packBeds(array $models, array $ppb): array
+    private static function packBeds(array $models, array $ppb, array $parts, array $zParts): array
     {
         $n = count($models);
         $order = array_keys($models);
@@ -626,6 +658,15 @@ class QuotePricingService
         $beds = [];
         $cur = -1;
         foreach ($order as $i) {
+            if ($parts[$i] > 1) {
+                $items = array_fill(0, $n, 0);
+                $items[$i] = 1;
+                for ($p = 0; $p < $models[$i]['qty'] * $parts[$i]; $p++) {
+                    $beds[] = ['height' => $models[$i]['heightMm'] / $zParts[$i], 'pieces' => 1, 'used' => 1.0, 'items' => $items];
+                    $cur++;
+                }
+                continue;
+            }
             $need = 1 / $ppb[$i];
             for ($p = 0; $p < $models[$i]['qty']; $p++) {
                 if ($cur < 0 || $beds[$cur]['used'] + $need > 1 + 1e-9) {
@@ -849,8 +890,17 @@ class QuotePricingService
     public static function finiteNum(mixed $v): ?float
     {
         if (is_int($v) || is_float($v)) return is_finite((float)$v) ? (float)$v : null;
-        if (is_string($v) && trim($v) !== '' && is_numeric(trim($v))) return (float)trim($v);
+        if (is_string($v) && trim($v) !== '' && is_numeric(trim($v))) {
+            $n = (float)trim($v);
+            return is_finite($n) ? $n : null; // "1e400" → INF, igual que Number() → null
+        }
         return null;
+    }
+
+    /** Objeto JSON (no lista), como isObj de costCalculator.ts; [] vacío cuenta como objeto. */
+    private static function isObj(mixed $v): bool
+    {
+        return is_array($v) && ($v === [] || !array_is_list($v));
     }
 
     /** Camas por tecnología (settings `beds`): cada medida > 0 o la de DEFAULT_BEDS. */
@@ -858,7 +908,7 @@ class QuotePricingService
     {
         $out = [];
         foreach (self::DEFAULT_BEDS as $tech => $default) {
-            $out[$tech] = self::normalizeBed(is_array($raw) ? ($raw[$tech] ?? null) : null, $default);
+            $out[$tech] = self::normalizeBed(self::isObj($raw) ? ($raw[$tech] ?? null) : null, $default);
         }
         return $out;
     }
@@ -867,7 +917,7 @@ class QuotePricingService
     {
         $out = [];
         foreach (['x', 'y', 'z'] as $k) {
-            $v = is_array($raw) ? self::finiteNum($raw[$k] ?? null) : null;
+            $v = self::isObj($raw) ? self::finiteNum($raw[$k] ?? null) : null;
             $out[$k] = $v !== null && $v > 0 ? $v : (float)$default[$k];
         }
         return $out;
@@ -880,14 +930,14 @@ class QuotePricingService
      */
     public static function normalizeRules(mixed $raw): array
     {
-        $r = is_array($raw) ? $raw : [];
+        $r = self::isObj($raw) ? $raw : [];
         $pos = static function (mixed $v, float $max = INF): float {
             $n = self::finiteNum($v);
             return $n !== null && $n > 0 ? min($n, $max) : 0.0;
         };
         $tiers = [];
-        foreach ((isset($r['volume_tiers']) && is_array($r['volume_tiers']) ? array_values($r['volume_tiers']) : []) as $t) {
-            if (!is_array($t)) continue;
+        foreach ((isset($r['volume_tiers']) && is_array($r['volume_tiers']) && array_is_list($r['volume_tiers']) ? $r['volume_tiers'] : []) as $t) {
+            if (!self::isObj($t)) continue;
             $min = self::finiteNum($t['min_qty'] ?? null);
             $pct = self::finiteNum($t['discount_pct'] ?? null);
             if ($min === null || $pct === null || floor($min) < 1 || $pct <= 0) continue;
@@ -913,9 +963,10 @@ class QuotePricingService
             $n = self::finiteNum($v);
             return $n !== null && $n >= 0.3 && $n <= 3 ? $n : null;
         };
-        $tf = is_array($raw) && is_array($raw['time_factor'] ?? null) ? $raw['time_factor'] : [];
+        $raw = self::isObj($raw) ? $raw : [];
+        $tf = self::isObj($raw['time_factor'] ?? null) ? $raw['time_factor'] : [];
         $byMaterial = [];
-        foreach ((is_array($raw) && is_array($raw['by_material'] ?? null) ? $raw['by_material'] : []) as $id => $v) {
+        foreach ((self::isObj($raw['by_material'] ?? null) ? $raw['by_material'] : []) as $id => $v) {
             $f = $ok($v);
             if ($f !== null) $byMaterial[(string)$id] = $f;
         }
@@ -974,50 +1025,6 @@ class QuotePricingService
     public static function jsRound(float $x): float
     {
         return floor($x + 0.5);
-    }
-
-    /**
-     * Altura SLA (el frontend usa dimensions.z || dimensions.y del visor, ya escalado).
-     * Si el cliente manda dimensions_mm se usa, acotado a lo geométricamente posible
-     * para la malla (entre su menor lado y su diagonal); si no, el bbox del archivo.
-     */
-    private function slaHeight(array $m, float $scale): float
-    {
-        $bbox = isset($m['bbox_mm']) && is_array($m['bbox_mm']) ? array_values($m['bbox_mm']) : null;
-        $hasBbox = $bbox !== null && count($bbox) >= 3;
-
-        $client = self::parseDimensions($m['dimensions_mm'] ?? null);
-        $candidate = 0.0;
-        if ($client !== null) {
-            $candidate = $client[2] > 0 ? $client[2] : ($client[1] > 0 ? $client[1] : 0.0);
-        }
-
-        if ($candidate > 0) {
-            if ($hasBbox) {
-                $sx = (float)$bbox[0] * $scale;
-                $sy = (float)$bbox[1] * $scale;
-                $sz = (float)$bbox[2] * $scale;
-                $lo = min($sx, $sy, $sz);
-                $hi = sqrt($sx * $sx + $sy * $sy + $sz * $sz);
-                $candidate = min(max($candidate, $lo), $hi);
-            }
-            return $candidate;
-        }
-
-        if ($hasBbox) {
-            $z = (float)$bbox[2] * $scale;
-            return $z > 0 ? $z : (float)$bbox[1] * $scale;
-        }
-        return 0.0;
-    }
-
-    /** "12.0x3.5x4" o "12 x 3.5 x 4" → [12.0, 3.5, 4.0] */
-    public static function parseDimensions(mixed $dims): ?array
-    {
-        if (!is_string($dims) || $dims === '') return null;
-        if (!preg_match_all('/-?\d+(?:[.,]\d+)?/', $dims, $mm) || count($mm[0]) < 3) return null;
-        $vals = array_map(static fn ($v) => abs((float)str_replace(',', '.', $v)), array_slice($mm[0], 0, 3));
-        return $vals;
     }
 
     private function extraCost(array $utility, string $defaultUnit, float $qty): float
