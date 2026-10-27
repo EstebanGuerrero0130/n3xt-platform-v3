@@ -47,6 +47,18 @@ function getAbsoluteUrl(path: string): string {
   return path.startsWith('http') ? path : window.location.origin + (path.startsWith('/') ? '' : '/') + path
 }
 
+/** Cantidad del pedido: piezas, camas y precio por cama/pieza cuando hay más de una. */
+function lotLabel(order: Record<string, any>): string {
+  const qty = Number(order.qty) || 1
+  if (qty <= 1) return 'Producci\u00f3n 3D Especializada'
+  const money = (n: number) => '$' + Math.round(n).toLocaleString('es-CO')
+  const beds = Number(order.beds) || 1
+  const perPiece = money(Number(order.total_price) / qty)
+  return beds > 1
+    ? `${qty} piezas en ${beds} camas \u00b7 ${money(Number(order.total_price) / beds)} por cama \u00b7 ${perPiece} por pieza`
+    : `${qty} piezas \u00b7 ${perPiece} por pieza`
+}
+
 export function usePDF({ settings, inventoryData, showNotify: _showNotify }: UsePDFOptions) {
   const companyLogo = (): string => {
     if (!settings.value?.company_logo) return window.location.origin + '/logo.png'
@@ -114,7 +126,7 @@ body { font-family: 'Outfit', sans-serif; padding: 0; color: #0f172a; line-heigh
   </div>
 </div>
 <table class="table"><thead><tr><th>Descripci\u00f3n Industrial</th><th style="width:150px;">Proceso</th><th style="width:200px;">Material</th><th style="text-align:right;width:180px;">Inversi\u00f3n</th></tr></thead>
-<tbody><tr><td style="font-weight:800;">${order.job_name || 'Fabricaci\u00f3n Digital Bajo Demanda'}<br><span style="font-size:13px;color:#64748b;font-weight:500;">Producci\u00f3n 3D Especializada</span></td>
+<tbody><tr><td style="font-weight:800;">${order.job_name || 'Fabricaci\u00f3n Digital Bajo Demanda'}<br><span style="font-size:13px;color:#64748b;font-weight:500;">${lotLabel(order)}</span></td>
 <td>${order.technology}</td><td>${mat ? mat.name : (order.material_name || order.material_id)}</td>
 <td style="text-align:right;font-weight:900;">$${Number(order.total_price - (order.extras_cost || 0)).toLocaleString()}</td></tr>
 ${(order.extra_items || []).map((extra: any) => `<tr><td>${extra.name} (Adicional)</td><td>N/A</td><td>${extra.qty} x Und</td><td style="text-align:right;font-weight:900;">$${Number(extra.cost * extra.qty).toLocaleString()}</td></tr>`).join('')}

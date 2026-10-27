@@ -35,6 +35,8 @@ export function useSimulationActions({
     // Mapeamos los datos del simulador a una estructura que entienda el generador de PDF
     const fakeOrder = {
       id: 'SIM-' + Date.now().toString().slice(-4),
+      qty: formData?.pieces_per_batch || simulator.pieces_per_batch || 1,
+      beds: formData?.beds || 1,
       customer_name: formData?.customer_name || simulator.customer_name || 'Cliente Prospecto',
       customer_id_document: formData?.customer_id_document || simulator.customer_id_document || '',
       customer_company: formData?.customer_company || simulator.customer_company || '',
@@ -69,7 +71,10 @@ export function useSimulationActions({
 
       const qty = Math.max(1, formData?.pieces_per_batch || simulator.pieces_per_batch || 1)
       const timeStr = formData?.time_str || simulator.time_str || '0:00'
-      const totalHours = (parseFloat(timeStr.split(':')[0]) || 0) + ((parseFloat(timeStr.split(':')[1]) || 0) / 60)
+      // El simulador ya manda las horas de todas las camas
+      const totalHours = formData?.total_hours != null
+        ? Number(formData.total_hours)
+        : (parseFloat(timeStr.split(':')[0]) || 0) + ((parseFloat(timeStr.split(':')[1]) || 0) / 60)
       const extrasData = formData?.extra_items || simulator.extra_items
 
       await api.post('/orders', {
@@ -86,7 +91,7 @@ export function useSimulationActions({
         total_price: formData?.total_price != null ? formData.total_price : (simulatedResult.value.total || 0),
         extras_cost: formData?.extras_cost != null ? formData.extras_cost : 0,
         technology: material?.category || 'FDM',
-        comments: `SIMULACIÓN N3XT: ${formData?.job_name || formData?.customer_name || simulator.job_name || 'Proyecto'}. Lote: ${qty} pzs.` + ((formData?.comments || simulator.comments) ? `\n\nNOTAS INTERNAS:\n${formData?.comments || simulator.comments}` : ''),
+        comments: `SIMULACIÓN N3XT: ${formData?.job_name || formData?.customer_name || simulator.job_name || 'Proyecto'}. Lote: ${qty} pzs` + (formData?.beds > 1 ? ` en ${formData.beds} camas de ${formData.pieces_per_bed} (${Math.round(formData.bed_price || 0).toLocaleString('es-CO')} por cama).` : '.') + ((formData?.comments || simulator.comments) ? `\n\nNOTAS INTERNAS:\n${formData?.comments || simulator.comments}` : ''),
         status: 'pending',
         qty: qty,
         extra_items: extrasData.map((e: any) => ({ material_id: e.id, qty: e.qty })),

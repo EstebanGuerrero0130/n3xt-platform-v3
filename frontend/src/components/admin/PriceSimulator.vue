@@ -15,18 +15,24 @@
           <div class="sm:col-span-2"><label for="sim-email" class="admin-label mb-2">Correo</label><input id="sim-email" v-model="form.customer_email" type="email" class="field"></div>
         </section>
 
-        <section class="grid gap-4 sm:grid-cols-3" aria-labelledby="sim-print">
-          <h3 id="sim-print" class="sm:col-span-3 admin-h2 text-base">Impresión</h3>
-          <div class="sm:col-span-3">
+        <section class="grid gap-4 sm:grid-cols-2" aria-labelledby="sim-print">
+          <h3 id="sim-print" class="sm:col-span-2 admin-h2 text-base">Producción por cama</h3>
+          <p class="sm:col-span-2 -mt-2 text-sm text-muted">Pon el peso y el tiempo de <strong>una cama</strong> (lo que dice el laminador). Si sacas varios pedidos iguales, sube las camas.</p>
+          <div class="sm:col-span-2">
             <label for="sim-material" class="admin-label mb-2">Material</label>
             <select id="sim-material" v-model="form.material_id" class="field">
               <option value="">Elegir…</option>
               <option v-for="m in baseMaterials" :key="m.id" :value="m.id">{{ m.name }} · {{ money(m.cost_per_kg) }}/{{ m.unit === 'ml' ? 'L' : 'kg' }}</option>
             </select>
           </div>
-          <div><label for="sim-weight" class="admin-label mb-2">Peso total (g)</label><input id="sim-weight" v-model.number="form.weight_g" type="number" min="0" step="0.1" class="field tabular-nums"></div>
-          <div><label for="sim-time" class="admin-label mb-2">Tiempo (h:mm)</label><input id="sim-time" v-model="form.time_str" placeholder="2:30" inputmode="numeric" class="field tabular-nums"></div>
-          <div><label for="sim-pieces" class="admin-label mb-2">Piezas</label><input id="sim-pieces" v-model.number="form.pieces_per_batch" type="number" min="1" class="field tabular-nums"></div>
+          <div><label for="sim-weight" class="admin-label mb-2">Peso por cama (g)</label><input id="sim-weight" v-model.number="form.weight_g" type="number" min="0" step="0.1" class="field tabular-nums"></div>
+          <div><label for="sim-time" class="admin-label mb-2">Tiempo por cama (h:mm)</label><input id="sim-time" v-model="form.time_str" placeholder="2:30" inputmode="numeric" class="field tabular-nums"></div>
+          <div><label for="sim-beds" class="admin-label mb-2">Camas (lotes)</label><input id="sim-beds" v-model.number="form.beds" type="number" min="1" step="1" class="field tabular-nums"></div>
+          <div><label for="sim-pieces" class="admin-label mb-2">Pzs x cama</label><input id="sim-pieces" v-model.number="form.pieces_per_bed" type="number" min="1" step="1" class="field tabular-nums"></div>
+          <p class="sm:col-span-2 text-sm text-muted tabular-nums" aria-live="polite">
+            Total: <strong class="text-ink">{{ run.pieces }} {{ run.pieces === 1 ? 'pieza' : 'piezas' }}</strong> en {{ run.beds }} {{ run.beds === 1 ? 'cama' : 'camas' }} ·
+            {{ run.weightG.toLocaleString('es-CO', { maximumFractionDigits: 1 }) }} g · {{ hoursLabel(run.hours) }}
+          </p>
         </section>
 
         <section aria-labelledby="sim-extras">
@@ -68,7 +74,8 @@
         <section class="admin-card">
           <p class="admin-label">Total</p>
           <p class="mt-1 text-4xl font-extrabold tabular-nums">{{ money(result.total) }}</p>
-          <dl class="mt-4 grid grid-cols-3 gap-3 text-sm">
+          <dl class="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <div><dt class="text-muted">Por cama</dt><dd class="font-semibold tabular-nums">{{ money(result.bed_price) }}</dd></div>
             <div><dt class="text-muted">Por pieza</dt><dd class="font-semibold tabular-nums">{{ money(result.unit_price) }}</dd></div>
             <div><dt class="text-muted">Margen</dt><dd class="font-semibold tabular-nums">{{ result.profit_margin_pct.toFixed(1) }} %</dd></div>
             <div><dt class="text-muted">Costo / hora</dt><dd class="font-semibold tabular-nums">{{ money(result.production / (result.total_hours || 1)) }}</dd></div>
@@ -140,7 +147,8 @@ const form = reactive({
   job_name: '', customer_id: '', customer_name: '', customer_company: '',
   customer_id_document: '', customer_email: '', customer_phone: '',
   shipping_address: '', shipping_city: '', shipping_zip: '', shipping_reference: '',
-  material_id: '', weight_g: 0, time_str: '0:00', pieces_per_batch: 1,
+  // Peso y tiempo son de UNA cama; camas × piezas por cama = piezas del pedido
+  material_id: '', weight_g: 0, time_str: '0:00', beds: 1, pieces_per_bed: 1,
   profit_pct: props.settings?.oper?.ganancia ?? 20,
   discount_pct: 0,
   transporte_pct: props.settings?.oper?.transporte ?? 5,
@@ -166,6 +174,28 @@ watch(() => props.visible, (open) => {
   form.fallos_pct = props.settings?.oper?.fallos ?? 5
   form.iva_pct = props.settings?.margin?.iva ?? 19
 })
+const parseHours = (str: string) => {
+  const [h, m] = String(str || '').split(':').map(Number)
+  return (h || 0) + (m || 0) / 60
+}
+const hoursLabel = (hours: number) => {
+  const total = Math.round(hours * 60)
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')} h`
+}
+const wholeAtLeastOne = (n: unknown) => Math.max(1, Math.floor(Number(n) || 1))
+
+/** La corrida completa: lo de una cama multiplicado por las camas. */
+const run = computed(() => {
+  const beds = wholeAtLeastOne(form.beds)
+  const perBed = wholeAtLeastOne(form.pieces_per_bed)
+  return {
+    beds,
+    pieces: beds * perBed,
+    weightG: (Number(form.weight_g) || 0) * beds,
+    hours: parseHours(form.time_str) * beds,
+  }
+})
+
 const money = (n: any) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CO')
 const pct = (part: number) => result.value.total > 0 ? Math.max(0, (part / result.value.total) * 100) : 0
 const canConvert = computed(() => !!form.material_id && result.value.total > 0 && !!form.customer_name.trim())
@@ -175,18 +205,16 @@ const result = computed(() => {
   if (!mat || !props.settings.infra) return {
     material: 0, luz: 0, labor: 0, depr: 0, mant: 0, etiquetas: 0, extras: 0,
     production: 0, logistics: 0, marketing: 0, failures: 0, profit: 0,
-    subtotal: 0, iva: 0, total: 0, unit_price: 0, discount: 0,
+    subtotal: 0, iva: 0, total: 0, unit_price: 0, bed_price: 0, discount: 0,
     profit_margin_pct: 0, total_hours: 0,
     isSafetyAlert: false, pcts: { material: 0, luz: 0, labor: 0, depr: 0, mant: 0, etiquetas: 0, extras: 0 }
   }
 
-  const qty = Math.max(1, form.pieces_per_batch || 1)
-  const [hours, minutes] = form.time_str.split(':').map(Number)
-  const totalHours = (hours || 0) + (minutes || 0) / 60
+  const { pieces: qty, beds, weightG, hours: totalHours } = run.value
   const extrasCost = form.extra_items.reduce((acc, item) => acc + item.cost * item.qty, 0)
 
   const prod = calcProductionCost({
-    weightG: form.weight_g, totalHours, costPerKg: mat.cost_per_kg,
+    weightG, totalHours, costPerKg: mat.cost_per_kg,
     infra: props.settings.infra, prep: props.settings.prep, extrasCost,
   })
 
@@ -206,6 +234,7 @@ const result = computed(() => {
     discount: price.discount, subtotal: price.subtotal,
     iva: price.iva, total: price.total,
     unit_price: Math.round(price.total / qty),
+    bed_price: Math.round(price.total / beds),
     total_hours: totalHours, profit_margin_pct: price.profitMarginPct,
     isSafetyAlert: form.discount_pct === 100, pcts: prod.pcts,
   }
@@ -225,18 +254,20 @@ const selectCustomer = (e: any) => {
 }
 
 const emitFormData = (action: 'download-pdf' | 'create-order') => {
-  const [hours, minutes] = form.time_str.split(':').map(Number)
-  const totalHours = (hours || 0) + ((minutes || 0) / 60)
   const extrasCost = form.extra_items.reduce((acc, item) => acc + item.cost * item.qty, 0)
-  
+
+  // El pedido lleva los totales de la corrida (todas las camas)
   const payload = {
     job_name: form.job_name,
     material_id: form.material_id,
-    weight_g: form.weight_g,
-    time_str: form.time_str,
-    total_hours: totalHours,
+    weight_g: run.value.weightG,
+    time_str: hoursLabel(run.value.hours).replace(' h', ''),
+    total_hours: run.value.hours,
     total_price: result.value.total,
-    pieces_per_batch: form.pieces_per_batch,
+    pieces_per_batch: run.value.pieces,
+    beds: run.value.beds,
+    pieces_per_bed: wholeAtLeastOne(form.pieces_per_bed),
+    bed_price: result.value.bed_price,
     profit_pct: form.profit_pct,
     discount_pct: form.discount_pct,
     extra_items: form.extra_items,
