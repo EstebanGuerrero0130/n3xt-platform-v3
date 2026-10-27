@@ -43,11 +43,6 @@ ALTER TABLE printers ADD COLUMN IF NOT EXISTS build_x_mm INTEGER NULL CHECK (bui
 ALTER TABLE printers ADD COLUMN IF NOT EXISTS build_y_mm INTEGER NULL CHECK (build_y_mm >= 0);
 ALTER TABLE printers ADD COLUMN IF NOT EXISTS build_z_mm INTEGER NULL CHECK (build_z_mm >= 0);
 
--- Parámetros del cotizador por material (null = valor por defecto)
-ALTER TABLE materials ADD COLUMN IF NOT EXISTS speed_factor DECIMAL(6, 3) NULL;
-ALTER TABLE materials ADD COLUMN IF NOT EXISTS waste_pct DECIMAL(5, 2) NULL;
-ALTER TABLE materials ADD COLUMN IF NOT EXISTS failure_pct DECIMAL(5, 2) NULL;
-
 -- Cotizaciones guardadas
 CREATE TABLE IF NOT EXISTS saved_quotes (
     id BIGSERIAL PRIMARY KEY,
@@ -119,8 +114,7 @@ FROM (VALUES
     ('2026_10_28_000003_add_role_and_permissions_to_users_table'),
     ('2026_10_28_000004_widen_order_volume_and_weight'),
     ('2026_10_29_000201_add_printing_finished_at_to_orders_table'),
-    ('2026_10_29_000301_add_build_volume_to_printers_table'),
-    ('2026_10_29_000101_add_quote_params_to_materials_table')
+    ('2026_10_29_000301_add_build_volume_to_printers_table')
 ) AS pending(m)
 WHERE NOT EXISTS (SELECT 1 FROM migrations WHERE migration = pending.m);
 
