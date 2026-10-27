@@ -112,6 +112,28 @@ class OrderStoreTest extends TestCase
         $this->assertSame(1.0, (float) $order->cost_snapshot['calibration_factor']);
     }
 
+    public function test_per_model_infill_and_layer_height_are_stored(): void
+    {
+        $res = $this->post('/api/orders', $this->payload(['models' => [
+            ['file' => UploadedFile::fake()->createWithContent('a.stl', $this->cubeStl()), 'qty' => 1, 'infill' => 60, 'layer_height' => 0.12],
+            ['file' => UploadedFile::fake()->createWithContent('b.stl', $this->cubeStl()), 'qty' => 1],
+        ]]), ['Accept' => 'application/json']);
+        $res->assertCreated();
+        $models = Order::findOrFail($res->json('data.order_id'))->models;
+        $this->assertSame(60, $models[0]['infill']);
+        $this->assertEqualsWithDelta(0.12, $models[0]['layer_height'], 1e-9);
+        // Sin valor propio: el del pedido
+        $this->assertSame(20, $models[1]['infill']);
+        $this->assertEqualsWithDelta(0.2, $models[1]['layer_height'], 1e-9);
+        // Más relleno, más peso
+        $this->assertGreaterThan($models[1]['weight_g'], $models[0]['weight_g']);
+
+        // SLA no lleva relleno ni capa
+        $sla = $this->post('/api/orders', $this->payload(['technology' => 'SLA', 'material_id' => 'RES_GREY']), ['Accept' => 'application/json']);
+        $sla->assertCreated();
+        $this->assertArrayNotHasKey('infill', Order::findOrFail($sla->json('data.order_id'))->models[0]);
+    }
+
     public function test_urgent_flag_applies_rush_surcharge_and_calibration_is_recorded(): void
     {
         Setting::updateOrCreate(['key' => 'rules'], ['value' => ['rush_pct' => 20]]);

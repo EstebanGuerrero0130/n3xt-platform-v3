@@ -26,7 +26,7 @@
                 <span class="font-medium break-all">{{ p.name || `Modelo ${i + 1}` }} <span class="text-muted tabular-nums">× {{ p.qty || 1 }}</span></span>
                 <button v-if="p.hasFile" type="button" class="order-last sm:order-none btn-outlined btn-sm" :aria-label="`Descargar ${p.name || 'modelo ' + (i + 1)}`" @click="emit('download', i)">Descargar</button>
                 <span class="text-sm text-muted tabular-nums">
-                  <template v-if="p.dims">{{ p.dims }} mm</template><template v-if="p.dims && p.weight"> · </template><template v-if="p.weight">{{ Math.round(p.weight) }} g</template><template v-if="p.subtotal"> · {{ money(p.subtotal) }}</template>
+                  <template v-if="p.dims">{{ p.dims }} mm</template><template v-if="p.dims && p.weight"> · </template><template v-if="p.weight">{{ Math.round(p.weight) }} g</template><template v-if="p.params"> · {{ p.params }}</template><template v-if="p.subtotal"> · {{ money(p.subtotal) }}</template>
                 </span>
               </li>
             </ul>
@@ -189,14 +189,19 @@ const statusClass = computed(() => {
 
 const money = (n: any) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CO')
 const isCatalog = computed(() => props.order?.technology === 'CATALOGO')
+// Relleno y capa con que se cotizó el modelo (los pedidos viejos no los tienen)
+const printParams = (m: any) => [
+  m.infill != null && m.infill !== '' ? `relleno ${m.infill} %` : '',
+  Number(m.layer_height) > 0 ? `capa ${Number(m.layer_height)} mm` : '',
+].filter(Boolean).join(' · ')
 // Piezas del pedido (models[] o el archivo suelto de pedidos viejos)
 const pieces = computed(() => {
   const o = props.order
   if (!o) return []
   if (Array.isArray(o.models) && o.models.length) {
-    return o.models.map((m: any) => ({ name: m.original_filename, qty: m.qty, dims: m.dimensions_mm, weight: m.weight_g, subtotal: m.subtotal, hasFile: !!m.path }))
+    return o.models.map((m: any) => ({ name: m.original_filename, qty: m.qty, dims: m.dimensions_mm, weight: m.weight_g, params: printParams(m), subtotal: m.subtotal, hasFile: !!m.path }))
   }
-  return o.original_filename ? [{ name: o.original_filename, qty: o.qty, dims: o.dimensions_mm, weight: o.estimated_weight_g, subtotal: null, hasFile: !!o.file_path }] : []
+  return o.original_filename ? [{ name: o.original_filename, qty: o.qty, dims: o.dimensions_mm, weight: o.estimated_weight_g, params: '', subtotal: null, hasFile: !!o.file_path }] : []
 })
 const utilities = computed(() => props.materials.filter((m: any) => m.type && m.type !== 'material'))
 const trackingSaved = ref(false)

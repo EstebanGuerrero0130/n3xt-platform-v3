@@ -210,6 +210,11 @@ class OrderController extends Controller
                 'orientation' => $qm['orientation'],
                 'pieces_per_bed' => $qm['pieces_per_bed'],
             ];
+            // FDM: relleno y capa con que se cotizó cada modelo (los ve el taller)
+            if (isset($qm['infill'])) {
+                $modelsOut[$i]['infill'] = $qm['infill'];
+                $modelsOut[$i]['layer_height'] = $qm['layer_height'];
+            }
         }
         $extras = array_map(fn ($e) => $e + ['added_at' => $now], $quote['extras']);
 
