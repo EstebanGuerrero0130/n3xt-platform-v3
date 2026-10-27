@@ -94,17 +94,47 @@ class OrderStoreTest extends TestCase
         $mesh = (new MeshVolumeService())->analyze(Storage::disk('local')->path(Order::first()->file_path), 'stl');
         $svc = app(QuotePricingService::class);
         $settings = $svc->loadSettings();
+        // Mismos datos que el controlador: áreas por eje, bbox (las 2 piezas comparten cama) y cama por defecto
         $quote = $svc->quote(
-            ['technology' => 'FDM', 'infill' => 20, 'layer_height' => 0.2, 'models' => [[
-                'qty' => 2, 'scale_factor' => 1, 'volume_mm3' => $mesh['volume_mm3'],
-                'total_area_mm2' => $mesh['total_area_mm2'], 'support_area_mm2' => $mesh['down_area_mm2']['y'],
-            ]]],
+            ['technology' => 'FDM', 'infill' => 20, 'layer_height' => 0.2, 'bed' => $svc->loadBeds($settings)['FDM'], 'models' => [
+                QuotePricingService::pricingModelFromMesh($mesh, ['qty' => 2, 'scale_factor' => 1]),
+            ]],
             $settings,
             ['id' => 'PLA_BLACK', 'cost_per_kg' => 85000, 'density' => 1.24],
             $svc->loadUtilities()
         );
 
         $this->assertSame($quote['total'], $res->json('data.total_price'));
+        $this->assertSame(1, $res->json('data.breakdown.beds'));
+        $this->assertSame('y', $res->json('data.breakdown.models.0.orientation'));
+        $order = Order::first();
+        $this->assertSame('y', $order->models[0]['orientation']);
+        $this->assertSame(1.0, (float) $order->cost_snapshot['calibration_factor']);
+    }
+
+    public function test_urgent_flag_applies_rush_surcharge_and_calibration_is_recorded(): void
+    {
+        Setting::updateOrCreate(['key' => 'rules'], ['value' => ['rush_pct' => 20]]);
+        Setting::updateOrCreate(['key' => 'calibration'], ['value' => ['time_factor' => ['FDM' => 1.25]]]);
+        $plain = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->assertCreated();
+        $urgent = $this->post('/api/orders', $this->payload(['urgent' => '1']), ['Accept' => 'application/json'])->assertCreated();
+
+        $this->assertGreaterThan($plain->json('data.total_price'), $urgent->json('data.total_price'));
+        $this->assertSame('rush', $urgent->json('data.breakdown.adjustments.0.type'));
+        $this->assertTrue($urgent->json('data.breakdown.urgent'));
+        $this->assertSame(1.25, (float) Order::latest('id')->first()->cost_snapshot['calibration_factor']);
+
+        $this->post('/api/orders', $this->payload(['urgent' => 'quizás']), ['Accept' => 'application/json'])
+            ->assertStatus(422)->assertJsonValidationErrors('urgent');
+    }
+
+    public function test_printer_bed_size_limits_pieces_per_bed(): void
+    {
+        // Cama de 30×30: cabe un solo cubo de 20 mm (con su separación) por cama
+        \App\Models\Printer::create(['name' => 'Mini', 'model' => 'A1 mini', 'watts' => 150, 'technology' => 'FDM', 'status' => 'idle', 'build_x_mm' => 30, 'build_y_mm' => 30, 'build_z_mm' => 30]);
+        $res = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->assertCreated();
+        $this->assertSame(2, $res->json('data.breakdown.beds'));
+        $this->assertSame(['x' => 30, 'y' => 30, 'z' => 30], array_map('intval', $res->json('data.breakdown.bed')));
     }
 
     public function test_coupon_is_applied_server_side(): void

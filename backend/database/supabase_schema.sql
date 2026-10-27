@@ -63,6 +63,9 @@ CREATE TABLE IF NOT EXISTS materials (
     cost_per_kg DECIMAL(12, 2) NOT NULL DEFAULT 0,        -- Precio por Kg o Litro
     color VARCHAR(255) NULL,
     location VARCHAR(255) NULL,                           -- Ubicación en taller
+    speed_factor DECIMAL(6, 3) NULL,                      -- Cotizador: × tiempo de impresión (null = 1)
+    waste_pct DECIMAL(5, 2) NULL,                         -- Cotizador: % de material extra (null = 0)
+    failure_pct DECIMAL(5, 2) NULL,                       -- Cotizador: reserva por fallos propia (null = global)
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL DEFAULT NOW()
@@ -387,7 +390,8 @@ INSERT INTO migrations (migration, batch) VALUES
 ('2026_10_28_000003_add_role_and_permissions_to_users_table', 1),
 ('2026_10_28_000004_widen_order_volume_and_weight', 1),
 ('2026_10_29_000201_add_printing_finished_at_to_orders_table', 1),
-('2026_10_29_000301_add_build_volume_to_printers_table', 1);
+('2026_10_29_000301_add_build_volume_to_printers_table', 1),
+('2026_10_29_000101_add_quote_params_to_materials_table', 1);
 
 -- ============================================================
 -- POLÍTICAS RLS (Row Level Security) - RECOMENDADAS

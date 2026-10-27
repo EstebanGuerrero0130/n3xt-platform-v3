@@ -37,7 +37,10 @@ class MaterialController extends Controller
                     'cost_per_kg' => $validated['cost_per_kg'],
                     'color' => $validated['color'] ?? '#cccccc',
                     'density' => $validated['density'] ?? ($validated['category'] === 'FDM' ? 1.24 : 1.10),
-                    'is_active' => true
+                    'is_active' => true,
+                    'speed_factor' => $validated['speed_factor'] ?? null,
+                    'waste_pct' => $validated['waste_pct'] ?? null,
+                    'failure_pct' => $validated['failure_pct'] ?? null,
                 ]);
 
                 Inventory::create([
@@ -82,12 +85,19 @@ class MaterialController extends Controller
                 'name' => 'sometimes|string|max:255',
                 'cost_per_kg' => 'sometimes|numeric|min:0',
                 'color' => 'sometimes|nullable|string|max:20',
-                'low_stock_threshold' => 'sometimes|numeric|min:0'
+                'low_stock_threshold' => 'sometimes|numeric|min:0',
+                ...array_map(fn ($r) => 'sometimes|' . $r, StoreMaterialRequest::QUOTE_PARAM_RULES),
             ]);
 
             $material->name = $request->input('name', $material->name);
             $material->cost_per_kg = $request->input('cost_per_kg', $material->cost_per_kg);
             $material->color = $request->input('color', $material->color);
+            // Parámetros del cotizador: vacío vuelve al valor por defecto
+            foreach (array_keys(StoreMaterialRequest::QUOTE_PARAM_RULES) as $key) {
+                if (array_key_exists($key, $validated)) {
+                    $material->{$key} = $validated[$key];
+                }
+            }
             $material->save();
 
             if (isset($validated['low_stock_threshold'])) {

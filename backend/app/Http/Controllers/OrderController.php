@@ -151,20 +151,11 @@ class OrderController extends Controller
                 $path = $this->models->put($file);
                 $stored[] = $path;
 
+                // Áreas por eje: el cotizador elige la orientación con menos soporte
                 $pricingModels[] = [
                     'name' => $file->getClientOriginalName(),
                     'path' => $path,
-                    'qty' => $up['qty'] ?? 1,
-                    'scale_factor' => $up['scale_factor'] ?? 1,
-                    'volume_mm3' => $mesh['volume_mm3'],
-                    'total_area_mm2' => $mesh['total_area_mm2'],
-                    // Misma orientación que el visor (normales hacia -Y de la geometría)
-                    'support_area_mm2' => $mesh['down_area_mm2']['y'],
-                    'bbox_mm' => $mesh['bbox']['size'],
-                    'dimensions_mm' => $up['dimensions_mm'] ?? null,
-                    'infill' => $up['infill'] ?? null,
-                    'layer_height' => $up['layer_height'] ?? null,
-                ];
+                ] + QuotePricingService::pricingModelFromMesh($mesh, $up);
             }
         } catch (InvalidMeshException $e) {
             $this->models->delete($stored);
@@ -184,16 +175,20 @@ class OrderController extends Controller
             }
             $coupon = $this->accounts->welcomeCoupon($welcomeOwner);
         }
+        $technology = strtoupper((string) $validated['technology']) === 'FDM' ? 'FDM' : 'SLA';
         $quote = $this->pricing->quote(
             [
                 'technology' => $validated['technology'],
                 'infill' => $validated['infill'] ?? null,
                 'layer_height' => $validated['layer_height'] ?? null,
+                'urgent' => (bool) ($validated['urgent'] ?? false),
+                // Cama de la impresora más grande de la tecnología (quote() sigue siendo pura)
+                'bed' => $this->pricing->loadBeds($settings)[$technology],
                 'models' => $pricingModels,
                 'extras' => $validated['extra_items'] ?? [],
             ],
             $settings,
-            ['id' => $material->id, 'cost_per_kg' => $material->cost_per_kg, 'density' => $material->density],
+            $material->only(['id', 'cost_per_kg', 'density', 'speed_factor', 'waste_pct', 'failure_pct']),
             $this->pricing->loadUtilities(),
             $coupon
         );
@@ -211,6 +206,9 @@ class OrderController extends Controller
                 'weight_g' => $qm['weight_g'],
                 'duration_h' => $qm['duration_h'],
                 'subtotal' => $qm['subtotal'],
+                // Eje vertical elegido y piezas por cama (los pedidos viejos no los tienen)
+                'orientation' => $qm['orientation'],
+                'pieces_per_bed' => $qm['pieces_per_bed'],
             ];
         }
         $extras = array_map(fn ($e) => $e + ['added_at' => $now], $quote['extras']);
@@ -240,7 +238,9 @@ class OrderController extends Controller
                     'cost_snapshot'        => [
                         'settings' => $settings,
                         'material_cost_per_kg' => $material->cost_per_kg,
-                        'quote' => array_intersect_key($quote, array_flip(['unit_price', 'subtotal', 'coupon', 'discount', 'subtotal_after_discount', 'iva_pct', 'iva', 'total'])),
+                        'quote' => array_intersect_key($quote, array_flip(['unit_price', 'subtotal', 'coupon', 'discount', 'subtotal_after_discount', 'iva_pct', 'iva', 'total', 'beds', 'pieces_per_bed', 'bed', 'urgent', 'adjustments', 'volume_discount'])),
+                        // Factor de tiempo aplicado: la calibración compara real / (estimado / factor)
+                        'calibration_factor' => $quote['calibration_factor'],
                         'captured_at' => $now,
                     ],
                 ]));

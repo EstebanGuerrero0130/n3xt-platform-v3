@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Printer;
+use App\Services\QuotePricingService;
 use App\Services\LeadTimeService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
@@ -13,29 +13,16 @@ class QuoteInfoController extends Controller
     use ApiResponse;
 
     /** Volumen típico si ninguna máquina tiene medidas cargadas (mm) */
-    public const DEFAULT_CAPACITY = [
-        'FDM' => ['x' => 256, 'y' => 256, 'z' => 256],
-        'SLA' => ['x' => 218, 'y' => 123, 'z' => 250],
-    ];
+    public const DEFAULT_CAPACITY = QuotePricingService::DEFAULT_BEDS;
 
     /** Mayor volumen de impresión por tecnología entre las máquinas que no están apagadas. */
-    public function capacity()
+    public function capacity(QuotePricingService $pricing)
     {
-        $printers = Printer::query()
-            ->where('status', '!=', 'offline')
-            ->whereNotNull('build_x_mm')->whereNotNull('build_y_mm')->whereNotNull('build_z_mm')
-            ->get(['technology', 'build_x_mm', 'build_y_mm', 'build_z_mm']);
-
-        $result = [];
-        foreach (self::DEFAULT_CAPACITY as $tech => $default) {
-            $best = $printers
-                ->filter(fn ($p) => strtoupper((string) $p->technology) === $tech)
-                ->sortByDesc(fn ($p) => $p->build_x_mm * $p->build_y_mm * $p->build_z_mm)
-                ->first();
-            $result[$tech] = $best
-                ? ['x' => (int) $best->build_x_mm, 'y' => (int) $best->build_y_mm, 'z' => (int) $best->build_z_mm]
-                : $default;
-        }
+        // Misma cama con la que el servidor cotiza (sin máquinas con medidas: settings `beds`)
+        $result = array_map(
+            fn ($bed) => array_map(fn ($v) => $v == (int) $v ? (int) $v : $v, $bed),
+            $pricing->loadBeds()
+        );
 
         return $this->success($result);
     }

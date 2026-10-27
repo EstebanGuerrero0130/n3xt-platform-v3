@@ -16,7 +16,11 @@ class Material extends Model
         'density',
         'color',
         'location',
-        'is_active'
+        'is_active',
+        // Cotizador (null = valor por defecto)
+        'speed_factor',
+        'waste_pct',
+        'failure_pct',
     ];
     
     public $incrementing = false;

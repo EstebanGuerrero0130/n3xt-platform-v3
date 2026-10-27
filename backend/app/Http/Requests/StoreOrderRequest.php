@@ -57,6 +57,8 @@ class StoreOrderRequest extends FormRequest
             'infill'                    => 'nullable|integer|min:0|max:100',
             'layer_height'              => 'nullable|numeric|min:0.05|max:0.4',
             'coupon_code'               => 'nullable|string|max:50',
+            // Pedido urgente: recargo settings rules.rush_pct (y entrega antes); FormData manda "1"/"0"
+            'urgent'                    => 'nullable|boolean',
             'dimensions_mm'             => 'nullable|string|max:100',
             'scale_factor'              => 'nullable|numeric|gt:0|max:100',
             'estimated_duration_h'      => 'nullable|numeric',
