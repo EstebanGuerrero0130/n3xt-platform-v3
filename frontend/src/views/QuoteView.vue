@@ -11,6 +11,7 @@ import {
 } from '../services/costCalculator'
 import { useRevealAnim } from '../composables/useRevealAnim'
 import { fitNotice, type Capacity } from '../utils/buildVolume'
+import { useLeadTime } from '../composables/useLeadTime'
 import AppNavbar from '../components/AppNavbar.vue'
 import AppFooter from '../components/AppFooter.vue'
 import QuoteSidebar from '../components/QuoteSidebar.vue'
@@ -830,30 +831,29 @@ const rushPct = computed(() => rules.value.rush_pct)
 watch(urgent, () => calculatePrice())
 watch(capacity, () => calculatePrice())
 
-/** Modelos FDM que se imprimirán girados respecto al visor para usar menos soporte */
+/**
+ * Modelos que se imprimirán con otro eje vertical que el del archivo (Y) para usar menos
+ * soporte. Se compara con el archivo, no con lo que muestra el visor (que puede girarla).
+ */
 const orientationNotes = computed(() =>
-  selectedTechnology.value !== 'FDM' ? [] : models.value
+  models.value
     .map((m, i) => ({ m, i }))
     .filter(({ m }) => m.hasModel && modelOrientation(m).axis !== 'y')
     .map(({ m, i }) => ({ id: m.id, name: modelLabel(m, i) }))
 )
 
+/** Hay precio vigente a la vista (igual que isPriced de QuoteSidebar) */
+const priceShown = computed(() => {
+  if (!(breakdown.value.total > 0)) return false
+  if (selectedTechnology.value === 'SLA') return true
+  const loaded = models.value.filter(m => m.hasModel)
+  return loaded.length > 0 && loaded.every(m => m.hasSlicing)
+})
+
 /** "jueves 30 de octubre", o vacío si no hay precio o el servidor no responde */
-const readyLabel = ref('')
-let leadTimeSeq = 0
-watch(
-  () => [breakdown.value.total, breakdown.value.duration, selectedTechnology.value, urgent.value] as const,
-  async ([total, hours, technology, isUrgent]) => {
-    const seq = ++leadTimeSeq
-    if (!(total > 0) || !(hours > 0)) { readyLabel.value = ''; return }
-    const params = new URLSearchParams({ technology, hours: (Math.ceil(hours * 10) / 10).toString(), urgent: isUrgent ? '1' : '0' })
-    try {
-      const data = await api.get(`/quote/lead-time?${params}`)
-      if (seq === leadTimeSeq) readyLabel.value = typeof data?.label === 'string' ? data.label : ''
-    } catch {
-      if (seq === leadTimeSeq) readyLabel.value = ''
-    }
-  },
+const { label: readyLabel, urgent: readyUrgent } = useLeadTime(
+  () => ({ shown: priceShown.value, technology: selectedTechnology.value, hours: breakdown.value.duration, urgent: urgent.value }),
+  params => api.get(`/quote/lead-time?${params}`),
 )
 
 const handleModelLoaded = (data: ModelStats) => {
@@ -997,7 +997,7 @@ onUnmounted(() => {
           <ul v-if="orientationNotes.length" class="mt-4 space-y-2" aria-label="Orientación de impresión">
             <li v-for="n in orientationNotes" :key="n.id" class="flex gap-3 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3 text-sm">
               <svg class="w-5 h-5 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              <p class="min-w-0 text-ink"><span v-if="models.length > 1" class="font-semibold">{{ n.name }}: </span>la imprimiremos girada para que necesite menos soporte.</p>
+              <p class="min-w-0 text-ink"><span v-if="models.length > 1" class="font-semibold">{{ n.name }}: </span>la imprimiremos con otra cara hacia arriba que la del archivo para que necesite menos soporte.</p>
             </li>
           </ul>
 
@@ -1050,6 +1050,7 @@ onUnmounted(() => {
           :previous-total="previousTotal"
           :last-order="lastOrder"
           :ready-label="readyLabel"
+          :ready-urgent="readyUrgent"
           :urgent="urgent"
           :rush-pct="rushPct"
           @update:selected-technology="selectedTechnology = $event"

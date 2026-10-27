@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, type PropType } from 'vue'
+import { summaryLines } from '../utils/quoteSummary'
 
 interface SidebarModel {
   id: number
@@ -37,6 +38,8 @@ const props = defineProps({
   lastOrder: { type: Object as PropType<{ id: number | string | null; total: number | null } | null>, default: null },
   /** Fecha estimada de entrega ("jueves 30 de octubre"); vacía si no se pudo calcular */
   readyLabel: { type: String, default: '' },
+  /** La fecha de readyLabel se calculó como pedido urgente */
+  readyUrgent: { type: Boolean, default: false },
   urgent: { type: Boolean, default: false },
   /** Recargo por urgencia (%); sin recargo no se muestra el interruptor */
   rushPct: { type: Number, default: 0 }
@@ -103,8 +106,8 @@ const formatTime = (h: number) => {
 }
 const money = (n: number) => '$' + Math.round(n || 0).toLocaleString('es-CO')
 
-/** Ajustes comerciales que ve el cliente (el redondeo va dentro del precio unitario) */
-const visibleAdjustments = computed(() => (props.breakdown.adjustments ?? []).filter(a => a.type !== 'rounding' && a.amount !== 0))
+/** Líneas del resumen: suman exactamente el subtotal (incluye redondeo y mano de obra) */
+const summary = computed(() => summaryLines(props.breakdown))
 const adjustmentText = (a: Adjustment) => a.pct !== null ? `${a.label} ${a.pct > 0 ? '+' : '−'}${Math.abs(a.pct).toLocaleString('es-CO')} %` : a.label
 const signedMoney = (n: number) => (n < 0 ? '−' : '+') + money(Math.abs(n))
 
@@ -336,7 +339,7 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
           ${{ Math.round(breakdown.total).toLocaleString('es-CO') }}
         </p>
         <p v-if="readyLabel" class="mt-1 text-sm text-muted">
-          Lista aproximadamente el <span class="font-medium text-ink">{{ readyLabel }}</span><template v-if="urgent"> (urgente)</template>
+          Lista aproximadamente el <span class="font-medium text-ink">{{ readyLabel }}</span><template v-if="readyUrgent"> (urgente)</template>
         </p>
 
         <ul v-if="modelSummaries.length > 1" class="mt-4 space-y-1.5 text-sm" aria-label="Estimado por modelo">
@@ -351,12 +354,9 @@ const isPriced = computed(() => hasSlicingOrSLA.value && !needsRecalc.value && p
           <div v-if="(breakdown.pieces ?? 0) > 1 && (breakdown.beds ?? 0) > 0" class="flex justify-between gap-4"><dt class="text-muted">Impresión</dt><dd class="tabular-nums text-ink">{{ breakdown.beds }} {{ breakdown.beds === 1 ? 'cama' : 'camas' }}</dd></div>
           <div class="flex justify-between gap-4"><dt class="text-muted">Peso estimado</dt><dd class="tabular-nums text-ink">{{ breakdown.weight.toFixed(1) }} g</dd></div>
           <div class="flex justify-between gap-4"><dt class="text-muted">Tiempo de impresión</dt><dd class="tabular-nums text-ink">{{ formatTime(breakdown.duration) }}</dd></div>
-          <div class="border-t border-line pt-2 flex justify-between gap-4"><dt class="text-muted">Material</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.matCost).toLocaleString('es-CO') }}</dd></div>
-          <div class="flex justify-between gap-4"><dt class="text-muted">Máquina y energía</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.infraCost).toLocaleString('es-CO') }}</dd></div>
-          <div class="flex justify-between gap-4"><dt class="text-muted">Extras</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.utilityCost).toLocaleString('es-CO') }}</dd></div>
-          <div class="flex justify-between gap-4"><dt class="text-muted">Operación y margen</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.marginCost).toLocaleString('es-CO') }}</dd></div>
-          <div v-for="a in visibleAdjustments" :key="a.type" class="flex justify-between gap-4"><dt :class="a.amount < 0 ? 'text-resin' : 'text-muted'">{{ adjustmentText(a) }}</dt><dd class="tabular-nums" :class="a.amount < 0 ? 'text-resin' : 'text-ink'">{{ signedMoney(a.amount) }}</dd></div>
-          <div v-if="breakdown.discount > 0" class="flex justify-between gap-4"><dt class="text-resin">Descuento</dt><dd class="tabular-nums text-resin">−${{ Math.round(breakdown.discount).toLocaleString('es-CO') }}</dd></div>
+          <div v-for="(l, li) in summary.costs" :key="l.key" class="flex justify-between gap-4" :class="li === 0 ? 'border-t border-line pt-2' : ''"><dt class="text-muted">{{ l.label }}</dt><dd class="tabular-nums text-ink">{{ money(l.amount) }}</dd></div>
+          <div v-for="a in summary.adjustments" :key="a.type" class="flex justify-between gap-4"><dt :class="a.amount < 0 ? 'text-resin' : 'text-muted'">{{ adjustmentText(a) }}</dt><dd class="tabular-nums" :class="a.amount < 0 ? 'text-resin' : 'text-ink'">{{ signedMoney(a.amount) }}</dd></div>
+          <div v-if="summary.discount > 0" class="flex justify-between gap-4"><dt class="text-resin">Descuento</dt><dd class="tabular-nums text-resin">−{{ money(summary.discount) }}</dd></div>
           <div class="border-t border-line pt-2 flex justify-between gap-4"><dt class="text-muted">Subtotal</dt><dd class="tabular-nums font-medium text-ink">${{ Math.round(breakdown.subtotal).toLocaleString('es-CO') }}</dd></div>
           <div class="flex justify-between gap-4"><dt class="text-muted">IVA ({{ breakdown.ivaPct ?? 19 }} %)</dt><dd class="tabular-nums text-ink">${{ Math.round(breakdown.iva).toLocaleString('es-CO') }}</dd></div>
         </dl>
