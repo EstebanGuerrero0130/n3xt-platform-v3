@@ -384,6 +384,11 @@ class OrderController extends Controller
                 // Inicio real de la impresión: lo usa el calendario de producción
                 if ($order->status === 'printing' && $oldStatus !== 'printing') {
                     $order->printing_started_at = now();
+                    $order->printing_finished_at = null;
+                }
+                // Fin real (calibración del tiempo); cancelar no cuenta como impresión terminada
+                if ($oldStatus === 'printing' && !in_array($order->status, ['printing', 'cancelled'], true) && $order->printing_started_at) {
+                    $order->printing_finished_at = now();
                 }
                 $order->save();
                 $this->mailer->statusChanged($order, $oldStatus);

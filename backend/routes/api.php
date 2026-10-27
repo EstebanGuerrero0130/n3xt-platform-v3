@@ -142,7 +142,10 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
         Route::post('/admin/printers/{id}/reset', [\App\Http\Controllers\PrinterController::class, 'reset']);
         Route::post('/admin/printers/{id}/maintenance-complete', [\App\Http\Controllers\PrinterController::class, 'maintenanceComplete']);
         Route::delete('/admin/printers/{id}', [\App\Http\Controllers\PrinterController::class, 'destroy']);
+        Route::get('/admin/calibration', [\App\Http\Controllers\Admin\CalibrationController::class, 'index']);
     });
+    // Aplicar la calibración cambia el cotizador: es un parámetro
+    Route::middleware('section:settings')->post('/admin/calibration/apply', [\App\Http\Controllers\Admin\CalibrationController::class, 'apply']);
 
     // Contactos (producción lee clientes para el pedido manual)
     Route::middleware('section:contacts,kanban')->get('/admin/contacts/customers', [\App\Http\Controllers\Admin\ContactController::class, 'getCustomers']);

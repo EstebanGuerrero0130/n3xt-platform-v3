@@ -14,7 +14,7 @@ class SettingController extends Controller
     /** Sección del panel que edita cada clave; el resto es de Parámetros. */
     private const KEY_SECTIONS = ['web' => 'web', 'coupons' => 'discounts', 'coupon_uses' => 'discounts', 'discounts' => 'discounts', 'welcome_coupon_pct' => 'discounts'];
     /** Solo los escribe el servidor (el admin guardaría una copia vieja encima). */
-    private const SERVER_KEYS = ['coupon_uses'];
+    private const SERVER_KEYS = ['coupon_uses', 'calibration'];
 
     public function index()
     {

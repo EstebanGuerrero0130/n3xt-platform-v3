@@ -21,6 +21,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSON NULL;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS job_name VARCHAR(255) NULL;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS models JSON NULL;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS printing_started_at TIMESTAMP NULL;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS printing_finished_at TIMESTAMP NULL;
 ALTER TABLE orders ALTER COLUMN volume_mm3 TYPE DECIMAL(16, 2);
 ALTER TABLE orders ALTER COLUMN estimated_weight_g TYPE DECIMAL(14, 2);
 
@@ -85,7 +86,8 @@ FROM (VALUES
     ('2026_10_28_000001_add_printing_started_at_to_orders_table'),
     ('2026_10_28_000002_add_alert_marks_to_inventories_and_printers'),
     ('2026_10_28_000003_add_role_and_permissions_to_users_table'),
-    ('2026_10_28_000004_widen_order_volume_and_weight')
+    ('2026_10_28_000004_widen_order_volume_and_weight'),
+    ('2026_10_29_000201_add_printing_finished_at_to_orders_table')
 ) AS pending(m)
 WHERE NOT EXISTS (SELECT 1 FROM migrations WHERE migration = pending.m);
 

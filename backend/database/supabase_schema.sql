@@ -160,6 +160,7 @@ CREATE TABLE IF NOT EXISTS orders (
     -- Impresora asignada
     printer_id BIGINT NULL REFERENCES printers(id) ON DELETE SET NULL,
     printing_started_at TIMESTAMP NULL,                    -- Inicio real de la impresión (calendario)
+    printing_finished_at TIMESTAMP NULL,                   -- Fin real de la impresión (calibración)
 
     created_at TIMESTAMP NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL DEFAULT NOW()
@@ -381,7 +382,8 @@ INSERT INTO migrations (migration, batch) VALUES
 ('2026_10_28_000001_add_printing_started_at_to_orders_table', 1),
 ('2026_10_28_000002_add_alert_marks_to_inventories_and_printers', 1),
 ('2026_10_28_000003_add_role_and_permissions_to_users_table', 1),
-('2026_10_28_000004_widen_order_volume_and_weight', 1);
+('2026_10_28_000004_widen_order_volume_and_weight', 1),
+('2026_10_29_000201_add_printing_finished_at_to_orders_table', 1);
 
 -- ============================================================
 -- POLÍTICAS RLS (Row Level Security) - RECOMENDADAS
