@@ -72,7 +72,8 @@ class LeadTimeService
         if ($workHours <= 0 || $workHours > 24) $workHours = 24;
 
         $date = CarbonImmutable::instance($end)->setTimezone(self::TIMEZONE);
-        $days = (int) ceil($postHours / $workHours);
+        // Tope de un año: un ajuste absurdo no debe colgar la página pública
+        $days = (int) min(ceil($postHours / $workHours), 365);
         for ($d = 0; $d < $days; $d++) {
             $date = $date->addDay();
             while ($date->isSunday()) $date = $date->addDay();

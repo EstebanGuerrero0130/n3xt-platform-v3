@@ -386,8 +386,8 @@ class OrderController extends Controller
                     $order->printing_started_at = now();
                     $order->printing_finished_at = null;
                 }
-                // Fin real (calibración del tiempo); cancelar no cuenta como impresión terminada
-                if ($oldStatus === 'printing' && !in_array($order->status, ['printing', 'cancelled'], true) && $order->printing_started_at) {
+                // Fin real (calibración del tiempo); cancelar o devolver a revisión no cuenta como impresión terminada
+                if ($oldStatus === 'printing' && !in_array($order->status, ['printing', 'cancelled', 'pending'], true) && $order->printing_started_at) {
                     $order->printing_finished_at = now();
                 }
                 $order->save();

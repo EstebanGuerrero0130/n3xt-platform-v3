@@ -389,4 +389,21 @@ class OrderStoreTest extends TestCase
         $this->assertSame('pending', $copy->status);
         $this->assertStringContainsString("#{$id}", $copy->comments);
     }
+
+    public function test_repeated_order_keeps_volume_discount_but_drops_rush(): void
+    {
+        Setting::updateOrCreate(['key' => 'rules'], ['value' => ['rush_pct' => 50, 'volume_tiers' => [['min_qty' => 1, 'discount_pct' => 10]]]]);
+        $plain = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->json('data.total_price');
+        $id = $this->post('/api/orders', $this->payload(['urgent' => true]), ['Accept' => 'application/json'])->assertCreated()->json('data.order_id');
+        $this->assertGreaterThan($plain, Order::find($id)->total_price);
+
+        $ana = RecurrentCustomer::create(['name' => 'Ana', 'email' => 'ana@example.com', 'password' => bcrypt('secret123')]);
+        $ana->forceFill(['email_verified_at' => now()])->save();
+        $res = $this->actingAs($ana, 'customer')->postJson("/api/customer/orders/{$id}/repeat")->assertCreated();
+
+        $this->assertEquals($plain, $res->json('data.total_price'));
+        $quote = Order::find($res->json('data.order_id'))->cost_snapshot['quote'];
+        $this->assertFalse($quote['urgent']);
+        $this->assertNotContains('rush', array_column($quote['adjustments'], 'type'));
+    }
 }

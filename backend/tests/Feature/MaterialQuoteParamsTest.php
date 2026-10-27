@@ -37,4 +37,19 @@ class MaterialQuoteParamsTest extends TestCase
         $this->assertArrayHasKey('waste_pct', $row);
         $this->assertArrayHasKey('failure_pct', $row);
     }
+
+    public function test_inventory_staff_cannot_change_quote_params(): void
+    {
+        Material::create(['id' => 'PLA_X', 'name' => 'PLA X', 'category' => 'FDM', 'type' => 'material', 'unit' => 'g', 'cost_per_kg' => 80000, 'speed_factor' => 1.5]);
+        $this->actingAs(User::factory()->create(['role' => 'staff', 'permissions' => ['inventory']]), 'web');
+
+        $this->patchJson('/api/materials/PLA_X', ['speed_factor' => 0.1])->assertForbidden();
+        // El modal manda todos los campos: si no cambian, se puede guardar lo demás
+        $this->patchJson('/api/materials/PLA_X', ['name' => 'PLA Gris', 'speed_factor' => 1.5, 'waste_pct' => null])->assertOk();
+        $this->assertSame('PLA Gris', Material::find('PLA_X')->name);
+        $this->postJson('/api/materials', [
+            'id' => 'PLA_Y', 'name' => 'PLA Y', 'category' => 'FDM', 'type' => 'material', 'unit' => 'g',
+            'cost_per_kg' => 80000, 'initial_stock' => 0, 'failure_pct' => 100,
+        ])->assertForbidden();
+    }
 }

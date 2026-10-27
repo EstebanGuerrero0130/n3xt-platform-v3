@@ -377,9 +377,12 @@ INSERT INTO migrations (migration, batch) VALUES
 ('2026_05_09_232002_create_inventario_3d_table', 1),
 ('2026_05_11_174837_add_password_to_recurrent_customers_table', 1),
 ('2026_05_12_003052_add_tracking_carrier_to_orders_table', 1),
--- Estas tablas y columnas ya están creadas arriba. Las migraciones de datos
--- (2026_10_24_000002, 2026_10_26_000002) quedan para php artisan migrate.
+-- Estas tablas y columnas ya están creadas arriba. Las dos migraciones de datos
+-- de cupones se marcan como hechas: la de ejemplo crearía N3XT10, MAKER5 y
+-- FDM2026 válidos para cualquiera; la lista de cupones empieza vacía (abajo).
 ('2026_06_02_000001_remove_pin_code_from_users_table', 1),
+('2026_10_24_000002_seed_coupons_setting', 1),
+('2026_10_26_000002_merge_admin_discounts_into_coupons', 1),
 ('2026_06_09_000001_add_job_name_to_orders_table', 1),
 ('2026_10_24_000001_add_models_to_orders_table', 1),
 ('2026_10_26_000001_add_verification_and_welcome_coupon_to_recurrent_customers', 1),
@@ -392,6 +395,11 @@ INSERT INTO migrations (migration, batch) VALUES
 ('2026_10_29_000201_add_printing_finished_at_to_orders_table', 1),
 ('2026_10_29_000301_add_build_volume_to_printers_table', 1),
 ('2026_10_29_000101_add_quote_params_to_materials_table', 1);
+
+-- Cupones: lista vacía (se crean desde el panel → Descuentos)
+INSERT INTO settings (key, value, created_at, updated_at)
+VALUES ('coupons', '[]', NOW(), NOW())
+ON CONFLICT (key) DO NOTHING;
 
 -- ============================================================
 -- POLÍTICAS RLS (Row Level Security) - RECOMENDADAS
@@ -464,8 +472,10 @@ ALTER TABLE saved_quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
 
 -- Bucket privado para los archivos 3D de los pedidos (50 MB por archivo)
 INSERT INTO storage.buckets (id, name, public, file_size_limit)

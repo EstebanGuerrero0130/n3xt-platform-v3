@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Material;
 use App\Models\Inventory;
 use App\Traits\ApiResponse;
+use App\Http\Middleware\EnsureAdmin;
 use App\Http\Requests\StoreMaterialRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,9 @@ class MaterialController extends Controller
     {
         try {
             $validated = $request->validated();
+            if (!self::mayChangeQuoteParams(array_filter(array_intersect_key($validated, StoreMaterialRequest::QUOTE_PARAM_RULES), fn ($v) => $v !== null))) {
+                return $this->error(self::QUOTE_PARAMS_DENIED, 403);
+            }
 
             return DB::transaction(function () use ($validated) {
                 $material = Material::create([
@@ -77,6 +81,14 @@ class MaterialController extends Controller
         }
     }
 
+    private const QUOTE_PARAMS_DENIED = 'Los parámetros de cotización del material los cambia quien tiene acceso a Ajustes.';
+
+    /** Velocidad, desperdicio y fallos cambian el precio de cada cotización: van con Ajustes, no con Inventario. */
+    private static function mayChangeQuoteParams(array $changed): bool
+    {
+        return !$changed || EnsureAdmin::can('settings');
+    }
+
     public function update(Request $request, $id)
     {
         try {
@@ -88,6 +100,16 @@ class MaterialController extends Controller
                 'low_stock_threshold' => 'sometimes|numeric|min:0',
                 ...array_map(fn ($r) => 'sometimes|' . $r, StoreMaterialRequest::QUOTE_PARAM_RULES),
             ]);
+
+            // Solo cuenta lo que cambia: el modal de edición manda todos los campos
+            $changed = array_filter(
+                array_intersect_key($validated, StoreMaterialRequest::QUOTE_PARAM_RULES),
+                fn ($v, $k) => $v != $material->{$k} || ($v === null) !== ($material->{$k} === null),
+                ARRAY_FILTER_USE_BOTH,
+            );
+            if (!self::mayChangeQuoteParams($changed)) {
+                return $this->error(self::QUOTE_PARAMS_DENIED, 403);
+            }
 
             $material->name = $request->input('name', $material->name);
             $material->cost_per_kg = $request->input('cost_per_kg', $material->cost_per_kg);

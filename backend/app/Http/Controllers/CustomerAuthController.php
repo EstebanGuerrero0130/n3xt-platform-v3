@@ -261,9 +261,10 @@ class CustomerAuthController extends Controller
 
         // Precio base del pedido original, sin el descuento del cupón
         $q = $original->cost_snapshot['quote'] ?? null;
+        $base = $q ? self::repeatSubtotal($q) : null;
         // (mismo redondeo que el cotizador: IVA redondeado aparte y sumado al subtotal)
-        $price = $q && isset($q['subtotal'], $q['iva_pct'])
-            ? $q['subtotal'] + floor($q['subtotal'] * $q['iva_pct'] / 100 + 0.5)
+        $price = $base !== null && isset($q['iva_pct'])
+            ? $base + floor($base * $q['iva_pct'] / 100 + 0.5)
             : (float) $original->total_price;
 
         $order = Order::create(array_merge(
@@ -288,7 +289,27 @@ class CustomerAuthController extends Controller
         return $this->success(['order_id' => $order->id, 'total_price' => $order->total_price], 'Pedido repetido.', 201);
     }
 
-    /** Copia de costos del original para el pedido repetido: sin cupón y con el total nuevo. */
+    /**
+     * Subtotal del pedido repetido: el del original con su descuento por volumen
+     * y su pedido mínimo, pero sin cupón ni recargo urgente (la copia no es urgente).
+     */
+    private static function repeatSubtotal(array $q): ?float
+    {
+        if (!isset($q['subtotal'])) {
+            return null;
+        }
+        $adjustments = collect($q['adjustments'] ?? []);
+        $amount = fn (string $type) => (float) $adjustments->where('type', $type)->sum('amount');
+        $volumePct = abs((float) ($adjustments->firstWhere('type', 'volume')['pct'] ?? 0));
+        $subtotal = (float) $q['subtotal'] - $amount('rush');
+        $subtotal = floor($subtotal * (1 - $volumePct / 100) + 0.5);
+        if ($amount('min_order') > 0 && isset($q['subtotal_after_discount'])) {
+            $subtotal = max($subtotal, (float) $q['subtotal_after_discount']);
+        }
+        return $subtotal;
+    }
+
+    /** Copia de costos del original para el pedido repetido: sin cupón ni urgente y con el total nuevo. */
     private function repeatSnapshot(?array $snapshot, float $price): ?array
     {
         if (!$snapshot) {
@@ -296,8 +317,10 @@ class CustomerAuthController extends Controller
         }
         if (isset($snapshot['quote']) && is_array($snapshot['quote'])) {
             $quote = array_diff_key($snapshot['quote'], array_flip(['coupon']));
-            $subtotal = (float) ($quote['subtotal'] ?? $price);
+            $subtotal = self::repeatSubtotal($quote) ?? $price;
             $snapshot['quote'] = array_merge($quote, [
+                'adjustments' => array_values(array_filter($quote['adjustments'] ?? [], fn ($a) => ($a['type'] ?? null) !== 'rush')),
+                'urgent' => false,
                 'discount' => 0,
                 'subtotal_after_discount' => $subtotal,
                 'iva' => $price - $subtotal,
