@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import AdminModal from './AdminModal.vue'
-import { toBuildMm } from '../../utils/buildVolume'
+import { toBuildMm, partialBuildVolume } from '../../utils/buildVolume'
 
 const props = defineProps<{
   modelValue: boolean
@@ -56,6 +56,7 @@ const submit = () => {
           <input v-model.number="form.build_z_mm" type="number" min="1" max="2000" step="1" placeholder="Z" aria-label="Alto Z (mm)" class="field tabular-nums">
         </div>
         <p class="mt-1.5 text-xs text-muted">Sirve para avisar al cliente si su pieza no cabe.</p>
+        <p v-if="partialBuildVolume(form.build_x_mm, form.build_y_mm, form.build_z_mm)" class="mt-1 text-xs text-warning" role="status">Completa las tres medidas: con una o dos, el cotizador no usa esta máquina.</p>
       </fieldset>
     </form>
     <template #footer>

@@ -18,10 +18,11 @@ Route::any('/login', function() {
 
 // --- PROTOCOLO DE ACCESO UNIFICADO N3XT ---
 Route::any('/ping', function() { return response()->json(['status' => 'online', 'timestamp' => now()]); });
-Route::middleware('throttle:10,1')->post('/auth-master-industrial-access', [UnifiedAuthController::class, 'login']);
-Route::middleware('throttle:5,1')->post('/auth/unified-register', [UnifiedAuthController::class, 'register']);
-Route::middleware('throttle:3,1')->post('/auth/password/forgot', [UnifiedAuthController::class, 'forgotPassword']);
-Route::middleware('throttle:10,1')->post('/auth/password/reset', [UnifiedAuthController::class, 'resetPassword']);
+// Cada ruta lleva su propio contador (3er parámetro): sin él, todas las de una IP comparten uno
+Route::middleware('throttle:10,1,postauth-master-industrial-access')->post('/auth-master-industrial-access', [UnifiedAuthController::class, 'login']);
+Route::middleware('throttle:5,1,postauth-unified-register')->post('/auth/unified-register', [UnifiedAuthController::class, 'register']);
+Route::middleware('throttle:3,1,postauth-password-forgot')->post('/auth/password/forgot', [UnifiedAuthController::class, 'forgotPassword']);
+Route::middleware('throttle:10,1,postauth-password-reset')->post('/auth/password/reset', [UnifiedAuthController::class, 'resetPassword']);
 
 // Ruta de Diagnóstico para el Lanzador N3XT
 Route::get('/health-check', function() { return response()->json(['status' => 'online', 'version' => '3.5.0']); });
@@ -29,15 +30,15 @@ Route::get('/health-check', function() { return response()->json(['status' => 'o
 // Sitemap dinámico (catalog + gallery desde settings)
 Route::get('/sitemap', [SitemapController::class, 'index'])->name('sitemap');
 // Vercel Cron (una vez al día): avisos de stock y mantenimiento
-Route::middleware('throttle:10,1')->get('/cron/alerts', [\App\Http\Controllers\CronController::class, 'alerts']);
+Route::middleware('throttle:10,1,getcron-alerts')->get('/cron/alerts', [\App\Http\Controllers\CronController::class, 'alerts']);
 
 // Ruta pública protegida por rate limit
-Route::middleware('throttle:5,1')->post('/orders', [OrderController::class, 'store']);
-Route::middleware('throttle:15,1')->post('/process-stl', [OrderController::class, 'processStl']);
-Route::middleware('throttle:20,1')->get('/orders/track', [OrderController::class, 'track']);
-Route::middleware('throttle:10,1')->post('/quote/coupon', [OrderController::class, 'validateCoupon']);
-Route::middleware('throttle:30,1')->get('/quote/capacity', [\App\Http\Controllers\QuoteInfoController::class, 'capacity']);
-Route::middleware('throttle:30,1')->get('/quote/lead-time', [\App\Http\Controllers\QuoteInfoController::class, 'leadTime']);
+Route::middleware('throttle:5,1,postorders')->post('/orders', [OrderController::class, 'store']);
+Route::middleware('throttle:15,1,postprocess-stl')->post('/process-stl', [OrderController::class, 'processStl']);
+Route::middleware('throttle:20,1,getorders-track')->get('/orders/track', [OrderController::class, 'track']);
+Route::middleware('throttle:10,1,postquote-coupon')->post('/quote/coupon', [OrderController::class, 'validateCoupon']);
+Route::middleware('throttle:30,1,getquote-capacity')->get('/quote/capacity', [\App\Http\Controllers\QuoteInfoController::class, 'capacity']);
+Route::middleware('throttle:30,1,getquote-lead-time')->get('/quote/lead-time', [\App\Http\Controllers\QuoteInfoController::class, 'leadTime']);
 
 // Ruta pública para leer configuraciones y materiales
 Route::get('/settings', [SettingController::class, 'index']);
@@ -48,15 +49,15 @@ Route::get('/materials', [MaterialController::class, 'index']);
 Route::middleware('auth:customer')->group(function () {
     Route::get('/customer/profile', [CustomerAuthController::class, 'profile']);
     Route::get('/customer/orders', [CustomerAuthController::class, 'orders']);
-    Route::middleware('throttle:10,1')->post('/customer/verify', [CustomerAuthController::class, 'verify']);
-    Route::middleware('throttle:3,1')->post('/customer/verify/resend', [CustomerAuthController::class, 'resendCode']);
-    Route::middleware('throttle:10,1')->post('/customer/catalog-orders', [CustomerAuthController::class, 'catalogOrder']);
-    Route::middleware('throttle:10,1')->post('/customer/orders/{id}/repeat', [CustomerAuthController::class, 'repeatOrder']);
+    Route::middleware('throttle:10,1,postcustomer-verify')->post('/customer/verify', [CustomerAuthController::class, 'verify']);
+    Route::middleware('throttle:3,1,postcustomer-verify-resend')->post('/customer/verify/resend', [CustomerAuthController::class, 'resendCode']);
+    Route::middleware('throttle:10,1,postcustomer-catalog-orders')->post('/customer/catalog-orders', [CustomerAuthController::class, 'catalogOrder']);
+    Route::middleware('throttle:10,1,postcustomer-orders-id-repeat')->post('/customer/orders/{id}/repeat', [CustomerAuthController::class, 'repeatOrder']);
     Route::get('/customer/quotes', [\App\Http\Controllers\SavedQuoteController::class, 'index']);
-    Route::middleware('throttle:10,1')->post('/customer/quotes', [\App\Http\Controllers\SavedQuoteController::class, 'store']);
+    Route::middleware('throttle:10,1,postcustomer-quotes')->post('/customer/quotes', [\App\Http\Controllers\SavedQuoteController::class, 'store']);
     Route::get('/customer/quotes/{id}/files/{index}', [\App\Http\Controllers\SavedQuoteController::class, 'file'])->whereNumber(['id', 'index']);
     Route::delete('/customer/quotes/{id}', [\App\Http\Controllers\SavedQuoteController::class, 'destroy'])->whereNumber('id');
-    Route::middleware('throttle:5,1')->post('/customer/orders/{id}/review', [\App\Http\Controllers\ReviewController::class, 'store'])->whereNumber('id');
+    Route::middleware('throttle:5,1,postcustomer-orders-id-review')->post('/customer/orders/{id}/review', [\App\Http\Controllers\ReviewController::class, 'store'])->whereNumber('id');
     Route::post('/customer/logout', [CustomerAuthController::class, 'logout']);
 });
 

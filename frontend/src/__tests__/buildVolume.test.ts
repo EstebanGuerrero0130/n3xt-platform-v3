@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fitsIn, fitNotice, toBuildMm } from '../utils/buildVolume'
+import { fitsIn, fitNotice, toBuildMm, partialBuildVolume } from '../utils/buildVolume'
 
 const capacity = { FDM: { x: 256, y: 256, z: 256 }, SLA: { x: 218, y: 123, z: 250 } }
 
@@ -39,5 +39,14 @@ describe('toBuildMm', () => {
     expect(toBuildMm('220.4')).toBe(220)
     expect(toBuildMm(0)).toBeNull()
     expect(toBuildMm(2001)).toBeNull()
+  })
+})
+
+describe('partialBuildVolume', () => {
+  it('avisa solo con una o dos medidas', () => {
+    expect(partialBuildVolume('', '', '')).toBe(false)
+    expect(partialBuildVolume(256, '', '')).toBe(true)
+    expect(partialBuildVolume(256, 256, null)).toBe(true)
+    expect(partialBuildVolume(256, 256, 256)).toBe(false)
   })
 })

@@ -33,3 +33,9 @@ export function toBuildMm(v: unknown): number | null {
   const n = Math.round(Number(v))
   return Number.isFinite(n) && n >= 1 && n <= 2000 ? n : null
 }
+
+/** Una o dos medidas: el cotizador solo usa la cama de máquinas con las tres */
+export function partialBuildVolume(...values: unknown[]): boolean {
+  const filled = values.filter(v => toBuildMm(v) !== null).length
+  return filled > 0 && filled < values.length
+}

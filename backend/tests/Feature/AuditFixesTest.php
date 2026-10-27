@@ -131,4 +131,13 @@ class AuditFixesTest extends TestCase
         $this->getJson('/api/orders/track?tracking_guide=G123')->assertOk()->assertJsonPath('data.customer_name', 'Laura G.');
         $this->getJson("/api/orders/track?order_id={$order->id}&email=laura@example.com")->assertOk()->assertJsonPath('data.customer_name', 'Laura Gómez Ruiz');
     }
+
+    public function test_each_public_route_has_its_own_rate_limit(): void
+    {
+        // La fecha de entrega se pide en cada cambio de cantidad: no debe gastar el cupo de otras rutas
+        for ($i = 0; $i < 12; $i++) {
+            $this->getJson('/api/quote/lead-time?technology=FDM&hours=' . ($i + 1))->assertOk();
+        }
+        $this->assertNotSame(429, $this->postJson('/api/quote/coupon', ['code' => 'NOEXISTE'])->status());
+    }
 }
