@@ -50,6 +50,7 @@ const KanbanBoard = defineAsyncComponent(() => import('../components/admin/Kanba
 const InventoryManager = defineAsyncComponent(() => import('../components/admin/InventoryManager.vue'))
 const AccountingDashboard = defineAsyncComponent(() => import('../components/admin/AccountingDashboard.vue'))
 const MachineMonitor = defineAsyncComponent(() => import('../components/admin/MachineMonitor.vue'))
+const CalibrationPanel = defineAsyncComponent(() => import('../components/admin/CalibrationPanel.vue'))
 const OrderHistory = defineAsyncComponent(() => import('../components/admin/OrderHistory.vue'))
 const PurchaseLog = defineAsyncComponent(() => import('../components/admin/PurchaseLog.vue'))
 const ContactManager = defineAsyncComponent(() => import('../components/admin/ContactManager.vue'))
@@ -629,6 +630,12 @@ const handlePurgeAll = () => {
             @maintenance-complete="handleMaintenanceComplete"
             @delete-printer="handleDeletePrinter"
             @sync="syncAll"
+          />
+          <CalibrationPanel
+            v-if="can('machines')"
+            class="mt-8"
+            :can-apply="can('settings')"
+            :show-notify="showNotify"
           />
         </div>
 
