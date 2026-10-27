@@ -221,6 +221,14 @@ class OrderStoreTest extends TestCase
         ])->assertCreated();
 
         $this->assertSame(42000.0, (float)Order::findOrFail($res->json('data.order_id'))->total_price);
+        $this->assertFalse(Order::findOrFail($res->json('data.order_id'))->is_urgent);
+
+        // Desde el simulador el admin puede marcarlo urgente
+        $id = $this->postJson('/api/orders', [
+            'customer_name' => 'Taller', 'technology' => 'FDM', 'material_id' => 'PLA_BLACK',
+            'volume_mm3' => 1000, 'estimated_weight_g' => 15, 'total_price' => 42000, 'urgent' => true,
+        ])->assertCreated()->json('data.order_id');
+        $this->assertTrue(Order::findOrFail($id)->is_urgent);
     }
 
     public function test_admin_manual_order_with_3d_file(): void

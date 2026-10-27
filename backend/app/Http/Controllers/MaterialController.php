@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Material;
+use App\Models\User;
 use App\Models\Inventory;
 use App\Traits\ApiResponse;
 use App\Http\Middleware\EnsureAdmin;
@@ -14,9 +15,15 @@ class MaterialController extends Controller
 {
     use ApiResponse;
 
+    /** Lo que necesita el cotizador público: sin stock, ubicación ni fechas del inventario */
+    private const PUBLIC_FIELDS = ['id', 'name', 'category', 'type', 'unit', 'cost_per_kg', 'density', 'color', 'is_active', 'speed_factor', 'waste_pct', 'failure_pct'];
+
     public function index()
     {
         try {
+            if (!(auth('sanctum')->user() instanceof User)) {
+                return $this->success(Material::get(self::PUBLIC_FIELDS));
+            }
             return $this->success(Material::with('inventory')->get());
         } catch (\Exception $e) {
             return $this->error('Error al listar inventario', 500);

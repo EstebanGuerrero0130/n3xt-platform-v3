@@ -94,6 +94,7 @@ export function useSimulationActions({
         comments: `SIMULACIÓN N3XT: ${formData?.job_name || formData?.customer_name || simulator.job_name || 'Proyecto'}. Lote: ${qty} pzs` + (formData?.beds > 1 ? ` en ${formData.beds} camas de ${formData.pieces_per_bed} (${Math.round(formData.bed_price || 0).toLocaleString('es-CO')} por cama).` : '.') + ((formData?.comments || simulator.comments) ? `\n\nNOTAS INTERNAS:\n${formData?.comments || simulator.comments}` : ''),
         status: 'pending',
         qty: qty,
+        urgent: !!formData?.urgent,
         extra_items: extrasData.map((e: any) => ({ material_id: e.id, qty: e.qty })),
         cost_snapshot: {
           settings: JSON.parse(JSON.stringify(settings.value)),

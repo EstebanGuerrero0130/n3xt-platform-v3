@@ -52,4 +52,19 @@ class MaterialQuoteParamsTest extends TestCase
             'cost_per_kg' => 80000, 'initial_stock' => 0, 'failure_pct' => 100,
         ])->assertForbidden();
     }
+
+    public function test_public_list_hides_stock_and_location(): void
+    {
+        Material::create(['id' => 'PLA_Z', 'name' => 'PLA Z', 'category' => 'FDM', 'type' => 'material', 'unit' => 'g', 'cost_per_kg' => 80000, 'location' => 'Estante 3']);
+        \App\Models\Inventory::create(['material_id' => 'PLA_Z', 'stock_available' => 750, 'low_stock_threshold' => 200]);
+
+        $row = collect($this->getJson('/api/materials')->assertOk()->json('data'))->firstWhere('id', 'PLA_Z');
+        $this->assertArrayNotHasKey('inventory', $row);
+        $this->assertArrayNotHasKey('location', $row);
+        $this->assertArrayHasKey('cost_per_kg', $row); // el cotizador del navegador lo usa
+
+        $this->actingAs(User::factory()->create(['role' => 'staff', 'permissions' => ['kanban']]), 'web');
+        $row = collect($this->getJson('/api/materials')->assertOk()->json('data'))->firstWhere('id', 'PLA_Z');
+        $this->assertEquals(750, $row['inventory']['stock_available']);
+    }
 }

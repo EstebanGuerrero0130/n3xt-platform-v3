@@ -32,6 +32,7 @@
           <p class="sm:col-span-2 text-sm text-muted tabular-nums" aria-live="polite">
             Total: <strong class="text-ink">{{ run.pieces }} {{ run.pieces === 1 ? 'pieza' : 'piezas' }}</strong> en {{ run.beds }} {{ run.beds === 1 ? 'cama' : 'camas' }} ·
             {{ run.weightG.toLocaleString('es-CO', { maximumFractionDigits: 1 }) }} g · {{ hoursLabel(run.hours) }}
+            <span v-if="params.waste_pct > 0" class="block text-xs">El peso incluye {{ params.waste_pct }} % de desperdicio del material.</span>
           </p>
         </section>
 
@@ -63,7 +64,11 @@
           <div><label for="sim-log" class="admin-label mb-1">Logística</label><input id="sim-log" v-model.number="form.transporte_pct" type="number" min="0" step="0.5" class="field h-10 tabular-nums"></div>
           <div><label for="sim-mkt" class="admin-label mb-1">Marketing</label><input id="sim-mkt" v-model.number="form.marketing_pct" type="number" min="0" step="0.5" class="field h-10 tabular-nums"></div>
           <div><label for="sim-iva" class="admin-label mb-1">IVA</label><input id="sim-iva" v-model.number="form.iva_pct" type="number" min="0" max="100" step="0.5" class="field h-10 tabular-nums"></div>
-          <div><label for="sim-disc" class="admin-label mb-1">Descuento</label><input id="sim-disc" v-model.number="form.discount_pct" type="number" min="0" max="100" class="field h-10 tabular-nums"></div>
+          <div><label for="sim-disc" class="admin-label mb-1">Descuento</label><input id="sim-disc" v-model.number="form.discount_pct" type="number" min="0" :max="MAX_DISCOUNT_PCT" class="field h-10 tabular-nums"></div>
+          <label v-if="rules.rush_pct > 0" class="col-span-2 sm:col-span-3 flex items-center gap-2 text-sm">
+            <input v-model="form.urgent" type="checkbox" class="h-4 w-4">
+            Urgente <span class="text-muted">(+{{ rules.rush_pct }} %, va primero en la cola)</span>
+          </label>
         </section>
 
         <div><label for="sim-notes" class="admin-label mb-2">Notas internas</label><textarea id="sim-notes" v-model="form.comments" rows="2" class="field !h-auto py-2.5"></textarea></div>
@@ -107,12 +112,16 @@
             <div class="flex justify-between"><dt class="text-muted">Marketing ({{ form.marketing_pct }} %)</dt><dd class="tabular-nums">{{ money(result.marketing) }}</dd></div>
             <div class="flex justify-between"><dt class="text-muted">Fallos ({{ form.fallos_pct }} %)</dt><dd class="tabular-nums">{{ money(result.failures) }}</dd></div>
             <div class="flex justify-between"><dt class="text-muted">Ganancia ({{ form.profit_pct }} %)</dt><dd class="tabular-nums">{{ money(result.profit) }}</dd></div>
+            <div v-for="a in result.adjustments" :key="a.type" class="flex justify-between" :class="a.amount < 0 ? 'text-success' : ''">
+              <dt :class="a.amount < 0 ? '' : 'text-muted'">{{ a.label }}<template v-if="a.pct"> ({{ Math.abs(a.pct) }} %)</template></dt>
+              <dd class="tabular-nums">{{ a.amount < 0 ? '−' : '' }}{{ money(Math.abs(a.amount)) }}</dd>
+            </div>
             <div v-if="result.discount > 0" class="flex justify-between text-success"><dt>Descuento ({{ form.discount_pct }} %)</dt><dd class="tabular-nums">−{{ money(result.discount) }}</dd></div>
             <div class="flex justify-between pt-2 border-t border-line"><dt class="text-muted">Subtotal</dt><dd class="tabular-nums">{{ money(result.subtotal) }}</dd></div>
             <div class="flex justify-between"><dt class="text-muted">IVA ({{ form.iva_pct }} %)</dt><dd class="tabular-nums">{{ money(result.iva) }}</dd></div>
             <div class="flex justify-between pt-2 border-t border-line font-semibold text-base"><dt>Total</dt><dd class="tabular-nums">{{ money(result.total) }}</dd></div>
           </dl>
-          <p v-if="form.discount_pct >= 100" role="alert" class="mt-3 text-danger font-semibold">Un descuento del 100 % deja el pedido en $0.</p>
+          <p v-if="result.discount_capped" role="status" class="mt-3 text-warning">Igual que en el sitio, el descuento por volumen y el tuyo juntos no pasan del {{ MAX_DISCOUNT_PCT }} %.</p>
         </section>
       </aside>
     </div>
@@ -127,7 +136,8 @@
 <script setup lang="ts">
 import { reactive, computed, watch } from 'vue'
 import AdminModal from './AdminModal.vue'
-import { calcProductionCost, calcFinalPrice } from '../../services/costCalculator'
+import type { QuoteAdjustment } from '../../services/costCalculator'
+import { calcProductionCost, calcFinalPrice, calcQuoteEstimate, normalizeRules, materialParams, MAX_DISCOUNT_PCT } from '../../services/costCalculator'
 
 const props = withDefaults(defineProps<{
   visible: boolean
@@ -155,6 +165,7 @@ const form = reactive({
   marketing_pct: props.settings?.oper?.marketing ?? 10,
   fallos_pct: props.settings?.oper?.fallos ?? 5,
   iva_pct: props.settings?.margin?.iva ?? 19,
+  urgent: false,
   extra_items: [] as Array<{ id: string; name: string; cost: number; unit: string; qty: number }>, comments: '',
 })
 
@@ -171,9 +182,17 @@ watch(() => props.visible, (open) => {
   form.profit_pct = props.settings?.oper?.ganancia ?? 20
   form.transporte_pct = props.settings?.oper?.transporte ?? 5
   form.marketing_pct = props.settings?.oper?.marketing ?? 10
-  form.fallos_pct = props.settings?.oper?.fallos ?? 5
+  form.fallos_pct = defaultFailures()
   form.iva_pct = props.settings?.margin?.iva ?? 19
 })
+
+// Mismas reglas comerciales y parámetros del material que el cotizador del sitio
+const rules = computed(() => normalizeRules(props.settings?.rules))
+const selectedMaterial = computed(() => props.materials.find(m => m.id === form.material_id))
+const params = computed(() => materialParams(selectedMaterial.value))
+const defaultFailures = () => params.value.failure_pct ?? props.settings?.oper?.fallos ?? 5
+// Cada material trae su reserva por fallos (si la tiene); se puede cambiar a mano
+watch(() => form.material_id, () => { form.fallos_pct = defaultFailures() })
 const parseHours = (str: string) => {
   const [h, m] = String(str || '').split(':').map(Number)
   return (h || 0) + (m || 0) / 60
@@ -191,7 +210,8 @@ const run = computed(() => {
   return {
     beds,
     pieces: beds * perBed,
-    weightG: (Number(form.weight_g) || 0) * beds,
+    // El laminador no cuenta el desperdicio del material (mismo % que el cotizador)
+    weightG: (Number(form.weight_g) || 0) * beds * (1 + params.value.waste_pct / 100),
     hours: parseHours(form.time_str) * beds,
   }
 })
@@ -201,42 +221,44 @@ const pct = (part: number) => result.value.total > 0 ? Math.max(0, (part / resul
 const canConvert = computed(() => !!form.material_id && result.value.total > 0 && !!form.customer_name.trim())
 
 const result = computed(() => {
-  const mat = props.materials.find(m => m.id === form.material_id)
+  const mat = selectedMaterial.value
   if (!mat || !props.settings.infra) return {
     material: 0, luz: 0, labor: 0, depr: 0, mant: 0, etiquetas: 0, extras: 0,
     production: 0, logistics: 0, marketing: 0, failures: 0, profit: 0,
     subtotal: 0, iva: 0, total: 0, unit_price: 0, bed_price: 0, discount: 0,
-    profit_margin_pct: 0, total_hours: 0,
-    isSafetyAlert: false, pcts: { material: 0, luz: 0, labor: 0, depr: 0, mant: 0, etiquetas: 0, extras: 0 }
+    profit_margin_pct: 0, total_hours: 0, urgent: false, adjustments: [] as QuoteAdjustment[], discount_capped: false,
   }
 
   const { pieces: qty, beds, weightG, hours: totalHours } = run.value
   const extrasCost = form.extra_items.reduce((acc, item) => acc + item.cost * item.qty, 0)
+  const costPerKg = Number(mat.cost_per_kg) || 0
+  const oper = { transporte: form.transporte_pct, marketing: form.marketing_pct, fallos: form.fallos_pct, ganancia: form.profit_pct }
 
-  const prod = calcProductionCost({
-    weightG, totalHours, costPerKg: mat.cost_per_kg,
-    infra: props.settings.infra, prep: props.settings.prep, extrasCost,
+  // Peso y tiempo vienen del laminador: sin camas ni calibración, pero con las reglas del sitio
+  const est = calcQuoteEstimate({
+    models: [{ id: 'sim', weightG: weightG / qty, hours: totalHours / qty, qty }],
+    costPerKg, infra: props.settings.infra, prep: props.settings.prep, oper,
+    margin: { iva: Number(form.iva_pct) || 0 }, extrasCost,
+    discountPct: Number(form.discount_pct) || 0, rules: rules.value, urgent: form.urgent,
   })
-
-  const price = calcFinalPrice({
-    productionCost: prod.total,
-    oper: { transporte: form.transporte_pct, marketing: form.marketing_pct, fallos: form.fallos_pct, ganancia: form.profit_pct },
-    margin: { iva: props.settings.margin?.iva || 0 },
-    overrides: { discountPct: form.discount_pct, ivaPct: form.iva_pct },
-  })
+  // Desglose: mismas cuentas que hace calcQuoteEstimate por dentro
+  const prod = calcProductionCost({ weightG, totalHours, costPerKg, infra: props.settings.infra, prep: props.settings.prep, extrasCost })
+  const perUnit = calcFinalPrice({ productionCost: est.productionCost / qty, oper, margin: { iva: 0 } })
 
   return {
-    material: prod.material, luz: prod.luz, labor: prod.labor,
+    material: prod.material, luz: prod.luz, labor: est.laborCost,
     depr: prod.depr, mant: prod.mant, etiquetas: prod.etiquetas,
-    extras: prod.extras, production: prod.total,
-    logistics: price.logistics, marketing: price.marketing,
-    failures: price.failures, profit: price.profit,
-    discount: price.discount, subtotal: price.subtotal,
-    iva: price.iva, total: price.total,
-    unit_price: Math.round(price.total / qty),
-    bed_price: Math.round(price.total / beds),
-    total_hours: totalHours, profit_margin_pct: price.profitMarginPct,
-    isSafetyAlert: form.discount_pct === 100, pcts: prod.pcts,
+    extras: prod.extras, production: est.productionCost,
+    logistics: perUnit.logistics * qty, marketing: perUnit.marketing * qty,
+    failures: perUnit.failures * qty, profit: perUnit.profit * qty,
+    discount: est.discount, subtotal: est.subtotal,
+    iva: est.iva, total: est.total,
+    unit_price: Math.round(est.total / qty),
+    bed_price: Math.round(est.total / beds),
+    total_hours: totalHours,
+    profit_margin_pct: est.subtotal > 0 ? ((est.subtotal - est.productionCost) / est.subtotal) * 100 : 0,
+    urgent: est.urgent, adjustments: est.adjustments,
+    discount_capped: (est.grossSubtotal - est.volumeDiscount) * (Number(form.discount_pct) || 0) / 100 > est.discount + 1,
   }
 })
 
@@ -270,6 +292,7 @@ const emitFormData = (action: 'download-pdf' | 'create-order') => {
     bed_price: result.value.bed_price,
     profit_pct: form.profit_pct,
     discount_pct: form.discount_pct,
+    urgent: result.value.urgent,
     extra_items: form.extra_items,
     extras_cost: extrasCost,
     comments: form.comments,

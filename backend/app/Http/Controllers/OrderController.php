@@ -318,6 +318,8 @@ class OrderController extends Controller
             'status'               => 'pending',
             'extra_items'          => count($processedExtras) > 0 ? $processedExtras : null,
             'extras_cost'          => $extrasCost,
+            // Pedido manual: el admin marca urgente desde el simulador
+            'is_urgent'            => !empty($validated['urgent']),
             'cost_snapshot'        => [
                 'settings' => Setting::all()->pluck('value', 'key'),
                 'material_cost_per_kg' => $material->cost_per_kg,
