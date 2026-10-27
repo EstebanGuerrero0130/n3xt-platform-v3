@@ -3,6 +3,7 @@
     <template v-if="order">
       <div class="flex flex-wrap items-center gap-2 mb-6">
         <span :class="['badge', statusClass]">{{ statusLabel }}</span>
+        <span v-if="order.is_urgent" class="badge bg-danger/10 text-danger" title="Pagó el recargo urgente: va primero en la cola">Urgente</span>
         <span :class="['badge', order.is_paid ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning']">{{ order.is_paid ? 'Pagado' : 'Pago pendiente' }}</span>
         <span v-if="order.printer" class="badge bg-surface-2 text-ink">Máquina: {{ order.printer.name }}</span>
       </div>

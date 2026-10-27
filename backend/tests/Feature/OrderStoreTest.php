@@ -405,5 +405,26 @@ class OrderStoreTest extends TestCase
         $quote = Order::find($res->json('data.order_id'))->cost_snapshot['quote'];
         $this->assertFalse($quote['urgent']);
         $this->assertNotContains('rush', array_column($quote['adjustments'], 'type'));
+        // El original sí es urgente; la copia no se adelanta en la cola
+        $this->assertTrue(Order::find($id)->is_urgent);
+        $this->assertFalse(Order::find($res->json('data.order_id'))->is_urgent);
+    }
+
+    public function test_is_urgent_only_when_rush_is_applied_and_shown_to_admin(): void
+    {
+        // Sin recargo configurado, pedir urgente no lo marca
+        Setting::updateOrCreate(['key' => 'rules'], ['value' => ['rush_pct' => 0]]);
+        $free = $this->post('/api/orders', $this->payload(['urgent' => '1']), ['Accept' => 'application/json'])->assertCreated()->json('data.order_id');
+        $this->assertFalse(Order::find($free)->is_urgent);
+
+        Setting::updateOrCreate(['key' => 'rules'], ['value' => ['rush_pct' => 20]]);
+        $plain = $this->post('/api/orders', $this->payload(), ['Accept' => 'application/json'])->assertCreated()->json('data.order_id');
+        $urgent = $this->post('/api/orders', $this->payload(['urgent' => '1', 'is_urgent' => '1']), ['Accept' => 'application/json'])->assertCreated()->json('data.order_id');
+        $this->assertFalse(Order::find($plain)->is_urgent);
+        $this->assertTrue(Order::find($urgent)->is_urgent);
+
+        $this->actingAs(User::factory()->create(), 'web');
+        $this->getJson("/api/admin/orders/{$urgent}")->assertOk()->assertJsonPath('data.is_urgent', true);
+        $this->getJson("/api/admin/orders/{$plain}")->assertOk()->assertJsonPath('data.is_urgent', false);
     }
 }

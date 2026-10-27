@@ -22,15 +22,17 @@ class LeadTimeService
 
     /**
      * Fecha de entrega estimada, o null si no hay máquina disponible para esa tecnología.
-     * $urgent: el trabajo pasa al frente de la cola (justo después de lo que se imprime).
+     * $urgent: el trabajo va después de lo que se imprime y de los urgentes que ya
+     * esperan; si no, después de toda la cola (urgentes incluidos).
      */
     public function estimate(string $technology, float $hours, bool $urgent = false, ?DateTimeInterface $now = null): ?CarbonImmutable
     {
         $now = CarbonImmutable::instance($now ?? now());
         $printers = Printer::query()->get(['id', 'technology', 'status'])->toArray();
         $orders = Order::query()
-            ->whereIn('status', $urgent ? ['printing'] : ['printing', 'pending'])
-            ->get(['id', 'status', 'technology', 'printer_id', 'estimated_duration_h', 'printing_started_at', 'updated_at', 'created_at'])
+            ->where(fn ($q) => $q->where('status', 'printing')
+                ->orWhere(fn ($q) => $q->where('status', 'pending')->when($urgent, fn ($q) => $q->where('is_urgent', true))))
+            ->get(['id', 'status', 'technology', 'printer_id', 'estimated_duration_h', 'printing_started_at', 'updated_at', 'created_at', 'is_urgent'])
             ->map(fn (Order $o) => [
                 'id' => $o->id,
                 'status' => $o->status,
@@ -40,6 +42,7 @@ class LeadTimeService
                 'printing_started_at' => $o->printing_started_at,
                 'updated_at' => $o->updated_at,
                 'created_at' => $o->created_at,
+                'is_urgent' => $o->is_urgent,
             ])->all();
 
         $end = self::slotEnd($printers, $orders, $technology, $hours, $now);

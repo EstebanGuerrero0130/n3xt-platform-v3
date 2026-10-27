@@ -281,6 +281,8 @@ class CustomerAuthController extends Controller
                 'cost_snapshot' => $this->repeatSnapshot($original->cost_snapshot, $price),
                 'total_price' => $price,
                 'status' => 'pending',
+                // La copia no paga recargo urgente: no se adelanta en la cola
+                'is_urgent' => false,
                 'comments' => "Repetición del pedido #{$original->id}. El taller confirma el precio antes de imprimir.",
             ]
         ));

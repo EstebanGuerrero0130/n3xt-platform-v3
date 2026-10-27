@@ -233,6 +233,8 @@ class OrderController extends Controller
                     'original_filename'    => $first['original_filename'],
                     'models'               => $modelsOut,
                     'status'               => 'pending',
+                    // Solo si el cotizador aplicó el recargo urgente
+                    'is_urgent'            => (bool) ($quote['urgent'] ?? false),
                     'extra_items'          => count($extras) > 0 ? $extras : null,
                     'extras_cost'          => $quote['extras_cost'],
                     'cost_snapshot'        => [

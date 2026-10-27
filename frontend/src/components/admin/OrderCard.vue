@@ -84,6 +84,7 @@ const isStalled = computed(() => {
     <div class="flex flex-wrap items-center gap-1.5 mb-3">
       <span class="text-sm font-semibold tabular-nums text-muted">#{{ order.id }}</span>
       <span class="badge bg-surface-2 text-ink">{{ isCatalog ? 'Catálogo' : order.technology }}</span>
+      <span v-if="order.is_urgent" class="badge bg-danger/10 text-danger" title="Pagó el recargo urgente: va primero en la cola">Urgente</span>
       <span v-if="order.is_paid" class="badge bg-success/10 text-success">Pagado</span>
       <span v-if="isStalled" class="badge bg-warning/10 text-warning" title="Más de 24 h sin cambios">Detenido</span>
     </div>

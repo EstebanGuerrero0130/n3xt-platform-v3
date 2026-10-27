@@ -4,7 +4,7 @@
  * estimada (ver utils/productionSchedule). La ventana va de hoy a 48 h.
  */
 import { computed, ref, onMounted, onUnmounted, type PropType } from 'vue'
-import { buildSchedule, type SchedulePrinter, type ScheduleOrder, type ScheduleSlot } from '../../utils/productionSchedule'
+import { buildSchedule, isUrgent, type SchedulePrinter, type ScheduleOrder, type ScheduleSlot } from '../../utils/productionSchedule'
 
 const props = defineProps({
   printers: { type: Array as PropType<SchedulePrinter[]>, default: () => [] },
@@ -98,6 +98,7 @@ const hours = (o: ScheduleOrder) => Math.round((Number(o.estimated_duration_h) |
           <span v-if="s.state === 'printing' && s.overdue" class="badge bg-danger/10 text-danger">Atrasado</span>
           <span v-else-if="s.state === 'printing'" class="badge bg-primary/15 text-brand">Imprimiendo</span>
           <span v-else class="badge bg-surface-2 text-muted">En cola</span>
+          <span v-if="isUrgent(s.order)" class="badge bg-danger/10 text-danger">Urgente</span>
           <span v-if="hours(s.order)" class="ml-auto text-muted tabular-nums">{{ when(s.start) }} → {{ when(s.end) }} · {{ hours(s.order) }} h</span>
           <span v-else class="ml-auto text-muted">Sin horas estimadas</span>
         </li>
@@ -110,6 +111,7 @@ const hours = (o: ScheduleOrder) => Math.round((Number(o.estimated_duration_h) |
       <ul class="mt-2 divide-y divide-line text-sm">
         <li v-for="o in schedule.unscheduled" :key="o.id" class="py-2 flex flex-wrap gap-x-3">
           <button type="button" class="font-semibold hover:underline" @click="$emit('view', o)">{{ label(o) }}</button>
+          <span v-if="isUrgent(o)" class="badge bg-danger/10 text-danger">Urgente</span>
           <span class="text-muted">{{ o.technology }} · {{ hours(o) }} h</span>
         </li>
       </ul>

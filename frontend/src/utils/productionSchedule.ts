@@ -2,8 +2,8 @@
  * Calendario de producción: qué imprime cada máquina y cuándo termina.
  *
  * Lo que está en impresión empieza en `printing_started_at`; la cola (pedidos por
- * revisar) se reparte, en orden de llegada, a la máquina libre más pronto de la
- * misma tecnología. Es una estimación con las horas calculadas de cada pedido.
+ * revisar) se reparte, urgentes primero y luego en orden de llegada, a la máquina
+ * libre más pronto de la misma tecnología. Es una estimación con las horas calculadas de cada pedido.
  */
 
 export interface SchedulePrinter { id: number | string; name: string; technology?: string; status?: string }
@@ -16,6 +16,8 @@ export interface ScheduleOrder {
   printing_started_at?: string | null
   updated_at?: string | null
   created_at?: string | null
+  /** Pagó el recargo urgente: va primero en la cola */
+  is_urgent?: boolean | number | string | null
   [key: string]: unknown
 }
 
@@ -49,6 +51,8 @@ const HOUR = 3_600_000
 const tech = (v?: string) => (v || '').toUpperCase()
 const hoursOf = (o: ScheduleOrder) => Math.max(Number(o.estimated_duration_h) || 0, 0)
 const time = (v?: string | null) => (v ? new Date(v).getTime() : NaN)
+/** Mismos valores que ProductionSchedule::isUrgent en el backend */
+export const isUrgent = (o: Pick<ScheduleOrder, 'is_urgent'>) => [true, 1, '1', 'true'].includes(o.is_urgent as never)
 
 export function buildSchedule(printers: SchedulePrinter[], orders: ScheduleOrder[], now = new Date()): ProductionSchedule {
   const rows: PrinterSchedule[] = printers.map(p => ({
@@ -68,10 +72,10 @@ export function buildSchedule(printers: SchedulePrinter[], orders: ScheduleOrder
     if (end > row.freeAt) row.freeAt = end
   }
 
-  // 2. La cola, en orden de llegada, a la máquina compatible libre más pronto
+  // 2. La cola: urgentes primero y luego en orden de llegada, a la máquina compatible libre más pronto
   const queue = orders
     .filter(o => o.status === 'pending' && tech(o.technology) !== 'CATALOGO')
-    .sort((a, b) => (time(a.created_at) || 0) - (time(b.created_at) || 0))
+    .sort((a, b) => Number(isUrgent(b)) - Number(isUrgent(a)) || (time(a.created_at) || 0) - (time(b.created_at) || 0))
 
   for (const o of queue) {
     const candidates = rows.filter(r => !r.inMaintenance && !r.offline && tech(r.printer.technology) === tech(o.technology))

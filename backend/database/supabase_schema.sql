@@ -160,6 +160,7 @@ CREATE TABLE IF NOT EXISTS orders (
     stock_deducted BOOLEAN NOT NULL DEFAULT FALSE,
     hours_added_to_printer BOOLEAN NOT NULL DEFAULT FALSE,
     is_paid BOOLEAN NOT NULL DEFAULT FALSE,
+    is_urgent BOOLEAN NOT NULL DEFAULT FALSE,             -- Pagó recargo urgente: primero en la cola
     tracking_guide VARCHAR(255) NULL,
     tracking_carrier VARCHAR(255) NULL,
 
@@ -394,7 +395,8 @@ INSERT INTO migrations (migration, batch) VALUES
 ('2026_10_28_000004_widen_order_volume_and_weight', 1),
 ('2026_10_29_000201_add_printing_finished_at_to_orders_table', 1),
 ('2026_10_29_000301_add_build_volume_to_printers_table', 1),
-('2026_10_29_000101_add_quote_params_to_materials_table', 1);
+('2026_10_29_000101_add_quote_params_to_materials_table', 1),
+('2026_10_29_000401_add_is_urgent_to_orders_table', 1);
 
 -- Cupones: lista vacía (se crean desde el panel → Descuentos)
 INSERT INTO settings (key, value, created_at, updated_at)

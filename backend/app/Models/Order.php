@@ -16,7 +16,7 @@ class Order extends Model
         'file_path', 'original_filename', 'status',
         'tracking_guide', 'tracking_carrier', 'dimensions_mm', 'scale_factor',
         'printer_id', 'estimated_duration_h',
-        'extras_cost', 'extra_items', 'cost_snapshot', 'is_paid',
+        'extras_cost', 'extra_items', 'cost_snapshot', 'is_paid', 'is_urgent',
         'stock_deducted', 'hours_added_to_printer', 'project_id',
         'job_name', 'models', 'printing_started_at', 'printing_finished_at'
     ];
@@ -33,6 +33,7 @@ class Order extends Model
         'extra_items' => 'array',
         'models' => 'array',
         'is_paid' => 'boolean',
+        'is_urgent' => 'boolean',
         'stock_deducted' => 'boolean',
         'hours_added_to_printer' => 'boolean',
         'printing_started_at' => 'datetime',

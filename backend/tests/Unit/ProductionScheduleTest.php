@@ -58,6 +58,21 @@ class ProductionScheduleTest extends TestCase
         $this->assertSame('2026-10-28T12:00:00.000Z', self::iso($rows[0]['slots'][1]['start']));
     }
 
+    public function test_urgent_orders_go_first_then_by_arrival(): void
+    {
+        $rows = ProductionSchedule::build($this->printers, [
+            ['id' => 10, 'status' => 'printing', 'printer_id' => 1, 'estimated_duration_h' => 4, 'printing_started_at' => '2026-10-28T08:00:00Z'],
+            ['id' => 20, 'status' => 'pending', 'technology' => 'FDM', 'estimated_duration_h' => 5, 'created_at' => '2026-10-27T08:00:00Z'],
+            ['id' => 22, 'status' => 'pending', 'technology' => 'FDM', 'estimated_duration_h' => 2, 'created_at' => '2026-10-27T10:00:00Z', 'is_urgent' => 1],
+            ['id' => 21, 'status' => 'pending', 'technology' => 'FDM', 'estimated_duration_h' => 3, 'created_at' => '2026-10-27T09:00:00Z', 'is_urgent' => true],
+        ], $this->now)['rows'];
+        // 21 (urgente más antiguo) a la Bambu ya; 22 a la Ender a las 12; el 20 espera a la Bambu (13:00)
+        $this->assertSame([21, 20], $this->ids($rows[1]));
+        $this->assertSame([10, 22], $this->ids($rows[0]));
+        $this->assertSame('2026-10-28T12:00:00.000Z', self::iso($rows[0]['slots'][1]['start']));
+        $this->assertSame('2026-10-28T13:00:00.000Z', self::iso($rows[1]['slots'][1]['start']));
+    }
+
     public function test_two_free_printers_share_the_queue(): void
     {
         $rows = ProductionSchedule::build($this->printers, [

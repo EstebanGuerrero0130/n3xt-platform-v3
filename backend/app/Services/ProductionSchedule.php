@@ -10,8 +10,9 @@ use DateTimeInterface;
  * Mantener las dos versiones equivalentes (mismos casos en sus pruebas).
  *
  * Lo que está en impresión empieza en printing_started_at; la cola (pendientes,
- * sin catálogo) se reparte en orden de llegada a la máquina compatible libre más
- * pronto. Tiempos en milisegundos para igualar al cálculo del frontend.
+ * sin catálogo) se reparte, urgentes primero y luego en orden de llegada, a la
+ * máquina compatible libre más pronto. Tiempos en milisegundos para igualar al
+ * cálculo del frontend.
  */
 class ProductionSchedule
 {
@@ -19,7 +20,7 @@ class ProductionSchedule
 
     /**
      * @param  array<int, array<string, mixed>>  $printers  id, technology, status
-     * @param  array<int, array<string, mixed>>  $orders    id, status, technology, printer_id, estimated_duration_h, printing_started_at, updated_at, created_at
+     * @param  array<int, array<string, mixed>>  $orders    id, status, technology, printer_id, estimated_duration_h, printing_started_at, updated_at, created_at, is_urgent
      * @return array{rows: array<int, array{printer: array, slots: array, freeAt: float, inMaintenance: bool, offline: bool}>, unscheduled: array}
      */
     public static function build(array $printers, array $orders, DateTimeInterface $now): array
@@ -47,9 +48,10 @@ class ProductionSchedule
             if ($end > $rows[$i]['freeAt']) $rows[$i]['freeAt'] = $end;
         }
 
-        // 2. La cola, en orden de llegada (usort es estable, como sort en JS)
+        // 2. La cola: urgentes primero y luego en orden de llegada (usort es estable, como sort en JS)
         $queue = array_values(array_filter($orders, fn ($o) => ($o['status'] ?? null) === 'pending' && self::tech($o['technology'] ?? null) !== 'CATALOGO'));
-        usort($queue, fn ($a, $b) => (self::ms($a['created_at'] ?? null) ?? 0) <=> (self::ms($b['created_at'] ?? null) ?? 0));
+        usort($queue, fn ($a, $b) => (self::isUrgent($b) <=> self::isUrgent($a))
+            ?: ((self::ms($a['created_at'] ?? null) ?? 0) <=> (self::ms($b['created_at'] ?? null) ?? 0)));
 
         foreach ($queue as $o) {
             $i = self::pickRow($rows, self::tech($o['technology'] ?? null), $o['printer_id'] ?? null);
@@ -85,6 +87,12 @@ class ProductionSchedule
     public static function tech($v): string
     {
         return strtoupper((string) $v);
+    }
+
+    /** Pagó el recargo urgente (columna is_urgent) */
+    public static function isUrgent(array $o): bool
+    {
+        return in_array($o['is_urgent'] ?? false, [true, 1, '1', 'true'], true);
     }
 
     private static function hoursOf(array $o): float

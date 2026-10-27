@@ -100,6 +100,21 @@ class QuoteInfoTest extends TestCase
         }
     }
 
+    public function test_urgent_lead_time_waits_for_other_urgent_orders(): void
+    {
+        $this->travelTo('2026-10-28T10:00:00Z');
+        $this->printer(['name' => 'Bambu']);
+        $this->order(['estimated_duration_h' => 40, 'created_at' => '2026-10-27 08:00:00']);
+        $this->order(['estimated_duration_h' => 20, 'created_at' => '2026-10-27 09:00:00', 'is_urgent' => true]);
+
+        // Urgente: después del otro urgente, no del normal (10:00 + 20 h + 10 h = 29 16:00 UTC)
+        $this->getJson('/api/quote/lead-time?technology=FDM&hours=10&urgent=1')->assertOk()
+            ->assertJsonPath('data.date', '2026-10-30');
+        // Normal: después de toda la cola (urgente incluido): 10:00 + 70 h = 31 08:00 UTC
+        $this->getJson('/api/quote/lead-time?technology=FDM&hours=10')->assertOk()
+            ->assertJsonPath('data.date', '2026-11-02');
+    }
+
     public function test_lead_time_uses_post_hours_setting_and_skips_sunday(): void
     {
         $this->travelTo('2026-10-30T15:00:00Z'); // viernes
