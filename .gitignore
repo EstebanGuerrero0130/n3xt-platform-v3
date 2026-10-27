@@ -123,3 +123,6 @@ query
 nul
 
 .taste-skill/
+
+# Configuración MCP local (contiene tokens)
+.mcp.json

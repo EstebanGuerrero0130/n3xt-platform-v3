@@ -5,9 +5,9 @@
 -- Cómo usarlo:
 --   1. Supabase → SQL Editor → pega este archivo completo → Run.
 --      Se puede correr varias veces: todo es IF NOT EXISTS / ON CONFLICT.
---   2. Después, desde backend/ con DB_URL apuntando a Supabase:
---        php artisan migrate --force
---      Eso corre solo las dos migraciones de datos (cupones), que no van aquí.
+--   2. No hace falta php artisan migrate: las dos migraciones de datos (cupones)
+--      se marcan como hechas aquí. La de ejemplo crearía cupones N3XT10, MAKER5 y
+--      FDM2026 válidos para cualquiera; en su lugar la lista queda vacía.
 -- ============================================================
 
 BEGIN;
@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS saved_quotes (
     created_at TIMESTAMP NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL DEFAULT NOW()
 );
-ALTER TABLE saved_quotes DISABLE ROW LEVEL SECURITY;
+-- RLS sin políticas: la API pública de Supabase no la ve; el backend (postgres) sí
+ALTER TABLE saved_quotes ENABLE ROW LEVEL SECURITY;
 
 -- Reseñas
 CREATE TABLE IF NOT EXISTS reviews (
@@ -75,16 +76,36 @@ CREATE TABLE IF NOT EXISTS reviews (
     updated_at TIMESTAMP NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS reviews_status_created_at_index ON reviews (status, created_at);
-ALTER TABLE reviews DISABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 
--- Registrar como hechas las migraciones de esquema de arriba (las de datos no:
--- las corre php artisan migrate)
+-- Cupones: lista vacía (se crean desde el panel → Descuentos)
+INSERT INTO settings (key, value, created_at, updated_at)
+VALUES ('coupons', '[]', NOW(), NOW())
+ON CONFLICT (key) DO NOTHING;
+
+-- La API pública de Supabase (roles anon/authenticated) no se usa: el backend entra
+-- como postgres. Sin permisos, ni una tabla nueva sin RLS queda expuesta.
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
+
+-- Bucket privado para los archivos 3D de los pedidos (50 MB por archivo)
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('order-models', 'order-models', false, 52428800)
+ON CONFLICT (id) DO UPDATE SET public = false;
+
+-- Registrar como hechas las migraciones de arriba
 INSERT INTO migrations (migration, batch)
 SELECT m, (SELECT COALESCE(MAX(batch), 0) + 1 FROM migrations)
 FROM (VALUES
     ('2026_06_02_000001_remove_pin_code_from_users_table'),
     ('2026_06_09_000001_add_job_name_to_orders_table'),
     ('2026_10_24_000001_add_models_to_orders_table'),
+    ('2026_10_24_000002_seed_coupons_setting'),
+    ('2026_10_26_000002_merge_admin_discounts_into_coupons'),
     ('2026_10_26_000001_add_verification_and_welcome_coupon_to_recurrent_customers'),
     ('2026_10_27_000001_create_saved_quotes_table'),
     ('2026_10_27_000002_create_reviews_table'),

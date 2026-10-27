@@ -398,25 +398,25 @@ INSERT INTO migrations (migration, batch) VALUES
 -- Si en el futuro usas Supabase Auth directamente, activa RLS.
 -- ============================================================
 
-ALTER TABLE users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE password_reset_tokens DISABLE ROW LEVEL SECURITY;
-ALTER TABLE sessions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE materials DISABLE ROW LEVEL SECURITY;
-ALTER TABLE inventories DISABLE ROW LEVEL SECURITY;
-ALTER TABLE printers DISABLE ROW LEVEL SECURITY;
-ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
-ALTER TABLE personal_access_tokens DISABLE ROW LEVEL SECURITY;
-ALTER TABLE settings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE purchases DISABLE ROW LEVEL SECURITY;
-ALTER TABLE recurrent_customers DISABLE ROW LEVEL SECURITY;
-ALTER TABLE recurrent_suppliers DISABLE ROW LEVEL SECURITY;
-ALTER TABLE inventario_3d DISABLE ROW LEVEL SECURITY;
-ALTER TABLE cache DISABLE ROW LEVEL SECURITY;
-ALTER TABLE cache_locks DISABLE ROW LEVEL SECURITY;
-ALTER TABLE jobs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE job_batches DISABLE ROW LEVEL SECURITY;
-ALTER TABLE failed_jobs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE migrations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE password_reset_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE printers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE personal_access_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recurrent_customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recurrent_suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventario_3d ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cache_locks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE failed_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE migrations ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- TABLA: saved_quotes (cotizaciones guardadas por el cliente)
@@ -453,6 +453,20 @@ CREATE TABLE IF NOT EXISTS reviews (
     updated_at TIMESTAMP NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS reviews_status_created_at_index ON reviews (status, created_at);
+
+-- RLS sin políticas en las tablas nuevas, y sin permisos para la API pública
+-- (anon/authenticated): el backend entra como postgres, que no pasa por RLS
+ALTER TABLE saved_quotes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+
+-- Bucket privado para los archivos 3D de los pedidos (50 MB por archivo)
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('order-models', 'order-models', false, 52428800)
+ON CONFLICT (id) DO UPDATE SET public = false;
 
 -- ============================================================
 -- ✅ ESQUEMA N3XT 3D COMPLETADO
