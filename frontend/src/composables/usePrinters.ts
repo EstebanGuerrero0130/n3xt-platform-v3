@@ -20,13 +20,14 @@ interface PrinterDeps {
 const emptyPrinter = () => ({
   id: '' as string | number, name: '', model: '', technology: 'FDM', status: 'idle',
   maintenance_interval_h: 200, next_maintenance: '', total_hours_run: 0, maintenance_notes: '',
+  build_x_mm: null as number | null, build_y_mm: null as number | null, build_z_mm: null as number | null,
 })
 
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
 export function usePrinters({ fetchPrinters, showNotify, showAlert, askConfirm, modalState, submitting }: PrinterDeps) {
   const editingPrinter = ref(emptyPrinter())
-  const newPrinter = reactive({ name: '', model: '', technology: 'FDM' })
+  const newPrinter = reactive({ name: '', model: '', technology: 'FDM', build_x_mm: null as number | null, build_y_mm: null as number | null, build_z_mm: null as number | null })
 
   /** Ejecuta una acción sobre una máquina y recarga la lista. */
   const run = async (action: () => Promise<unknown>, done: () => void, fail: (msg: string) => void) => {

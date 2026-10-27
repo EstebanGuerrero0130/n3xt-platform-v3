@@ -9,7 +9,8 @@ class Printer extends Model
     protected $fillable = [
         'name', 'model', 'technology', 'watts', 'status', 
         'last_maintenance', 'next_maintenance', 'maintenance_notes',
-        'total_hours_run', 'maintenance_interval_h'
+        'total_hours_run', 'maintenance_interval_h',
+        'build_x_mm', 'build_y_mm', 'build_z_mm',
     ];
 
     protected $casts = [

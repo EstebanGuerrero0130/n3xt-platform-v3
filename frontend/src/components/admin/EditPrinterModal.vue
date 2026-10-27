@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import AdminModal from './AdminModal.vue'
+import { toBuildMm } from '../../utils/buildVolume'
 
 const props = defineProps<{
   modelValue: boolean
@@ -33,6 +34,9 @@ const submit = () => emit('update-printer', {
   maintenance_interval_h: Math.max(1, Math.round(Number(form.maintenance_interval_h) || 200)),
   next_maintenance: form.next_maintenance || null,
   maintenance_notes: form.maintenance_notes || null,
+  build_x_mm: toBuildMm(form.build_x_mm),
+  build_y_mm: toBuildMm(form.build_y_mm),
+  build_z_mm: toBuildMm(form.build_z_mm),
 })
 </script>
 
@@ -44,6 +48,17 @@ const submit = () => emit('update-printer', {
       <div><label for="ep-hours" class="admin-label mb-2">Horas desde el último mantenimiento</label><input id="ep-hours" v-model.number="form.total_hours_run" type="number" min="0" step="0.1" class="field tabular-nums"></div>
       <div><label for="ep-interval" class="admin-label mb-2">Mantenimiento cada (horas)</label><input id="ep-interval" v-model.number="form.maintenance_interval_h" type="number" min="1" class="field tabular-nums"></div>
       <div><label for="ep-next" class="admin-label mb-2">Próxima revisión</label><input id="ep-next" v-model="form.next_maintenance" type="date" class="field"></div>
+      <fieldset class="sm:col-span-2">
+        <legend class="admin-label mb-2">Volumen de impresión (mm) <span class="font-normal text-muted">· opcional</span></legend>
+        <div class="flex items-center gap-2">
+          <input v-model.number="form.build_x_mm" type="number" min="1" max="2000" step="1" placeholder="X" aria-label="Ancho X (mm)" class="field tabular-nums">
+          <span class="text-muted" aria-hidden="true">×</span>
+          <input v-model.number="form.build_y_mm" type="number" min="1" max="2000" step="1" placeholder="Y" aria-label="Fondo Y (mm)" class="field tabular-nums">
+          <span class="text-muted" aria-hidden="true">×</span>
+          <input v-model.number="form.build_z_mm" type="number" min="1" max="2000" step="1" placeholder="Z" aria-label="Alto Z (mm)" class="field tabular-nums">
+        </div>
+        <p class="mt-1.5 text-xs text-muted">Sirve para avisar al cliente si su pieza no cabe.</p>
+      </fieldset>
       <div class="sm:col-span-2"><label for="ep-notes" class="admin-label mb-2">Notas de mantenimiento</label><textarea id="ep-notes" v-model="form.maintenance_notes" rows="3" placeholder="Cambio de boquilla, limpieza, calibración…" class="field !h-auto py-2.5"></textarea></div>
     </form>
     <div class="mt-6 pt-5 border-t border-line flex flex-wrap gap-2">

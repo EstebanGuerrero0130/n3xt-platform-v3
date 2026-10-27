@@ -97,6 +97,9 @@ CREATE TABLE IF NOT EXISTS printers (
     next_maintenance DATE NULL,
     maintenance_notes TEXT NULL,
     maintenance_alerted_at TIMESTAMP NULL,                -- Ya se avisó por correo
+    build_x_mm INTEGER NULL CHECK (build_x_mm >= 0),     -- Volumen de impresión (mm)
+    build_y_mm INTEGER NULL CHECK (build_y_mm >= 0),
+    build_z_mm INTEGER NULL CHECK (build_z_mm >= 0),
     created_at TIMESTAMP NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL DEFAULT NOW()
 );
@@ -383,7 +386,8 @@ INSERT INTO migrations (migration, batch) VALUES
 ('2026_10_28_000002_add_alert_marks_to_inventories_and_printers', 1),
 ('2026_10_28_000003_add_role_and_permissions_to_users_table', 1),
 ('2026_10_28_000004_widen_order_volume_and_weight', 1),
-('2026_10_29_000201_add_printing_finished_at_to_orders_table', 1);
+('2026_10_29_000201_add_printing_finished_at_to_orders_table', 1),
+('2026_10_29_000301_add_build_volume_to_printers_table', 1);
 
 -- ============================================================
 -- POLÍTICAS RLS (Row Level Security) - RECOMENDADAS

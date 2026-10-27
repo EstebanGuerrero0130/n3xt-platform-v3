@@ -38,6 +38,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS recurrent_customers_welcome_coupon_unique ON r
 ALTER TABLE inventories ADD COLUMN IF NOT EXISTS low_stock_alerted_at TIMESTAMP NULL;
 ALTER TABLE printers ADD COLUMN IF NOT EXISTS maintenance_alerted_at TIMESTAMP NULL;
 
+-- Volumen de impresión de cada máquina (mm)
+ALTER TABLE printers ADD COLUMN IF NOT EXISTS build_x_mm INTEGER NULL CHECK (build_x_mm >= 0);
+ALTER TABLE printers ADD COLUMN IF NOT EXISTS build_y_mm INTEGER NULL CHECK (build_y_mm >= 0);
+ALTER TABLE printers ADD COLUMN IF NOT EXISTS build_z_mm INTEGER NULL CHECK (build_z_mm >= 0);
+
 -- Cotizaciones guardadas
 CREATE TABLE IF NOT EXISTS saved_quotes (
     id BIGSERIAL PRIMARY KEY,
@@ -87,7 +92,8 @@ FROM (VALUES
     ('2026_10_28_000002_add_alert_marks_to_inventories_and_printers'),
     ('2026_10_28_000003_add_role_and_permissions_to_users_table'),
     ('2026_10_28_000004_widen_order_volume_and_weight'),
-    ('2026_10_29_000201_add_printing_finished_at_to_orders_table')
+    ('2026_10_29_000201_add_printing_finished_at_to_orders_table'),
+    ('2026_10_29_000301_add_build_volume_to_printers_table')
 ) AS pending(m)
 WHERE NOT EXISTS (SELECT 1 FROM migrations WHERE migration = pending.m);
 

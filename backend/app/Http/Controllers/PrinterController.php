@@ -10,6 +10,13 @@ class PrinterController extends Controller
 {
     use ApiResponse;
 
+    /** Volumen de impresión opcional, en mm */
+    private const BUILD_VOLUME_RULES = [
+        'build_x_mm' => 'nullable|integer|min:1|max:2000',
+        'build_y_mm' => 'nullable|integer|min:1|max:2000',
+        'build_z_mm' => 'nullable|integer|min:1|max:2000',
+    ];
+
     public function index()
     {
         try {
@@ -28,7 +35,8 @@ class PrinterController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'model' => 'required|string|max:255',
-                'technology' => 'required|in:FDM,SLA'
+                'technology' => 'required|in:FDM,SLA',
+                ...self::BUILD_VOLUME_RULES,
             ]);
 
             $validated['status'] = 'idle';
@@ -54,7 +62,8 @@ class PrinterController extends Controller
                 'last_maintenance' => 'nullable|date',
                 'total_hours_run' => 'sometimes|numeric',
                 'maintenance_interval_h' => 'sometimes|integer',
-                'maintenance_notes' => 'nullable|string'
+                'maintenance_notes' => 'nullable|string',
+                ...self::BUILD_VOLUME_RULES,
             ]);
 
             $printer->update($validated);
