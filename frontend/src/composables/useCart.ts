@@ -48,5 +48,21 @@ export function useCart() {
   const remove = (key: string) => { state.items = state.items.filter(i => i.key !== key) }
   const clear = () => { state.items = [] }
 
-  return { items: computed(() => state.items), count, total, add, setQty, remove, clear }
+  /**
+   * Pone los precios del catálogo de hoy y quita lo que ya no se vende. El carrito
+   * vive en el navegador: sin esto mostraría precios viejos (o editados a mano).
+   */
+  const syncWithCatalog = (catalog: { id?: string | number; name?: string; price?: unknown; status?: string; image?: string }[]) => {
+    const active = new Map(catalog
+      .filter(p => p?.name && (p.status ?? 'active') === 'active')
+      .map(p => [String(p.id ?? p.name), p]))
+    state.items = state.items
+      .filter(i => active.has(i.key))
+      .map(i => {
+        const p = active.get(i.key)!
+        return { ...i, name: p.name!, price: parsePrice(p.price) ?? 0, image: p.image || i.image }
+      })
+  }
+
+  return { items: computed(() => state.items), count, total, add, setQty, remove, clear, syncWithCatalog }
 }

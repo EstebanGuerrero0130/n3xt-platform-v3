@@ -53,7 +53,9 @@ class CustomerAuthController extends Controller
         if ($customer->isVerified()) {
             return $this->success(null, 'Tu correo ya está verificado.');
         }
-        $this->accounts->sendVerificationCode($customer);
+        if (!$this->accounts->sendVerificationCode($customer)) {
+            return $this->error('Pediste muchos códigos. Espera una hora e intenta de nuevo.', 429);
+        }
 
         return $this->success(null, 'Te enviamos un código nuevo.');
     }
@@ -179,7 +181,12 @@ class CustomerAuthController extends Controller
         ]);
         $this->mailer->received($order);
 
-        return $this->success(['order_id' => $order->id, 'total_price' => $order->total_price], 'Pedido guardado en tu cuenta.', 201);
+        return $this->success([
+            'order_id' => $order->id,
+            'total_price' => $order->total_price,
+            // Precios del servidor para el mensaje de WhatsApp (no los del navegador)
+            'items' => array_map(fn ($l) => ['name' => $l['original_filename'], 'qty' => $l['qty'], 'price' => $l['unit_price']], $lines),
+        ], 'Pedido guardado en tu cuenta.', 201);
     }
 
     /** Productos activos del catálogo publicado. */
@@ -191,14 +198,26 @@ class CustomerAuthController extends Controller
         return collect($web['catalog'] ?? [])->filter(fn ($p) => is_array($p) && ($p['status'] ?? 'active') === 'active' && !empty($p['name']));
     }
 
-    /** Precio del catálogo: el admin lo guarda como texto ("185000", "$185.000"). */
-    private static function price(mixed $v): float
+    /**
+     * Precio del catálogo con las mismas reglas que parsePrice del frontend:
+     * "185.000", "1.250.000" o "45,000" son miles; "45000.50" o "45000,5" llevan decimales.
+     */
+    public static function price(mixed $v): float
     {
-        if (is_numeric($v)) {
+        if (is_int($v) || is_float($v)) {
             return (float) $v;
         }
-        // Formato colombiano: punto de miles y coma decimal
-        return (float) preg_replace('/[^0-9.]/', '', str_replace(',', '.', str_replace('.', '', (string) $v)));
+        $clean = preg_replace('/[^\d.,-]/', '', (string) $v);
+        if (!preg_match('/\d/', $clean)) {
+            return 0.0;
+        }
+        if (preg_match('/^-?\d{1,3}([.,]\d{3})+$/', $clean)) {
+            return (float) str_replace(['.', ','], '', $clean);
+        }
+        if (preg_match('/^(-?[\d.,]*?)[.,](\d{1,2})$/', $clean, $m)) {
+            return (float) (str_replace(['.', ','], '', $m[1]) . '.' . $m[2]);
+        }
+        return (float) str_replace(['.', ','], '', $clean);
     }
 
     /**
@@ -251,13 +270,14 @@ class CustomerAuthController extends Controller
             $original->only(['customer_name', 'customer_company', 'customer_email', 'customer_phone', 'customer_id_document',
                 'shipping_address', 'shipping_city', 'shipping_zip', 'shipping_reference', 'technology', 'material_id',
                 'material_name', 'infill', 'qty', 'volume_mm3', 'estimated_weight_g', 'estimated_duration_h',
-                'dimensions_mm', 'scale_factor', 'cost_snapshot']),
+                'dimensions_mm', 'scale_factor', 'extra_items', 'extras_cost']),
             [
                 'job_name' => trim(($original->job_name ?: 'Pedido') . ' (repetido)'),
                 'models' => $newModels,
                 'file_path' => $newModels[0]['path'],
                 'original_filename' => $newModels[0]['original_filename'] ?? $original->original_filename,
-                'extras_cost' => 0,
+                // Mismos costos del original, pero sin su cupón: la copia dice de dónde salió el precio
+                'cost_snapshot' => $this->repeatSnapshot($original->cost_snapshot, $price),
                 'total_price' => $price,
                 'status' => 'pending',
                 'comments' => "Repetición del pedido #{$original->id}. El taller confirma el precio antes de imprimir.",
@@ -266,6 +286,27 @@ class CustomerAuthController extends Controller
         $this->mailer->received($order);
 
         return $this->success(['order_id' => $order->id, 'total_price' => $order->total_price], 'Pedido repetido.', 201);
+    }
+
+    /** Copia de costos del original para el pedido repetido: sin cupón y con el total nuevo. */
+    private function repeatSnapshot(?array $snapshot, float $price): ?array
+    {
+        if (!$snapshot) {
+            return null;
+        }
+        if (isset($snapshot['quote']) && is_array($snapshot['quote'])) {
+            $quote = array_diff_key($snapshot['quote'], array_flip(['coupon']));
+            $subtotal = (float) ($quote['subtotal'] ?? $price);
+            $snapshot['quote'] = array_merge($quote, [
+                'discount' => 0,
+                'subtotal_after_discount' => $subtotal,
+                'iva' => $price - $subtotal,
+                'total' => $price,
+            ]);
+        }
+        $snapshot['repeated_at'] = now()->toIso8601String();
+
+        return $snapshot;
     }
 
     public function logout(Request $request)

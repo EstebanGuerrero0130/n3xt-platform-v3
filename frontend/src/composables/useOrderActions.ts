@@ -47,12 +47,8 @@ export function useOrderActions({ orders, printers, modalState, syncAll, fetchOr
       return
     }
     try {
-      const order = findOrder(orderId)
+      // El servidor libera la máquina y suma sus horas al salir de impresión
       await api.patch(`/admin/orders/${orderId}/status`, { status, tracking_guide, tracking_carrier })
-      // Liberar la máquina (las horas ya las suma el servidor)
-      if ((status === 'completed' || status === 'cancelled') && order?.printer_id) {
-        await api.patch(`/admin/printers/${order.printer_id}`, { status: 'idle' })
-      }
       showNotify(`Pedido #${orderId}: ${STATUS_NAMES[status] || status}`, 'success')
       syncAll(true)
     } catch (err) {

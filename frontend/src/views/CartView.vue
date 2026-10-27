@@ -10,7 +10,7 @@ import AppFooter from '../components/AppFooter.vue'
 
 usePageMeta({ title: 'Tu carrito | N3XT 3D', description: 'Productos del catálogo N3XT 3D que vas a pedir.', noIndex: true })
 
-const { items, total, setQty, remove, clear } = useCart()
+const { items, total, setQty, remove, clear, syncWithCatalog } = useCart()
 const account = ref<{ role: string | null; verified: boolean }>({ role: null, verified: false })
 const companyPhone = ref('')
 const name = ref('')
@@ -23,6 +23,7 @@ onMounted(async () => {
   account.value = { role: auth.role, verified: !!auth.user?.email_verified }
   if (auth.user?.name) name.value = auth.user.name
   companyPhone.value = settings?.company?.phone || ''
+  if (Array.isArray(settings?.web?.catalog)) syncWithCatalog(settings.web.catalog)
 })
 
 /**
@@ -35,7 +36,9 @@ const checkout = async () => {
   const canSave = account.value.role === 'customer' && account.value.verified
   // La pestaña se abre dentro del clic para que el navegador no la bloquee
   const win = window.open('', '_blank')
-  const lines = items.value.map(i => ({ name: i.name, qty: i.qty, price: i.price }))
+  // Sin acceso de la pestaña nueva a esta (window.opener)
+  if (win) win.opener = null
+  let lines = items.value.map(i => ({ name: i.name, qty: i.qty, price: i.price }))
   let orderId: number | null = null
 
   if (canSave) {
@@ -43,6 +46,8 @@ const checkout = async () => {
     try {
       const res = await api.post('/customer/catalog-orders', { items: items.value.map(i => ({ product: i.key, qty: i.qty })) })
       orderId = res?.order_id ?? null
+      // El mensaje lleva los precios con los que el servidor guardó el pedido
+      if (Array.isArray(res?.items) && res.items.length) lines = res.items
     } catch (err) {
       win?.close()
       error.value = err instanceof Error ? err.message : 'No pudimos guardar el pedido.'

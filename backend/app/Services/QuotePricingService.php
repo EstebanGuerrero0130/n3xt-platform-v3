@@ -388,6 +388,9 @@ class QuotePricingService
     public function recordCouponUse(string $code): void
     {
         $code = strtoupper(trim($code));
+        // La fila debe existir antes de bloquearla: en el primer uso, dos pedidos a la vez
+        // chocaban al crearla (clave única) y uno respondía 500 con el pedido ya hecho
+        Setting::query()->insertOrIgnore(['key' => 'coupon_uses', 'value' => '{}', 'created_at' => now(), 'updated_at' => now()]);
         DB::transaction(function () use ($code) {
             $row = Setting::where('key', 'coupon_uses')->lockForUpdate()->first();
             $uses = $row && is_array($row->value) ? $row->value : [];

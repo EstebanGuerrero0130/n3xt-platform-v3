@@ -1,16 +1,12 @@
 <?php
-// Gateway Industrial N3XT - MODO DIAGNÓSTICO
+// Entrada de Vercel al backend Laravel. Si falla el arranque (APP_KEY, base de
+// datos…), el detalle va al log de la función y el visitante solo ve un 500.
 try {
     require __DIR__ . '/../backend/public/index.php';
 } catch (\Throwable $e) {
-    header('HTTP/1.1 500 Internal Server Error');
-    header('Content-Type: text/plain');
-    echo "ERROR N3XT DIAGNOSTIC:\n";
-    echo "Mensaje: " . $e->getMessage() . "\n";
-    echo "Archivo: " . $e->getFile() . "\n";
-    echo "Línea: " . $e->getLine() . "\n";
-    echo "Ruta actual: " . __DIR__ . "\n";
-    echo "Vendor path local: " . realpath(__DIR__ . '/../backend/vendor/autoload.php') . "\n";
-    echo "Vendor path root: " . realpath(__DIR__ . '/../vendor/autoload.php') . "\n";
+    error_log('N3XT bootstrap error: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'Error', 'message' => 'Error interno del servidor.', 'data' => null]);
     exit(1);
 }

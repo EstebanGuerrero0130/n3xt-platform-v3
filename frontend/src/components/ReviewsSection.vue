@@ -13,6 +13,8 @@ const emit = defineEmits<{ (e: 'summary', value: { count: number; average: numbe
 
 const reviews = ref<PublicReview[]>([])
 const average = ref<number | null>(null)
+// Total de reseñas aprobadas (el servidor muestra solo las más nuevas)
+const count = ref(0)
 
 const load = async () => {
   try {
@@ -20,11 +22,13 @@ const load = async () => {
     const data = await api.get('/reviews' + q)
     reviews.value = data?.reviews || []
     average.value = data?.average ?? null
+    count.value = Number(data?.count) || reviews.value.length
   } catch {
     reviews.value = []
     average.value = null
+    count.value = 0
   }
-  emit('summary', { count: reviews.value.length, average: average.value })
+  emit('summary', { count: count.value, average: average.value })
 }
 onMounted(load)
 watch(() => props.product, load)

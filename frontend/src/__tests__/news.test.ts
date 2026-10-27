@@ -19,6 +19,14 @@ describe('noticias', () => {
     expect(list[2]).toMatchObject({ image: 'x.jpg', category: 'Eventos' })
   })
 
+  it('coincide con el sitemap en ligaduras, títulos vacíos y enlaces', async () => {
+    const { newsLink } = await import('../utils/news')
+    expect(slugify('Straße & Æon Ø')).toBe('strasse-aeon-o')
+    expect(publishedNews([{ t: '🎉' }, { t: '🎉🎉' }]).map(n => n.slug)).toEqual(['noticia', 'noticia-2'])
+    expect(newsLink({ slug: 'a', body: '', url: 'instagram.com/p/x' })).toBe('/noticias/a')
+    expect(newsLink({ slug: 'a', body: '', url: 'https://instagram.com/p/x' })).toBe('https://instagram.com/p/x')
+  })
+
   it('separa párrafos por líneas en blanco', () => {
     expect(paragraphs('Uno\nsigue\n\n  Dos  \n\n\n')).toEqual(['Uno\nsigue', 'Dos'])
   })

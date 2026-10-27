@@ -65,6 +65,7 @@ const hours = (o: ScheduleOrder) => Math.round((Number(o.estimated_duration_h) |
           <h3 class="font-semibold truncate">{{ row.printer.name }} <span class="text-sm font-normal text-muted">{{ row.printer.technology }}</span></h3>
         </div>
         <span v-if="row.inMaintenance" class="badge bg-warning/15 text-warning">En mantenimiento</span>
+        <span v-else-if="row.offline" class="badge bg-surface-2 text-muted">Apagada</span>
         <span v-else-if="!row.slots.length" class="badge bg-success/10 text-success">Libre</span>
         <span v-else class="text-sm text-muted">Libre desde <strong class="text-ink tabular-nums">{{ when(row.freeAt) }}</strong></span>
       </header>

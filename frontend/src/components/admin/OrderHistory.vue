@@ -4,7 +4,9 @@ import { ref, computed, type PropType } from 'vue'
 
 const props = defineProps({
   orders: { type: Array as PropType<any[]>, required: true },
-  loadingAnalytics: { type: Boolean, default: false }
+  loadingAnalytics: { type: Boolean, default: false },
+  /** El balance usa datos de Contabilidad (permiso del equipo) */
+  canSeeBalance: { type: Boolean, default: true }
 })
 
 defineEmits(['export-report', 'view-details', 'download-pdf', 'print-label', 'delete'])
@@ -122,7 +124,7 @@ const getStatusLabel = (status: any) => {
       </div>
       <div class="flex flex-wrap gap-3">
         <button type="button" class="btn-outlined btn-lg" :disabled="loadingAnalytics" @click="$emit('export-report', { type: 'ledger', start: dateRange.start, end: dateRange.end, filteredOrders })">Libro de pedidos (PDF)</button>
-        <button type="button" class="btn-outlined btn-lg" :disabled="loadingAnalytics" @click="$emit('export-report', { type: 'metrics', start: dateRange.start, end: dateRange.end, filteredOrders })">Balance (PDF)</button>
+        <button v-if="canSeeBalance" type="button" class="btn-outlined btn-lg" :disabled="loadingAnalytics" @click="$emit('export-report', { type: 'metrics', start: dateRange.start, end: dateRange.end, filteredOrders })">Balance (PDF)</button>
       </div>
     </header>
 

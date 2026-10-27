@@ -75,7 +75,8 @@ export function useAdminSettings({ showNotify, askConfirm }: SettingsDeps) {
 
   const fetchSettings = async () => {
     try {
-      const data = await api.get('/settings')
+      // Siempre fresco: «Publicar» manda el objeto entero y no debe pisar cambios de otro
+      const data = await api.get('/settings', true)
       if (data && typeof data === 'object' && !Array.isArray(data)) {
         // Merge inteligente por categorías para no perder campos nuevos
         if (data.infra) settings.value.infra = { ...settings.value.infra, ...data.infra }

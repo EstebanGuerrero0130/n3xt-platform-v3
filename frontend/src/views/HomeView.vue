@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { publishedNews } from '../utils/news'
+import { publishedNews, newsLink } from '../utils/news'
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useHead } from '@unhead/vue'
 import gsap from 'gsap'
@@ -300,7 +300,7 @@ const fetchSettings = async () => {
       // Con texto propio, «Leer nota» abre /noticias/:slug; sin texto, el enlace externo
       const news = publishedNews(dbWeb.news).map(n => ({
         t: n.title, d: n.summary, tag: n.category, i: n.image,
-        url: n.body || !isRealUrl(n.url) ? `/noticias/${n.slug}` : n.url,
+        url: newsLink(n),
       }))
       const posts = (Array.isArray(dbWeb.posts) ? dbWeb.posts : [])
         .filter((p: any) => p && p.t && (!p.status || p.status === 'published'))

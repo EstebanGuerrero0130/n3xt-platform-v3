@@ -146,11 +146,12 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     // Contactos (producción lee clientes para el pedido manual)
     Route::middleware('section:contacts,kanban')->get('/admin/contacts/customers', [\App\Http\Controllers\Admin\ContactController::class, 'getCustomers']);
+    // Compras elige proveedor al registrar una compra
+    Route::middleware('section:contacts,purchases')->get('/admin/contacts/suppliers', [\App\Http\Controllers\Admin\ContactController::class, 'getSuppliers']);
     Route::middleware('section:contacts')->group(function () {
         Route::post('/admin/contacts/customers', [\App\Http\Controllers\Admin\ContactController::class, 'storeCustomer']);
         Route::patch('/admin/contacts/customers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'updateCustomer']);
         Route::delete('/admin/contacts/customers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'deleteCustomer']);
-        Route::get('/admin/contacts/suppliers', [\App\Http\Controllers\Admin\ContactController::class, 'getSuppliers']);
         Route::post('/admin/contacts/suppliers', [\App\Http\Controllers\Admin\ContactController::class, 'storeSupplier']);
         Route::patch('/admin/contacts/suppliers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'updateSupplier']);
         Route::delete('/admin/contacts/suppliers/{id}', [\App\Http\Controllers\Admin\ContactController::class, 'deleteSupplier']);

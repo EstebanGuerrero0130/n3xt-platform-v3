@@ -25,6 +25,9 @@ const emit = defineEmits<{
 
 const webSubTab = ref('general')
 
+// Ítems por unidad que puede descontar una venta del catálogo
+const stockItems = computed(() => (props.inventoryData || []).filter((m: any) => m.type && m.type !== 'material'))
+
 // Catalog functions
 const editingCatalogItemIndex = ref<number | null>(null)
 
@@ -540,7 +543,8 @@ v-for="(item, idx) in [
                 <label :for="`cat-stock-${index}`" class="admin-label mb-1">Descontar del inventario</label>
                 <select :id="`cat-stock-${index}`" v-model="item.stock_item" class="field h-10">
                   <option :value="null">No descontar</option>
-                  <option v-for="mat in (inventoryData || [])" :key="mat.id" :value="mat.id">{{ mat.name }}</option>
+                  <!-- Solo ítems por unidad: filamento y resina se miden en gramos y no aplican -->
+                  <option v-for="mat in stockItems" :key="mat.id" :value="mat.id">{{ mat.name }}</option>
                 </select>
               </div>
             </div>

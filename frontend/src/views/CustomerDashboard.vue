@@ -109,7 +109,7 @@ const repeating = ref<number | null>(null)
 const repeatMsg = ref<{ id: number; text: string; ok: boolean } | null>(null)
 const repeatOrder = async (order: CustomerOrder) => {
   repeatMsg.value = null
-  // Catálogo: los productos vuelven al carrito (con el precio de hoy)
+  // Catálogo: los productos vuelven al carrito; al abrirse, el carrito pone el precio de hoy
   if (order.technology === 'CATALOGO') {
     for (const m of order.models || []) {
       if (m.name) cart.add({ id: m.product_id ?? undefined, name: m.name, price: m.unit_price ?? 0, image: m.image ?? undefined }, m.qty || 1)

@@ -34,7 +34,9 @@ export interface PrinterSchedule {
   slots: ScheduleSlot[]
   /** Cuándo queda libre después de todo lo asignado */
   freeAt: Date
+  /** En mantenimiento o apagada: no recibe trabajos de la cola */
   inMaintenance: boolean
+  offline: boolean
 }
 
 export interface ProductionSchedule {
@@ -50,7 +52,7 @@ const time = (v?: string | null) => (v ? new Date(v).getTime() : NaN)
 
 export function buildSchedule(printers: SchedulePrinter[], orders: ScheduleOrder[], now = new Date()): ProductionSchedule {
   const rows: PrinterSchedule[] = printers.map(p => ({
-    printer: p, slots: [], freeAt: now, inMaintenance: p.status === 'maintenance',
+    printer: p, slots: [], freeAt: now, inMaintenance: p.status === 'maintenance', offline: p.status === 'offline',
   }))
   const byId = new Map(rows.map(r => [String(r.printer.id), r]))
   const unscheduled: ScheduleOrder[] = []
@@ -72,7 +74,7 @@ export function buildSchedule(printers: SchedulePrinter[], orders: ScheduleOrder
     .sort((a, b) => (time(a.created_at) || 0) - (time(b.created_at) || 0))
 
   for (const o of queue) {
-    const candidates = rows.filter(r => !r.inMaintenance && tech(r.printer.technology) === tech(o.technology))
+    const candidates = rows.filter(r => !r.inMaintenance && !r.offline && tech(r.printer.technology) === tech(o.technology))
     const preferred = o.printer_id != null ? candidates.find(r => String(r.printer.id) === String(o.printer_id)) : undefined
     const row = preferred ?? candidates.sort((a, b) => a.freeAt.getTime() - b.freeAt.getTime() || a.slots.length - b.slots.length)[0]
     if (!row) { unscheduled.push(o); continue }

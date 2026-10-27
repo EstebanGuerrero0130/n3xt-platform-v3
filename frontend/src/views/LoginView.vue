@@ -50,7 +50,8 @@ onMounted(async () => {
   const authStatus = await api.checkAuth()
   
   if (authStatus.authenticated) {
-    router.push('/admin')
+    // Cada rol a su panel (el cliente no entra a /admin y volvería aquí)
+    router.push(authStatus.role === 'customer' ? '/customer/dashboard' : '/admin')
     return
   }
 

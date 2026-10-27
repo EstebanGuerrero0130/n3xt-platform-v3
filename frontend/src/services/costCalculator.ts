@@ -169,7 +169,8 @@ export function calcOrderDetailBreakdown(order: Record<string, any>, settings: R
 
   const totalPrice = Number(order.total_price) || 0
   const operatingMargin = totalPrice - rTotalCost
-  const profitMarginPct = rTotalCost > 0 ? ((operatingMargin) / totalPrice) * 100 : 0
+  // Sin precio (pedido en $0) no hay margen que mostrar
+  const profitMarginPct = totalPrice > 0 ? (operatingMargin / totalPrice) * 100 : 0
 
   return {
     material: rMaterial,

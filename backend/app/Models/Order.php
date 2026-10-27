@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
@@ -31,12 +32,31 @@ class Order extends Model
         'extras_cost' => 'float',
         'extra_items' => 'array',
         'models' => 'array',
-        'cost_snapshot' => 'array',
         'is_paid' => 'boolean',
         'stock_deducted' => 'boolean',
         'hours_added_to_printer' => 'boolean',
         'printing_started_at' => 'datetime',
     ];
+
+    /**
+     * Copia de costos del pedido. Nunca guarda ni devuelve las claves privadas de
+     * ajustes (cupones): el personal sin la sección Descuentos ve los pedidos.
+     */
+    protected function costSnapshot(): Attribute
+    {
+        $clean = function ($value) {
+            $snap = is_string($value) ? json_decode($value, true) : $value;
+            if (is_array($snap) && isset($snap['settings'])) {
+                $snap['settings'] = Setting::withoutPrivate($snap['settings']);
+            }
+            return $snap;
+        };
+
+        return Attribute::make(
+            get: fn ($value) => $clean($value),
+            set: fn ($value) => $value === null ? null : json_encode($clean($value)),
+        );
+    }
 
     public function printer()
     {

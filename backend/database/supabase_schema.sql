@@ -126,10 +126,10 @@ CREATE TABLE IF NOT EXISTS orders (
     shipping_reference VARCHAR(255) NULL,
 
     -- Datos técnicos del modelo
-    volume_mm3 DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    volume_mm3 DECIMAL(16, 2) NOT NULL DEFAULT 0,
     dimensions_mm VARCHAR(255) NULL,                      -- e.g., "50x30x20"
     scale_factor DECIMAL(8, 4) NOT NULL DEFAULT 1.0,
-    estimated_weight_g DECIMAL(10, 2) NULL,
+    estimated_weight_g DECIMAL(14, 2) NULL,
     qty INTEGER NOT NULL DEFAULT 1,
     technology VARCHAR(255) NOT NULL,                     -- FDM o SLA
     material_id VARCHAR(255) NOT NULL,
@@ -369,7 +369,19 @@ INSERT INTO migrations (migration, batch) VALUES
 ('2026_05_09_230306_make_customer_fields_nullable_on_orders_table', 1),
 ('2026_05_09_232002_create_inventario_3d_table', 1),
 ('2026_05_11_174837_add_password_to_recurrent_customers_table', 1),
-('2026_05_12_003052_add_tracking_carrier_to_orders_table', 1);
+('2026_05_12_003052_add_tracking_carrier_to_orders_table', 1),
+-- Estas tablas y columnas ya están creadas arriba. Las migraciones de datos
+-- (2026_10_24_000002, 2026_10_26_000002) quedan para php artisan migrate.
+('2026_06_02_000001_remove_pin_code_from_users_table', 1),
+('2026_06_09_000001_add_job_name_to_orders_table', 1),
+('2026_10_24_000001_add_models_to_orders_table', 1),
+('2026_10_26_000001_add_verification_and_welcome_coupon_to_recurrent_customers', 1),
+('2026_10_27_000001_create_saved_quotes_table', 1),
+('2026_10_27_000002_create_reviews_table', 1),
+('2026_10_28_000001_add_printing_started_at_to_orders_table', 1),
+('2026_10_28_000002_add_alert_marks_to_inventories_and_printers', 1),
+('2026_10_28_000003_add_role_and_permissions_to_users_table', 1),
+('2026_10_28_000004_widen_order_volume_and_weight', 1);
 
 -- ============================================================
 -- POLÍTICAS RLS (Row Level Security) - RECOMENDADAS

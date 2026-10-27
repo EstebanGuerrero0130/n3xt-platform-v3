@@ -25,12 +25,15 @@ class ReviewController extends Controller
         if ($product = $request->query('product')) {
             $query->whereJsonContains('product_ids', (string) $product);
         }
+        // Se muestran las 24 más nuevas, pero la calificación es de todas (va en el JSON-LD)
+        $count = (clone $query)->reorder()->count();
+        $average = $count ? round((float) (clone $query)->reorder()->avg('rating'), 1) : null;
         $reviews = $query->limit(24)->get();
 
         return $this->success([
             'reviews' => $reviews->map->toPublic(),
-            'count' => $reviews->count(),
-            'average' => $reviews->count() ? round($reviews->avg('rating'), 1) : null,
+            'count' => $count,
+            'average' => $average,
         ]);
     }
 

@@ -216,34 +216,40 @@ class OrderController extends Controller
         $extras = array_map(fn ($e) => $e + ['added_at' => $now], $quote['extras']);
 
         $first = $modelsOut[0];
-        $order = DB::transaction(function () use ($validated, $material, $quote, $modelsOut, $first, $extras, $settings, $now, $welcomeOwner) {
-            if ($welcomeOwner && !$this->accounts->consumeWelcomeCoupon($welcomeOwner)) {
-                return null;
-            }
-            return Order::create(array_merge($this->orderFields($validated), [
-                'material_id'          => $material->id,
-                'material_name'        => $material->name,
-                'qty'                  => $quote['qty'],
-                'volume_mm3'           => round($quote['volume_mm3'], 2),
-                'estimated_weight_g'   => round($quote['weight_g'], 2),
-                'estimated_duration_h' => round($quote['duration_h'], 3),
-                'total_price'          => $quote['total'],
-                'dimensions_mm'        => count($modelsOut) === 1 ? $first['dimensions_mm'] : null,
-                'scale_factor'         => count($modelsOut) === 1 ? $first['scale_factor'] : 1,
-                'file_path'            => $first['path'],
-                'original_filename'    => $first['original_filename'],
-                'models'               => $modelsOut,
-                'status'               => 'pending',
-                'extra_items'          => count($extras) > 0 ? $extras : null,
-                'extras_cost'          => $quote['extras_cost'],
-                'cost_snapshot'        => [
-                    'settings' => $settings,
-                    'material_cost_per_kg' => $material->cost_per_kg,
-                    'quote' => array_intersect_key($quote, array_flip(['unit_price', 'subtotal', 'coupon', 'discount', 'subtotal_after_discount', 'iva_pct', 'iva', 'total'])),
-                    'captured_at' => $now,
-                ],
-            ]));
-        });
+        try {
+            $order = DB::transaction(function () use ($validated, $material, $quote, $modelsOut, $first, $extras, $settings, $now, $welcomeOwner) {
+                if ($welcomeOwner && !$this->accounts->consumeWelcomeCoupon($welcomeOwner)) {
+                    return null;
+                }
+                return Order::create(array_merge($this->orderFields($validated), [
+                    'material_id'          => $material->id,
+                    'material_name'        => $material->name,
+                    'qty'                  => $quote['qty'],
+                    'volume_mm3'           => round($quote['volume_mm3'], 2),
+                    'estimated_weight_g'   => round($quote['weight_g'], 2),
+                    'estimated_duration_h' => round($quote['duration_h'], 3),
+                    'total_price'          => $quote['total'],
+                    'dimensions_mm'        => count($modelsOut) === 1 ? $first['dimensions_mm'] : null,
+                    'scale_factor'         => count($modelsOut) === 1 ? $first['scale_factor'] : 1,
+                    'file_path'            => $first['path'],
+                    'original_filename'    => $first['original_filename'],
+                    'models'               => $modelsOut,
+                    'status'               => 'pending',
+                    'extra_items'          => count($extras) > 0 ? $extras : null,
+                    'extras_cost'          => $quote['extras_cost'],
+                    'cost_snapshot'        => [
+                        'settings' => $settings,
+                        'material_cost_per_kg' => $material->cost_per_kg,
+                        'quote' => array_intersect_key($quote, array_flip(['unit_price', 'subtotal', 'coupon', 'discount', 'subtotal_after_discount', 'iva_pct', 'iva', 'total'])),
+                        'captured_at' => $now,
+                    ],
+                ]));
+            });
+        } catch (\Throwable $e) {
+            // Sin pedido no deben quedar archivos huérfanos en el almacenamiento
+            $this->models->delete($stored);
+            throw $e;
+        }
 
         if (!$order) {
             $this->models->delete($stored);
@@ -388,6 +394,10 @@ class OrderController extends Controller
                     if ($order->printer_id) {
                         Printer::where('id', $order->printer_id)->update(['status' => 'printing']);
                     }
+                    // Pasó a otra máquina sin salir de impresión: la anterior queda libre
+                    if ($oldStatus === 'printing' && $oldPrinterId && $oldPrinterId != $order->printer_id) {
+                        Printer::where('id', $oldPrinterId)->update(['status' => 'idle']);
+                    }
                 } else if ($oldStatus === 'printing' && $order->status !== 'printing') {
                     // Order moved away from printing -> Release the printer
                     $printerId = $oldPrinterId ?? $order->printer_id;
@@ -424,7 +434,8 @@ class OrderController extends Controller
     {
         try {
             return DB::transaction(function () use ($id) {
-                $order = Order::findOrFail($id);
+                // Bloqueo del pedido: dos clics a la vez no descuentan el stock dos veces
+                $order = Order::whereKey($id)->lockForUpdate()->firstOrFail();
 
                 if ($order->is_paid) {
                     return $this->error('El pago ya ha sido confirmado y no puede revertirse por seguridad del inventario.', 422);
@@ -517,6 +528,10 @@ class OrderController extends Controller
     {
         try {
             $order = Order::findOrFail($id);
+            // Borrado mientras imprimía: la máquina queda libre
+            if ($order->status === 'printing' && $order->printer_id) {
+                Printer::where('id', $order->printer_id)->update(['status' => 'idle']);
+            }
             // Todas las piezas del pedido, no solo la primera
             $this->models->delete(array_merge([$order->file_path], array_column($order->models ?? [], 'path')));
             $order->delete();
@@ -542,7 +557,7 @@ class OrderController extends Controller
 
         if ($request->filled('order_id') && $request->filled('email')) {
             $query->where('id', $request->order_id)
-                  ->where('customer_email', $request->email);
+                  ->whereRaw('LOWER(customer_email) = ?', [strtolower($request->email)]);
         } elseif ($request->filled('tracking_guide')) {
             $query->where('tracking_guide', $request->tracking_guide);
             if ($request->filled('carrier')) {
@@ -561,7 +576,8 @@ class OrderController extends Controller
         return $this->success([
             'id'             => $order->id,
             'status'         => $order->status,
-            'customer_name'  => $order->customer_name,
+            // Solo con la guía (que puede adivinarse) no se muestra el nombre completo
+            'customer_name'  => $request->filled('email') ? $order->customer_name : $this->shortName($order->customer_name),
             'technology'     => $order->technology,
             'material'       => $order->material_name ?? $order->material_id,
             'created_at'     => $order->created_at,
@@ -569,6 +585,14 @@ class OrderController extends Controller
             'tracking_carrier' => $order->tracking_carrier,
             'is_paid'        => $order->is_paid
         ]);
+    }
+
+    /** "Laura Gómez" → "Laura G." */
+    private function shortName(?string $name): string
+    {
+        $parts = preg_split('/\s+/', trim((string) $name)) ?: [];
+        $first = $parts[0] ?? '';
+        return isset($parts[1]) ? $first . ' ' . mb_substr($parts[1], 0, 1) . '.' : $first;
     }
 
     /**
@@ -626,40 +650,38 @@ class OrderController extends Controller
         return $response->json('success') === true;
     }
 
+    /**
+     * Descuenta del inventario lo que usa el pedido: el material principal (gramos),
+     * las unidades de cada producto del catálogo con ítem de stock y los insumos extra.
+     * Cada resta es atómica en la base: dos pagos a la vez no pisan el descuento del otro.
+     */
     private function deductInventory(Order $order)
     {
-        // 1. Deduct Main Material
-        $inventory = Inventory::where('material_id', $order->material_id)->first();
-        if ($inventory) {
-            // estimated_weight_g ya es el total del pedido (todas las piezas)
-            $requiredStock = (float)$order->estimated_weight_g;
-            $inventory->stock_available -= $requiredStock;
-            $inventory->save();
-        }
+        $this->deductStock($order->material_id, (float) $order->estimated_weight_g);
 
-        // Catálogo: unidades vendidas de cada producto vinculado a un ítem de stock
         foreach ($order->technology === 'CATALOGO' ? ($order->models ?? []) : [] as $line) {
             if (!empty($line['stock_item'])) {
-                $item = Inventory::where('material_id', $line['stock_item'])->first();
-                if ($item) {
-                    $item->stock_available -= (int) ($line['qty'] ?? 1);
-                    $item->save();
-                }
+                $this->deductStock($line['stock_item'], (int) ($line['qty'] ?? 1));
             }
         }
 
-        // 2. Deduct Extra Items (Utilities)
         $extras = $order->extra_items;
         if (is_string($extras)) $extras = json_decode($extras, true);
-        
-        if (is_array($extras)) {
-            foreach ($extras as $item) {
-                $extraInv = Inventory::where('material_id', $item['material_id'])->first();
-                if ($extraInv) {
-                    $extraInv->stock_available -= (float)$item['qty'];
-                    $extraInv->save();
-                }
-            }
+        foreach (is_array($extras) ? $extras : [] as $item) {
+            $this->deductStock($item['material_id'] ?? null, (float) ($item['qty'] ?? 0));
+        }
+    }
+
+    private function deductStock(?string $materialId, float $amount): void
+    {
+        if (!$materialId || $amount <= 0) {
+            return;
+        }
+        $item = Inventory::where('material_id', $materialId)->first();
+        if ($item) {
+            Inventory::whereKey($item->id)->decrement('stock_available', $amount);
+            // decrement no dispara eventos del modelo: revisar avisos de stock bajo
+            app(\App\Services\WorkshopAlerts::class)->checkLater();
         }
     }
 

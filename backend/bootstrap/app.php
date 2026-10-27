@@ -54,6 +54,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
             // La API usa la sesión (cookies): sin esto otra página podía hacer
             // POST/PATCH/DELETE en nombre de quien tuviera la sesión abierta
             \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+            // Cambiar la contraseña cierra las otras sesiones de esa cuenta
+            \App\Http\Middleware\EndSessionsOnPasswordChange::class,
         ]);
 
         $middleware->alias([

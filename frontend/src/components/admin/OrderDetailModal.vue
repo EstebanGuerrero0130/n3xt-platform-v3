@@ -59,7 +59,7 @@
           </section>
 
           <!-- Guía -->
-          <section v-if="['completed', 'shipped'].includes(order.status)" aria-labelledby="od-tracking">
+          <section v-if="canEdit && ['completed', 'shipped'].includes(order.status)" aria-labelledby="od-tracking">
             <h3 id="od-tracking" class="admin-h2 text-base">Guía de envío</h3>
             <form class="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" @submit.prevent="saveTracking">
               <div><label for="od-carrier" class="admin-label mb-1">Transportadora</label><input id="od-carrier" v-model="localCarrier" type="text" placeholder="Servientrega" class="field"></div>
@@ -106,7 +106,7 @@ v-for="row in [
             </ul>
             <p v-else class="mt-2 text-sm text-muted">Sin insumos extra.</p>
             <p v-if="actionError" role="alert" class="mt-3 text-sm text-danger">{{ actionError }}</p>
-            <form v-if="showAddForm" class="mt-4 space-y-2" @submit.prevent="addExtra">
+            <form v-if="canEdit && showAddForm" class="mt-4 space-y-2" @submit.prevent="addExtra">
               <label for="od-extra" class="admin-label">Insumo</label>
               <select id="od-extra" v-model="newExtra.material_id" class="field">
                 <option value="">Elegir…</option>
@@ -119,7 +119,7 @@ v-for="row in [
                 <button type="button" class="btn-outlined" @click="showAddForm = false">Cancelar</button>
               </div>
             </form>
-            <button v-else type="button" class="mt-4 btn-outlined btn-sm" @click="showAddForm = true">Agregar insumo</button>
+            <button v-else-if="canEdit" type="button" class="mt-4 btn-outlined btn-sm" @click="showAddForm = true">Agregar insumo</button>
           </section>
         </div>
       </div>
@@ -138,6 +138,8 @@ const props = defineProps({
   order: { type: Object, default: null },
   materials: { type: Array as PropType<{ id: string; name: string; cost_per_kg?: number | string }[]>, default: () => [] },
   settings: { type: Object, default: () => ({ infra: {}, prep: {}, margin: {} }) },
+  /** Guía e insumos solo con permiso de Producción (permisos del equipo) */
+  canEdit: { type: Boolean, default: true },
 })
 
 const actionError = ref('')

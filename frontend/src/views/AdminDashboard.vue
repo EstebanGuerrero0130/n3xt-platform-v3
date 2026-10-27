@@ -75,7 +75,8 @@ let unmounted = false
 const can = (...ids) => ids.some(id => sections.value.includes(id))
 const applyAuth = (user) => {
   sections.value = Array.isArray(user?.sections) ? user.sections : []
-  if (!can(activeTab.value) && sections.value.length) activeTab.value = sections.value[0]
+  // Sin ninguna sección no se muestra Producción (sus acciones darían 403)
+  if (!can(activeTab.value)) activeTab.value = sections.value[0] || 'none'
 }
 const isSidebarOpen = ref(false)
 const isDark = ref(localStorage.getItem('n3xt_theme') !== 'light')
@@ -175,7 +176,7 @@ const syncAll = async (silent = false) => {
     ...(can('machines', 'kanban') ? [{ name: 'Maquinaria', fn: fetchPrinters }] : []),
     ...(isSilent ? [] : [{ name: 'Ajustes', fn: fetchSettings }]),
     ...(can('accounting') ? [{ name: 'Analíticas', fn: fetchAnalytics }] : []),
-    ...(can('contacts', 'kanban') ? [{ name: 'Contactos', fn: fetchContacts }] : []),
+    ...(can('contacts', 'kanban', 'purchases') ? [{ name: 'Contactos', fn: fetchContacts }] : []),
   ]
 
   try {
@@ -249,11 +250,12 @@ const fetchAnalytics = async () => {
   }
 }
 
+// Clientes: Contactos y Producción (pedido manual). Proveedores: Contactos y Compras.
 const fetchContacts = async () => {
   try {
     const [cData, sData] = await Promise.all([
-      api.get('/admin/contacts/customers', true),
-      can('contacts') ? api.get('/admin/contacts/suppliers', true) : Promise.resolve([])
+      can('contacts', 'kanban') ? api.get('/admin/contacts/customers', true) : Promise.resolve([]),
+      can('contacts', 'purchases') ? api.get('/admin/contacts/suppliers', true) : Promise.resolve([]),
     ])
     contacts.customers = cData
     contacts.suppliers = sData
@@ -408,7 +410,8 @@ const logout = async () => {
 const handleExportReport = async ({ type, start, end, filteredOrders }) => {
   loadingAnalytics.value = true
   try {
-    const reportData = await api.get(`/admin/analytics?start_date=${start}&end_date=${end}`, true)
+    // El libro de pedidos sale de los pedidos filtrados; solo el balance pide Contabilidad
+    const reportData = type === 'metrics' ? await api.get(`/admin/analytics?start_date=${start}&end_date=${end}`, true) : null
     printHtml(buildReportHtml({ type, start, end, filteredOrders, reportData, settings: settings.value, storageUrl: api.storageUrl }))
   } catch (err) {
     logger.error('Error:', err)
@@ -487,6 +490,11 @@ const handlePurgeAll = () => {
                 >
                     <div :key="activeTab">
         
+        <div v-if="activeTab === 'none'" class="admin-card py-16 text-center">
+          <h1 class="text-2xl font-extrabold">Aún no tienes secciones asignadas</h1>
+          <p class="mt-2 text-muted">Pídele al dueño del taller que te dé acceso desde Equipo.</p>
+        </div>
+
         <!-- Módulo: Producción (Kanban) -->
         <div v-if="activeTab === 'kanban'">
           <header class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
@@ -589,6 +597,7 @@ const handlePurgeAll = () => {
           <OrderHistory 
             :orders="orders"
             :loading-analytics="loadingAnalytics"
+            :can-see-balance="can('accounting')"
             @view-details="openOrderDetails"
             @download-pdf="handleDownloadQuotePDF"
             @export-report="handleExportReport"
@@ -716,6 +725,7 @@ const handlePurgeAll = () => {
       :order="selectedOrderDetails"
       :materials="inventoryData"
       :settings="settings"
+      :can-edit="can('kanban')"
       @close="selectedOrderDetails = null; modalState.orderDetails = false"
       @updated="refreshOrderDetails"
       @download="(idx) => downloadFile(selectedOrderDetails, idx)"

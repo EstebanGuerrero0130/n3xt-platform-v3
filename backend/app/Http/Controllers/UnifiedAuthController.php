@@ -100,11 +100,17 @@ class UnifiedAuthController extends Controller
         if ($existing && $existing->password && $existing->isVerified()) {
             return $this->error('Ya existe una cuenta con este correo. Inicia sesión.', 422);
         }
+        // Registro a medias con contraseña: no se pisa (sería quitarle la cuenta a quien
+        // la empezó). Esa persona entra con su contraseña o la recupera con el correo.
+        if ($existing && $existing->password) {
+            return $this->error('Ya hay un registro con este correo. Inicia sesión o usa «Olvidé mi contraseña».', 422);
+        }
 
         // Contacto del taller (sin contraseña) o cuenta nunca verificada: el correo aún no
         // tiene dueño probado, así que se puede registrar y queda de quien verifique el código
         $customer = $existing ?? new RecurrentCustomer(['email' => $email]);
         $customer->name = $existing?->name ?: $request->name;
+        $shownName = $request->name; // no revelar el nombre guardado de un contacto del taller
         $customer->password = Hash::make($request->password);
         $customer->save();
 
@@ -118,7 +124,7 @@ class UnifiedAuthController extends Controller
             'role'  => 'customer',
             'user'  => [
                 'id'    => $customer->id,
-                'name'  => $customer->name,
+                'name'  => $shownName,
                 'email' => $customer->email,
                 'email_verified' => false,
             ]
@@ -160,7 +166,8 @@ class UnifiedAuthController extends Controller
             ? $accounts->resetPassword($customer, $request->code, $request->password)
             : 'El código no es correcto.';
         if ($error) {
-            return $this->error($error, 422);
+            // Mismo mensaje exista o no la cuenta (no revela qué correos están registrados)
+            return $this->error('El código no es correcto o ya venció. Pide uno nuevo si hace falta.', 422);
         }
 
         Auth::guard('customer')->login($customer);

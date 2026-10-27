@@ -22,6 +22,8 @@ class RecurrentCustomer extends Authenticatable
         'verification_code_hash',
         'verification_expires_at',
         'verification_attempts',
+        // El cupón personal solo lo ve su dueño (CustomerAuthController::me)
+        'welcome_coupon',
     ];
 
     protected $casts = [

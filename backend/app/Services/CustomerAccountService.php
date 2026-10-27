@@ -8,6 +8,7 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 /**
@@ -21,27 +22,35 @@ class CustomerAccountService
     public const CODE_TTL_MINUTES = 30;
     public const MAX_ATTEMPTS = 5;
     public const DEFAULT_WELCOME_PCT = 10;
+    /** Códigos nuevos por correo y por hora (cada código nuevo reinicia los intentos) */
+    public const MAX_CODES_PER_HOUR = 5;
 
     /** Genera un código nuevo (invalida el anterior) y lo envía por correo. */
-    public function sendVerificationCode(RecurrentCustomer $customer): void
+    public function sendVerificationCode(RecurrentCustomer $customer): bool
     {
-        $code = $this->newCode($customer);
+        if (!$code = $this->newCode($customer)) {
+            return false;
+        }
         $this->deliver($customer->email, new CustomerMail('Tu código de verificación N3XT 3D', 'mail.verification-code', [
             'name' => $this->firstName($customer),
             'code' => $code,
             'minutes' => self::CODE_TTL_MINUTES,
         ]));
+        return true;
     }
 
     /** Código para cambiar la contraseña (mismo mecanismo: prueba que el correo es suyo). */
-    public function sendPasswordResetCode(RecurrentCustomer $customer): void
+    public function sendPasswordResetCode(RecurrentCustomer $customer): bool
     {
-        $code = $this->newCode($customer);
+        if (!$code = $this->newCode($customer)) {
+            return false;
+        }
         $this->deliver($customer->email, new CustomerMail('Cambia tu contraseña de N3XT 3D', 'mail.password-reset-code', [
             'name' => $this->firstName($customer),
             'code' => $code,
             'minutes' => self::CODE_TTL_MINUTES,
         ]));
+        return true;
     }
 
     /**
@@ -72,8 +81,16 @@ class CustomerAccountService
         return null;
     }
 
-    private function newCode(RecurrentCustomer $customer): string
+    /** Código nuevo, o null si este correo ya pidió demasiados en la última hora. */
+    private function newCode(RecurrentCustomer $customer): ?string
     {
+        // Por correo (no por IP): sin esto, pedir códigos desde varias IP daría intentos sin fin
+        $key = 'account-code:' . strtolower($customer->email);
+        if (RateLimiter::tooManyAttempts($key, self::MAX_CODES_PER_HOUR)) {
+            return null;
+        }
+        RateLimiter::hit($key, 3600);
+
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $customer->forceFill([
             'verification_code_hash' => Hash::make($code),
@@ -89,11 +106,15 @@ class CustomerAccountService
         if (!$customer->verification_code_hash || !$customer->verification_expires_at || $customer->verification_expires_at->isPast()) {
             return 'El código venció. Pide uno nuevo.';
         }
-        if ($customer->verification_attempts >= self::MAX_ATTEMPTS) {
+        // El intento se reserva en la base antes de comparar: peticiones en paralelo
+        // no pueden pasar del límite con el valor viejo
+        $reserved = RecurrentCustomer::whereKey($customer->getKey())
+            ->where('verification_attempts', '<', self::MAX_ATTEMPTS)
+            ->increment('verification_attempts');
+        if (!$reserved) {
             return 'Demasiados intentos. Pide un código nuevo.';
         }
         if (!Hash::check($code, $customer->verification_code_hash)) {
-            $customer->increment('verification_attempts');
             return 'El código no es correcto.';
         }
 

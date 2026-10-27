@@ -10,7 +10,7 @@ use App\Http\Middleware\EnsureAdmin;
 class SettingController extends Controller
 {
     /** Claves que solo ve el admin (p. ej. códigos de cupón). */
-    private const PRIVATE_KEYS = ['coupons', 'coupon_uses', 'discounts', 'security'];
+    private const PRIVATE_KEYS = Setting::PRIVATE_KEYS;
     /** Sección del panel que edita cada clave; el resto es de Parámetros. */
     private const KEY_SECTIONS = ['web' => 'web', 'coupons' => 'discounts', 'coupon_uses' => 'discounts', 'discounts' => 'discounts', 'welcome_coupon_pct' => 'discounts'];
     /** Solo los escribe el servidor (el admin guardaría una copia vieja encima). */

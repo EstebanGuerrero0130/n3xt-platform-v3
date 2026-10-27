@@ -6,7 +6,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../services/api'
-import { publishedNews, paragraphs, type NewsItem } from '../utils/news'
+import { publishedNews, paragraphs, isExternalUrl as isExternal, newsLink as linkOf, type NewsItem } from '../utils/news'
 import { srcsetFor } from '../utils/images'
 import { usePageMeta, absoluteUrl } from '../composables/usePageMeta'
 import AppNavbar from '../components/AppNavbar.vue'
@@ -20,10 +20,6 @@ const loadError = ref(false)
 const slug = computed(() => String(route.params.slug || ''))
 const article = computed(() => (slug.value ? news.value.find(n => n.slug === slug.value) ?? null : null))
 const others = computed(() => news.value.filter(n => n.slug !== slug.value).slice(0, 3))
-
-const isExternal = (url: string) => /^https?:\/\//.test(url)
-/** Con texto propio se lee aquí; sin texto, la nota es un enlace a otro sitio. */
-const linkOf = (n: NewsItem) => (n.body || !isExternal(n.url) ? `/noticias/${n.slug}` : n.url)
 
 const dateLabel = (d: string) => (d ? new Date(d + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '')
 
