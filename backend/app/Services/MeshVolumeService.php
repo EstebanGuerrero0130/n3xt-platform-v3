@@ -24,11 +24,17 @@ class MeshVolumeService
     /** Normal con componente < -0.5 en un eje = cara en voladizo (mismo umbral que el frontend). */
     private const OVERHANG_THRESHOLD = -0.5;
 
+    /** Tolerancia (unidades del archivo) para decidir que una cara plana toca la cama. */
+    private const CONTACT_TOL = 1e-3;
+
     private float $signedVolume = 0.0;
     private float $area = 0.0;
     private float $downX = 0.0;
     private float $downY = 0.0;
     private float $downZ = 0.0;
+    /** Por eje [x, y, z]: nivel más bajo de caras planas hacia abajo y su área (apoyo en la cama). */
+    private array $contactLevel = [INF, INF, INF];
+    private array $contactArea = [0.0, 0.0, 0.0];
     private int $triangles = 0;
     private float $minX = INF;
     private float $minY = INF;
@@ -43,6 +49,7 @@ class MeshVolumeService
      * @return array{
      *   volume_mm3: float, total_area_mm2: float, support_area_mm2: float,
      *   down_area_mm2: array{x: float, y: float, z: float},
+     *   bed_contact_mm2: array{x: float, y: float, z: float},
      *   bbox: array{min: float[], max: float[], size: float[]},
      *   triangles: int, unit_scale: float, format: string
      * }
@@ -92,6 +99,12 @@ class MeshVolumeService
                 'x' => $this->downX * $s2,
                 'y' => $this->downY * $s2,
                 'z' => $this->downZ * $s2,
+            ],
+            // Parte del área hacia abajo que apoya en la cama con ese eje vertical (no lleva soporte)
+            'bed_contact_mm2'  => [
+                'x' => $this->contactAt(0, $this->minX) * $s2,
+                'y' => $this->contactAt(1, $this->minY) * $s2,
+                'z' => $this->contactAt(2, $this->minZ) * $s2,
             ],
             'bbox' => [
                 'min'  => [$this->minX * $unitScale, $this->minY * $unitScale, $this->minZ * $unitScale],
@@ -341,9 +354,9 @@ class MeshVolumeService
         if ($len > 0.0) {
             $triArea = $len / 2.0;
             $this->area += $triArea;
-            if ($nx / $len < self::OVERHANG_THRESHOLD) $this->downX += $triArea;
-            if ($ny / $len < self::OVERHANG_THRESHOLD) $this->downY += $triArea;
-            if ($nz / $len < self::OVERHANG_THRESHOLD) $this->downZ += $triArea;
+            if ($nx / $len < self::OVERHANG_THRESHOLD) { $this->downX += $triArea; $this->trackContact(0, $ax, $bx, $cx, $triArea); }
+            if ($ny / $len < self::OVERHANG_THRESHOLD) { $this->downY += $triArea; $this->trackContact(1, $ay, $by, $cy, $triArea); }
+            if ($nz / $len < self::OVERHANG_THRESHOLD) { $this->downZ += $triArea; $this->trackContact(2, $az, $bz, $cz, $triArea); }
         }
 
         $this->minX = min($this->minX, $ax, $bx, $cx);
@@ -354,8 +367,33 @@ class MeshVolumeService
         $this->maxZ = max($this->maxZ, $az, $bz, $cz);
     }
 
+    /**
+     * Acumula el área de caras planas hacia abajo en el nivel más bajo visto en el eje $k
+     * (en streaming: si aparece una cara más baja, se descarta lo acumulado).
+     */
+    private function trackContact(int $k, float $a, float $b, float $c, float $area): void
+    {
+        $lo = min($a, $b, $c);
+        if (max($a, $b, $c) - $lo > self::CONTACT_TOL) return;
+        $level = $this->contactLevel[$k];
+        if ($lo < $level - self::CONTACT_TOL) {
+            $this->contactLevel[$k] = $lo;
+            $this->contactArea[$k] = $area;
+        } elseif ($lo <= $level + self::CONTACT_TOL) {
+            $this->contactArea[$k] += $area;
+        }
+    }
+
+    /** Área de apoyo del eje $k, solo si su nivel es el mínimo de la malla. */
+    private function contactAt(int $k, float $min): float
+    {
+        return $this->contactLevel[$k] <= $min + self::CONTACT_TOL ? $this->contactArea[$k] : 0.0;
+    }
+
     private function reset(): void
     {
+        $this->contactLevel = [INF, INF, INF];
+        $this->contactArea = [0.0, 0.0, 0.0];
         $this->signedVolume = 0.0;
         $this->area = 0.0;
         $this->downX = 0.0;

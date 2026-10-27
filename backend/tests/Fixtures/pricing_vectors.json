@@ -1,5 +1,5 @@
 {
-    "generated_by": "scratchpad/gen_pricing_vectors.mjs (importa frontend/src/services/costCalculator.ts) | casos multi-modelo actualizados a calcQuoteEstimate (piezas = Σqty)",
+    "generated_by": "scratchpad/gen_pricing_vectors.mjs (importa frontend/src/services/costCalculator.ts) | casos multi-modelo actualizados a calcQuoteEstimate (piezas = Σqty) | casos con varias piezas recalculados al compartir cama (QuotePricingService::estimate, paridad en quote_core_vectors.json)",
     "utilities": [
         {
             "id": "Argo_Piez_01",
@@ -180,26 +180,28 @@
             "expected": {
                 "models": [
                     {
-                        "weight_g": 14.37204,
-                        "duration_h": 1.4792747138397504
+                        "weight_g": 11.87204,
+                        "duration_h": 1.0683199791883455
                     },
                     {
-                        "weight_g": 11.337679762595842,
-                        "duration_h": 1.2161494764651268
+                        "weight_g": 8.837679762595842,
+                        "duration_h": 0.805194741813722
                     }
                 ],
-                "weight_g": 77.12915928778753,
-                "duration_h": 8.086272570914632,
-                "production_cost": 20154.660984826278,
-                "extras_cost": 900,
-                "unit_price": 9406,
-                "subtotal": 56436,
-                "discount": 5644,
-                "subtotal_after_discount": 50792,
-                "iva_pct": 19,
-                "iva": 9650,
-                "total": 60442
-            }
+                "weight_g": 62.12915928778753,
+                "duration_h": 5.620544163006202,
+                "production_cost": 15007.481093046881,
+                "extras_cost": 900.0,
+                "unit_price": 7003,
+                "subtotal": 42018,
+                "discount": 4202,
+                "subtotal_after_discount": 37816,
+                "iva_pct": 19.0,
+                "iva": 7185,
+                "total": 45001,
+                "beds": 1
+            },
+            "note": "Camas compartidas (v. 2026-10): 6 piezas en 1 cama(s); antes cada pieza pagaba su preparación/purga (FDM) o su propio tiempo de cama (SLA). Total anterior: 60442."
         },
         {
             "name": "sla_single_qty1_auto_extras",
@@ -332,21 +334,23 @@
                 "models": [
                     {
                         "weight_g": 7.9321923828125005,
-                        "duration_h": 1.78
+                        "duration_h": 0.445
                     }
                 ],
                 "weight_g": 31.728769531250002,
-                "duration_h": 7.12,
-                "production_cost": 29263.0643828125,
-                "extras_cost": 8331,
-                "unit_price": 20484,
-                "subtotal": 81936,
-                "discount": 12290,
-                "subtotal_after_discount": 69646,
-                "iva_pct": 0,
+                "duration_h": 1.78,
+                "production_cost": 19888.1603828125,
+                "extras_cost": 8331.0,
+                "unit_price": 13922,
+                "subtotal": 55688,
+                "discount": 8353,
+                "subtotal_after_discount": 47335,
+                "iva_pct": 0.0,
                 "iva": 0,
-                "total": 69646
-            }
+                "total": 47335,
+                "beds": 1
+            },
+            "note": "Camas compartidas (v. 2026-10): 4 piezas en 1 cama(s); antes cada pieza pagaba su preparación/purga (FDM) o su propio tiempo de cama (SLA). Total anterior: 69646."
         },
         {
             "name": "fdm_string_settings_null_density_thin_shell",
@@ -415,22 +419,24 @@
             "expected": {
                 "models": [
                     {
-                        "weight_g": 5.3125,
-                        "duration_h": 0.42885253456221195
+                        "weight_g": 3.8125,
+                        "duration_h": 0.25705299539170506
                     }
                 ],
-                "weight_g": 10.625,
-                "duration_h": 0.8577050691244239,
-                "production_cost": 2305.9214921658986,
-                "extras_cost": 300,
-                "unit_price": 2652,
-                "subtotal": 5304,
-                "discount": 265,
-                "subtotal_after_discount": 5039,
-                "iva_pct": 19,
-                "iva": 957,
-                "total": 5996
-            }
+                "weight_g": 7.625,
+                "duration_h": 0.5141059907834101,
+                "production_cost": 1721.85285437788,
+                "extras_cost": 300.0,
+                "unit_price": 1980,
+                "subtotal": 3960,
+                "discount": 198,
+                "subtotal_after_discount": 3762,
+                "iva_pct": 19.0,
+                "iva": 715,
+                "total": 4477,
+                "beds": 1
+            },
+            "note": "Camas compartidas (v. 2026-10): 2 piezas en 1 cama(s); antes cada pieza pagaba su preparación/purga (FDM) o su propio tiempo de cama (SLA). Total anterior: 5996."
         },
         {
             "name": "fdm_three_models_qty2_iva0",
@@ -514,30 +520,32 @@
             "expected": {
                 "models": [
                     {
-                        "weight_g": 37.66048,
-                        "duration_h": 2.682302809573361
+                        "weight_g": 35.16048,
+                        "duration_h": 2.3255450919181406
                     },
                     {
-                        "weight_g": 20.084414487807997,
-                        "duration_h": 1.539218424024974
+                        "weight_g": 17.584414487807997,
+                        "duration_h": 1.1824607063697536
                     },
                     {
-                        "weight_g": 3.38599204375,
-                        "duration_h": 0.45321280201287717
+                        "weight_g": 0.88599204375,
+                        "duration_h": 0.09645508435765696
                     }
                 ],
-                "weight_g": 122.261773063116,
-                "duration_h": 9.349468071222425,
-                "production_cost": 25174.655369412558,
-                "extras_cost": 100,
-                "unit_price": 11748,
-                "subtotal": 70488,
+                "weight_g": 107.261773063116,
+                "duration_h": 7.208921765291103,
+                "production_cost": 20538.14145057801,
+                "extras_cost": 100.0,
+                "unit_price": 9584,
+                "subtotal": 57504,
                 "discount": 0,
-                "subtotal_after_discount": 70488,
-                "iva_pct": 0,
+                "subtotal_after_discount": 57504,
+                "iva_pct": 0.0,
                 "iva": 0,
-                "total": 70488
-            }
+                "total": 57504,
+                "beds": 1
+            },
+            "note": "Camas compartidas (v. 2026-10): 6 piezas en 1 cama(s); antes cada pieza pagaba su preparación/purga (FDM) o su propio tiempo de cama (SLA). Total anterior: 70488."
         }
     ]
 }

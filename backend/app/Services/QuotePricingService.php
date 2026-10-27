@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\Material;
+use App\Models\Printer;
 use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Cotizador del servidor.
@@ -26,6 +28,16 @@ class QuotePricingService
     public const SLA_ALCOHOL_ID = 'Alco_ML_05';
     public const SLA_CURING_ID = 'Cicl_Serv_06';
     public const SLA_ALCOHOL_ML_PER_PIECE = 50;
+
+    /** FDM: preparación (h) y purga (g) de cada cama, no de cada pieza. */
+    public const FDM_PREP_H = 0.233;
+    public const FDM_PURGE_G = 3.0;
+    /** Separación entre piezas (mm) y parte de la cama que se aprovecha. */
+    public const BED_SPACING_MM = 5;
+    public const BED_PACKING = 0.7;
+    /** Cama por defecto si ninguna impresora activa tiene medidas (settings `beds`). */
+    public const DEFAULT_BEDS = ['FDM' => ['x' => 256, 'y' => 256, 'z' => 256], 'SLA' => ['x' => 218, 'y' => 123, 'z' => 250]];
+    public const AXES = ['x' => 0, 'y' => 1, 'z' => 2];
 
     public function __construct(
         protected CostCalculatorService $costCalculator
@@ -96,17 +108,22 @@ class QuotePricingService
      *   'technology'   => 'FDM'|'SLA',
      *   'infill'       => int (FDM, por defecto 15),
      *   'layer_height' => float (FDM, por defecto 0.2),
+     *   'urgent'       => bool (recargo `rules.rush_pct`),
+     *   'bed'          => ['x', 'y', 'z'] mm de la cama (el controlador la lee de las impresoras;
+     *                     si falta se usa settings `beds`),
      *   'models' => [[
      *       'name', 'qty' (>=1), 'scale_factor' (1 = 100%),
      *       'volume_mm3', 'total_area_mm2', 'support_area_mm2'  (SIN escalar, en mm),
+     *       'down_area_mm2'   => ['x','y','z'] (SIN escalar, opcional: área hacia abajo por eje),
+     *       'bed_contact_mm2' => ['x','y','z'] (SIN escalar, opcional: parte que apoya en la cama),
      *       'bbox_mm' => [x, y, z] (SIN escalar, opcional),
      *       'dimensions_mm' => "X x Y x Z" (cliente, ya escalado, opcional),
      *       'infill'?, 'layer_height'?  (override por modelo)
      *   ]],
      *   'extras' => [['material_id', 'qty']],
      * ]
-     * @param array      $settings  Settings crudos (claves infra, prep, oper, margin).
-     * @param array      $material  ['id', 'cost_per_kg', 'density'].
+     * @param array      $settings  Settings crudos (infra, prep, oper, margin, beds, rules, calibration).
+     * @param array      $material  ['id', 'cost_per_kg', 'density', 'speed_factor'?, 'waste_pct'?, 'failure_pct'?].
      * @param array      $utilities Insumos indexados por id: ['id','name','cost_per_kg','unit'].
      * @param array|null $coupon    Cupón ya validado: ['code','discount_pct','label'].
      */
@@ -115,11 +132,20 @@ class QuotePricingService
         $cfg = self::normalizeSettings($settings);
         $technology = strtoupper(trim((string)($input['technology'] ?? 'FDM')));
         $isFdm = $technology === 'FDM'; // el frontend usa "if FDM ... else (lógica SLA)"
+        $tech = $isFdm ? 'FDM' : 'SLA';
 
         $costPerKg = self::jsOr($material['cost_per_kg'] ?? null, 0.0);
+        $params = self::materialParams($material);
+        $calibration = self::calibrationFactor($cfg['calibration'], $tech, (string)($material['id'] ?? ''));
+        // Tiempo de impresión × velocidad del material × calibración del taller
+        $speed = $params['speed_factor'] * $calibration;
+        $waste = 1 + $params['waste_pct'] / 100;
+        $bed = self::normalizeBed($input['bed'] ?? null, $cfg['beds'][$tech]);
 
         $defaultInfill = (int)(self::jsOr($input['infill'] ?? null, 15.0));
         $defaultLayer = self::jsOr($input['layer_height'] ?? null, 0.2);
+        $densityRaw = self::jsNumber($material['density'] ?? null);
+        $fdmDensity = is_nan($densityRaw) ? 0.0 : $densityRaw;
 
         $modelsIn = array_values($input['models'] ?? []);
         $models = [];
@@ -133,6 +159,8 @@ class QuotePricingService
             $volume = (float)($m['volume_mm3'] ?? 0) * abs($s * $s * $s);
             $totalArea = (float)($m['total_area_mm2'] ?? 0) * abs($s * $s);
             $supportArea = (float)($m['support_area_mm2'] ?? 0) * abs($s * $s);
+            $bbox = self::scaledBbox($m['bbox_mm'] ?? null, $s);
+            $axis = 'y';
 
             $row = [
                 'name' => (string)($m['name'] ?? ('Modelo ' . ($i + 1))),
@@ -140,45 +168,50 @@ class QuotePricingService
                 'scale_factor' => $s,
                 'volume_mm3' => $volume,
                 'total_area_mm2' => $totalArea,
-                'support_area_mm2' => $supportArea,
                 'weight_g' => 0.0,
-                'duration_h' => 0.0,
+                'hours' => 0.0,
             ];
 
             if ($isFdm) {
+                // Orientación con menos soporte (si llegan las áreas por eje; si no, la del visor)
+                if (isset($m['down_area_mm2']) && is_array($m['down_area_mm2'])) {
+                    $o = self::chooseOrientation(
+                        self::scaleAxes($m['down_area_mm2'], $s * $s),
+                        isset($m['bed_contact_mm2']) && is_array($m['bed_contact_mm2']) ? self::scaleAxes($m['bed_contact_mm2'], $s * $s) : null
+                    );
+                    $axis = $o['axis'];
+                    $supportArea = $o['support_area_mm2'];
+                }
                 $infill = (int)(self::jsOr($m['infill'] ?? null, (float)$defaultInfill));
                 $layer = self::jsOr($m['layer_height'] ?? null, $defaultLayer);
-                $densityRaw = self::jsNumber($material['density'] ?? null);
-                $density = is_nan($densityRaw) ? 0.0 : $densityRaw;
 
-                $cf = $this->fdmFactors($volume, $totalArea, $supportArea, $density, $infill, $layer);
-                $row['weight_g'] = $cf['shell_weight_g'] + $cf['internal_weight_g'] + $cf['support_weight_g'] + (self::jsOr($cf['purge_weight_g'], 3.0));
-                $row['duration_h'] = $cf['prep_time_h'] + $cf['print_time_h'];
+                $cf = $this->fdmFactors($volume, $totalArea, $supportArea, $fdmDensity, $infill, $layer);
+                // Peso y tiempo de UNA pieza sin purga ni preparación (esas van por cama)
+                $net = $cf['shell_weight_g'] + $cf['internal_weight_g'] + $cf['support_weight_g'];
+                $row['weight_g'] = $net * $waste;
+                $row['hours'] = self::fdmPrintHours($net, $fdmDensity, $layer) * $speed;
                 $row['infill'] = $infill;
                 $row['layer_height'] = $layer;
+                $row['height_mm'] = $bbox ? $bbox[self::AXES[$axis]] : 0.0;
             } else {
                 // SLA: volumen mm³ → cm³
                 $volCm3 = $volume / 1000;
                 $density = self::jsOr($material['density'] ?? null, 1.1);
-                $row['weight_g'] = $volCm3 * $density * 1.1;
-                $heightMm = $this->slaHeight($m, $s);
-                $row['height_mm'] = $heightMm;
-                $row['duration_h'] = max(0.5, $heightMm / 25);
+                $row['weight_g'] = $volCm3 * $density * 1.1 * $waste;
+                $row['height_mm'] = $this->slaHeight($m, $s);
             }
+            $row['support_area_mm2'] = $supportArea;
+            $row['orientation'] = $axis;
+            $row['footprint'] = self::footprint($bbox, $axis);
 
             $models[] = $row;
         }
 
-        // Totales: igual que calcQuoteEstimate (cada modelo × su qty; piezas = Σqty)
         $totalQty = 0;
-        $totalWeight = 0.0;
-        $totalDuration = 0.0;
         $totalVolume = 0.0;
         foreach ($models as $row) {
             $totalQty += $row['qty'];
             $totalVolume += $row['volume_mm3'] * $row['qty'];
-            $totalWeight += $row['weight_g'] * $row['qty'];
-            $totalDuration += $row['duration_h'] * $row['qty'];
         }
         // Piezas del pedido: divisor del costo unitario y multiplicador del subtotal
         $qtyForPrice = $totalQty;
@@ -214,54 +247,50 @@ class QuotePricingService
             }
         }
 
-        // calcProductionCost
-        $infra = $cfg['infra'];
-        $prep = $cfg['prep'];
-        $loadFactor = $infra['load_factor'];
-        $prepTimePct = $prep['prep_time_pct'] / 100;
-
-        $matCost = ($totalWeight / 1000) * $costPerKg;
-        $luz = $totalDuration * $loadFactor * $infra['luz_hr'];
-        $labor = ($totalDuration * $prepTimePct) * $prep['mano_obra_hr'];
-        $depr = $totalDuration * $infra['depr_hr'];
-        $mant = $totalDuration * $infra['mant_hr'];
-        $etiquetas = $infra['etiquetas'];
-        $productionCost = $matCost + $luz + $labor + $depr + $mant + $etiquetas + $utilityCost;
-
-        // calcFinalPrice sobre el costo unitario
-        $baseUnitCost = $qtyForPrice > 0 ? $productionCost / $qtyForPrice : 0;
-        $oper = $cfg['oper'];
-        $logistics = $baseUnitCost * ($oper['transporte'] / 100);
-        $marketing = $baseUnitCost * ($oper['marketing'] / 100);
-        $failures = $baseUnitCost * ($oper['fallos'] / 100);
-        $profit = $baseUnitCost * ($oper['ganancia'] / 100);
-        $unitSubtotal = $baseUnitCost + $logistics + $marketing + $failures + $profit;
-        $unitPrice = self::jsRound($unitSubtotal);
-
-        $subtotal = $unitPrice * $qtyForPrice;
-
         $discountPct = $coupon ? (float)$coupon['discount_pct'] : 0.0;
-        $discountAmount = $coupon ? ($subtotal * ($discountPct / 100)) : 0;
-        $finalSubtotal = self::jsRound($subtotal - $discountAmount);
-        $ivaPct = $cfg['margin']['iva'];
-        $ivaRate = $ivaPct / 100;
-        $iva = self::jsRound($finalSubtotal * $ivaRate);
-        $total = $finalSubtotal + $iva;
+        $est = self::estimate([
+            'technology' => $tech,
+            'models' => array_map(fn ($r) => [
+                'qty' => $r['qty'],
+                'weightG' => $r['weight_g'],
+                'hours' => $r['hours'],
+                'footprint' => $r['footprint'],
+                'heightMm' => $r['height_mm'],
+            ], $models),
+            'costPerKg' => $costPerKg,
+            'infra' => $cfg['infra'],
+            'prep' => $cfg['prep'],
+            'oper' => $cfg['oper'],
+            'margin' => $cfg['margin'],
+            'extrasCost' => $utilityCost,
+            'discountPct' => $discountPct,
+            'bed' => $bed,
+            'bedHours' => self::FDM_PREP_H + self::fdmPrintHours(self::FDM_PURGE_G, $fdmDensity, $defaultLayer) * $speed,
+            'bedWeightG' => self::FDM_PURGE_G,
+            'bedTimeFactor' => $speed,
+            'failurePct' => $params['failure_pct'],
+            'rules' => $cfg['rules'],
+            'urgent' => filter_var($input['urgent'] ?? false, FILTER_VALIDATE_BOOLEAN),
+        ]);
 
-        $marginCost = (self::jsRound($logistics) + self::jsRound($marketing) + self::jsRound($failures) + self::jsRound($profit)) * $qtyForPrice;
+        $subtotal = $est['grossSubtotal'];
 
         // Reparto informativo del subtotal (antes de descuento) entre modelos,
         // proporcional a su costo de producción directo. Suma exacta = subtotal.
-        $hourRate = $loadFactor * $infra['luz_hr'] + $prepTimePct * $prep['mano_obra_hr'] + $infra['depr_hr'] + $infra['mant_hr'];
+        $infra = $cfg['infra'];
+        $prep = $cfg['prep'];
+        $hourRate = $infra['load_factor'] * $infra['luz_hr'] + ($prep['prep_time_pct'] / 100) * $prep['mano_obra_hr'] + $infra['depr_hr'] + $infra['mant_hr'];
+        $pieceLabor = ($cfg['rules']['labor_per_piece_min'] / 60) * $prep['mano_obra_hr'];
         $shares = [];
-        foreach ($models as $row) {
-            $shares[] = (($row['weight_g'] * $row['qty']) / 1000) * $costPerKg + ($row['duration_h'] * $row['qty']) * $hourRate;
+        foreach ($est['models'] as $em) {
+            $shares[] = (($em['weightG'] * $em['qty']) / 1000) * $costPerKg + ($em['hours'] * $em['qty']) * $hourRate + $pieceLabor * $em['qty'];
         }
         $shareSum = array_sum($shares);
         $allocated = 0;
         $lastIdx = count($models) - 1;
         $outModels = [];
         foreach ($models as $idx => $row) {
+            $em = $est['models'][$idx];
             if ($idx === $lastIdx) {
                 $modelSubtotal = (int)$subtotal - $allocated;
             } else {
@@ -274,60 +303,363 @@ class QuotePricingService
                 'qty' => $row['qty'],
                 'scale_factor' => $row['scale_factor'],
                 'volume_mm3' => round($row['volume_mm3'], 2),
-                'weight_g' => round($row['weight_g'], 2),
-                'duration_h' => round($row['duration_h'], 3),
+                'weight_g' => round($em['weightG'], 2),
+                'duration_h' => round($em['hours'], 3),
                 'subtotal' => $modelSubtotal,
+                'orientation' => $row['orientation'],
+                'pieces_per_bed' => $em['piecesPerBed'],
             ];
             if (isset($row['infill'])) {
                 $out['infill'] = $row['infill'];
                 $out['layer_height'] = $row['layer_height'];
             }
-            if (isset($row['height_mm'])) {
+            if (!$isFdm) {
                 $out['height_mm'] = round($row['height_mm'], 2);
             }
+            // weight_g / duration_h: por pieza, con su parte de purga, preparación o cama
             $out['raw'] = [
                 'volume_mm3' => $row['volume_mm3'],
                 'total_area_mm2' => $row['total_area_mm2'],
                 'support_area_mm2' => $row['support_area_mm2'],
-                'weight_g' => $row['weight_g'],
-                'duration_h' => $row['duration_h'],
+                'weight_g' => $em['weightG'],
+                'duration_h' => $em['hours'],
             ];
             $outModels[] = $out;
         }
 
+        $p = $est['production'];
         return [
-            'technology' => $isFdm ? 'FDM' : 'SLA',
+            'technology' => $tech,
             'models' => $outModels,
             'qty' => $totalQty,
-            'weight_g' => $totalWeight,
-            'duration_h' => $totalDuration,
+            'weight_g' => $est['weight'],
+            'duration_h' => $est['duration'],
             'volume_mm3' => $totalVolume,
+            'bed' => $bed,
+            'beds' => $est['beds'],
+            'pieces_per_bed' => $est['piecesPerBed'],
+            'calibration_factor' => $calibration,
+            'urgent' => $est['urgent'],
             'production' => [
-                'material' => $matCost,
-                'luz' => $luz,
-                'labor' => $labor,
-                'depr' => $depr,
-                'mant' => $mant,
-                'etiquetas' => $etiquetas,
+                'material' => $p['material'],
+                'luz' => $p['luz'],
+                'labor' => $p['labor'],
+                'labor_pieces' => $p['laborPieces'],
+                'depr' => $p['depr'],
+                'mant' => $p['mant'],
+                'etiquetas' => $p['etiquetas'],
                 'extras' => $utilityCost,
-                'total' => $productionCost,
+                'total' => $p['total'],
             ],
             'extras' => $extras,
             'extras_cost' => $utilityCost,
-            'unit_price' => (int)$unitPrice,
-            'margin' => (int)$marginCost,
+            'unit_price' => (int)$est['unitPrice'],
+            'margin' => (int)$est['marginCost'],
             'subtotal' => (int)$subtotal,
+            'adjustments' => $est['adjustments'],
+            'volume_discount' => (int)$est['volumeDiscount'],
             'coupon' => $coupon ? [
                 'code' => $coupon['code'],
                 'discount_pct' => $discountPct,
                 'label' => $coupon['label'] ?? null,
             ] : null,
-            'discount' => (int)self::jsRound($discountAmount),
-            'subtotal_after_discount' => (int)$finalSubtotal,
-            'iva_pct' => $ivaPct,
-            'iva' => (int)$iva,
-            'total' => (int)$total,
+            'discount' => (int)$est['discount'],
+            'subtotal_after_discount' => (int)$est['subtotal'],
+            'iva_pct' => $est['ivaPct'],
+            'iva' => (int)$est['iva'],
+            'total' => (int)$est['total'],
         ];
+    }
+
+    /**
+     * Núcleo del precio: espejo EXACTO de calcQuoteEstimate (frontend/src/services/costCalculator.ts),
+     * con las mismas claves de entrada y salida. Las dos versiones se prueban con
+     * tests/Fixtures/quote_core_vectors.json.
+     *
+     * Sin `technology` es el cálculo histórico (cada pieza es un trabajo aparte). Con
+     * `technology` las piezas comparten cama:
+     *   - FDM: `hours`/`weightG` son de impresión por pieza; preparación y purga
+     *     (`bedHours`, `bedWeightG`) se cobran una vez por cama.
+     *   - SLA: cada cama tarda max(0.5, pieza más alta / 25) × `bedTimeFactor`.
+     */
+    public static function estimate(array $in): array
+    {
+        $tech = $in['technology'] ?? null;
+        $tech = ($tech === 'FDM' || $tech === 'SLA') ? $tech : null;
+
+        $models = [];
+        foreach (array_values($in['models'] ?? []) as $m) {
+            $q = self::jsNumber($m['qty'] ?? null);
+            $q = is_nan($q) ? 0 : (int)floor($q);
+            $models[] = [
+                'qty' => max(1, $q ?: 1),
+                'weightG' => self::jsOr($m['weightG'] ?? null, 0.0),
+                'hours' => self::jsOr($m['hours'] ?? null, 0.0),
+                'footprint' => isset($m['footprint']) && is_array($m['footprint']) ? $m['footprint'] : null,
+                'heightMm' => self::jsOr($m['heightMm'] ?? null, 0.0),
+            ];
+        }
+        $n = count($models);
+        $pieces = 0;
+        $weight = 0.0;
+        $duration = 0.0;
+        foreach ($models as $m) {
+            $pieces += $m['qty'];
+            $weight += $m['weightG'] * $m['qty'];
+            $duration += $m['hours'] * $m['qty'];
+        }
+
+        // Camas: cuántas piezas caben y en qué cama va cada una
+        $ppb = array_fill(0, $n, 1);
+        $beds = [];
+        if ($tech !== null) {
+            foreach ($models as $i => $m) {
+                $ppb[$i] = self::piecesPerBed($m['footprint'], $in['bed'] ?? null);
+            }
+            $beds = self::packBeds($models, $ppb);
+        }
+        $bedCount = $tech !== null ? count($beds) : $pieces;
+        $maxPerBed = 1;
+        foreach ($beds as $b) $maxPerBed = max($maxPerBed, $b['pieces']);
+
+        $unitW = array_map(fn ($m) => $m['weightG'], $models);
+        $unitH = array_map(fn ($m) => $m['hours'], $models);
+        if ($tech === 'FDM' && $pieces > 0) {
+            $bedW = self::jsOr($in['bedWeightG'] ?? null, 0.0);
+            $bedH = self::jsOr($in['bedHours'] ?? null, 0.0);
+            $weight += $bedW * $bedCount;
+            $duration += $bedH * $bedCount;
+            foreach ($models as $i => $m) {
+                $unitW[$i] = $m['weightG'] + ($bedW * $bedCount) / $pieces;
+                $unitH[$i] = $m['hours'] + ($bedH * $bedCount) / $pieces;
+            }
+        } elseif ($tech === 'SLA') {
+            $f = self::jsOr($in['bedTimeFactor'] ?? null, 1.0);
+            $duration = 0.0;
+            $share = array_fill(0, $n, 0.0);
+            foreach ($beds as $b) {
+                $t = max(0.5, $b['height'] / 25) * $f;
+                $duration += $t;
+                foreach ($b['items'] as $i => $c) {
+                    if ($c > 0) $share[$i] += $t * $c / $b['pieces'];
+                }
+            }
+            foreach ($models as $i => $m) {
+                $unitH[$i] = $share[$i] / $m['qty'];
+            }
+        }
+
+        // Costo de producción (calcProductionCost) + mano de obra por pieza
+        $infra = $in['infra'] ?? [];
+        $prep = $in['prep'] ?? [];
+        $oper = $in['oper'] ?? [];
+        $rules = $in['rules'] ?? self::normalizeRules(null);
+        $loadFactor = $infra['load_factor'] ?? 0.4;
+        $prepTimePct = ($prep['prep_time_pct'] ?? 10) / 100;
+        $manoObra = $prep['mano_obra_hr'] ?? 0;
+        $costPerKg = (float)($in['costPerKg'] ?? 0);
+        $extrasCost = (float)($in['extrasCost'] ?? 0);
+
+        $matCost = ($weight / 1000) * $costPerKg;
+        $luz = $duration * $loadFactor * ($infra['luz_hr'] ?? 0);
+        $labor = ($duration * $prepTimePct) * $manoObra;
+        $depr = $duration * ($infra['depr_hr'] ?? 0);
+        $mant = $duration * ($infra['mant_hr'] ?? 0);
+        $etiquetas = $infra['etiquetas'] ?? 0;
+        $laborPieces = $pieces * ($rules['labor_per_piece_min'] / 60) * $manoObra;
+        $production = $matCost + $luz + $labor + $depr + $mant + $etiquetas + $extrasCost + $laborPieces;
+
+        // calcFinalPrice sobre el costo unitario (la reserva por fallos puede venir del material)
+        $unitCost = $pieces > 0 ? $production / $pieces : 0;
+        $failPct = $in['failurePct'] ?? null;
+        $failPct = $failPct ?? ($oper['fallos'] ?? 0);
+        $logistics = $unitCost * (($oper['transporte'] ?? 0) / 100);
+        $marketing = $unitCost * (($oper['marketing'] ?? 0) / 100);
+        $failures = $unitCost * ($failPct / 100);
+        $profit = $unitCost * (($oper['ganancia'] ?? 0) / 100);
+        $unitPrice = self::jsRound($unitCost + $logistics + $marketing + $failures + $profit);
+
+        $adjustments = [];
+        $urgent = !empty($in['urgent']) && $rules['rush_pct'] > 0;
+        if ($urgent) {
+            $withRush = self::jsRound($unitPrice * (1 + $rules['rush_pct'] / 100));
+            $adjustments[] = self::adjustment('rush', 'Urgente', $rules['rush_pct'], ($withRush - $unitPrice) * $pieces);
+            $unitPrice = $withRush;
+        }
+        if ($rules['round_to'] > 0) {
+            $rounded = ceil($unitPrice / $rules['round_to']) * $rules['round_to'];
+            if ($rounded != $unitPrice) {
+                $adjustments[] = self::adjustment('rounding', 'Redondeo', null, ($rounded - $unitPrice) * $pieces);
+            }
+            $unitPrice = $rounded;
+        }
+        $subtotal = $unitPrice * $pieces;
+
+        // Descuento por volumen (antes del cupón); juntos no pasan de MAX_COUPON_PCT
+        $volumePct = 0;
+        foreach ($rules['volume_tiers'] as $t) {
+            if ($pieces >= $t['min_qty']) $volumePct = $t['discount_pct'];
+        }
+        $volumeAmount = $volumePct > 0 ? $subtotal * ($volumePct / 100) : 0;
+        $couponPct = self::jsOr($in['discountPct'] ?? null, 0.0);
+        $couponAmount = $couponPct ? ($subtotal - $volumeAmount) * ($couponPct / 100) : 0;
+        $maxOff = $subtotal * (self::MAX_COUPON_PCT / 100);
+        if ($volumeAmount + $couponAmount > $maxOff) {
+            $couponAmount = max(0, $maxOff - $volumeAmount);
+        }
+        if ($volumePct > 0) {
+            $adjustments[] = self::adjustment('volume', 'Descuento por volumen', -$volumePct, -self::jsRound($volumeAmount));
+        }
+        $finalSubtotal = self::jsRound($subtotal - $volumeAmount - $couponAmount);
+
+        $minTotal = self::jsRound($rules['min_order_total']);
+        if ($minTotal > 0 && $finalSubtotal < $minTotal) {
+            $adjustments[] = self::adjustment('min_order', 'Pedido mínimo', null, $minTotal - $finalSubtotal);
+            $finalSubtotal = $minTotal;
+        }
+
+        $ivaPct = $in['margin']['iva'] ?? 19;
+        $iva = self::jsRound($finalSubtotal * ($ivaPct / 100));
+        $total = $finalSubtotal + $iva;
+
+        $outModels = [];
+        foreach ($models as $i => $m) {
+            $outModels[] = ['qty' => $m['qty'], 'piecesPerBed' => $ppb[$i], 'weightG' => $unitW[$i], 'hours' => $unitH[$i]];
+        }
+
+        return [
+            'pieces' => $pieces,
+            'weight' => $weight,
+            'duration' => $duration,
+            'beds' => $bedCount,
+            'piecesPerBed' => $maxPerBed,
+            'matCost' => $matCost,
+            'infraCost' => $luz + $depr + $mant,
+            'laborCost' => $labor + $laborPieces,
+            'utilityCost' => $extrasCost,
+            'productionCost' => $production,
+            'marginCost' => (self::jsRound($logistics) + self::jsRound($marketing) + self::jsRound($failures) + self::jsRound($profit)) * $pieces,
+            'unitPrice' => $unitPrice,
+            'grossSubtotal' => $subtotal,
+            'volumeDiscount' => self::jsRound($volumeAmount),
+            'discount' => self::jsRound($couponAmount),
+            'subtotal' => $finalSubtotal,
+            'iva' => $iva,
+            'ivaPct' => $ivaPct,
+            'total' => $total,
+            'urgent' => $urgent,
+            'adjustments' => $adjustments,
+            'models' => $outModels,
+            'production' => [
+                'material' => $matCost, 'luz' => $luz, 'labor' => $labor, 'laborPieces' => $laborPieces,
+                'depr' => $depr, 'mant' => $mant, 'etiquetas' => $etiquetas, 'total' => $production,
+            ],
+        ];
+    }
+
+    // ------------------------------------------------------------------
+    // Camas y orientación (espejo de costCalculator.ts)
+    // ------------------------------------------------------------------
+
+    /** Horas de impresión FDM de $weightG gramos (mismo flujo volumétrico que fdmFactors). */
+    public static function fdmPrintHours(float $weightG, float $density, float $layerHeight): float
+    {
+        if ($density <= 0) $density = 1.25;
+        if ($layerHeight <= 0) $layerHeight = 0.2;
+        return ((($weightG / $density) * 1000) / 15500) * (0.2 / $layerHeight);
+    }
+
+    /**
+     * Eje vertical con menos soporte: área hacia abajo menos la que apoya en la cama.
+     * Gana 'y' (la orientación del visor) salvo que otro eje ahorre más de 1 mm².
+     *
+     * @return array{axis: string, support_area_mm2: float}
+     */
+    public static function chooseOrientation(array $down, ?array $contact = null): array
+    {
+        $support = static fn (string $k) => max(0.0, self::jsOr($down[$k] ?? null, 0.0) - self::jsOr($contact[$k] ?? null, 0.0));
+        $best = 'y';
+        $bestArea = $support('y');
+        foreach (['z', 'x'] as $k) {
+            $a = $support($k);
+            if ($a < $bestArea - 1.0) {
+                $best = $k;
+                $bestArea = $a;
+            }
+        }
+        return ['axis' => $best, 'support_area_mm2' => $bestArea];
+    }
+
+    /** Huella en la cama {x, y} con $axis vertical (los otros dos lados del bbox escalado). */
+    public static function footprint(?array $bbox, string $axis): ?array
+    {
+        if ($bbox === null) return null;
+        $rest = array_values(array_diff_key($bbox, [self::AXES[$axis] => true]));
+        return ['x' => $rest[0], 'y' => $rest[1]];
+    }
+
+    /** Piezas de esa huella que caben en una cama (separación + factor de aprovechamiento). */
+    public static function piecesPerBed(?array $footprint, ?array $bed): int
+    {
+        $bx = self::jsOr($bed['x'] ?? null, 0.0);
+        $by = self::jsOr($bed['y'] ?? null, 0.0);
+        $fx = self::jsOr($footprint['x'] ?? null, 0.0);
+        $fy = self::jsOr($footprint['y'] ?? null, 0.0);
+        if ($bx <= 0 || $by <= 0 || $fx <= 0 || $fy <= 0) return 1;
+        // Una pieza más grande que la cama ocupa una cama entera
+        if (!(($fx <= $bx && $fy <= $by) || ($fx <= $by && $fy <= $bx))) return 1;
+        $n = floor(($bx * $by * self::BED_PACKING) / (($fx + self::BED_SPACING_MM) * ($fy + self::BED_SPACING_MM)));
+        return max(1, (int)$n);
+    }
+
+    /**
+     * Reparte las piezas en camas: de la más alta a la más baja, llenando cada cama
+     * (cada pieza ocupa 1/piezas_por_cama de la suya).
+     *
+     * @return array<int, array{height: float, pieces: int, used: float, items: int[]}>
+     */
+    private static function packBeds(array $models, array $ppb): array
+    {
+        $n = count($models);
+        $order = array_keys($models);
+        usort($order, fn ($a, $b) => ($models[$b]['heightMm'] <=> $models[$a]['heightMm']) ?: ($a <=> $b));
+        $beds = [];
+        $cur = -1;
+        foreach ($order as $i) {
+            $need = 1 / $ppb[$i];
+            for ($p = 0; $p < $models[$i]['qty']; $p++) {
+                if ($cur < 0 || $beds[$cur]['used'] + $need > 1 + 1e-9) {
+                    $beds[] = ['height' => $models[$i]['heightMm'], 'pieces' => 0, 'used' => 0.0, 'items' => array_fill(0, $n, 0)];
+                    $cur++;
+                }
+                $beds[$cur]['used'] += $need;
+                $beds[$cur]['pieces']++;
+                $beds[$cur]['items'][$i]++;
+            }
+        }
+        return $beds;
+    }
+
+    private static function adjustment(string $type, string $label, int|float|null $pct, int|float $amount): array
+    {
+        return ['type' => $type, 'label' => $label, 'pct' => $pct, 'amount' => (int)$amount];
+    }
+
+    /** [x, y, z] del archivo × escala, o null si no hay bbox válido. */
+    private static function scaledBbox(mixed $bbox, float $scale): ?array
+    {
+        if (!is_array($bbox) || count($bbox) < 3) return null;
+        $b = array_values($bbox);
+        return [(float)$b[0] * $scale, (float)$b[1] * $scale, (float)$b[2] * $scale];
+    }
+
+    private static function scaleAxes(array $v, float $f): array
+    {
+        $out = [];
+        foreach (['x', 'y', 'z'] as $k) {
+            $out[$k] = self::jsOr($v[$k] ?? null, 0.0) * $f;
+        }
+        return $out;
     }
 
     // ------------------------------------------------------------------
@@ -374,6 +706,52 @@ class QuotePricingService
     public function loadSettings(): array
     {
         return Setting::all()->pluck('value', 'key')->toArray();
+    }
+
+    /**
+     * Cama de cada tecnología: la impresora no apagada de mayor volumen con medidas
+     * (columnas build_*_mm); si ninguna las tiene, settings `beds`.
+     */
+    public function loadBeds(?array $settings = null): array
+    {
+        $beds = self::normalizeBeds(($settings ?? $this->loadSettings())['beds'] ?? null);
+        if (!Schema::hasColumn('printers', 'build_x_mm')) return $beds;
+        $printers = Printer::query()
+            ->where('status', '!=', 'offline')
+            ->whereNotNull('build_x_mm')->whereNotNull('build_y_mm')->whereNotNull('build_z_mm')
+            ->get(['technology', 'build_x_mm', 'build_y_mm', 'build_z_mm']);
+        foreach (array_keys($beds) as $tech) {
+            $best = $printers
+                ->filter(fn ($p) => strtoupper((string)$p->technology) === $tech && $p->build_x_mm > 0 && $p->build_y_mm > 0 && $p->build_z_mm > 0)
+                ->sortByDesc(fn ($p) => $p->build_x_mm * $p->build_y_mm * $p->build_z_mm)
+                ->first();
+            if ($best) {
+                $beds[$tech] = ['x' => (float)$best->build_x_mm, 'y' => (float)$best->build_y_mm, 'z' => (float)$best->build_z_mm];
+            }
+        }
+        return $beds;
+    }
+
+    /**
+     * Modelo para quote() a partir del análisis de MeshVolumeService (lo usa el
+     * controlador; así las pruebas cotizan con exactamente los mismos datos).
+     */
+    public static function pricingModelFromMesh(array $mesh, array $meta = []): array
+    {
+        return [
+            'qty' => $meta['qty'] ?? 1,
+            'scale_factor' => $meta['scale_factor'] ?? 1,
+            'volume_mm3' => $mesh['volume_mm3'],
+            'total_area_mm2' => $mesh['total_area_mm2'],
+            // Orientación del visor (normales hacia -Y) si no llegan las áreas por eje
+            'support_area_mm2' => $mesh['down_area_mm2']['y'],
+            'down_area_mm2' => $mesh['down_area_mm2'],
+            'bed_contact_mm2' => $mesh['bed_contact_mm2'] ?? null,
+            'bbox_mm' => $mesh['bbox']['size'],
+            'dimensions_mm' => $meta['dimensions_mm'] ?? null,
+            'infill' => $meta['infill'] ?? null,
+            'layer_height' => $meta['layer_height'] ?? null,
+        ];
     }
 
     public function findActiveCoupon(?string $code, ?array $settings = null): ?array
@@ -461,6 +839,113 @@ class QuotePricingService
             'margin' => [
                 'iva' => is_finite($ivaNum) ? $ivaNum : 19.0,
             ],
+            'beds' => self::normalizeBeds($settings['beds'] ?? null),
+            'rules' => self::normalizeRules($settings['rules'] ?? null),
+            'calibration' => self::normalizeCalibration($settings['calibration'] ?? null),
+        ];
+    }
+
+    /** Número finito (número o texto numérico) o null; igual que finiteNum de costCalculator.ts. */
+    public static function finiteNum(mixed $v): ?float
+    {
+        if (is_int($v) || is_float($v)) return is_finite((float)$v) ? (float)$v : null;
+        if (is_string($v) && trim($v) !== '' && is_numeric(trim($v))) return (float)trim($v);
+        return null;
+    }
+
+    /** Camas por tecnología (settings `beds`): cada medida > 0 o la de DEFAULT_BEDS. */
+    public static function normalizeBeds(mixed $raw): array
+    {
+        $out = [];
+        foreach (self::DEFAULT_BEDS as $tech => $default) {
+            $out[$tech] = self::normalizeBed(is_array($raw) ? ($raw[$tech] ?? null) : null, $default);
+        }
+        return $out;
+    }
+
+    public static function normalizeBed(mixed $raw, array $default): array
+    {
+        $out = [];
+        foreach (['x', 'y', 'z'] as $k) {
+            $v = is_array($raw) ? self::finiteNum($raw[$k] ?? null) : null;
+            $out[$k] = $v !== null && $v > 0 ? $v : (float)$default[$k];
+        }
+        return $out;
+    }
+
+    /**
+     * Reglas comerciales (settings `rules`). Sin configurar no cambian el precio.
+     *
+     * @return array{min_order_total: float, volume_tiers: array<int, array{min_qty: int, discount_pct: float}>, round_to: float, labor_per_piece_min: float, rush_pct: float}
+     */
+    public static function normalizeRules(mixed $raw): array
+    {
+        $r = is_array($raw) ? $raw : [];
+        $pos = static function (mixed $v, float $max = INF): float {
+            $n = self::finiteNum($v);
+            return $n !== null && $n > 0 ? min($n, $max) : 0.0;
+        };
+        $tiers = [];
+        foreach ((isset($r['volume_tiers']) && is_array($r['volume_tiers']) ? array_values($r['volume_tiers']) : []) as $t) {
+            if (!is_array($t)) continue;
+            $min = self::finiteNum($t['min_qty'] ?? null);
+            $pct = self::finiteNum($t['discount_pct'] ?? null);
+            if ($min === null || $pct === null || floor($min) < 1 || $pct <= 0) continue;
+            $tiers[] = ['min_qty' => (int)floor($min), 'discount_pct' => min($pct, (float)self::MAX_COUPON_PCT)];
+        }
+        usort($tiers, fn ($a, $b) => $a['min_qty'] <=> $b['min_qty']);
+        return [
+            'min_order_total' => $pos($r['min_order_total'] ?? null),
+            'volume_tiers' => $tiers,
+            'round_to' => $pos($r['round_to'] ?? null),
+            'labor_per_piece_min' => $pos($r['labor_per_piece_min'] ?? null),
+            'rush_pct' => $pos($r['rush_pct'] ?? null, 200.0),
+        ];
+    }
+
+    /**
+     * Calibración del tiempo (settings `calibration`). Solo valen factores entre 0.3 y 3:
+     * por tecnología, si no, 1; por material, si no, se ignora (cae al de la tecnología).
+     */
+    public static function normalizeCalibration(mixed $raw): array
+    {
+        $ok = static function (mixed $v): ?float {
+            $n = self::finiteNum($v);
+            return $n !== null && $n >= 0.3 && $n <= 3 ? $n : null;
+        };
+        $tf = is_array($raw) && is_array($raw['time_factor'] ?? null) ? $raw['time_factor'] : [];
+        $byMaterial = [];
+        foreach ((is_array($raw) && is_array($raw['by_material'] ?? null) ? $raw['by_material'] : []) as $id => $v) {
+            $f = $ok($v);
+            if ($f !== null) $byMaterial[(string)$id] = $f;
+        }
+        return [
+            'time_factor' => ['FDM' => $ok($tf['FDM'] ?? null) ?? 1.0, 'SLA' => $ok($tf['SLA'] ?? null) ?? 1.0],
+            'by_material' => $byMaterial,
+        ];
+    }
+
+    /** by_material[id] ?? time_factor[tecnología] ?? 1 (sobre la calibración normalizada). */
+    public static function calibrationFactor(array $calibration, string $technology, string $materialId): float
+    {
+        return $calibration['by_material'][$materialId] ?? $calibration['time_factor'][$technology] ?? 1.0;
+    }
+
+    /**
+     * Parámetros de cotización del material: velocidad (× tiempo), desperdicio (% extra de
+     * material) y reserva por fallos propia (null = la global oper.fallos).
+     *
+     * @return array{speed_factor: float, waste_pct: float, failure_pct: float|null}
+     */
+    public static function materialParams(array $material): array
+    {
+        $speed = self::finiteNum($material['speed_factor'] ?? null);
+        $waste = self::finiteNum($material['waste_pct'] ?? null);
+        $fail = self::finiteNum($material['failure_pct'] ?? null);
+        return [
+            'speed_factor' => $speed !== null && $speed > 0 ? min($speed, 10.0) : 1.0,
+            'waste_pct' => $waste !== null && $waste > 0 ? min($waste, 100.0) : 0.0,
+            'failure_pct' => $fail !== null && $fail >= 0 ? min($fail, 100.0) : null,
         ];
     }
 

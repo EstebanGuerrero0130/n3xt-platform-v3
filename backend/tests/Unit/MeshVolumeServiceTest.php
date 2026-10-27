@@ -120,6 +120,31 @@ class MeshVolumeServiceTest extends TestCase
         $this->assertCube($r);
     }
 
+    public function test_bed_contact_area_excludes_overhangs_above_the_bed(): void
+    {
+        // Cubo: su cara de abajo apoya en la cama en cualquier eje
+        $r = (new MeshVolumeService())->analyze($this->tmp('stl', $this->asciiStl(10)));
+        foreach (['x', 'y', 'z'] as $k) {
+            $this->assertEqualsWithDelta(100, $r['bed_contact_mm2'][$k], 1e-6, $k);
+        }
+
+        // Dos cubos, el segundo flotando 20 mm más arriba en Z: su cara de abajo es voladizo
+        $out = "solid two\n";
+        foreach ([0, 20] as $dz) {
+            foreach (self::cubeTriangles(10) as $t) {
+                $out .= "facet normal 0 0 0\nouter loop\n";
+                foreach ($t as $p) {
+                    $out .= sprintf("vertex %F %F %F\n", $p[0], $p[1], $p[2] + $dz);
+                }
+                $out .= "endloop\nendfacet\n";
+            }
+        }
+        $r = (new MeshVolumeService())->analyze($this->tmp('stl', $out . "endsolid two\n"));
+        $this->assertEqualsWithDelta(200, $r['down_area_mm2']['z'], 1e-6);
+        $this->assertEqualsWithDelta(100, $r['bed_contact_mm2']['z'], 1e-6);
+        $this->assertEqualsWithDelta(200, $r['bed_contact_mm2']['x'], 1e-6);
+    }
+
     public function test_obj_cube_with_quads(): void
     {
         $obj = "# cube\no cube\n";
